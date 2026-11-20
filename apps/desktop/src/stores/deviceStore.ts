@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { DeviceSummary, DeviceDetail } from '../types';
+import { api, isTauri } from '../lib/api';
 
 interface DeviceState {
   devices: DeviceSummary[];
@@ -15,6 +16,8 @@ interface DeviceState {
   setCapturedScreenshot: (dataUrl: string | null) => void;
   setIsLoadingDevices: (loading: boolean) => void;
   setIsInspecting: (inspecting: boolean) => void;
+  fetchDevices: () => Promise<void>;
+  captureCurrentDevice: () => Promise<void>;
 }
 
 const mockDevices: DeviceSummary[] = [
@@ -76,4 +79,26 @@ export const useDeviceStore = create<DeviceState>((set) => ({
   setCapturedScreenshot: (dataUrl) => set({ capturedScreenshot: dataUrl }),
   setIsLoadingDevices: (loading) => set({ isLoadingDevices: loading }),
   setIsInspecting: (inspecting) => set({ isInspecting: inspecting }),
+
+  fetchDevices: async () => {
+    if (!isTauri()) return;
+    set({ isLoadingDevices: true });
+    try {
+      const realDevices = await api.listDevices();
+      if (realDevices.length > 0) {
+        set({ devices: realDevices });
+      }
+    } finally {
+      set({ isLoadingDevices: false });
+    }
+  },
+
+  captureCurrentDevice: async () => {
+    const devId = useDeviceStore.getState().selectedDeviceId;
+    if (!devId) return;
+    const b64 = await api.captureDevice(devId);
+    if (b64) {
+      set({ capturedScreenshot: b64 });
+    }
+  },
 }));

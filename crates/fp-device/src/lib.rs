@@ -168,3 +168,75 @@ impl DeviceActorHandle {
         rx.await.map_err(|_| anyhow::anyhow!("Canceled"))?
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fp_testkit::FakeDeviceDriver;
+
+    #[tokio::test]
+    async fn test_device_actor_operations() {
+        let driver = Arc::new(FakeDeviceDriver::new("fake-01", 1080, 1920));
+        let handle = DeviceActorHandle::new("fake-01".to_string(), driver);
+
+        let geom = handle.geometry().await.unwrap();
+        assert_eq!(geom.width_px, 1080);
+        assert_eq!(geom.height_px, 1920);
+
+        let snap = handle.snapshot().await.unwrap();
+        assert!(!snap.bytes.is_empty());
+
+        let launch = handle.launch_app("com.game.test").await.unwrap();
+        assert!(launch.success);
+
+        let tap = handle.tap(250, 450, 1).await.unwrap();
+        assert!(tap.success);
+
+        let stop = handle.stop_app("com.game.test").await.unwrap();
+        assert!(stop.success);
+    }
+
+    #[tokio::test]
+    async fn test_generation_fencing() {
+        let driver = Arc::new(FakeDeviceDriver::new("fake-02", 1080, 1920));
+        let mut handle = DeviceActorHandle::new("fake-02".to_string(), driver);
+
+        assert_eq!(handle.generation(), 1);
+
+        // Tap with valid generation 1
+        let tap_ok = handle.tap(100, 100, 1).await;
+        assert!(tap_ok.is_ok());
+
+        // Bump generation to 2
+        let new_gen = handle.bump_generation();
+        assert_eq!(new_gen, 2);
+
+        // Tap with stale generation 1 must fail
+        let stale_tap = handle.tap(100, 100, 1).await;
+        assert!(stale_tap.is_err());
+        let err_msg = stale_tap.unwrap_err().to_string();
+        assert!(err_msg.contains("Stale device lease generation"));
+
+        // Tap with current generation 2 succeeds
+        let valid_tap = handle.tap(100, 100, 2).await;
+        assert!(valid_tap.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_device_actor_hardware_error_resilience() {
+        let driver = Arc::new(FakeDeviceDriver::new("fake-03", 1080, 1920));
+        let handle = DeviceActorHandle::new("fake-03".to_string(), driver.clone());
+
+        // Force next action to fail
+        driver
+            .should_fail_next_action
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+
+        let failed_tap = handle.tap(100, 100, 1).await;
+        assert!(failed_tap.is_err());
+
+        // Subsequent call must succeed (actor remains alive and responsive)
+        let recovered_tap = handle.tap(100, 100, 1).await;
+        assert!(recovered_tap.is_ok());
+    }
+}

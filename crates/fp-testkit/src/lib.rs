@@ -102,6 +102,20 @@ impl DeviceDriver for FakeDeviceDriver {
             anyhow::bail!("Simulated hardware tap failure");
         }
         self.tap_count.fetch_add(1, Ordering::SeqCst);
+
+        let mut state = self.current_screen_state.lock().await;
+        if *state == "quest_marker_visible" {
+            let button = Bounds::new(200.0, 400.0, 120.0, 60.0);
+            if button.contains_point(x as f32, y as f32) {
+                *state = "quest_dialog_open".to_string();
+            }
+        } else if *state == "quest_dialog_open" {
+            let dialog = Bounds::new(100.0, 800.0, 400.0, 200.0);
+            if dialog.contains_point(x as f32, y as f32) {
+                *state = "completed".to_string();
+            }
+        }
+
         Ok(ActionReceipt {
             success: true,
             duration_ms: 12,

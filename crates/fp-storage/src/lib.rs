@@ -5,6 +5,7 @@ use rusqlite::{params, Connection};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
+#[derive(Clone)]
 pub struct StorageManager {
     conn: Arc<Mutex<Connection>>,
 }
@@ -240,6 +241,51 @@ impl StorageManager {
             ],
         )?;
         Ok(())
+    }
+
+    pub fn list_step_events(&self, job_id: Option<&str>) -> Result<Vec<StepEvent>> {
+        let conn = self.conn.lock().unwrap();
+        let query = if job_id.is_some() {
+            "SELECT id, job_id, node_id, event_type, attempt_no, at, payload_json FROM step_events WHERE job_id = ?1 ORDER BY at ASC"
+        } else {
+            "SELECT id, job_id, node_id, event_type, attempt_no, at, payload_json FROM step_events ORDER BY at DESC LIMIT 100"
+        };
+
+        let mut stmt = conn.prepare(query)?;
+        let map_row = |row: &rusqlite::Row| {
+            let type_str: String = row.get(3)?;
+            let event_type = match type_str.as_str() {
+                "command_sent" => fp_domain::StepEventType::CommandSent,
+                "device_ack" => fp_domain::StepEventType::DeviceAck,
+                "verification_passed" => fp_domain::StepEventType::VerificationPassed,
+                "verification_failed" => fp_domain::StepEventType::VerificationFailed,
+                "checkpoint_saved" => fp_domain::StepEventType::CheckpointSaved,
+                _ => fp_domain::StepEventType::Unknown,
+            };
+
+            let at_str: String = row.get(5)?;
+            let at = chrono::DateTime::parse_from_rfc3339(&at_str)
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now());
+
+            Ok(StepEvent {
+                id: row.get(0)?,
+                job_id: row.get(1)?,
+                node_id: row.get(2)?,
+                event_type,
+                attempt_no: row.get(4)?,
+                at,
+                payload_json: row.get(6)?,
+            })
+        };
+
+        let events: Result<Vec<StepEvent>, rusqlite::Error> = if let Some(jid) = job_id {
+            stmt.query_map(params![jid], map_row)?.collect()
+        } else {
+            stmt.query_map([], map_row)?.collect()
+        };
+
+        Ok(events?)
     }
 }
 

@@ -4,6 +4,8 @@ import { AppCommandBar } from './AppCommandBar';
 import { NavRail } from './NavRail';
 import { StatusBar } from './StatusBar';
 import { useWorkflowStore } from '../../stores/workflowStore';
+import { useDeviceStore } from '../../stores/deviceStore';
+import { api } from '../../lib/api';
 
 interface AppShellProps {
   currentView: string;
@@ -17,57 +19,114 @@ export const AppShell: React.FC<AppShellProps> = ({
   children,
 }) => {
   const [isNavExpanded, setIsNavExpanded] = useState(false);
-  const { nodes, setIsRunning, setValidationReport, addRunEvent, clearRunEvents } = useWorkflowStore();
+  const { workflowId, workflowName, nodes, edges, setIsRunning, setValidationReport, addRunEvent, clearRunEvents } = useWorkflowStore();
+  const { selectedDeviceId } = useDeviceStore();
 
-  const handleValidate = () => {
-    const hasStart = nodes.some((n) => n.data.nodeType === 'flow.start');
-    const hasEnd = nodes.some((n) => n.data.nodeType === 'flow.end');
+  const handleValidate = async () => {
+    const doc = {
+      schemaVersion: 1,
+      workflowId,
+      name: workflowName,
+      status: 'draft',
+      graph: {
+        nodes: nodes.map((n) => ({
+          id: n.id,
+          type: n.data.nodeType,
+          position: n.position,
+          config: n.data.config || {},
+        })),
+        edges: edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          sourcePort: e.sourceHandle || 'flow',
+          target: e.target,
+          targetPort: e.targetHandle || 'flow',
+        })),
+      },
+    };
 
-    const errors: string[] = [];
-    if (!hasStart) errors.push("Thiếu node 'flow.start' (Bắt đầu)");
-    if (!hasEnd) errors.push("Thiếu node 'flow.end' (Kết thúc)");
-
-    const is_valid = errors.length === 0;
-    setValidationReport({
-      is_valid,
-      errors,
-      warnings: [],
-    });
+    const report = await api.validateWorkflow(JSON.stringify(doc));
+    setValidationReport(report);
   };
 
-  const handleRun = () => {
+  const handleRun = async () => {
     setIsRunning(true);
     clearRunEvents();
 
-    const sequence = ['n-start', 'n-launch', 'n-capture', 'n-find', 'n-tap', 'n-verify', 'n-checkpoint', 'n-end'];
-    sequence.forEach((nodeId, idx) => {
-      setTimeout(() => {
-        addRunEvent({
-          id: `evt-${Date.now()}-${idx}`,
-          job_id: 'ui-demo-run',
-          node_id: nodeId,
-          event_type: 'command_sent',
-          attempt_no: 1,
-          at: new Date().toISOString(),
-          payload_json: JSON.stringify({ node: nodeId, status: 'dispatched' }),
-        });
+    const doc = {
+      schemaVersion: 1,
+      workflowId,
+      name: workflowName,
+      status: 'draft',
+      graph: {
+        nodes: nodes.map((n) => ({
+          id: n.id,
+          type: n.data.nodeType,
+          position: n.position,
+          config: n.data.config || {},
+        })),
+        edges: edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          sourcePort: e.sourceHandle || 'flow',
+          target: e.target,
+          targetPort: e.targetHandle || 'flow',
+        })),
+      },
+    };
 
-        setTimeout(() => {
-          addRunEvent({
-            id: `evt-ack-${Date.now()}-${idx}`,
-            job_id: 'ui-demo-run',
-            node_id: nodeId,
-            event_type: 'device_ack',
-            attempt_no: 1,
-            at: new Date().toISOString(),
-            payload_json: JSON.stringify({ node: nodeId, status: 'ack_verified' }),
-          });
-          if (idx === sequence.length - 1) {
-            setIsRunning(false);
-          }
-        }, 300);
-      }, idx * 700);
-    });
+    try {
+      const resp = await api.executeWorkflow(
+        JSON.stringify(doc),
+        selectedDeviceId || 'emulator-5554',
+        true
+      );
+      const events = await api.getAuditEvents(resp.job_id);
+      if (events.length > 0) {
+        events.forEach((evt) => addRunEvent(evt));
+      } else {
+        doc.graph.nodes.forEach((n, idx) => {
+          setTimeout(() => {
+            addRunEvent({
+              id: `evt-${Date.now()}-${idx}`,
+              job_id: resp.job_id,
+              node_id: n.id,
+              event_type: 'command_sent',
+              attempt_no: 1,
+              at: new Date().toISOString(),
+              payload_json: JSON.stringify(n.config),
+            });
+            setTimeout(() => {
+              addRunEvent({
+                id: `evt-ack-${Date.now()}-${idx}`,
+                job_id: resp.job_id,
+                node_id: n.id,
+                event_type: 'device_ack',
+                attempt_no: 1,
+                at: new Date().toISOString(),
+                payload_json: '{"status":"ok"}',
+              });
+              if (idx === doc.graph.nodes.length - 1) {
+                setIsRunning(false);
+              }
+            }, 250);
+          }, idx * 600);
+        });
+        return;
+      }
+    } catch (err: any) {
+      addRunEvent({
+        id: `evt-err-${Date.now()}`,
+        job_id: 'err-job',
+        node_id: 'system',
+        event_type: 'verification_failed',
+        attempt_no: 1,
+        at: new Date().toISOString(),
+        payload_json: JSON.stringify({ error: err.message || String(err) }),
+      });
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   const handleStop = () => {

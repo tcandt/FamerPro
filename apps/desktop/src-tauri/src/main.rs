@@ -2,12 +2,18 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use fp_adb::AdbRunner;
-use fp_domain::{ConnectionState, DeviceDetail, DeviceSummary};
+use fp_domain::{ConnectionState, DeviceDetail, DeviceDriver, DeviceSummary, StepEvent};
 use fp_storage::StorageManager;
-use fp_workflow_schema::{ValidationReport, WorkflowValidator};
+use fp_testkit::FakeDeviceDriver;
+use fp_workflow_runtime::{ExecutionContext, ExecutionSignal, WorkflowExecutor};
+use fp_workflow_schema::{ValidationReport, WorkflowDocument, WorkflowNode, WorkflowValidator};
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc, Mutex,
+};
 use tauri::State;
+use tokio::sync::watch;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppStatus {
@@ -24,6 +30,13 @@ pub struct NodeTestResult {
     pub duration_ms: u64,
     pub message: String,
     pub point_tapped: Option<fp_domain::Point>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExecuteWorkflowResponse {
+    pub job_id: String,
+    pub state: String,
+    pub events_count: usize,
 }
 
 pub struct AppState {
@@ -153,7 +166,7 @@ async fn get_workflow_draft(
 
 #[tauri::command]
 fn validate_workflow(workflow_json: String) -> Result<ValidationReport, String> {
-    let doc = match serde_json::from_str::<fp_workflow_schema::WorkflowDocument>(&workflow_json) {
+    let doc = match serde_json::from_str::<WorkflowDocument>(&workflow_json) {
         Ok(d) => d,
         Err(e) => {
             return Ok(ValidationReport {
@@ -167,21 +180,116 @@ fn validate_workflow(workflow_json: String) -> Result<ValidationReport, String> 
 }
 
 #[tauri::command]
+async fn execute_workflow(
+    workflow_json: String,
+    device_id: String,
+    mock: bool,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<ExecuteWorkflowResponse, String> {
+    let doc = WorkflowValidator::parse_and_validate(&workflow_json).map_err(|e| e.to_string())?;
+
+    let driver: Arc<dyn DeviceDriver> =
+        if mock || device_id.is_empty() || device_id.starts_with("fake") {
+            Arc::new(FakeDeviceDriver::new(&device_id, 1080, 1920))
+        } else {
+            Arc::new(fp_adb::AdbDeviceDriver::new(
+                device_id.clone(),
+                AdbRunner::default(),
+            ))
+        };
+
+    let (_tx, rx) = watch::channel(ExecutionSignal::Running);
+    let mut executor = WorkflowExecutor::new(driver, rx);
+    let job_id = format!("job-{}", uuid::Uuid::new_v4());
+    let mut ctx = ExecutionContext::new(job_id.clone(), device_id);
+
+    let storage = {
+        let st = state.lock().unwrap();
+        st.storage.clone()
+    };
+
+    let events_counter = Arc::new(AtomicUsize::new(0));
+    let counter_clone = events_counter.clone();
+
+    let job_state = executor
+        .execute_workflow(
+            &doc,
+            &mut ctx,
+            Some(Arc::new(move |evt| {
+                counter_clone.fetch_add(1, Ordering::SeqCst);
+                let _ = storage.insert_step_event(&evt);
+            })),
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(ExecuteWorkflowResponse {
+        job_id,
+        state: format!("{:?}", job_state),
+        events_count: events_counter.load(Ordering::SeqCst),
+    })
+}
+
+#[tauri::command]
+async fn get_audit_events(
+    job_id: Option<String>,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<Vec<StepEvent>, String> {
+    let st = state.lock().unwrap();
+    st.storage
+        .list_step_events(job_id.as_deref())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn execute_test_node(
     device_id: String,
     node_type: String,
-    _config_json: String,
+    config_json: String,
 ) -> Result<NodeTestResult, String> {
     let start = std::time::Instant::now();
-    Ok(NodeTestResult {
-        success: true,
-        duration_ms: start.elapsed().as_millis() as u64,
-        message: format!(
-            "Node '{}' executed successfully on device {}",
-            node_type, device_id
-        ),
-        point_tapped: Some(fp_domain::Point { x: 540.0, y: 960.0 }),
-    })
+    let config = serde_json::from_str(&config_json).unwrap_or(serde_json::Value::Null);
+
+    let test_node = WorkflowNode {
+        id: "test-node".to_string(),
+        node_type: node_type.clone(),
+        position: fp_workflow_schema::NodePosition { x: 0.0, y: 0.0 },
+        config,
+        timeout_ms: Some(5000),
+        retry_policy: None,
+    };
+
+    let fake_driver = Arc::new(FakeDeviceDriver::new(&device_id, 1080, 1920));
+    let (_tx, rx) = watch::channel(ExecutionSignal::Running);
+    let mut executor = WorkflowExecutor::new(fake_driver, rx);
+    let mut ctx = ExecutionContext::new("test-job".to_string(), device_id);
+
+    // If testing random safe tap, initialize context with target
+    if node_type == "action.random_safe_tap" {
+        ctx.last_target = Some(fp_domain::VisionTarget {
+            bounds: fp_domain::Bounds::new(200.0, 400.0, 120.0, 60.0),
+            confidence: 0.96,
+            geometry: fp_domain::ScreenGeometry::new(1080, 1920, 0),
+        });
+    }
+
+    match executor.execute_node(&test_node, &mut ctx).await {
+        Ok(_) => {
+            let point = ctx.last_receipt.as_ref().and_then(|r| r.point_tapped);
+            Ok(NodeTestResult {
+                success: true,
+                duration_ms: start.elapsed().as_millis() as u64,
+                message: format!("Node '{}' executed successfully", node_type),
+                point_tapped: point,
+            })
+        }
+        Err(err) => Ok(NodeTestResult {
+            success: false,
+            duration_ms: start.elapsed().as_millis() as u64,
+            message: format!("Node '{}' execution failed: {}", node_type, err),
+            point_tapped: None,
+        }),
+    }
 }
 
 fn base64_encode(bytes: &[u8]) -> String {
@@ -234,6 +342,8 @@ fn main() {
             save_workflow_draft,
             get_workflow_draft,
             validate_workflow,
+            execute_workflow,
+            get_audit_events,
             execute_test_node
         ])
         .run(tauri::generate_context!())

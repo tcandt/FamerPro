@@ -172,7 +172,36 @@ impl DeviceDriver for AdbDeviceDriver {
             }
         }
 
-        Ok(ScreenGeometry::new(width, height, 0))
+        // Detect device rotation (0, 90, 180, 270)
+        let rotation_out = self
+            .runner
+            .run_args(&["-s", &self.serial, "shell", "dumpsys", "window"])
+            .await
+            .unwrap_or_default();
+
+        let mut rotation_deg = 0;
+        for line in rotation_out.lines() {
+            if line.contains("mCurrentRotation") || line.contains("SurfaceOrientation") {
+                if line.contains("ROTATION_90") || line.contains("=1") || line.contains(": 1") {
+                    rotation_deg = 90;
+                    break;
+                } else if line.contains("ROTATION_180")
+                    || line.contains("=2")
+                    || line.contains(": 2")
+                {
+                    rotation_deg = 180;
+                    break;
+                } else if line.contains("ROTATION_270")
+                    || line.contains("=3")
+                    || line.contains(": 3")
+                {
+                    rotation_deg = 270;
+                    break;
+                }
+            }
+        }
+
+        Ok(ScreenGeometry::new(width, height, rotation_deg))
     }
 
     async fn tap(&self, x: u32, y: u32) -> Result<ActionReceipt> {

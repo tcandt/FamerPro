@@ -57,26 +57,59 @@ impl SafeRegionSampler {
         }
     }
 
+    /// Rotates a point between standard 0, 90, 180, 270 degree orientations
+    pub fn rotate_point(
+        point: Point,
+        from_deg: u16,
+        to_deg: u16,
+        width: u32,
+        height: u32,
+    ) -> Point {
+        let diff = ((to_deg as i32 - from_deg as i32) % 360 + 360) % 360;
+        let w = width as f32;
+        let h = height as f32;
+
+        match diff {
+            90 => Point {
+                x: h - 1.0 - point.y,
+                y: point.x,
+            },
+            180 => Point {
+                x: w - 1.0 - point.x,
+                y: h - 1.0 - point.y,
+            },
+            270 => Point {
+                x: point.y,
+                y: w - 1.0 - point.x,
+            },
+            _ => point,
+        }
+    }
+
     /// Transforms a point from capture coordinates to device display coordinates
     pub fn transform_to_display(
         point: Point,
         capture_geom: &ScreenGeometry,
         display_geom: &ScreenGeometry,
     ) -> Result<Point> {
-        if capture_geom.rotation_deg != display_geom.rotation_deg {
-            bail!(
-                "Stale geometry: capture rotation {} deg does not match display rotation {} deg",
+        let pt = if capture_geom.rotation_deg != display_geom.rotation_deg {
+            Self::rotate_point(
+                point,
                 capture_geom.rotation_deg,
-                display_geom.rotation_deg
-            );
-        }
+                display_geom.rotation_deg,
+                capture_geom.width_px,
+                capture_geom.height_px,
+            )
+        } else {
+            point
+        };
 
         let scale_x = display_geom.width_px as f32 / capture_geom.width_px as f32;
         let scale_y = display_geom.height_px as f32 / capture_geom.height_px as f32;
 
         Ok(Point {
-            x: (point.x * scale_x).clamp(0.0, display_geom.width_px as f32),
-            y: (point.y * scale_y).clamp(0.0, display_geom.height_px as f32),
+            x: (pt.x * scale_x).clamp(0.0, display_geom.width_px as f32),
+            y: (pt.y * scale_y).clamp(0.0, display_geom.height_px as f32),
         })
     }
 
@@ -197,5 +230,19 @@ mod tests {
             SafeRegionSampler::transform_to_display(pt, &capture_geom, &display_geom).unwrap();
         assert_eq!(transformed.x, 1080.0);
         assert_eq!(transformed.y, 1920.0);
+    }
+
+    #[test]
+    fn test_point_rotation_and_landscape_transform() {
+        let pt = Point { x: 100.0, y: 200.0 };
+        // 90 deg rotation on 1080x1920
+        let rotated_90 = SafeRegionSampler::rotate_point(pt, 0, 90, 1080, 1920);
+        assert_eq!(rotated_90.x, 1920.0 - 1.0 - 200.0);
+        assert_eq!(rotated_90.y, 100.0);
+
+        // 180 deg
+        let rotated_180 = SafeRegionSampler::rotate_point(pt, 0, 180, 1080, 1920);
+        assert_eq!(rotated_180.x, 1080.0 - 1.0 - 100.0);
+        assert_eq!(rotated_180.y, 1920.0 - 1.0 - 200.0);
     }
 }
