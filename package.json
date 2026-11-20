@@ -1,0 +1,8 @@
+{
+  "name": "farmerpro-workspace",
+  "private": true,
+  "scripts": {
+    "desktop:dev": "pnpm --filter @farmerpro/desktop dev",
+    "desktop:build": "pnpm --filter @farmerpro/desktop build"
+  }
+}

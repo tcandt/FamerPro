@@ -1,0 +1,13 @@
+[package]
+name = "fp-testkit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fp-domain = { path = "../fp-domain" }
+chrono.workspace = true
+image.workspace = true
+async-trait.workspace = true
+anyhow.workspace = true
+tokio.workspace = true

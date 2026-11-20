@@ -1,0 +1,65 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "meta": {
+    "name": "FarmerPro Dark Precision",
+    "version": "1.0.0",
+    "status": "proposed",
+    "reference": "AutoFarm Workflow Studio screenshot supplied 2026-11-20",
+    "notes": "Flat navy/blue UI. Colors are design proposals, not extracted official brand colors."
+  },
+  "colors": {
+    "app": "#101722",
+    "sidebar": "#161E29",
+    "surface": "#192230",
+    "elevated": "#202B3B",
+    "canvas": "#121A26",
+    "border": "#2A3647",
+    "focus": "#4B9CFF",
+    "textPrimary": "#EDF3FC",
+    "textSecondary": "#A9B8CC",
+    "textMuted": "#74869D",
+    "accentPrimary": "#1878F5",
+    "accentHover": "#2F8CFF",
+    "accentSoft": "#173355",
+    "success": "#3BC38D",
+    "warning": "#E7B15B",
+    "danger": "#F27883",
+    "vision": "#B291F7",
+    "nodeNeutral": "#7BA6D6"
+  },
+  "typography": {
+    "fontFamily": "Inter, 'Segoe UI Variable', 'Segoe UI', sans-serif",
+    "bodyPx": 13,
+    "bodyLineHeightPx": 19,
+    "tablePx": 12,
+    "metaPx": 11,
+    "h1Px": 22,
+    "h2Px": 17,
+    "fontWeights": [400, 500, 600, 700]
+  },
+  "spacingPx": [4, 8, 12, 16, 20, 24, 32],
+  "radiiPx": {
+    "control": 6,
+    "panel": 9,
+    "dialog": 12,
+    "node": 10
+  },
+  "layoutPx": {
+    "titleBarHeight": 38,
+    "commandBarHeight": 52,
+    "navigationRailWidth": 64,
+    "navigationExpandedWidth": 220,
+    "nodePaletteWidth": 240,
+    "inspectorWidth": 312,
+    "executionDockDefaultHeight": 220,
+    "minimumWindowWidth": 1120,
+    "minimumWindowHeight": 700,
+    "targetWidth": 1600,
+    "targetHeight": 900
+  },
+  "motion": {
+    "microMs": 150,
+    "panelMs": 200,
+    "reducedMotionSupported": true
+  }
+}

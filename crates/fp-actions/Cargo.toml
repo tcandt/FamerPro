@@ -1,0 +1,13 @@
+[package]
+name = "fp-actions"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fp-domain = { path = "../fp-domain" }
+rand.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+serde.workspace = true
