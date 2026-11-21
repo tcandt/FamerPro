@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 520" width="1400" height="520">
+  <defs>
+    <style>
+      text { font-family: 'Segoe UI', Inter, Roboto, Arial, sans-serif; fill: #EDF3FC; }
+      .mono { font-family: Consolas, 'Courier New', monospace; }
+      .title { font-size: 20px; font-weight: 700; fill: #FFFFFF; }
+      .subtitle { font-size: 12.5px; font-weight: 500; fill: #8FA2BC; }
+      .zone-title { font-size: 13.5px; font-weight: 700; letter-spacing: 0.4px; }
+      .box-title { font-size: 13px; font-weight: 700; fill: #FFFFFF; }
+      .box-sub { font-size: 11px; font-weight: 400; fill: #A9B8CC; }
+      .box-code { font-family: Consolas, monospace; font-size: 10.5px; fill: #38BDF8; }
+      .badge { font-size: 10px; font-weight: 700; }
+      .edge-label { font-size: 10.5px; font-weight: 600; fill: #38BDF8; }
+    </style>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38BDF8"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#3BC38D"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#E7B15B"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#F27883"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B291F7"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1400" height="520" rx="10" fill="#0D131D" stroke="#2A3647" stroke-width="2"/>
+  <rect x="0" y="0" width="1400" height="56" rx="10" fill="#141C28"/>
+  <line x1="0" y1="56" x2="1400" y2="56" stroke="#2A3647" stroke-width="1.5"/>
+  <text x="22" y="25" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="18.5" font-weight="700">SƠ ĐỒ IV.7 — MINI TOOL UI SCHEMA RENDERER ARCHITECTURE</text>
+  <text x="22" y="45" fill="#9FB2CC" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="500">Cơ chế dựng giao diện Mini Tool động 100% từ bundle/ui-schema.json và kiểm soát Module 5 trạng thái</text>
+  
+  <rect x="18" y="72" width="410" height="430" rx="8" fill="#181A22" stroke="#E7B15B" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="30" y="61" width="268" height="21" rx="4" fill="#16202F" stroke="#E7B15B" stroke-width="1.2"/>
+  <text x="38" y="76" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">1. SIGNED BUNDLE INPUTS (bundle/)</text>
+<rect x="34" y="102" width="378" height="186" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="34" y="102" width="5" height="186" rx="2" fill="#E7B15B"/>
+  <text x="48" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">bundle/ui-schema.json (MiniToolUiSchema v1)</text>
+  <text x="48" y="139" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">{</text>
+  <text x="48" y="153.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">  &quot;schemaVersion&quot;: 1,</text>
+  <text x="48" y="168.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">  &quot;layoutPreset&quot;: &quot;compact_2_col&quot;,</text>
+  <text x="48" y="182.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">  &quot;branding&quot;: { &quot;accentColor&quot;: &quot;#F59E0B&quot;, ... },</text>
+  <text x="48" y="197.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">  &quot;deviceColumns&quot;: [</text>
+  <text x="48" y="211.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">    {&quot;key&quot;:&quot;char_level&quot;,&quot;label&quot;:&quot;Cấp&quot;,&quot;fallback&quot;:&quot;Chưa OCR (-)&quot;}</text>
+  <text x="48" y="226.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">  ],</text>
+  <text x="48" y="240.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">  &quot;taskCategories&quot;: [{&quot;id&quot;:&quot;quest&quot;,&quot;shortTag&quot;:&quot;NV&quot;}],</text>
+  <text x="48" y="255.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">  &quot;tasks&quot;: [{&quot;id&quot;:&quot;task-jx2-main&quot;,&quot;settingsSchema&quot;:[...]}]</text>
+  <text x="48" y="269.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">}</text>
+<rect x="34" y="306" width="378" height="180" rx="6" fill="#142524" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="34" y="306" width="5" height="180" rx="2" fill="#3BC38D"/>
+  <text x="48" y="326" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">bundle/manifest.fpbundle.json &amp; signature.fpbundle.json</text>
+  <text x="48" y="343" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Đã xác thực chữ ký Ed25519 khớp khóa PE RT_RCDATA #7777</text>
+  <text x="48" y="357.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Danh sách `packagedModules`: quyết định module nào được phép</text>
+  <text x="48" y="372.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">  hiển thị và khởi tạo trong Mini Tool</text>
+  <text x="48" y="386.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Tuyệt đối không tải bất kỳ giao diện nào trước khi Verify PASS</text>
+  <text x="48" y="401.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Zero Hardcoded Game Strings in fp-mini-runtime.exe</text>
+
+  <rect x="456" y="72" width="430" height="430" rx="8" fill="#111927" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="468" y="61" width="406" height="21" rx="4" fill="#16202F" stroke="#38BDF8" stroke-width="1.2"/>
+  <text x="476" y="76" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">2. DYNAMIC SCHEMA RENDERER ENGINE (apps/mini-runtime)</text>
+<rect x="474" y="102" width="394" height="86" rx="6" fill="#152333" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="474" y="102" width="5" height="86" rx="2" fill="#38BDF8"/>
+  <text x="488" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">A. Theme &amp; Branding Injector</text>
+  <text x="488" y="139" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Áp dụng CSS Variables động: `--accent`, `--header-bg`, `--badge`</text>
+  <text x="488" y="153.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Cập nhật tiêu đề cửa sổ Windows &amp; thông tin Game Package ID</text>
+  <text x="488" y="168.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">JX2 = Amber (#F59E0B) | Kingdom SLG = Emerald (#10B981)</text>
+<rect x="474" y="200" width="394" height="92" rx="6" fill="#142624" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="474" y="200" width="5" height="92" rx="2" fill="#3BC38D"/>
+  <text x="488" y="220" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">B. Truthful Dynamic OCR Device Table Renderer</text>
+  <text x="488" y="237" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Sinh cột bảng thiết bị từ mảng `deviceColumns` trong schema</text>
+  <text x="488" y="251.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Khi chưa chạy bước `vision.ocr` thật, bắt buộc hiển thị `Chưa OCR (-)`</text>
+  <text x="488" y="266.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Chỉ hiển thị giá trị khi `updatedRuntimeVars` có dữ liệu OCR thật</text>
+  <text x="488" y="280.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Chống tuyệt đối việc hiển thị chỉ số nhân vật giả lập</text>
+<rect x="474" y="304" width="394" height="92" rx="6" fill="#1B1E32" stroke="#B291F7" stroke-width="1.5"/>
+  <rect x="474" y="304" width="5" height="92" rx="2" fill="#B291F7"/>
+  <text x="488" y="324" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">C. Category Tabs, Task Queue &amp; Dynamic Settings Form</text>
+  <text x="488" y="341" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Tự động sinh thanh lọc danh mục (`Tất cả`, `[NV]`, `[PB]`, `[HĐ]`...)</text>
+  <text x="488" y="355.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Tự động render form cấu hình theo từng Task (`boolean`, `number`, `select`)</text>
+  <text x="488" y="370.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Không cần viết code React/HTML riêng cho từng game</text>
+<rect x="474" y="408" width="394" height="80" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="474" y="408" width="5" height="80" rx="2" fill="#E7B15B"/>
+  <text x="488" y="428" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">D. 5-State Module &amp; Dependency Audit Panel</text>
+  <text x="488" y="445" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Chỉ hiển thị các module có `packagedInRelease &amp;&amp; permittedToInitialize`</text>
+  <text x="488" y="459.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Hiển thị ghi chú kỹ thuật trung thực (VD: giới hạn UDP của SOCKS5 Proxy)</text>
+
+  <rect x="914" y="72" width="468" height="430" rx="8" fill="#101E22" stroke="#3BC38D" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="926" y="61" width="283" height="21" rx="4" fill="#16202F" stroke="#3BC38D" stroke-width="1.2"/>
+  <text x="934" y="76" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">3. MULTI-GAME STANDALONE UI OUTPUTS</text>
+<rect x="932" y="102" width="432" height="182" rx="6" fill="#22201A" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="932" y="102" width="5" height="182" rx="2" fill="#E7B15B"/>
+  <text x="946" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Output UI #1: Auto Võ Hiệp 2 Mobile v1.0.0</text>
+  <text x="946" y="139" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Theme: Võ Hiệp Amber (#F59E0B) | Layout: compact_2_col</text>
+  <text x="946" y="153.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Cột thiết bị: Thiết bị | Trạng thái | Cấp | Vàng | Bạc</text>
+  <text x="946" y="168.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Nhóm Task: [NV] Nhiệm vụ | [PB] Phó bản | [HĐ] Hoạt động (5 Tasks)</text>
+  <text x="946" y="182.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Modules Active (5/6): ADB, Vision/OCR, Vault, SOCKS5 Proxy, Watchdog</text>
+  <text x="946" y="197.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Ảnh chụp thực tế: screenshots/p1_poc/p1_1_auto_jx2_truthful.png</text>
+<rect x="932" y="304" width="432" height="182" rx="6" fill="#142724" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="932" y="304" width="5" height="182" rx="2" fill="#3BC38D"/>
+  <text x="946" y="324" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Output UI #2: Auto Kingdom Rise SLG v1.0.0</text>
+  <text x="946" y="341" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Theme: Chiến Thuật Emerald (#10B981) | Layout: compact_2_col</text>
+  <text x="946" y="355.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Cột thiết bị: Thiết bị | Thành Chính | Lương Thực | Gỗ | Quân Lực</text>
+  <text x="946" y="370.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Nhóm Task: [Nông Nghiệp] | [Quân Sự] | [Liên Minh] (4 Tasks)</text>
+  <text x="946" y="384.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Modules Active (4/6): ADB, Vision/OCR, Vault, Watchdog (Proxy ẩn)</text>
+  <text x="946" y="399.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Ảnh chụp thực tế: screenshots/p1_poc/p1_1_auto_slg_truthful.png</text>
+<line x1="412" y1="195" x2="474" y2="150" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
+  <rect x="400.2" y="162.5" width="85.5" height="17" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
+  <text x="443.0" y="174.5" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">Schema JSON</text>
+<line x1="412" y1="380" x2="474" y2="440" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="413.2" y="400.0" width="59.5" height="17" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
+  <text x="443.0" y="412.0" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">5-State</text>
+<line x1="868" y1="200" x2="932" y2="190" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
+  <rect x="850.8" y="185.0" width="98.5" height="17" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
+  <text x="900.0" y="197.0" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">Render Game 1</text>
+<line x1="868" y1="310" x2="932" y2="380" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="850.8" y="335.0" width="98.5" height="17" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
+  <text x="900.0" y="347.0" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">Render Game 2</text>
+</svg>

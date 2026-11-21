@@ -1,0 +1,18 @@
+flowchart TB
+    subgraph HOST["Rust Host Process (No Raw Shell Interpolation)"]
+        RUNNER["fp-adb::AdbRunner\ntokio::process::Command::new(adb_path).args(&[...])"]
+        DISC["Device Discovery & LAN TCP Scanner\n(USB Serials + 127.0.0.1:5555..5585 + LAN /24)"]
+        EMU["Emulator Adapter Controller\n(LDPlayer ldconsole.exe / Nox / BlueStacks)"]
+        ACTOR["fp-device::DeviceActor\n(Per-Device Mailbox + Generation Fencing Token)"]
+        GEOM["Geometry & Orientation Normalizer\n(wm size 1280x720 + Rotation 0/90/180/270 Transform)"]
+    end
+    subgraph TARGETS["Connected Android Targets"]
+        LD["LDPlayer Instance (emulator-5554 / SM_X710N)"]
+        TCP["TCP/IP Android Device (192.168.1.x:5555)"]
+    end
+    DISC --> RUNNER
+    EMU --> LD
+    ACTOR --> GEOM
+    GEOM --> RUNNER
+    RUNNER --> LD
+    RUNNER --> TCP

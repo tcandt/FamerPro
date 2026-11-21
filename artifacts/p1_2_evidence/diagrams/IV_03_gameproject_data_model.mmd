@@ -1,0 +1,12 @@
+erDiagram
+    PROJECTS ||--o{ PROJECT_MODULES : configures
+    PROJECTS ||--o{ VISION_TEMPLATES : owns
+    PROJECTS ||--o{ WORKFLOWS : contains
+    PROJECTS ||--o{ TASK_DEFINITIONS : publishes
+    PROJECTS ||--|| MINI_TOOL_SCHEMAS : defines_ui
+    PROJECTS ||--o{ PROJECT_RELEASES : builds
+    PROJECTS ||--o{ ACCOUNTS : scopes_vault
+    PROJECTS ||--o{ JOBS : records_runs
+    WORKFLOWS ||--o{ TASK_DEFINITIONS : mapped_to
+    JOBS ||--o{ STEP_EVENTS : emits
+    JOBS ||--o{ CHECKPOINTS : saves

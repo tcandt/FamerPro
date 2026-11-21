@@ -1,0 +1,18 @@
+flowchart LR
+    subgraph QUEUE["Project Task Queue"]
+        T1["Task #1 [NV] Priority 1"]
+        T2["Task #2 [PB] Priority 2"]
+        T3["Task #3 [HĐ] Priority 3"]
+    end
+    subgraph SCHED["fp-scheduler::DeviceScheduler"]
+        PQ["BinaryHeap Priority Queue"]
+        LEASE["Per-Device Lease Table\n(device_id -> LeaseHolder + Generation u64)"]
+    end
+    subgraph WORKERS["Isolated Tokio Device Workers"]
+        W_A["Worker A: emulator-5554\n(Lease Gen #14)"]
+        W_B["Worker B: emulator-5556\n(Lease Gen #08)"]
+    end
+    T1 & T2 & T3 --> PQ
+    PQ --> LEASE
+    LEASE -->|Exclusive Lease Gen #14| W_A
+    LEASE -->|Exclusive Lease Gen #08| W_B

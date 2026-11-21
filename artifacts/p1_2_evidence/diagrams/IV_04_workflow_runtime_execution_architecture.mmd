@@ -1,0 +1,12 @@
+flowchart LR
+    START(["flow.start"]) --> CAP["vision.capture\n(AdbRunner screencap -p PNG)"]
+    CAP --> FIND["vision.find_image\n(Multiscale SSD Template Match)"]
+    FIND -->|Matched >= minConfidence| SAFE["action.random_safe_tap\n(18% Margin Shrink + Exclusion Masks)"]
+    FIND -->|Below Threshold| RETRY{"Retry Policy\n(Attempt <= Max?)"}
+    RETRY -->|Yes + Backoff| CAP
+    RETRY -->|Exhausted| FAIL(["JobState::Failed\n(Emit step_failed event)"])
+    SAFE --> TAP["AdbRunner: shell input tap X Y\n(Explicit Args Vector)"]
+    TAP --> WAIT["flow.wait / Post-Condition"]
+    WAIT --> OCR["vision.ocr\n(WinRT OcrEngine Extract Text/Vars)"]
+    OCR --> CP["state.checkpoint\n(Atomic SQLite WAL Persist)"]
+    CP --> END(["flow.end (Succeeded)"])

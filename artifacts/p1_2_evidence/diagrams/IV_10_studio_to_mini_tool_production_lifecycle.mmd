@@ -1,0 +1,20 @@
+flowchart LR
+    subgraph CORE["Unchanged Shared Rust Core (14 Crates)"]
+        CRATES["fp-domain · fp-adb · fp-device · fp-vision · fp-actions\nfp-workflow-schema · fp-workflow-runtime · fp-scheduler\nfp-storage · fp-security · fp-bundle-contract · fp-bundle-verify"]
+    end
+    subgraph STUDIO_PROJECTS["FarmerPro Studio Multi-Game Projects"]
+        P_A["Game Project A: jx2-mobile\n(2 Workflows, 4 PNGs, 5 Tasks, 5 Modules)"]
+        P_B["Game Project B: kingdom-slg\n(1 Workflow, 3 PNGs, 4 Tasks, 4 Modules)"]
+        P_N["Game Project N: new-rpg-game\n(Custom Workflows, PNGs, Tasks, Modules)"]
+    end
+    subgraph PACKAGER["fp-builder (No Rust Recompile Needed)"]
+        BLD["MiniToolPackager::build_and_export_release()"]
+    end
+    subgraph RELEASES["Independent Commercial Mini Auto-Tools"]
+        OUT_A["Auto_JX2_Mobile.exe (Amber UI, 5 Tasks)"]
+        OUT_B["Auto_Kingdom_SLG.exe (Emerald UI, 4 Tasks)"]
+        OUT_N["Auto_New_RPG.exe (Custom Theme & Tasks)"]
+    end
+    CRATES --> BLD
+    P_A & P_B & P_N --> BLD
+    BLD --> OUT_A & OUT_B & OUT_N

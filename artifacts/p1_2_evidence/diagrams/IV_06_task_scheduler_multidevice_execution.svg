@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 520" width="1400" height="520">
+  <defs>
+    <style>
+      text { font-family: 'Segoe UI', Inter, Roboto, Arial, sans-serif; fill: #EDF3FC; }
+      .mono { font-family: Consolas, 'Courier New', monospace; }
+      .title { font-size: 20px; font-weight: 700; fill: #FFFFFF; }
+      .subtitle { font-size: 12.5px; font-weight: 500; fill: #8FA2BC; }
+      .zone-title { font-size: 13.5px; font-weight: 700; letter-spacing: 0.4px; }
+      .box-title { font-size: 13px; font-weight: 700; fill: #FFFFFF; }
+      .box-sub { font-size: 11px; font-weight: 400; fill: #A9B8CC; }
+      .box-code { font-family: Consolas, monospace; font-size: 10.5px; fill: #38BDF8; }
+      .badge { font-size: 10px; font-weight: 700; }
+      .edge-label { font-size: 10.5px; font-weight: 600; fill: #38BDF8; }
+    </style>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38BDF8"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#3BC38D"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#E7B15B"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#F27883"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B291F7"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1400" height="520" rx="10" fill="#0D131D" stroke="#2A3647" stroke-width="2"/>
+  <rect x="0" y="0" width="1400" height="56" rx="10" fill="#141C28"/>
+  <line x1="0" y1="56" x2="1400" y2="56" stroke="#2A3647" stroke-width="1.5"/>
+  <text x="22" y="25" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="18.5" font-weight="700">SƠ ĐỒ IV.6 — TASK SCHEDULER &amp; MULTI-DEVICE EXECUTION ARCHITECTURE</text>
+  <text x="22" y="45" fill="#9FB2CC" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="500">Hàng đợi ưu tiên, cấp phát Lease độc quyền từng thiết bị và cơ chế Generation Token Fencing chống xung đột</text>
+  
+  <rect x="18" y="72" width="390" height="430" rx="8" fill="#111927" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="30" y="61" width="276" height="21" rx="4" fill="#16202F" stroke="#38BDF8" stroke-width="1.2"/>
+  <text x="38" y="76" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">1. PROJECT TASK QUEUE &amp; PRIORITIES</text>
+<rect x="34" y="102" width="358" height="86" rx="6" fill="#162438" stroke="#1878F5" stroke-width="1.5"/>
+  <rect x="34" y="102" width="5" height="86" rx="2" fill="#38BDF8"/>
+  <text x="48" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Task #1 [NV] Chính Tuyến &amp; Dã Tẩu (Priority 1)</text>
+  <text x="48" y="139" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Workflow: wf-jx2-main-quest | Est: 180s</text>
+  <text x="48" y="153.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Params: auto_skip_dialog=true, max_quest_loops=10</text>
+  <text x="48" y="168.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Hạng ưu tiên cao nhất trong BinaryHeap</text>
+<rect x="34" y="202" width="358" height="86" rx="6" fill="#142624" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="34" y="202" width="5" height="86" rx="2" fill="#3BC38D"/>
+  <text x="48" y="222" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Task #2 [NV] Kiểm tra ADB Thật + OCR (Priority 2)</text>
+  <text x="48" y="239" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Workflow: wf-jx2-live-adb-probe | Est: 15s</text>
+  <text x="48" y="253.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Nodes: capture -&gt; find_image -&gt; safe_tap -&gt; ocr -&gt; cp</text>
+  <text x="48" y="268.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Đã kiểm chứng thực tế trên emulator-5554</text>
+<rect x="34" y="302" width="358" height="86" rx="6" fill="#1B1E32" stroke="#B291F7" stroke-width="1.5"/>
+  <rect x="34" y="302" width="5" height="86" rx="2" fill="#B291F7"/>
+  <text x="48" y="322" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Task #3 [PB] Sơn Tặc Mật Quật (Priority 3)</text>
+  <text x="48" y="339" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Workflow: wf-jx2-dungeon | Est: 300s</text>
+  <text x="48" y="353.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Params: difficulty=&#x27;Anh Hùng&#x27;, auto_heal_pct=45</text>
+  <text x="48" y="368.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Chờ Lease thiết bị giải phóng</text>
+<rect x="34" y="402" width="358" height="84" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="34" y="402" width="5" height="84" rx="2" fill="#E7B15B"/>
+  <text x="48" y="422" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Task #4 [Nông Nghiệp] Thu Hoạch SLG (Project #2)</text>
+  <text x="48" y="439" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Workflow: wf-slg-harvest-and-patrol | Est: 90s</text>
+  <text x="48" y="453.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Chạy độc lập trên tiến trình Auto_Kingdom_SLG.exe</text>
+
+  <rect x="436" y="72" width="450" height="430" rx="8" fill="#161B24" stroke="#E7B15B" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="448" y="61" width="426" height="21" rx="4" fill="#16202F" stroke="#E7B15B" stroke-width="1.2"/>
+  <text x="456" y="76" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">2. SCHEDULER, LEASE MANAGER &amp; FENCING (crates/fp-scheduler)</text>
+<rect x="454" y="102" width="414" height="118" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="454" y="102" width="5" height="118" rx="2" fill="#E7B15B"/>
+  <text x="468" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Priority Dispatcher (BinaryHeap&lt;ScheduledJob&gt;)</text>
+  <text x="468" y="139" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Sắp xếp nhiệm vụ theo `priority ASC`, sau đó theo thời점 enqueue</text>
+  <text x="468" y="153.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Hỗ trợ hủy nhiệm vụ tức thì (`CancellationToken` / `stop_active_job`)</text>
+  <text x="468" y="168.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Không bao giờ cấp phát 2 job cùng lúc lên 1 serial thiết bị</text>
+  <text x="468" y="182.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">test_priority_queue_ordering (PASS)</text>
+<rect x="454" y="236" width="414" height="130" rx="6" fill="#251922" stroke="#F27883" stroke-width="1.5"/>
+  <rect x="454" y="236" width="5" height="130" rx="2" fill="#F27883"/>
+  <text x="468" y="256" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Exclusive Device Lease &amp; Generation Token Table</text>
+  <text x="468" y="273" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Bảng khóa thiết bị: `HashMap&lt;DeviceId, LeaseRecord&gt;`</text>
+  <text x="468" y="287.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Khi cấp Lease mới cho `emulator-5554`: tăng `generation_token` (VD: #14 -&gt; #15)</text>
+  <text x="468" y="302.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Nếu luồng cũ (Gen #14) bị treo mạng và cố gửi lệnh tap trễ, `DeviceActor`</text>
+  <text x="468" y="316.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">  đối chiếu `cmd.gen (14) != current_gen (15)` -&gt; TỪ CHỐI NGAY LẬP TỨC!</text>
+  <text x="468" y="331.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">test_device_lease_exclusion_and_fencing (PASS)</text>
+<rect x="454" y="382" width="414" height="104" rx="6" fill="#152333" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="454" y="382" width="5" height="104" rx="2" fill="#38BDF8"/>
+  <text x="468" y="402" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">SQLite WAL Lease &amp; Checkpoint Persistence</text>
+  <text x="468" y="419" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Lưu trạng thái Lease và Checkpoint vào bảng `device_leases` &amp; `checkpoints`</text>
+  <text x="468" y="433.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Tự động thu hồi Lease mồ côi khi khởi động lại ứng dụng</text>
+
+  <rect x="914" y="72" width="468" height="430" rx="8" fill="#101E22" stroke="#3BC38D" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="926" y="61" width="305" height="21" rx="4" fill="#16202F" stroke="#3BC38D" stroke-width="1.2"/>
+  <text x="934" y="76" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">3. ISOLATED MULTI-DEVICE TOKIO WORKERS</text>
+<rect x="932" y="102" width="432" height="180" rx="6" fill="#142725" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="932" y="102" width="5" height="180" rx="2" fill="#3BC38D"/>
+  <text x="946" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Worker Thread A -&gt; Target: emulator-5554</text>
+  <text x="946" y="139" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Holder: Job `mini-job-cf950745` | Lease Generation: #15</text>
+  <text x="946" y="153.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• State: RUNNING -&gt; SUCCEEDED (19 StepEvents)</text>
+  <text x="946" y="168.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Tuyệt đối không bị can thiệp bởi các job đang chờ trong hàng đợi</text>
+  <text x="946" y="182.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Giải phóng Lease ngay khi kết thúc hoặc khi bấm `Dừng khẩn`</text>
+  <text x="946" y="197.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Cách ly tài nguyên 100% theo DeviceId</text>
+<rect x="932" y="304" width="432" height="182" rx="6" fill="#152333" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="932" y="304" width="5" height="182" rx="2" fill="#38BDF8"/>
+  <text x="946" y="324" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Worker Thread B -&gt; Target: emulator-5556</text>
+  <text x="946" y="341" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Holder: Job `slg-job-8821a` | Lease Generation: #08</text>
+  <text x="946" y="355.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Thực thi song song trên thiết bị giả lập thứ 2</text>
+  <text x="946" y="370.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Có bộ biến Runtime (`ocr_text`, `food_stock`) và Checkpoint riêng biệt</text>
+  <text x="946" y="384.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Không chia sẻ trạng thái mutable với Worker A</text>
+  <text x="946" y="399.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">test_multi_device_concurrent_isolation_and_fencing (PASS)</text>
+<line x1="392" y1="150" x2="454" y2="150" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="393.2" y="140.0" width="59.5" height="17" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
+  <text x="423.0" y="152.0" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">Enqueue</text>
+<line x1="392" y1="245" x2="454" y2="180" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="393.2" y="202.5" width="59.5" height="17" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
+  <text x="423.0" y="214.5" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">Enqueue</text>
+<line x1="868" y1="280" x2="932" y2="190" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="850.8" y="225.0" width="98.5" height="17" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
+  <text x="900.0" y="237.0" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">Lease Gen #15</text>
+<line x1="868" y1="320" x2="932" y2="380" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="850.8" y="340.0" width="98.5" height="17" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
+  <text x="900.0" y="352.0" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">Lease Gen #08</text>
+</svg>
