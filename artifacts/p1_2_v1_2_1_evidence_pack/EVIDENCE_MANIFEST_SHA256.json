@@ -1,0 +1,533 @@
+{
+  "packageVersion": "v1.2.1-REVIEW",
+  "generatedAt": "2026-11-21T22:03:36.040940+07:00",
+  "headCommitAtPackaging": "130d254e3546f4d3c11af2b14bdbf65848ac1320",
+  "totalFiles": 105,
+  "files": [
+    {
+      "relativePath": "01_pdf_deliverables/CHANGELOG_v1_2_0_TO_v1_2_1.md",
+      "sizeBytes": 3533,
+      "sha256": "1cf2905cf57fd407a6c7e890f8793b5a902894f73a35b4a635c17d230a9c9704"
+    },
+    {
+      "relativePath": "01_pdf_deliverables/FARMERPRO_P1_2_ARCHITECTURE_UX_ACCEPTANCE_REPORT.pdf",
+      "sizeBytes": 13116084,
+      "sha256": "d0bf16d1720c4deaf7f5995534ae4d8056ff4321587c06770bac13bb5540acda"
+    },
+    {
+      "relativePath": "01_pdf_deliverables/pdf_quality_assurance_report.json",
+      "sizeBytes": 17800,
+      "sha256": "addf3a4df38220001c31c66b961908daab150876ffe0a248643bec0e9f15c178"
+    },
+    {
+      "relativePath": "02_blueprint_and_specs/FARMERPRO_P1_2_STUDIO_BLUEPRINT.md",
+      "sizeBytes": 77867,
+      "sha256": "7d70ecc6f36e211e5d1d97c3c675ac71fb7381e295d1576f40b93ba64c35f665"
+    },
+    {
+      "relativePath": "02_blueprint_and_specs/ui-schema.jx2-mobile.json",
+      "sizeBytes": 4275,
+      "sha256": "eacd001c21f8d9530f6db18763e281e1cd9a9d462c7c52982e9629194ef97df7"
+    },
+    {
+      "relativePath": "02_blueprint_and_specs/ui-schema.kingdom-slg.json",
+      "sizeBytes": 3990,
+      "sha256": "7b20e3ccf466c300a8d1a20bfa8a4ce62fd4d90a113e17dda0f29ff920b0029d"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/01_adb_devices_live.log",
+      "sizeBytes": 254,
+      "sha256": "00dfd305cef758e74dcbcb066216550cbd574ba88a7feb9f06386d3526820ee3"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/02_cargo_tree_mini_runtime.log",
+      "sizeBytes": 2248,
+      "sha256": "2d550d27947e0d5c804195e0951007ffd94002ba5b0bc642f6e85b4baa4afdf7"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/03_ed25519_unit_tests.log",
+      "sizeBytes": 1526,
+      "sha256": "59f2de6a313b8b15af2fa5c75d6a871012df130aff17d3e8280a2d0af470f96f"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/05_binary_no_secret_key_proof.jsonl",
+      "sizeBytes": 1558,
+      "sha256": "dc5093084552809abe46a76a7fcb1a88f189f7551074bbe9e5adf0ed6fbdf45e"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/07_adb_device_props.txt",
+      "sizeBytes": 88,
+      "sha256": "68dd7b1d8c46fbb9d623d2f54d4625201db27dee0ec33257d0abc211c1d12fb8"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/09_live_adb_workflow_execution.json",
+      "sizeBytes": 14594,
+      "sha256": "81324272002974efda8027e1303ba920a49dd65aa7279e47a772baabf3a11064"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/11_live_adb_workflow_cancelled.json",
+      "sizeBytes": 3194,
+      "sha256": "5181316e9bb8256c785cf9ce3085f74a127738cc8a0629135ea430ece9f7c593"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/12_windows_acl_readonly_proof.json",
+      "sizeBytes": 978,
+      "sha256": "0df3dd71bc635da342b6a18fc9287f00044330e0ba34ef129ee0188f2f33e663"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/13_sqlite_backup_restore_migration_proof.json",
+      "sizeBytes": 1034,
+      "sha256": "fb1d631da2c0df6b7c296088df69864bb37d6c462e8550dbb1686da22ad31c4c"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/cargo_test_workspace_p1_2.log",
+      "sizeBytes": 16466,
+      "sha256": "ea55cbc2b96d0c28a7c6674993c17f312203291dc1c2fedbbd13b780c4b26ddc"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/export_poc_tools_pe_root_of_trust.json",
+      "sizeBytes": 32828,
+      "sha256": "d3aa3a911a4e9339337f57142daf7f4bbea7083f7f300566bb6f3c334b96e758"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/tamper_suite_5_cases_pe_root_of_trust.json",
+      "sizeBytes": 3388,
+      "sha256": "7ca569724c3dba334f08d60db85034ae3c325e366ad70d64fbbc2fd9a69629f9"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/tamper_suite_kingdom_slg_pe_root_of_trust.json",
+      "sizeBytes": 3388,
+      "sha256": "7ca569724c3dba334f08d60db85034ae3c325e366ad70d64fbbc2fd9a69629f9"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/verify_bundle_kingdom_slg_pe_root_of_trust.json",
+      "sizeBytes": 8770,
+      "sha256": "2e27f4d97abf86c06fc87383923154f453c6064e0f3a8578c1eabef8b5029c4e"
+    },
+    {
+      "relativePath": "03_raw_logs_and_json/verify_bundle_pe_root_of_trust.json",
+      "sizeBytes": 8738,
+      "sha256": "ea05a430efdcc5b9d601f20374a986e7886be25e3ce83e26d9427fb97b034b13"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_adb_after_screen.png",
+      "sizeBytes": 519330,
+      "sha256": "9ee0fd8726e77b7bad3f4a7cb3b914a8f1536a7566b6ea27f5d9f8d0e3cf5774"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_adb_before_screen.png",
+      "sizeBytes": 559100,
+      "sha256": "685df76f6b667869ce6e12f9ea61a7a868077c19dc5bb55d5f95fce0b003cf40"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_adb_cropped_template.png",
+      "sizeBytes": 3815,
+      "sha256": "9ae3d5da05db9304919810f8f75133508bde4befb67b7ad3e4a5a6256d3b815d"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_mini_tool_jx2_mobile.png",
+      "sizeBytes": 85248,
+      "sha256": "2eae83fb4f944d2e2ceef8d402a7c9d4f19a632bbaf67935135b231ffc23e991"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_mini_tool_kingdom_slg.png",
+      "sizeBytes": 85536,
+      "sha256": "fa4600f90b02b1c9b865cff6036c5784918d7486ac0beb99f07319efdb3844c0"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_studio_01_tong_quan.png",
+      "sizeBytes": 245912,
+      "sha256": "d05f3bfea3d9e846b1f19db70c5a26286972fea490a814768488d0ed5db1c988"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_studio_02_thiet_bi_android.png",
+      "sizeBytes": 193057,
+      "sha256": "b800eb3900121447e3f08af62a30d9172fc87f0c6257962508a7ac683decb70a"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_studio_03_kho_quy_trinh_jx2.png",
+      "sizeBytes": 202884,
+      "sha256": "d682ae5e2041dcfa13f8351749f0f9569e35a656a532cc91df81ecc08f6085e9"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_studio_04_workflow_studio.png",
+      "sizeBytes": 351317,
+      "sha256": "3db14669bac2e87ed89560da6a41076dd3df71798ef49b9c09244e303bef0c94"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_studio_05_bo_nhiem_vu.png",
+      "sizeBytes": 181625,
+      "sha256": "3b8bffede12c8a4b4760461138c0561d3da681781a05160b56e02788ae1a0834"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_studio_06_phien_chay.png",
+      "sizeBytes": 220128,
+      "sha256": "dd1a87476936ce390006c1b9283d79fde11232d5b4d649393f7aeaf74d4de7f6"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_studio_07_tai_khoan_vault.png",
+      "sizeBytes": 187416,
+      "sha256": "57e477fad4df7273becad2da3457a38ec6d827cca0fca135a731de24670d0505"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_studio_08_mang_proxy.png",
+      "sizeBytes": 182906,
+      "sha256": "058fbea583e58840d6ecf0675cd2558c82becdcdbbc1d291336cbe1f4c0ea4c2"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_studio_09_design_tokens.png",
+      "sizeBytes": 252301,
+      "sha256": "f03999a02bc747a299eb4c9ee4cd3f75a8cfdb2566ed59d69cea64996e6c7d33"
+    },
+    {
+      "relativePath": "04_screenshots_actual/actual_studio_10_cai_dat_adb.png",
+      "sizeBytes": 179917,
+      "sha256": "8b81cba0f2d1ec074e202c0fbbdf776e426cfab271b3d5ee4590024e77260762"
+    },
+    {
+      "relativePath": "04_screenshots_actual/raw_tab_01_tong_quan.png",
+      "sizeBytes": 245912,
+      "sha256": "d05f3bfea3d9e846b1f19db70c5a26286972fea490a814768488d0ed5db1c988"
+    },
+    {
+      "relativePath": "04_screenshots_actual/raw_tab_02_thiet_bi_android.png",
+      "sizeBytes": 193057,
+      "sha256": "b800eb3900121447e3f08af62a30d9172fc87f0c6257962508a7ac683decb70a"
+    },
+    {
+      "relativePath": "04_screenshots_actual/raw_tab_03_kho_quy_trinh_jx2.png",
+      "sizeBytes": 202884,
+      "sha256": "d682ae5e2041dcfa13f8351749f0f9569e35a656a532cc91df81ecc08f6085e9"
+    },
+    {
+      "relativePath": "04_screenshots_actual/raw_tab_04_workflow_studio.png",
+      "sizeBytes": 351317,
+      "sha256": "3db14669bac2e87ed89560da6a41076dd3df71798ef49b9c09244e303bef0c94"
+    },
+    {
+      "relativePath": "04_screenshots_actual/raw_tab_05_bo_nhiem_vu.png",
+      "sizeBytes": 181625,
+      "sha256": "3b8bffede12c8a4b4760461138c0561d3da681781a05160b56e02788ae1a0834"
+    },
+    {
+      "relativePath": "04_screenshots_actual/raw_tab_06_phien_chay.png",
+      "sizeBytes": 220128,
+      "sha256": "dd1a87476936ce390006c1b9283d79fde11232d5b4d649393f7aeaf74d4de7f6"
+    },
+    {
+      "relativePath": "04_screenshots_actual/raw_tab_07_tai_khoan_vault.png",
+      "sizeBytes": 187416,
+      "sha256": "57e477fad4df7273becad2da3457a38ec6d827cca0fca135a731de24670d0505"
+    },
+    {
+      "relativePath": "04_screenshots_actual/raw_tab_08_mang_proxy.png",
+      "sizeBytes": 182906,
+      "sha256": "058fbea583e58840d6ecf0675cd2558c82becdcdbbc1d291336cbe1f4c0ea4c2"
+    },
+    {
+      "relativePath": "04_screenshots_actual/raw_tab_09_design_tokens.png",
+      "sizeBytes": 252301,
+      "sha256": "f03999a02bc747a299eb4c9ee4cd3f75a8cfdb2566ed59d69cea64996e6c7d33"
+    },
+    {
+      "relativePath": "04_screenshots_actual/raw_tab_10_cai_dat_adb.png",
+      "sizeBytes": 179917,
+      "sha256": "8b81cba0f2d1ec074e202c0fbbdf776e426cfab271b3d5ee4590024e77260762"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_01_new_dashboard.png",
+      "sizeBytes": 347636,
+      "sha256": "fcbf01820cbae1b0cb2a4b2f6a05513d5cc1ce92c217e05abd04d2c994ca85e4"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_02_game_projects.png",
+      "sizeBytes": 362349,
+      "sha256": "d76690fcc9366bcfc56602d59f184632161d5df8de6d11fe0828c10b41b77598"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_03_workflow_studio.png",
+      "sizeBytes": 329074,
+      "sha256": "80d5e7c1f21bebf9631212db0fb13c9f8788f610405b8bba0d441ff33cab3f84"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_03b_workflow_studio_states.png",
+      "sizeBytes": 306077,
+      "sha256": "ed3e60804b384d940252dcba6456c9abeacaeb5e46ec088f3d2025b98df287c3"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_04_tasks_and_modules.png",
+      "sizeBytes": 298737,
+      "sha256": "93459761b8e9ca7157e76065120b611925f59a09b7d2eac95383f4624ae0af2d"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_05_device_lab.png",
+      "sizeBytes": 528935,
+      "sha256": "2cfb702074a41ff6e85f3eaf1122e627103d8fc60b3cbd9a991fb9a9a754d4bd"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_06_test_and_debug.png",
+      "sizeBytes": 697342,
+      "sha256": "ce4301809398df89975eb15decce4f21c98c1e44eb829e34b4b902afa4216c98"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_07_mini_tool_builder.png",
+      "sizeBytes": 326959,
+      "sha256": "0e66ef1799449aba449002377ad81f61dc82b45b5f173bfa9d05364f25aabde3"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_07b_mini_builder_layouts_states.png",
+      "sizeBytes": 269181,
+      "sha256": "4ea3d9e029d3b7b19ce98c3778a71986b3a34b3ab5210298db87271ae852ede5"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_08_release_management.png",
+      "sizeBytes": 296185,
+      "sha256": "b368f40488427026929fa6b2300e2ea10181791b2d18e68c28c1e88e3ce88d29"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_res_1280x720.png",
+      "sizeBytes": 194498,
+      "sha256": "f3e4fad495013122f0373e962ee5b3e4389e58710eba684ad0a3a2a80c446d08"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_res_1600x900.png",
+      "sizeBytes": 229004,
+      "sha256": "9991614a2cc90b041ba1af2c124fcea39ece3c2588b46caa842e16a7a179deab"
+    },
+    {
+      "relativePath": "05_ui_mockups_fullres/ui_res_1920x1080.png",
+      "sizeBytes": 229275,
+      "sha256": "a4c45e3224e41e5c4cd91d71c5c9a1b35d27d57be1b83a9f70dd511a4b73a712"
+    },
+    {
+      "relativePath": "06_diagrams_source/00_part1_overall_product_architecture.mmd",
+      "sizeBytes": 1246,
+      "sha256": "d92f45bb6960a076b0b44fc54cf3044d2e98d4b367172ba395af4564227e811b"
+    },
+    {
+      "relativePath": "06_diagrams_source/00_part1_overall_product_architecture.svg",
+      "sizeBytes": 18254,
+      "sha256": "fa3eac41beb30b64bb722e2049c42de30931dfb360eca8d8f005ef660b6c19f0"
+    },
+    {
+      "relativePath": "06_diagrams_source/00_part1b_studio_engine_builder_runtime_relationship.mmd",
+      "sizeBytes": 1481,
+      "sha256": "31fb118a8eb2acf65437d85eaaa30e633147558fe9b983e39272ed3a245f1e5e"
+    },
+    {
+      "relativePath": "06_diagrams_source/00_part1b_studio_engine_builder_runtime_relationship.svg",
+      "sizeBytes": 19598,
+      "sha256": "ade51c6de508ea135fd84aba97484f81eadf38b5b85fb067a08338f705b21b0f"
+    },
+    {
+      "relativePath": "06_diagrams_source/00_part2_before_vs_proposed_architecture.mmd",
+      "sizeBytes": 1474,
+      "sha256": "71a67a28862767bb0d820add69a63f95c2403411611c64a62bb9bf85913605ae"
+    },
+    {
+      "relativePath": "06_diagrams_source/00_part2_before_vs_proposed_architecture.svg",
+      "sizeBytes": 18488,
+      "sha256": "34241b5fd6800e713ae86714af53336bfdda2e9cc40ea2b98ab44adfe4a6cfa9"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_01_cargo_workspace_dependency_graph.mmd",
+      "sizeBytes": 1537,
+      "sha256": "b3b5ae4dc0acc7bf3dc58b8970b5360871f9ae7bd9cd595ce98413c69813fb12"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_01_cargo_workspace_dependency_graph.svg",
+      "sizeBytes": 17122,
+      "sha256": "a70f0e6ed292c22cc184f4f0e55e58a59546530ac3b263c552cc31a7af706629"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_02_farmerpro_studio_architecture.mmd",
+      "sizeBytes": 1200,
+      "sha256": "4d817dce62e5eca22d6432d08b0b6dd1d579094ab3bc847631b4466d0b4d0ab7"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_02_farmerpro_studio_architecture.svg",
+      "sizeBytes": 16618,
+      "sha256": "cbb8260f87aceba9b9ff4e294f24b801112cd953561767a67d43b8fc7cb5c590"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_03_gameproject_data_model.mmd",
+      "sizeBytes": 508,
+      "sha256": "406705d64ea3ccd32685ddb2c08e619df48f99ca92dca2ccef99c8b529cfb65c"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_03_gameproject_data_model.svg",
+      "sizeBytes": 14957,
+      "sha256": "241c7b83e15cf04161f439719834859411ffd949f5fbd0b8c89c91a0d53749ec"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_04_workflow_runtime_execution_architecture.mmd",
+      "sizeBytes": 764,
+      "sha256": "378ae3ff05f3f7903e6c3e7e67120720fa28a91a7fe1baf8fc2cd9e5c2301f70"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_04_workflow_runtime_execution_architecture.svg",
+      "sizeBytes": 14810,
+      "sha256": "3e7330a488f53ecf97b908ebfe5876d6d84a12118f6c33ebe345ded8ec9d5d7f"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_05_adb_emulator_adapter_architecture.mmd",
+      "sizeBytes": 860,
+      "sha256": "2169e5f0df9274904f00820000d12bf4359acf16e5b31158e31830b4aebc0705"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_05_adb_emulator_adapter_architecture.svg",
+      "sizeBytes": 12272,
+      "sha256": "d40f08b9855fc095eeeb94db57dbb89006dd6b3a67a16e9d97cf7626e6df4409"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_06_task_scheduler_multidevice_execution.mmd",
+      "sizeBytes": 681,
+      "sha256": "e8b7b502429581b3a4b6587dfe42d66f4fec58f389107f5865e501f1aa26458a"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_06_task_scheduler_multidevice_execution.svg",
+      "sizeBytes": 14247,
+      "sha256": "5fb1d0804362ce376bd9a79276b5d41d0e394f27cac44e3d13fc9afd9c82c210"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_07_mini_tool_ui_schema_renderer.mmd",
+      "sizeBytes": 765,
+      "sha256": "7c92ed1c5f4b09c7d5d8da8bdda7a6d0de20875a6cc40a4f1e0712ff7798cd3e"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_07_mini_tool_ui_schema_renderer.svg",
+      "sizeBytes": 14819,
+      "sha256": "d7fa0ae0e2f28e9ebc712f29d52b0e2866a427796df67867942c09e250a6596d"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_08_mini_tool_build_release_pipeline.mmd",
+      "sizeBytes": 592,
+      "sha256": "0e166b7a988210d60a588b517d68be99b88f3c1b4a99cdaf087fa09d86a828d2"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_08_mini_tool_build_release_pipeline.svg",
+      "sizeBytes": 15281,
+      "sha256": "747c429f92e2249048b35c72e06b357d8cfe82f0e77fb77d20487a3bfa3f29e0"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_09_security_architecture_ed25519_root_of_trust.mmd",
+      "sizeBytes": 1133,
+      "sha256": "1c6e9144812fc4336eeee182de16a9f4271fdb8a6cb20f7347dff57956ffbea8"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_09_security_architecture_ed25519_root_of_trust.svg",
+      "sizeBytes": 15961,
+      "sha256": "87c484796883156f9be6dd994d268295eacf1b65f8a005cdabc52caa869f977d"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_10_studio_to_mini_tool_production_lifecycle.mmd",
+      "sizeBytes": 1098,
+      "sha256": "dc7871e5710451de8621fc771015e8441837c363c3bd13919a953bc67023ebe0"
+    },
+    {
+      "relativePath": "06_diagrams_source/IV_10_studio_to_mini_tool_production_lifecycle.svg",
+      "sizeBytes": 15639,
+      "sha256": "f2bfa7f2741e12e7f282ba099a97f3e2f8338a8bc05ddd4375acc4283a605a67"
+    },
+    {
+      "relativePath": "06_diagrams_source/VIII_01_p2_to_p6_roadmap_timeline.mmd",
+      "sizeBytes": 550,
+      "sha256": "0db5a1cc26e143146191b4a89638f418905d5389d5aafd96a77073dac4b65373"
+    },
+    {
+      "relativePath": "06_diagrams_source/VIII_01_p2_to_p6_roadmap_timeline.svg",
+      "sizeBytes": 18441,
+      "sha256": "f59389c6a5b3de8bb8180052a1e4f4f24eff339410cbf380ed3db58eb578568a"
+    },
+    {
+      "relativePath": "06_diagrams_source/VI_01_9step_production_workflow.mmd",
+      "sizeBytes": 740,
+      "sha256": "9ba9d78ce34ec7090135c46842ac4afe363f8d3eb5ff4ab44cb0608f913ed539"
+    },
+    {
+      "relativePath": "06_diagrams_source/VI_01_9step_production_workflow.svg",
+      "sizeBytes": 15034,
+      "sha256": "7f149ec1fd689b47dd008118e3982e865508c4443781c26053efd4e5f2adc281"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_00_part1_overall_product_architecture.png",
+      "sizeBytes": 393592,
+      "sha256": "57ca1551073d4040a4073e662d6e131812704e4c6a270d76b7d7abfdea2cfe6b"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_00_part1b_studio_engine_builder_runtime_relationship.png",
+      "sizeBytes": 379861,
+      "sha256": "948e669ab80040dda0b84bf6d4ffdb3c46a8e472697127736960c4d8ca0f4f05"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_00_part2_before_vs_proposed_architecture.png",
+      "sizeBytes": 362307,
+      "sha256": "67f074214f77171efa16898293a2962d443d750bb38ec4f11dd122b99d58ff16"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_IV_01_cargo_workspace_dependency_graph.png",
+      "sizeBytes": 277524,
+      "sha256": "daf9ef634fcb2943b661a32e870295452648ad1b8408501ed3941798d9b6c244"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_IV_02_farmerpro_studio_architecture.png",
+      "sizeBytes": 316720,
+      "sha256": "97a3ed62053f684c18b0669827820205b4f998fdd944cd38c287991c12fabc2d"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_IV_03_gameproject_data_model.png",
+      "sizeBytes": 285335,
+      "sha256": "2bb89e4d8c2cd14a98f0097df0cfa5d5f4ddf1337b0d9dd77d746fae85ed9b78"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_IV_04_workflow_runtime_execution_architecture.png",
+      "sizeBytes": 243006,
+      "sha256": "dee2358279ea9901366e9ce0dfc836028b06be68b2ed7c2a97573f2df77120b9"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_IV_05_adb_emulator_adapter_architecture.png",
+      "sizeBytes": 286497,
+      "sha256": "b7337ca44c3511e9d9d8075a17517804921202f40b359251e5fe74fa1d5557ca"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_IV_06_task_scheduler_multidevice_execution.png",
+      "sizeBytes": 303097,
+      "sha256": "82687f3a85a8d2aecb2d1cec9e5b03c10e0efa4bc7f8464bc91203186c3d6b71"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_IV_07_mini_tool_ui_schema_renderer.png",
+      "sizeBytes": 306456,
+      "sha256": "58d83a55c90c72c4cda0a428bddaece66734fdacffcf9358b998fefd2232283c"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_IV_08_mini_tool_build_release_pipeline.png",
+      "sizeBytes": 298272,
+      "sha256": "38c4e40fcecd3c4cd0447ab85c2766590b2742229ea940600860989e03cbd944"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_IV_09_security_architecture_ed25519_root_of_trust.png",
+      "sizeBytes": 392183,
+      "sha256": "356ae04f0353ab5c60431e56c9780dbc9ded2a8dfbe177a63984bc740d2bf556"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_IV_10_studio_to_mini_tool_production_lifecycle.png",
+      "sizeBytes": 312682,
+      "sha256": "aabd1ad785490e6eddf17415dadc645ddbc0f6b5a37bb308755f6583b8c3a572"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_VIII_01_p2_to_p6_roadmap_timeline.png",
+      "sizeBytes": 281946,
+      "sha256": "a66ab83a2ed0731e6776ab1dc2431d7fd6e2d01c27925c9a9941da0ba279df39"
+    },
+    {
+      "relativePath": "06_diagrams_source/diag_VI_01_9step_production_workflow.png",
+      "sizeBytes": 311841,
+      "sha256": "ea63ba2af914a7dd2020e992752b8e760d143d13f69b3cd72d3b49343515567b"
+    },
+    {
+      "relativePath": "07_git_and_environment/git_and_environment_metadata.json",
+      "sizeBytes": 1563,
+      "sha256": "f10be40cf48d943756f7cb4380c393cca4b4bd6cdba7193e6f9e3d7e64d00f4d"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+flowchart TB
+    subgraph PRODUCER["Producer Machine (Studio / Build Time)"]
+        KS["External Producer Keystore\n%LOCALAPPDATA%\FarmerPro\ProducerKeys\active_producer_ed25519.json\n(32-byte SigningKey NEVER in repo or bundle)"]
+        INJ["Step 5: Win32 UpdateResourceW\nEmbed 32-byte VerifyingKey into PE .rsrc\nRT_RCDATA (#10) Resource ID #7777"]
+        SIGN["Step 7: RFC 8032 Ed25519 Signer\nSigns Canonical SHA-256 Manifest Table"]
+        AUTH["P5 Optional Post-Step: Windows Authenticode\n(signtool.exe EV/OV Certificate signs entire .exe image)"]
+    end
+    subgraph RUNTIME["End-User Machine (Auto_<Game>.exe Startup)"]
+        PE_READ["1. Read Trusted Public Key from Current Process PE\nLoadLibraryExW + FindResourceW(RT_RCDATA, #7777)"]
+        DISK_CHK["2. Cross-Check bundle/trusted_publisher.pub &\nsignature.fpbundle.json publisherPublicKeyHex == PE Key"]
+        ED_VER["3. Verify RFC 8032 Ed25519 Signature &\nEvery File SHA-256 in bundle/"]
+    end
+    KS --> INJ
+    KS --> SIGN
+    INJ --> AUTH
+    AUTH --> PE_READ
+    SIGN --> DISK_CHK
+    PE_READ --> DISK_CHK
+    DISK_CHK --> ED_VER

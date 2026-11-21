@@ -1,0 +1,33 @@
+flowchart TB
+    subgraph BEFORE["KIẾN TRÚC CŨ (v0.1.0 - 10 Tab Vận Hành Phẳng)"]
+        B1["01. Tổng quan (Vận hành đơn lẻ)"]
+        B2["02. Thiết bị Android"]
+        B3["03. Kho Quy trình JX2 (Hardcode)"]
+        B4["04. Workflow Studio"]
+        B5["05. Bộ Nhiệm vụ (Tách rời)"]
+        B6["06. Phiên chạy (Có dữ liệu demo)"]
+        B7["07. Tài khoản Vault (Phân tán)"]
+        B8["08. Mạng & Proxy (Phân tán)"]
+        B9["09. Design Tokens"]
+        B10["10. Cài đặt & ADB"]
+    end
+    subgraph AFTER["KIẾN TRÚC ĐỀ XUẤT P1.2 (Studio IDE Đa Dự Án - 6 Khu Vực + Hệ Thống)"]
+        A1["1. Game Projects / Workspace (Multi-Game Hub, Assets, Health)"]
+        A2["2. Workflow Studio (Project Explorer, Canvas, Inspector, Execution Dock)"]
+        A3["3. Tasks & Modules (Task Library, Categories, Account Vault, Proxy, Watchdog)"]
+        A4["4. Device Lab (ADB, LDPlayer, Live Snapshot, ROI Template Cropper)"]
+        A5["5. Test & Debug (Real SQLite Traces, Before/After Shots, Checkpoints)"]
+        A6["6. Mini Tool Builder & Releases (Form Designer, Live Preview, 8-Step Build EXE)"]
+        ASYS["System Settings Drawer (ADB Path, Producer Ed25519 Keystore, SQLite Backup, Design Tokens)"]
+    end
+    B1 --> A1
+    B2 --> A4
+    B3 --> A1
+    B3 --> A2
+    B4 --> A2
+    B5 --> A3
+    B6 --> A5
+    B7 --> A3
+    B8 --> A3
+    B9 --> ASYS
+    B10 --> ASYS

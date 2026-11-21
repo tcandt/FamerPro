@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 520" width="1400" height="520">
+  <defs>
+    <style>
+      text { font-family: 'Segoe UI', Inter, Roboto, Arial, sans-serif; fill: #EDF3FC; }
+      .mono { font-family: Consolas, 'Courier New', monospace; }
+      .title { font-size: 20px; font-weight: 700; fill: #FFFFFF; }
+      .subtitle { font-size: 12.5px; font-weight: 500; fill: #8FA2BC; }
+      .zone-title { font-size: 13.5px; font-weight: 700; letter-spacing: 0.4px; }
+      .box-title { font-size: 13px; font-weight: 700; fill: #FFFFFF; }
+      .box-sub { font-size: 11px; font-weight: 400; fill: #A9B8CC; }
+      .box-code { font-family: Consolas, monospace; font-size: 10.5px; fill: #38BDF8; }
+      .badge { font-size: 10px; font-weight: 700; }
+      .edge-label { font-size: 10px; font-weight: 600; fill: #38BDF8; }
+    </style>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38BDF8"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#3BC38D"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#E7B15B"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#F27883"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B291F7"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1400" height="520" rx="10" fill="#0D131D" stroke="#2A3647" stroke-width="2"/>
+  <rect x="0" y="0" width="1400" height="56" rx="10" fill="#141C28"/>
+  <line x1="0" y1="56" x2="1400" y2="56" stroke="#2A3647" stroke-width="1.5"/>
+  <text x="22" y="25" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="18.5" font-weight="700">SƠ ĐỒ VI.1 — QUY TRÌNH 9 BƯỚC SẢN XUẤT MINI TOOL ĐA DỰ ÁN TRÊN FARMERPRO STUDIO</text>
+  <text x="22" y="45" fill="#9FB2CC" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="500">Hành trình khép kín từ tạo Game Project, cắt mẫu ADB, vẽ Workflow, đóng gói EXE đến chạy độc lập không cần Studio</text>
+  
+  <rect x="18" y="72" width="1364" height="430" rx="8" fill="#101824" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="30" y="61" width="549" height="21" rx="4" fill="#16202F" stroke="#38BDF8" stroke-width="1.2"/>
+  <text x="38" y="76" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">QUY TRÌNH 9 BƯỚC SẢN XUẤT MINI TOOL ĐA DỰ ÁN GAME TRÊN FARMERPRO STUDIO</text>
+<rect x="34" y="102" width="285" height="115" rx="6" fill="#162438" stroke="#1878F5" stroke-width="1.5"/>
+  <rect x="34" y="102" width="5" height="115" rx="2" fill="#38BDF8"/>
+  <text x="48" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">BƯỚC 1: Tạo Game Project</text>
+  <text x="48" y="139" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Khu vực: `1. Game Projects`</text>
+  <text x="48" y="153.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Project A: `jx2-mobile` (com.blackhole.jx2)</text>
+  <text x="48" y="168.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Project B: `kingdom-slg` (com.kingdom.slg)</text>
+  <text x="48" y="182.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Chọn độ phân giải chuẩn &amp; `icon.ico`</text>
+  <text x="48" y="197.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Khởi tạo projects/&lt;slug&gt;/</text>
+<rect x="344" y="102" width="285" height="115" rx="6" fill="#152333" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="344" y="102" width="5" height="115" rx="2" fill="#38BDF8"/>
+  <text x="358" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">BƯỚC 2: Kết nối Thiết bị Android</text>
+  <text x="358" y="139" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Khu vực: `4. Device Lab`</text>
+  <text x="358" y="153.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kết nối LDPlayer `emulator-5554` (SM_X710N)</text>
+  <text x="358" y="168.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Chụp ảnh màn hình PNG theo yêu cầu</text>
+  <text x="358" y="182.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kéo khung ROI cắt ảnh mẫu lưu vào Project</text>
+  <text x="358" y="197.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">4 PNGs (JX2) | 3 PNGs (SLG)</text>
+<rect x="654" y="102" width="285" height="115" rx="6" fill="#1B1E32" stroke="#B291F7" stroke-width="1.5"/>
+  <rect x="654" y="102" width="5" height="115" rx="2" fill="#B291F7"/>
+  <text x="668" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">BƯỚC 3: Thiết kế Workflow</text>
+  <text x="668" y="139" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Khu vực: `2. Workflow Studio`</text>
+  <text x="668" y="153.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kéo thả Node: `start -&gt; capture -&gt;</text>
+  <text x="668" y="168.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  find_image -&gt; random_safe_tap -&gt; ocr -&gt; cp`</text>
+  <text x="668" y="182.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đặt Confidence `0.90` &amp; Safe Margin `18%`</text>
+  <text x="668" y="197.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Kiểm tra đồ thị WorkflowValidator</text>
+<rect x="964" y="102" width="398" height="115" rx="6" fill="#142624" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="964" y="102" width="5" height="115" rx="2" fill="#3BC38D"/>
+  <text x="978" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">BƯỚC 4: Tạo Task &amp; Cấu hình Modules</text>
+  <text x="978" y="139" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Khu vực: `3. Tasks &amp; Modules`</text>
+  <text x="978" y="153.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Ánh xạ Workflow thành Nhiệm vụ người dùng:</text>
+  <text x="978" y="168.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  - JX2: 5 Tasks (`[NV]`, `[PB]`, `[HĐ]`)</text>
+  <text x="978" y="182.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  - SLG: 4 Tasks (`[Nông Nghiệp]`, `[Quân Sự]`, `[Liên Minh]`)</text>
+  <text x="978" y="197.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Bật/tắt Module: Vault, SOCKS5 Proxy, Watchdog</text>
+<rect x="34" y="250" width="285" height="115" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="34" y="250" width="5" height="115" rx="2" fill="#E7B15B"/>
+  <text x="48" y="270" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">BƯỚC 5: Chạy Test &amp; Debug</text>
+  <text x="48" y="287" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Khu vực: `5. Test &amp; Debug`</text>
+  <text x="48" y="301.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Chạy luồng thật trên `emulator-5554`</text>
+  <text x="48" y="316.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đối chiếu 19 StepEvents, ảnh Trước/Sau,</text>
+  <text x="48" y="330.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  tọa độ Safe Tap `(111, 170)` &amp; kết quả OCR</text>
+  <text x="48" y="345.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Xác nhận trạng thái VERIFIED</text>
+<rect x="344" y="250" width="285" height="115" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="344" y="250" width="5" height="115" rx="2" fill="#E7B15B"/>
+  <text x="358" y="270" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">BƯỚC 6: Thiết kế UI Mini Tool</text>
+  <text x="358" y="287" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Khu vực: `6. Mini Tool Builder`</text>
+  <text x="358" y="301.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.76">• Chọn Layout `compact_2_col` &amp; Màu thương hiệu</text>
+  <text x="358" y="316.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  (`#F59E0B` cho JX2 / `#10B981` cho SLG)</text>
+  <text x="358" y="330.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Định nghĩa cột chỉ số OCR động</text>
+  <text x="358" y="345.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kiểm tra trên khung Live Preview</text>
+<rect x="654" y="250" width="285" height="115" rx="6" fill="#251920" stroke="#F27883" stroke-width="1.5"/>
+  <rect x="654" y="250" width="5" height="115" rx="2" fill="#F27883"/>
+  <text x="668" y="270" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">BƯỚC 7: Build EXE (8 Bước)</text>
+  <text x="668" y="287" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Bấm `Build &amp; Xuất Mini Tool (.EXE)`</text>
+  <text x="668" y="301.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Chạy Pre-Flight Audit 6 điểm</text>
+  <text x="668" y="316.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Copy `fp-mini-runtime.exe`, nhúng PE Icon</text>
+  <text x="668" y="330.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  + khóa công khai vào `PE RT_RCDATA #7777`</text>
+  <text x="668" y="345.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.32">• Ký số RFC 8032 Ed25519 (đo telemetry từng bước)</text>
+<rect x="964" y="250" width="398" height="115" rx="6" fill="#142624" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="964" y="250" width="5" height="115" rx="2" fill="#3BC38D"/>
+  <text x="978" y="270" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">BƯỚC 8: Kiểm tra &amp; Xuất Release</text>
+  <text x="978" y="287" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Khu vực: `6. Release Management`</text>
+  <text x="978" y="301.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Chạy Smoke Test: `--verify-bundle` &amp; `--test-tamper-suite`</text>
+  <text x="978" y="316.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kiểm tra SHA-256 binary, chữ ký Ed25519 &amp; ADB DLLs</text>
+  <text x="978" y="330.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Xuất thư mục `releases/poc/Auto_JX2_Mobile/` và</text>
+  <text x="978" y="345.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  `releases/poc/Auto_Kingdom_SLG/`</text>
+<rect x="34" y="392" width="1328" height="94" rx="6" fill="#132824" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="34" y="392" width="5" height="94" rx="2" fill="#3BC38D"/>
+  <text x="48" y="412" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">BƯỚC 9: ĐÓNG HOÀN TOÀN FARMERPRO STUDIO &amp; CHẠY ĐỘC LẬP 2 MINI TOOLS (BẰNG CHỨNG ĐA GAME)</text>
+  <text x="48" y="429" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Sau khi đóng `FarmerPro.exe`, người chơi khởi chạy trực tiếp `Auto_JX2_Mobile.exe` và `Auto_Kingdom_SLG.exe` từ thư mục phát hành.</text>
+  <text x="48" y="443.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Mỗi Mini Tool tự đọc khóa công khai từ `PE RT_RCDATA #7777` của chính nó, xác thực `bundle/signature.fpbundle.json` &amp; kết nối `./bin/adb.exe`.</text>
+  <text x="48" y="458.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Lưu dữ liệu vào SQLite WAL riêng biệt (`data/runtime_jx2-mobile.db` &amp; `data/runtime_kingdom-slg.db`) — 100% không phụ thuộc Studio!</text>
+<line x1="319" y1="158" x2="344" y2="158" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+<line x1="629" y1="158" x2="654" y2="158" stroke="#B291F7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+<line x1="939" y1="158" x2="964" y2="158" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+<line x1="1160" y1="217" x2="180" y2="250" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
+  <rect x="617.6" y="226.0" width="104.8" height="15.0" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
+  <text x="670.0" y="236.7" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">Bước 4 -&gt; Bước 5</text>
+<line x1="319" y1="308" x2="344" y2="308" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
+<line x1="629" y1="308" x2="654" y2="308" stroke="#F27883" stroke-width="2" marker-end="url(#arrow-red)"/>
+<line x1="939" y1="308" x2="964" y2="308" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+<line x1="1160" y1="365" x2="700" y2="392" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="877.6" y="371.0" width="104.8" height="15.0" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
+  <text x="930.0" y="381.7" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">Bước 8 -&gt; Bước 9</text>
+</svg>

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 520" width="1400" height="520">
+  <defs>
+    <style>
+      text { font-family: 'Segoe UI', Inter, Roboto, Arial, sans-serif; fill: #EDF3FC; }
+      .mono { font-family: Consolas, 'Courier New', monospace; }
+      .title { font-size: 20px; font-weight: 700; fill: #FFFFFF; }
+      .subtitle { font-size: 12.5px; font-weight: 500; fill: #8FA2BC; }
+      .zone-title { font-size: 13.5px; font-weight: 700; letter-spacing: 0.4px; }
+      .box-title { font-size: 13px; font-weight: 700; fill: #FFFFFF; }
+      .box-sub { font-size: 11px; font-weight: 400; fill: #A9B8CC; }
+      .box-code { font-family: Consolas, monospace; font-size: 10.5px; fill: #38BDF8; }
+      .badge { font-size: 10px; font-weight: 700; }
+      .edge-label { font-size: 10px; font-weight: 600; fill: #38BDF8; }
+    </style>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38BDF8"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#3BC38D"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#E7B15B"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#F27883"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B291F7"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1400" height="520" rx="10" fill="#0D131D" stroke="#2A3647" stroke-width="2"/>
+  <rect x="0" y="0" width="1400" height="56" rx="10" fill="#141C28"/>
+  <line x1="0" y1="56" x2="1400" y2="56" stroke="#2A3647" stroke-width="1.5"/>
+  <text x="22" y="25" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="18.5" font-weight="700">SƠ ĐỒ IV.8 — MINI TOOL BUILD &amp; RELEASE PIPELINE (8-STEP PACKAGER)</text>
+  <text x="22" y="45" fill="#9FB2CC" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="500">Dây chuyền đóng gói 8 bước của fp-builder: Kiểm tra đồ thị -&gt; Nhúng PE Icon &amp; RT_RCDATA #7777 -&gt; Ký Ed25519 -&gt; Kiểm toán</text>
+  
+  <rect x="18" y="72" width="1364" height="430" rx="8" fill="#131924" stroke="#E7B15B" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="30" y="61" width="579" height="21" rx="4" fill="#16202F" stroke="#E7B15B" stroke-width="1.2"/>
+  <text x="38" y="76" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">8-STEP DETERMINISTIC MINI TOOL BUILD &amp; RELEASE PIPELINE (crates/fp-builder)</text>
+<rect x="34" y="104" width="315" height="165" rx="6" fill="#152333" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="34" y="104" width="5" height="165" rx="2" fill="#38BDF8"/>
+  <text x="48" y="124" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">STEP 1: Validate Project, Schema &amp; Graphs</text>
+  <text x="48" y="141" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kiểm tra `GameProjectManifest` &amp; slug</text>
+  <text x="48" y="155.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kiểm tra `MiniToolUiSchema` (tasks, cột OCR)</text>
+  <text x="48" y="170.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Chạy `WorkflowValidator` trên toàn bộ</text>
+  <text x="48" y="184.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  workflows được liên kết (start/end/edges)</text>
+  <text x="48" y="199.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Thời gian thực tế: &lt; 1 ms</text>
+  <text x="48" y="213.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Status: PASS (2 workflows JX2 / 1 SLG)</text>
+<rect x="372" y="104" width="315" height="165" rx="6" fill="#152333" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="372" y="104" width="5" height="165" rx="2" fill="#38BDF8"/>
+  <text x="386" y="124" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">STEP 2: Asset Integrity &amp; Path Guard</text>
+  <text x="386" y="141" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kiểm tra mọi `templateRef` trong Node Vision</text>
+  <text x="386" y="155.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  tồn tại thật trên đĩa (`templates/*.png`)</text>
+  <text x="386" y="170.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Chặn Path Traversal (`../` hoặc đường dẫn</text>
+  <text x="386" y="184.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  tuyệt đối) bằng `validate_safe_relative_path`</text>
+  <text x="386" y="199.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kiểm tra header file `branding/icon.ico`</text>
+  <text x="386" y="213.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Status: PASS (4 PNGs JX2 / 3 PNGs SLG)</text>
+<rect x="710" y="104" width="315" height="165" rx="6" fill="#1B1E32" stroke="#B291F7" stroke-width="1.5"/>
+  <rect x="710" y="104" width="5" height="165" rx="2" fill="#B291F7"/>
+  <text x="724" y="124" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">STEP 3: Resolve 5-State Module Matrix</text>
+  <text x="724" y="141" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đối chiếu 6 module hệ thống với cấu hình</text>
+  <text x="724" y="155.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  `packaged_modules` của Game Project</text>
+  <text x="724" y="170.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Xác thực đồ thị phụ thuộc module (VD:</text>
+  <text x="724" y="184.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  `mod.vision_ocr` yêu cầu `mod.adb_core`)</text>
+  <text x="724" y="199.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Khóa danh sách quyền (`requiredCapabilities`)</text>
+  <text x="724" y="213.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Status: PASS (5 modules JX2 / 4 SLG)</text>
+<rect x="1048" y="104" width="316" height="165" rx="6" fill="#1B1E32" stroke="#B291F7" stroke-width="1.5"/>
+  <rect x="1048" y="104" width="5" height="165" rx="2" fill="#B291F7"/>
+  <text x="1062" y="124" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">STEP 4: Copy Dedicated Runtime Binary</text>
+  <text x="1062" y="141" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Sao chép `target/release/fp-mini-runtime.exe`</text>
+  <text x="1062" y="155.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  sang `releases/&lt;slug&gt;/Auto_&lt;Game&gt;.exe`</text>
+  <text x="1062" y="170.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Binary này hoàn toàn KHÔNG chứa mã nguồn</text>
+  <text x="1062" y="184.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  của Studio hay `fp-builder`</text>
+  <text x="1062" y="199.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kích thước: 12,515,840 bytes (~12.5 MB)</text>
+  <text x="1062" y="213.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Status: PASS (30 ms)</text>
+<rect x="34" y="312" width="315" height="172" rx="6" fill="#23211A" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="34" y="312" width="5" height="172" rx="2" fill="#E7B15B"/>
+  <text x="48" y="332" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.17" font-weight="700">STEP 5: PE Icon &amp; RT_RCDATA #7777 Injection</text>
+  <text x="48" y="349" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Gọi Win32 API `BeginUpdateResourceW` /</text>
+  <text x="48" y="363.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  `UpdateResourceW` / `EndUpdateResourceW`</text>
+  <text x="48" y="378.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Nhúng 7 lớp biểu tượng `.ico` vào `RT_ICON`</text>
+  <text x="48" y="392.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Nhúng cứng 32-byte Ed25519 Public Key vào</text>
+  <text x="48" y="407.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  tài nguyên PE `RT_RCDATA (#10) ID #7777`</text>
+  <text x="48" y="421.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Mở lại PE kiểm tra readback khớp 100%</text>
+  <text x="48" y="436.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Status: PASS (1,018 ms)</text>
+<rect x="372" y="312" width="315" height="172" rx="6" fill="#23211A" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="372" y="312" width="5" height="172" rx="2" fill="#E7B15B"/>
+  <text x="386" y="332" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">STEP 6: Package Bundle Assets &amp; ADB</text>
+  <text x="386" y="349" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Xuất `bundle/manifest.fpbundle.json`,</text>
+  <text x="386" y="363.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  `ui-schema.json`, `workflows.fpbundle.json`</text>
+  <text x="386" y="378.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Sao chép `bundle/templates/*.png` &amp; `.ico`</text>
+  <text x="386" y="392.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đóng gói kèm `./bin/adb.exe`,</text>
+  <text x="386" y="407.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  `AdbWinApi.dll`, `AdbWinUsbApi.dll`</text>
+  <text x="386" y="421.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Khởi tạo thư mục `./data/` cho SQLite WAL</text>
+  <text x="386" y="436.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Status: PASS (24 ms)</text>
+<rect x="710" y="312" width="315" height="172" rx="6" fill="#142624" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="710" y="312" width="5" height="172" rx="2" fill="#3BC38D"/>
+  <text x="724" y="332" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">STEP 7: SHA-256 Table &amp; Ed25519 Signing</text>
+  <text x="724" y="349" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Băm SHA-256 từng file trong `bundle/`</text>
+  <text x="724" y="363.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Tạo chuỗi Canonical Manifest Payload</text>
+  <text x="724" y="378.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đọc khóa bí mật từ kho khóa ngoài</text>
+  <text x="724" y="392.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  `%LOCALAPPDATA%\FarmerPro\ProducerKeys`</text>
+  <text x="724" y="407.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Ký chữ ký số RFC 8032 Ed25519 (64 bytes)</text>
+  <text x="724" y="421.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Xuất `bundle/signature.fpbundle.json`</text>
+  <text x="724" y="436.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">KeyID: fp-ed25519-acb43ebd9ab4 (9 ms)</text>
+<rect x="1048" y="312" width="316" height="172" rx="6" fill="#142624" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="1048" y="312" width="5" height="172" rx="2" fill="#3BC38D"/>
+  <text x="1062" y="332" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">STEP 8: PE Root-of-Trust Verify &amp; Audit</text>
+  <text x="1062" y="349" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đọc lại khóa công khai từ PE `RT_RCDATA #7777`</text>
+  <text x="1062" y="363.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  của file `Auto_&lt;Game&gt;.exe` vừa xuất</text>
+  <text x="1062" y="378.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Xác thực chữ ký Ed25519 &amp; toàn bộ bảng SHA-256</text>
+  <text x="1062" y="392.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kiểm toán phụ thuộc: ADB DLLs, WebView2</text>
+  <text x="1062" y="407.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  Evergreen, WinRT OCR, quyền ghi SQLite</text>
+  <text x="1062" y="421.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Xuất `build-report.json` kèm SHA-256 EXE</text>
+  <text x="1062" y="436.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="9.92">Status: PASS (Verify: 13ms | PoC Total: 1097–1127ms)</text>
+<line x1="349" y1="186" x2="372" y2="186" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+<line x1="687" y1="186" x2="710" y2="186" stroke="#B291F7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+<line x1="1025" y1="186" x2="1048" y2="186" stroke="#B291F7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+<line x1="1206" y1="269" x2="190" y2="312" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
+  <rect x="645.6" y="283.0" width="104.8" height="15.0" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
+  <text x="698.0" y="293.7" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">Step 4 -&gt; Step 5</text>
+<line x1="349" y1="398" x2="372" y2="398" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
+<line x1="687" y1="398" x2="710" y2="398" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+<line x1="1025" y1="398" x2="1048" y2="398" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+</svg>

@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-11-21T22:03:36.040940+07:00",
+  "headCommit": "130d254e3546f4d3c11af2b14bdbf65848ac1320",
+  "recentCommits": [
+    "130d254 docs(p1.2-acceptance): finalize 34-page visual acceptance report with Sơ đồ 1.2, auto-fitted SVGs, and full PDF QA",
+    "3a868d6 docs(p1.2-acceptance): generate 33-page visual architecture & Studio UX acceptance report PDF with embedded mockups, 14 SVG/Mermaid diagrams, and QA proofs",
+    "35cc5cf fix(platform-p1.2): remove dead duplicate files in fp-builder, verify real rogue Ed25519 signature in Case 5 tamper test, fix relative path parent resolution",
+    "b48dcde feat(platform-p1.2): split bundle-contract/bundle-verify/builder, pin Ed25519 Root of Trust in PE RT_RCDATA #7777, restore 34/34 unit tests",
+    "feed10d feat(desktop): eliminate cmd window flashing (CREATE_NO_WINDOW), remove mock data, add IP range scanner, app launcher, and LDPlayer quick controls",
+    "4db4ee9 fix(desktop): enable default custom-protocol for standalone FarmerPro.exe, mount JX2 Workflow Library, and auto-detect live LDPlayer",
+    "32fcbc0 docs: export live LDPlayer acceptance report (.pdf, .html, .md) at root directory",
+    "3ea17bb feat(jx2mobile): live LDPlayer 14 end-to-end automation, WinRT OCR, 10 beginner quest workflows, and live acceptance artifacts"
+  ],
+  "desktopSrcStatus": "",
+  "productionDbUntouched": true,
+  "toolchain": {
+    "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)",
+    "cargo": "cargo 1.96.0 (30a34c682 2026-05-25)",
+    "os": "Microsoft Windows 11 Pro"
+  }
+}

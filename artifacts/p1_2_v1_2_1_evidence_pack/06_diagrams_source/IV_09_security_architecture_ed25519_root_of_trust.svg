@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 520" width="1400" height="520">
+  <defs>
+    <style>
+      text { font-family: 'Segoe UI', Inter, Roboto, Arial, sans-serif; fill: #EDF3FC; }
+      .mono { font-family: Consolas, 'Courier New', monospace; }
+      .title { font-size: 20px; font-weight: 700; fill: #FFFFFF; }
+      .subtitle { font-size: 12.5px; font-weight: 500; fill: #8FA2BC; }
+      .zone-title { font-size: 13.5px; font-weight: 700; letter-spacing: 0.4px; }
+      .box-title { font-size: 13px; font-weight: 700; fill: #FFFFFF; }
+      .box-sub { font-size: 11px; font-weight: 400; fill: #A9B8CC; }
+      .box-code { font-family: Consolas, monospace; font-size: 10.5px; fill: #38BDF8; }
+      .badge { font-size: 10px; font-weight: 700; }
+      .edge-label { font-size: 10px; font-weight: 600; fill: #38BDF8; }
+    </style>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38BDF8"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#3BC38D"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#E7B15B"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#F27883"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B291F7"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1400" height="520" rx="10" fill="#0D131D" stroke="#2A3647" stroke-width="2"/>
+  <rect x="0" y="0" width="1400" height="56" rx="10" fill="#141C28"/>
+  <line x1="0" y1="56" x2="1400" y2="56" stroke="#2A3647" stroke-width="1.5"/>
+  <text x="22" y="25" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="18.5" font-weight="700">SƠ ĐỒ IV.9 — SECURITY ARCHITECTURE: ED25519 PE RT_RCDATA #7777 ROOT OF TRUST</text>
+  <text x="22" y="45" fill="#9FB2CC" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="500">Kiến trúc xác thực chữ ký số RFC 8032 Ed25519 với khóa công khai nhúng cứng trong PE Resource #7777 &amp; vai trò của Authenticode</text>
+  
+  <rect x="18" y="72" width="436" height="430" rx="8" fill="#171A22" stroke="#E7B15B" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="30" y="61" width="394" height="21" rx="4" fill="#16202F" stroke="#E7B15B" stroke-width="1.2"/>
+  <text x="38" y="76" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">1. PRODUCER SIGNING ENVIRONMENT (Máy Nhà Sản Xuất)</text>
+<rect x="34" y="102" width="404" height="118" rx="6" fill="#251920" stroke="#F27883" stroke-width="1.5"/>
+  <rect x="34" y="102" width="5" height="118" rx="2" fill="#F27883"/>
+  <text x="48" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">External Producer Keystore (%LOCALAPPDATA%)</text>
+  <text x="48" y="139" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đường dẫn: `%LOCALAPPDATA%\FarmerPro\ProducerKeys\`</text>
+  <text x="48" y="153.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  `active_producer_ed25519.json`</text>
+  <text x="48" y="168.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Chứa `SigningKey` (32-byte Secret Seed) &amp; `VerifyingKey`</text>
+  <text x="48" y="182.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Khóa bí mật KHÔNG BAO GIỜ nằm trong mã nguồn, git hay bundle/</text>
+  <text x="48" y="197.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Key ID: fp-ed25519-acb43ebd9ab4</text>
+<rect x="34" y="236" width="404" height="122" rx="6" fill="#23211A" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="34" y="236" width="5" height="122" rx="2" fill="#E7B15B"/>
+  <text x="48" y="256" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">PE Resource Root-of-Trust Injector (Step 5)</text>
+  <text x="48" y="273" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Nhúng khóa công khai `acb43ebd9ab499f0...` (64 hex bytes) vào</text>
+  <text x="48" y="287.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  phân vùng `.rsrc` của `Auto_&lt;Game&gt;.exe` tại:</text>
+  <text x="48" y="302.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  `RT_RCDATA (lpType = #10), Resource ID = #7777`</text>
+  <text x="48" y="316.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Ký bảng SHA-256 của `bundle/` bằng khóa bí mật ở Step 7</text>
+  <text x="48" y="331.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">crates/fp-builder/src/pe_icon.rs</text>
+<rect x="34" y="374" width="404" height="112" rx="6" fill="#152333" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="34" y="374" width="5" height="112" rx="2" fill="#38BDF8"/>
+  <text x="48" y="394" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11.97" font-weight="700">P5 Release Hardening: Windows Authenticode (signtool.exe)</text>
+  <text x="48" y="411" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Ký số toàn bộ file `Auto_&lt;Game&gt;.exe` bằng chứng thư EV/OV</text>
+  <text x="48" y="425.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Bảo vệ cả mã máy lẫn vùng tài nguyên `.rsrc (RT_RCDATA #7777)`</text>
+  <text x="48" y="440.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  trước hành vi dùng công cụ hex/PE editor sửa trực tiếp file `.exe`</text>
+  <text x="48" y="454.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Hoàn thiện chuỗi tin cậy OS -&gt; Binary -&gt; PE Key -&gt; Bundle</text>
+
+  <rect x="486" y="72" width="436" height="430" rx="8" fill="#101E22" stroke="#3BC38D" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="498" y="61" width="412" height="21" rx="4" fill="#16202F" stroke="#3BC38D" stroke-width="1.2"/>
+  <text x="506" y="76" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">2. RUNTIME VERIFICATION GATE (Khi Mở Auto_&lt;Game&gt;.exe)</text>
+<rect x="502" y="102" width="404" height="118" rx="6" fill="#142624" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="502" y="102" width="5" height="118" rx="2" fill="#3BC38D"/>
+  <text x="516" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Gate 1: Read Trusted Public Key from Self PE Memory</text>
+  <text x="516" y="139" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Lấy đường dẫn tiến trình đang chạy: `std::env::current_exe()`</text>
+  <text x="516" y="153.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Gọi `LoadLibraryExW(..., LOAD_LIBRARY_AS_DATAFILE)`</text>
+  <text x="516" y="168.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Gọi `FindResourceW(hMod, #7777, RT_RCDATA)` -&gt; Đọc 64 byte hex</text>
+  <text x="516" y="182.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đây là nguồn tin cậy gốc (Root of Trust) để đối chiếu!</text>
+  <text x="516" y="197.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">read_pe_embedded_pubkey_from_current_process()</text>
+<rect x="502" y="236" width="404" height="122" rx="6" fill="#142624" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="502" y="236" width="5" height="122" rx="2" fill="#3BC38D"/>
+  <text x="516" y="256" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Gate 2: Cross-Check Disk Public Key &amp; Envelope Header</text>
+  <text x="516" y="273" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đọc `bundle/trusted_publisher.pub` và trường</text>
+  <text x="516" y="287.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  `publisherPublicKeyHex` trong `bundle/signature.fpbundle.json`</text>
+  <text x="516" y="302.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Nếu bất kỳ giá trị nào khác với khóa trong PE `RT_RCDATA #7777`:</text>
+  <text x="516" y="316.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  -&gt; Chặn đứng ngay với lỗi `PE_ROOT_OF_TRUST_MISMATCH`!</text>
+  <text x="516" y="331.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Chặn hoàn toàn tấn công thay khóa công khai trên đĩa</text>
+<rect x="502" y="374" width="404" height="112" rx="6" fill="#142624" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="502" y="374" width="5" height="112" rx="2" fill="#3BC38D"/>
+  <text x="516" y="394" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.18" font-weight="700">Gate 3: RFC 8032 Ed25519 Verify &amp; Per-File SHA-256 Check</text>
+  <text x="516" y="411" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kiểm tra phương trình chữ ký đường cong Elliptic Curve25519</text>
+  <text x="516" y="425.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Băm lại SHA-256 của toàn bộ file trong `bundle/` (manifest,</text>
+  <text x="516" y="440.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  ui-schema, workflows, templates/*.png) đối chiếu bảng đã ký</text>
+  <text x="516" y="454.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Chỉ khởi tạo Tauri UI &amp; Engine khi cả 3 Gate đều PASS</text>
+
+  <rect x="954" y="72" width="428" height="430" rx="8" fill="#1A141B" stroke="#F27883" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="966" y="61" width="364" height="21" rx="4" fill="#16202F" stroke="#F27883" stroke-width="1.2"/>
+  <text x="974" y="76" fill="#F27883" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">3. 5 TAMPER ATTACK CASES &amp; BOUNDARY DISCLOSURE</text>
+<rect x="970" y="102" width="396" height="232" rx="6" fill="#152522" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="970" y="102" width="5" height="232" rx="2" fill="#3BC38D"/>
+  <text x="984" y="122" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">5 Kịch bản Tấn công Giả mạo Đã Bị Chặn (5/5 REJECTED)</text>
+  <text x="984" y="139" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">✅ Case 1: Sửa `ui-schema.json` + tính lại SHA-256 trên đĩa</text>
+  <text x="984" y="153.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">   -&gt; Bị chặn: `ED25519_SIGNATURE_INVALID`</text>
+  <text x="984" y="168.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">✅ Case 2: Ghi đè `bundle/trusted_publisher.pub` bằng khóa lạ</text>
+  <text x="984" y="182.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">   -&gt; Bị chặn: `PE_ROOT_OF_TRUST_MISMATCH (RT_RCDATA #7777)`</text>
+  <text x="984" y="197.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">✅ Case 3: Đảo bit chữ ký trong `signature.fpbundle.json`</text>
+  <text x="984" y="211.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">   -&gt; Bị chặn: `ED25519_SIGNATURE_INVALID`</text>
+  <text x="984" y="226.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">✅ Case 4: Xóa tệp bắt buộc `manifest.fpbundle.json`</text>
+  <text x="984" y="240.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">   -&gt; Bị chặn: `INTEGRITY_MISSING_MANIFEST`</text>
+  <text x="984" y="255.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">✅ Case 5: Sinh cặp khóa Ed25519 giả mạo mới, thay cả</text>
+  <text x="984" y="269.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">   `trusted_publisher.pub` lẫn ký lại `signature.fpbundle.json`</text>
+  <text x="984" y="284.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">   -&gt; Bị chặn: `ED25519_PUBKEY_UNTRUSTED` (Khác khóa PE #7777)!</text>
+<rect x="970" y="350" width="396" height="136" rx="6" fill="#241F19" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="970" y="350" width="5" height="136" rx="2" fill="#E7B15B"/>
+  <text x="984" y="370" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11.32" font-weight="700">Phân tích Trung thực Giới hạn Bảo mật (Security Disclosure)</text>
+  <text x="984" y="387" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Nhúng Public Key vào PE `RT_RCDATA #7777` chống triệt để việc</text>
+  <text x="984" y="401.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  kẻ tấn công chỉ sửa/thay khóa và bundle trên đĩa.</text>
+  <text x="984" y="416.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Cơ chế này KHÔNG tự bảo vệ nếu kẻ tấn công thay thế cả file</text>
+  <text x="984" y="430.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.58">  `.exe` hoặc dùng PE Editor vá lại tài nguyên `#7777` trong `.exe`.</text>
+  <text x="984" y="445.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Do đó ở P5 cần kết hợp chữ ký Windows Authenticode lên file</text>
+  <text x="984" y="459.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.85">  `.exe` để hệ điều hành xác thực tính toàn vẹn nhị phân &amp; nhà phát hành.</text>
+<line x1="438" y1="290" x2="502" y2="160" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
+  <rect x="443.7" y="217.5" width="52.6" height="15.0" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
+  <text x="470.0" y="228.2" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">PE#7777</text>
+<line x1="704" y1="220" x2="704" y2="236" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+<line x1="704" y1="358" x2="704" y2="374" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+<line x1="906" y1="290" x2="970" y2="220" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="909.0" y="247.5" width="58.0" height="15.0" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
+  <text x="938.0" y="258.2" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">5/5 Block</text>
+</svg>

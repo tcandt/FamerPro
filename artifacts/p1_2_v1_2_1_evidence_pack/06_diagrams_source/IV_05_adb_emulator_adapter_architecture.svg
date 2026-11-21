@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 520" width="1400" height="520">
+  <defs>
+    <style>
+      text { font-family: 'Segoe UI', Inter, Roboto, Arial, sans-serif; fill: #EDF3FC; }
+      .mono { font-family: Consolas, 'Courier New', monospace; }
+      .title { font-size: 20px; font-weight: 700; fill: #FFFFFF; }
+      .subtitle { font-size: 12.5px; font-weight: 500; fill: #8FA2BC; }
+      .zone-title { font-size: 13.5px; font-weight: 700; letter-spacing: 0.4px; }
+      .box-title { font-size: 13px; font-weight: 700; fill: #FFFFFF; }
+      .box-sub { font-size: 11px; font-weight: 400; fill: #A9B8CC; }
+      .box-code { font-family: Consolas, monospace; font-size: 10.5px; fill: #38BDF8; }
+      .badge { font-size: 10px; font-weight: 700; }
+      .edge-label { font-size: 10px; font-weight: 600; fill: #38BDF8; }
+    </style>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38BDF8"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#3BC38D"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#E7B15B"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#F27883"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B291F7"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1400" height="520" rx="10" fill="#0D131D" stroke="#2A3647" stroke-width="2"/>
+  <rect x="0" y="0" width="1400" height="56" rx="10" fill="#141C28"/>
+  <line x1="0" y1="56" x2="1400" y2="56" stroke="#2A3647" stroke-width="1.5"/>
+  <text x="22" y="25" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="18.5" font-weight="700">SƠ ĐỒ IV.5 — ADB &amp; EMULATOR ADAPTER ARCHITECTURE</text>
+  <text x="22" y="45" fill="#9FB2CC" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="500">Kiến trúc điều khiển thiết bị Android không nội suy chuỗi shell, tích hợp Generation Fencing và chuẩn hóa tọa độ xoay</text>
+  
+  <rect x="18" y="72" width="864" height="430" rx="8" fill="#111927" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="30" y="61" width="557" height="21" rx="4" fill="#16202F" stroke="#38BDF8" stroke-width="1.2"/>
+  <text x="38" y="76" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">RUST HOST ADB &amp; EMULATOR DRIVER STACK (crates/fp-adb + crates/fp-device)</text>
+<rect x="36" y="100" width="402" height="118" rx="6" fill="#152334" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="36" y="100" width="5" height="118" rx="2" fill="#38BDF8"/>
+  <text x="50" y="120" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">1. DeviceActor &amp; Generation Fencing (fp-device)</text>
+  <text x="50" y="137" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Mỗi thiết bị Android có 1 Actor riêng xử lý tuần tự lệnh</text>
+  <text x="50" y="151.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Cấp phát `generation: u64` tăng dần mỗi lần acquire lease</text>
+  <text x="50" y="166.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.74">• Mọi lệnh mang generation cũ bị từ chối ngay lập tức (Stale Command Guard)</text>
+  <text x="50" y="180.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">test_generation_fencing &amp; test_device_actor_operations (PASS)</text>
+<rect x="462" y="100" width="402" height="118" rx="6" fill="#1B1E32" stroke="#B291F7" stroke-width="1.5"/>
+  <rect x="462" y="100" width="5" height="118" rx="2" fill="#B291F7"/>
+  <text x="476" y="120" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11.12" font-weight="700">2. Geometry &amp; Orientation Normalizer (fp-device + fp-actions)</text>
+  <text x="476" y="137" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.15">• Truy vấn `wm size` (1280x720) và chiều xoay màn hình (0/90/180/270 độ)</text>
+  <text x="476" y="151.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Chuyển đổi hệ tọa độ chuẩn hóa giữa Portrait và Landscape</text>
+  <text x="476" y="166.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đảm bảo tọa độ mẫu Vision khớp chính xác với tọa độ `input tap`</text>
+  <text x="476" y="180.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">test_point_rotation_and_landscape_transform (PASS)</text>
+<rect x="36" y="236" width="828" height="120" rx="6" fill="#132524" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="36" y="236" width="5" height="120" rx="2" fill="#3BC38D"/>
+  <text x="50" y="256" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">3. Secure AdbRunner — Zero Raw Shell Interpolation (crates/fp-adb — AGENTS.md Rule #3)</text>
+  <text x="50" y="273" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Thực thi hoàn toàn qua `tokio::process::Command::new(&amp;adb_path).args(&amp;[&quot;-s&quot;, serial, ...])`</text>
+  <text x="50" y="287.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Tuyệt đối không nối chuỗi shell (`cmd /c` hay `sh -c`), chặn đứng nguy cơ Command Injection từ serial hoặc package name</text>
+  <text x="50" y="302.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Tự động phát hiện `./bin/adb.exe` đóng gói kèm Mini Tool trước khi tìm trong PATH hệ thống</text>
+  <text x="50" y="316.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Bằng chứng: test_discover_adb_path &amp; test_parse_adb_devices_output (PASS)</text>
+<rect x="36" y="374" width="402" height="112" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
+  <rect x="36" y="374" width="5" height="112" rx="2" fill="#1878F5"/>
+  <text x="50" y="394" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">4. Unified USB / TCP &amp; LAN IP Scanner</text>
+  <text x="50" y="411" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Quét cổng giả lập cục bộ (127.0.0.1:5555..5585)</text>
+  <text x="50" y="425.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Quét dải IP LAN (`scanRange`) kết nối máy thật qua Wi-Fi ADB</text>
+  <text x="50" y="440.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">adb connect &lt;ip&gt;:&lt;port&gt; với timeout kiểm soát chặt</text>
+<rect x="462" y="374" width="402" height="112" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="462" y="374" width="5" height="112" rx="2" fill="#E7B15B"/>
+  <text x="476" y="394" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11.7" font-weight="700">5. Emulator Instance Adapter (LDPlayer / Nox / BlueStacks)</text>
+  <text x="476" y="411" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Điều khiển vòng đời giả lập: Launch / Quit / Reboot instance</text>
+  <text x="476" y="425.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.44">• Quản lý ứng dụng trên thiết bị: `monkey`/`am start`, `am force-stop`</text>
+  <text x="476" y="440.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Tích hợp tập trung tại khu vực 4. Device Lab</text>
+
+  <rect x="918" y="72" width="464" height="430" rx="8" fill="#101E22" stroke="#3BC38D" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="930" y="61" width="283" height="21" rx="4" fill="#16202F" stroke="#3BC38D" stroke-width="1.2"/>
+  <text x="938" y="76" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">PHYSICAL &amp; EMULATOR ANDROID TARGETS</text>
+<rect x="936" y="104" width="428" height="180" rx="6" fill="#142725" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="936" y="104" width="5" height="180" rx="2" fill="#3BC38D"/>
+  <text x="950" y="124" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Verified Live Target: LDPlayer Android 14 (emulator-5554)</text>
+  <text x="950" y="141" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Model: Samsung SM_X710N | Android 14 (API 34)</text>
+  <text x="950" y="155.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Resolution: 720x1280 / 1280x720 | State: device (ONLINE)</text>
+  <text x="950" y="170.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Screencap PNG: 08_adb_before_screen.png (SHA: 685df...)</text>
+  <text x="950" y="184.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Live Tap Executed: `adb -s emulator-5554 shell input tap 111 170`</text>
+  <text x="950" y="199.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Post-Tap Frame: 10_adb_after_screen.png (Hộp thoại System Apps mở)</text>
+  <text x="950" y="213.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Bằng chứng vật lý thật 100% trong artifacts/p1_1_evidence/</text>
+<rect x="936" y="304" width="428" height="180" rx="6" fill="#152333" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="936" y="304" width="5" height="180" rx="2" fill="#38BDF8"/>
+  <text x="950" y="324" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Multi-Instance &amp; Physical Device Fleet</text>
+  <text x="950" y="341" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Instance #2: emulator-5556 (Secondary LDPlayer / SLG Farm)</text>
+  <text x="950" y="355.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Physical USB/TCP Phone: 192.168.1.x:5555</text>
+  <text x="950" y="370.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Cách ly hoàn toàn luồng lệnh theo `-s &lt;serial&gt;`</text>
+  <text x="950" y="384.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Mỗi thiết bị được bảo vệ bởi Device Lease &amp; Generation Token riêng</text>
+  <text x="950" y="399.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">test_multi_device_concurrent_isolation_and_fencing (PASS)</text>
+<line x1="864" y1="290" x2="936" y2="195" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="870.8" y="235.0" width="58.4" height="15.0" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
+  <text x="900.0" y="245.7" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">ADB Argv</text>
+<line x1="864" y1="420" x2="936" y2="385" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="870.8" y="395.0" width="58.4" height="15.0" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
+  <text x="900.0" y="405.7" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">Multi-ID</text>
+</svg>

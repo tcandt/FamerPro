@@ -1,0 +1,24 @@
+flowchart LR
+    subgraph STUDIO["FarmerPro Studio IDE (FarmerPro.exe)"]
+        CTX["Global Context Header: Project Switcher + Active Lab Device"]
+        W1["1. Game Projects / Workspace"]
+        W2["2. Workflow Studio (React Flow + Vision/OCR)"]
+        W3["3. Tasks & Modules (Library, Vault, Proxy)"]
+        W4["4. Device Lab (ADB, LDPlayer, ROI Cropper)"]
+        W5["5. Test & Debug (Timeline, Before/After, Checkpoints)"]
+        W6["6. Mini Tool Builder & Releases"]
+    end
+    subgraph ENGINE["Shared Rust Core Workspace (14 Crates)"]
+        CORE["fp-domain · fp-adb · fp-device · fp-vision · fp-actions\nfp-workflow-schema · fp-workflow-runtime · fp-scheduler\nfp-storage (SQLite WAL) · fp-security"]
+        CONTRACT["fp-bundle-contract + fp-bundle-verify"]
+        BUILDER["fp-builder (8-Step Packager + PE RT_RCDATA #7777 + Ed25519 Signer)"]
+    end
+    subgraph OUTPUT["Standalone Mini Auto-Tools (Zero Studio Dependency)"]
+        M1["Auto_JX2_Mobile.exe + signed bundle/ + data/runtime_jx2-mobile.db"]
+        M2["Auto_Kingdom_SLG.exe + signed bundle/ + data/runtime_kingdom-slg.db"]
+    end
+    STUDIO --> CORE
+    W6 --> BUILDER
+    BUILDER --> CONTRACT
+    BUILDER ==> M1
+    BUILDER ==> M2

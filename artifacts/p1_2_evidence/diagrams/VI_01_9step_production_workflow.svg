@@ -93,7 +93,7 @@
   <text x="668" y="301.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Chạy Pre-Flight Audit 6 điểm</text>
   <text x="668" y="316.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Copy `fp-mini-runtime.exe`, nhúng PE Icon</text>
   <text x="668" y="330.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  + khóa công khai vào `PE RT_RCDATA #7777`</text>
-  <text x="668" y="345.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Ký số RFC 8032 Ed25519 (~1.1 giây)</text>
+  <text x="668" y="345.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.32">• Ký số RFC 8032 Ed25519 (đo telemetry từng bước)</text>
 <rect x="964" y="250" width="398" height="115" rx="6" fill="#142624" stroke="#3BC38D" stroke-width="1.5"/>
   <rect x="964" y="250" width="5" height="115" rx="2" fill="#3BC38D"/>
   <text x="978" y="270" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">BƯỚC 8: Kiểm tra &amp; Xuất Release</text>

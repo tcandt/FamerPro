@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "projectSlug": "jx2-mobile",
+  "windowTitle": "Auto Võ Hiệp 2 Mobile v1.0.0",
+  "versionBadge": "JX2-MMORPG v1.0",
+  "themeAccentHex": "#F59E0B",
+  "headerBgHex": "#18131A",
+  "layoutPreset": "compact2_col",
+  "defaultWindowSize": [
+    740,
+    660
+  ],
+  "sectionsOrder": [
+    "device_table",
+    "task_and_log_split",
+    "footer_controls"
+  ],
+  "hiddenComponents": [],
+  "deviceColumns": [
+    {
+      "id": "col-level",
+      "label": "Cấp",
+      "runtimeVarKey": "char_level",
+      "fallbackDisplay": "Chưa OCR (-)",
+      "minWindowWidth": 360,
+      "badgeColor": "#FBBF24"
+    },
+    {
+      "id": "col-gold",
+      "label": "Vàng",
+      "runtimeVarKey": "char_gold",
+      "fallbackDisplay": "Chưa OCR (-)",
+      "minWindowWidth": 480,
+      "badgeColor": "#F59E0B"
+    },
+    {
+      "id": "col-silver",
+      "label": "Bạc",
+      "runtimeVarKey": "char_silver",
+      "fallbackDisplay": "Chưa OCR (-)",
+      "minWindowWidth": 560,
+      "badgeColor": "#94A3B8"
+    }
+  ],
+  "taskCategories": [
+    {
+      "id": "cat-nv",
+      "shortTag": "[NV]",
+      "displayName": "Nhiệm vụ Ngày",
+      "colorHex": "#38BDF8"
+    },
+    {
+      "id": "cat-pb",
+      "shortTag": "[PB]",
+      "displayName": "Phó bản Bang",
+      "colorHex": "#A78BFA"
+    },
+    {
+      "id": "cat-hd",
+      "shortTag": "[HĐ]",
+      "displayName": "Hoạt động Giờ",
+      "colorHex": "#F59E0B"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-jx2-main",
+      "title": "Chính Tuyến & Đối thoại Dã Tẩu",
+      "categoryId": "cat-nv",
+      "workflowId": "wf-jx2-main-quest",
+      "defaultEnabled": true,
+      "priority": 1,
+      "estimateSec": 45,
+      "settingsSchema": [
+        {
+          "key": "auto_skip_dialog",
+          "label": "Tự động bỏ qua hội thoại NPC",
+          "fieldType": "boolean",
+          "defaultValue": true,
+          "options": null
+        },
+        {
+          "key": "max_quest_loops",
+          "label": "Số chuỗi Dã Tẩu tối đa",
+          "fieldType": "number",
+          "defaultValue": 10,
+          "options": null
+        }
+      ]
+    },
+    {
+      "id": "task-jx2-treasure",
+      "title": "Tìm Kho Báu & Đào Tàng Bảo Đồ",
+      "categoryId": "cat-nv",
+      "workflowId": "wf-jx2-main-quest",
+      "defaultEnabled": true,
+      "priority": 2,
+      "estimateSec": 60,
+      "settingsSchema": [
+        {
+          "key": "use_golden_shovel",
+          "label": "Dùng La Bàn Hoàng Kim",
+          "fieldType": "boolean",
+          "defaultValue": false,
+          "options": null
+        }
+      ]
+    },
+    {
+      "id": "task-jx2-dungeon",
+      "title": "Sơn Tặc Mật Quật & Bí Cảnh Tổ Đội",
+      "categoryId": "cat-pb",
+      "workflowId": "wf-jx2-main-quest",
+      "defaultEnabled": true,
+      "priority": 3,
+      "estimateSec": 120,
+      "settingsSchema": [
+        {
+          "key": "difficulty",
+          "label": "Độ khó Phó bản",
+          "fieldType": "select",
+          "defaultValue": "Anh Hùng",
+          "options": [
+            "Thường",
+            "Anh Hùng",
+            "Địa Ngục"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "task-jx2-campfire",
+      "title": "Lửa Trại Bang & Chiến Trường Tống Kim",
+      "categoryId": "cat-hd",
+      "workflowId": "wf-jx2-main-quest",
+      "defaultEnabled": false,
+      "priority": 4,
+      "estimateSec": 180,
+      "settingsSchema": []
+    },
+    {
+      "id": "task-jx2-live-adb",
+      "title": "Kiểm tra Thiết bị ADB Thật (Chụp màn hình + OCR + Vuốt)",
+      "categoryId": "cat-nv",
+      "workflowId": "wf-jx2-live-adb-probe",
+      "defaultEnabled": true,
+      "priority": 5,
+      "estimateSec": 15,
+      "settingsSchema": []
+    }
+  ],
+  "utilities": [
+    {
+      "id": "util-use-items",
+      "label": "Tự dùng Rương Hoàng Kim & Sách Tu Vi",
+      "defaultEnabled": true,
+      "requiredModule": null,
+      "settingsSchema": []
+    },
+    {
+      "id": "util-proxy-route",
+      "label": "Định tuyến SOCKS5 Proxy theo Tài khoản",
+      "defaultEnabled": false,
+      "requiredModule": "mod.proxy_network",
+      "settingsSchema": []
+    }
+  ],
+  "initialRuntimeVars": {}
+}

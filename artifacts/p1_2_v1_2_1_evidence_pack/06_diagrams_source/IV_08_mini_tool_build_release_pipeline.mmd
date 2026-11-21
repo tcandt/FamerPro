@@ -1,0 +1,8 @@
+flowchart LR
+    S1["Step 1: Validate Project,\nUI Schema & Workflows"] --> S2["Step 2: Asset Integrity &\nPath Traversal Guard"]
+    S2 --> S3["Step 3: Resolve 5-State\nModule Matrix"]
+    S3 --> S4["Step 4: Copy Dedicated\nfp-mini-runtime.exe"]
+    S4 --> S5["Step 5: Win32 UpdateResourceW\nInject PE Icon + RT_RCDATA #7777 PubKey"]
+    S5 --> S6["Step 6: Package bundle/ Assets\n& ./bin/adb.exe Dependencies"]
+    S6 --> S7["Step 7: Compute SHA-256 Table &\nSign Ed25519 via External Keystore"]
+    S7 --> S8["Step 8: Verify Signature Against\nPE RT_RCDATA #7777 & Audit Runtime"]

@@ -115,7 +115,7 @@
   <text x="756" y="383" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đọc lại khóa từ PE RT_RCDATA #7777</text>
   <text x="756" y="397.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kiểm tra chữ ký &amp; bảng băm SHA-256</text>
   <text x="756" y="412.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đóng gói kèm ./bin/adb.exe + 2 DLLs</text>
-  <text x="756" y="426.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Xuất build-report.json (~1.1 giây)</text>
+  <text x="756" y="426.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="9.52">Xuất build-report.json (đo thời gian từng bước)</text>
 
   <rect x="1073" y="68" width="309" height="412" rx="8" fill="#101E22" stroke="#3BC38D" stroke-width="1.5" stroke-dasharray="4,2"/>
   <rect x="1085" y="57" width="216" height="21" rx="4" fill="#16202F" stroke="#3BC38D" stroke-width="1.2"/>

@@ -1,0 +1,27 @@
+flowchart LR
+    subgraph S1["1. FarmerPro Studio IDE (Design & Authoring)"]
+        A1["GameProjectManifest (project.fpproj.json)"]
+        A2["Workflow Graphs (workflows/*.json + templates/*.png)"]
+        A3["MiniToolUiSchema (ui-schema.json + 5-State Modules)"]
+    end
+    subgraph S2["2. Shared Workflow Engine (12 Core Crates)"]
+        E1["fp-workflow-schema + fp-workflow-runtime"]
+        E2["fp-vision (Multiscale SSD + WinRT OCR) + fp-actions (Safe Tap 18%)"]
+        E3["fp-adb + fp-device (Generation Fencing) + fp-scheduler (Leases)"]
+        E4["fp-storage (SQLite WAL) + fp-security (CRED_MGR://)"]
+    end
+    subgraph S3["3. fp-builder (Compile-Time Isolated Packager)"]
+        B1["Step 1-4: Validate Graph/Paths/Modules & Copy fp-mini-runtime.exe"]
+        B2["Step 5: Inject 7-Layer PE Icon + PE RT_RCDATA #7777 Public Key"]
+        B3["Step 6-8: Sign bundle/ via External Ed25519 Keystore & Verify"]
+    end
+    subgraph S4["4. Mini Runtime (Auto_<Game>.exe — End-User Execution)"]
+        R1["fp-bundle-verify: Read PubKey from Self PE #7777 & Verify Ed25519"]
+        R2["fp-bundle-contract: Render Dynamic UI from Signed ui-schema.json"]
+        R3["Execute Workflows via Identical Shared Workflow Engine + Local SQLite"]
+    end
+    S1 -->|Author & Test| S2
+    S1 -->|Export Specs| S3
+    S3 -->|Produce Signed Release| S4
+    S2 -->|Linked at Compile Time| S4
+    S4 -. "ZERO Dependency on fp-builder or Secret Key" .-> S3

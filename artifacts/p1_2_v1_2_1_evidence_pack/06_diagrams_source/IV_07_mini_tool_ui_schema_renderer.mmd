@@ -1,0 +1,8 @@
+flowchart LR
+    SCHEMA["bundle/ui-schema.json\n(Signed in Bundle)"] --> PARSER["fp-bundle-contract::MiniToolUiSchema"]
+    MANIFEST["bundle/manifest.fpbundle.json"] --> MOD_MATRIX["5-State Module Matrix Evaluator"]
+    PARSER --> THEME["1. Dynamic Window Title, Badge & Brand Colors\n(e.g. #F59E0B JX2 vs #10B981 Kingdom SLG)"]
+    PARSER --> COLS["2. Dynamic Device Table & OCR Columns\n(Truthful Fallback: 'Chưa OCR (-)' until verified)"]
+    PARSER --> CATS["3. Category Filter Tabs & Priority Task Checklist\n([NV]/[PB]/[HĐ] or [Nông Nghiệp]/[Quân Sự])"]
+    PARSER --> FIELDS["4. Per-Task Dynamic Settings Drawer\n(boolean / number / select / text controls)"]
+    MOD_MATRIX --> MOD_UI["5. Permitted Module Controls & Honest Technical Notes"]

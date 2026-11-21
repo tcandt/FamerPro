@@ -44,7 +44,7 @@ b64_before = b64_img("actual_adb_before_screen.png")
 b64_after = b64_img("actual_adb_after_screen.png")
 b64_crop = b64_img("actual_adb_cropped_template.png")
 
-def studio_shell(active_nav_idx, header_right_btns, main_content_html, title_sub="Võ Hiệp Truyền Kỳ 2 Mobile (v1.0.0)"):
+def studio_shell(active_nav_idx, header_right_btns, main_content_html, title_sub="Võ Hiệp 2 (v1.0.0)"):
     nav_items = [
         ("1. Game Projects", "Workspace & Assets"),
         ("2. Workflow Studio", "React Flow & Vision"),
@@ -79,7 +79,7 @@ def studio_shell(active_nav_idx, header_right_btns, main_content_html, title_sub
           </div>
           <div class="ctx-pill device-pill">
             <span class="ctx-tag">LAB DEVICE</span>
-            <span class="ctx-val"><span class="dot-on"></span> emulator-5554 (SM_X710N · 1280×720) ▾</span>
+            <span class="ctx-val"><span class="dot-on"></span> emulator-5554 · Online ▾</span>
           </div>
         </div>
         <div class="hdr-actions">
@@ -200,8 +200,12 @@ s02_html = studio_shell(
     """
     <div class="ws-header">
       <div>
-        <div class="ws-title">ẢNH 02 — GAME PROJECTS (QUẢN LÝ ĐA DỰ ÁN GAME, ASSETS, VERSION & MODULES)</div>
-        <div class="ws-desc">Quản lý danh sách nhiều tựa game, tạo/sửa/nhân bản Project, cấu hình Android Package ID, thư viện ảnh mẫu PNG và ma trận 6 module.</div>
+        <div class="ws-title">ẢNH 02 — GAME PROJECTS (QUẢN LÝ ĐA DỰ ÁN GAME, TẠO PROJECT MỚI, ASSETS & MODULES)</div>
+        <div class="ws-desc">Quy trình Tạo Project Mới: [1. Tên & Package ID] ➔ [2. Độ phân giải & Icon PE] ➔ [3. Ma trận 5-State Modules] ➔ [4. Khởi tạo projects/&lt;slug&gt;/]</div>
+      </div>
+      <div class="ws-badges">
+        <span class="tag tag-green">Wizard Tạo Project 4 Bước</span>
+        <span class="tag tag-blue">Cô lập SQLite + Assets theo Slug</span>
       </div>
     </div>
     <div class="grid-sidebar-main">
@@ -266,111 +270,176 @@ s02_html = studio_shell(
     """
 )
 
-# Screen 03: Workflow Studio
+# Screen 03A: Workflow Studio (Canvas-First IDE)
 s03_html = studio_shell(
     2,
-    '<span class="btn btn-outline">📐 Auto Layout</span><span class="btn btn-outline">🔍 Fit View</span><span class="btn btn-outline">⏸ Breakpoint</span><span class="btn btn-outline">⏭ Step Run</span><span class="btn btn-primary">▶ Debug trên Lab</span>',
+    '<span class="btn btn-outline">📐 Auto Layout</span><span class="btn btn-outline">🔍 Fit View</span><span class="btn btn-outline">⏸ Breakpoint</span><span class="btn btn-outline">⏭ Step Run</span><span class="btn btn-primary">▶ Chạy Debug trên Lab</span>',
     """
-    <div class="studio-3col">
+    <div class="studio-3col-wide">
       <div class="panel palette-col">
-        <div class="panel-hdr"><span>NODE PALETTE & LUỒNG</span><span class="tag tag-blue">10 Luồng</span></div>
-        <div class="sub-title">LUỒNG CỦA PROJECT (jx2-mobile)</div>
+        <div class="panel-hdr"><span>LUỒNG & NODE</span><span class="tag tag-blue">◀ Ẩn</span></div>
+        <div class="sub-title">WORKFLOWS (jx2-mobile)</div>
         <div class="wf-list-item active">● wf-jx2-live-adb-probe</div>
         <div class="wf-list-item">○ wf-jx2-main-quest</div>
         <div class="wf-list-item">○ wf-jx2-treasure-map</div>
-        <div class="wf-list-item">○ wf-jx2-bandit-dungeon</div>
-        <div class="sub-title" style="margin-top:8px;">DANH MỤC NODE (KÉO THẢ)</div>
-        <div class="node-cat">▼ Điều khiển Luồng (Flow)</div>
+        <div class="sub-title" style="margin-top:8px;">NHÓM NODE KÉO THẢ</div>
+        <div class="node-cat">▼ Điều khiển Luồng</div>
         <div class="node-pill">flow.start / flow.end</div>
-        <div class="node-pill">flow.wait / flow.branch</div>
+        <div class="node-pill">logic.if_else / wait</div>
         <div class="node-cat">▼ Thị giác & WinRT OCR</div>
-        <div class="node-pill purple">vision.capture (PNG)</div>
-        <div class="node-pill purple">vision.find_image (SSD)</div>
-        <div class="node-pill purple">vision.ocr (WinRT Engine)</div>
-        <div class="node-cat">▼ Thao tác Thiết bị (ADB)</div>
+        <div class="node-pill purple">vision.capture_png</div>
+        <div class="node-pill purple">vision.find_image</div>
+        <div class="node-pill purple">vision.ocr_region</div>
+        <div class="node-cat">▼ Thao tác ADB & State</div>
         <div class="node-pill green">action.random_safe_tap</div>
-        <div class="node-pill green">action.swipe / key_event</div>
-        <div class="node-cat">▼ Trạng thái & Phục hồi</div>
-        <div class="node-pill amber">state.checkpoint (WAL)</div>
+        <div class="node-pill amber">state.checkpoint</div>
       </div>
       <div class="canvas-col">
         <div class="canvas-toolbar">
-          <span><b>CANVAS REACT FLOW:</b> <code>wf-jx2-live-adb-probe</code> (7 Nodes · 6 Edges)</span>
+          <span><b>CANVAS REACT FLOW (64% Bề Ngang):</b> <code>wf-jx2-live-adb-probe</code> · <span class="c-green">● Đã khớp 6/6 Nodes</span></span>
           <div class="toolbar-pills">
-            <span class="tag tag-blue">Auto Layout: DAG</span>
-            <span class="tag tag-blue">Fit View: 100%</span>
-            <span class="tag tag-red">● Breakpoint @ n-tap-sys</span>
-            <span class="tag tag-green">Step Run: #4 Verified</span>
+            <span class="tag tag-blue">1280×720: Tự ẩn Palette (&gt;72%)</span>
+            <span class="tag tag-red">● BP @ n-tap-sys</span>
+            <span class="tag tag-amber">⏸ Paused Step #4</span>
+            <span class="tag tag-green">⏭ Step Over</span>
           </div>
         </div>
-        <div class="rf-canvas">
-          <div class="rf-row">
+        <div class="rf-canvas" style="padding:14px 18px;">
+          <div class="rf-row" style="gap:12px;">
             <div class="rf-node start-node">
-              <div class="rf-hdr">1. flow.start</div>
-              <div class="rf-body">ID: <code>n-start</code><br/>Khởi tạo phiên ADB</div>
+              <div class="rf-hdr"><span>1. flow.start</span><span class="tag tag-blue">OK</span></div>
+              <div class="rf-body">ID: <code>n-start</code><br/>Driver: <code>LIVE_ADB</code></div>
             </div>
             <div class="rf-arrow">➔</div>
             <div class="rf-node vision-node">
-              <div class="rf-hdr">2. vision.capture</div>
-              <div class="rf-body">ID: <code>n-cap</code><br/>screencap -p (1280×720)</div>
+              <div class="rf-hdr"><span>2. vision.capture</span><span class="tag tag-green">454ms</span></div>
+              <div class="rf-body">ID: <code>n-cap</code><br/>Ảnh PNG 1280×720</div>
             </div>
             <div class="rf-arrow">➔</div>
             <div class="rf-node vision-node selected-node">
-              <div class="rf-hdr">3. vision.find_image <span class="bp-dot" title="Selected">★</span></div>
-              <div class="rf-body">ID: <code>n-find-sys</code><br/>Mẫu: <code>system_apps.png</code><br/>Confidence: <b>0.90 (Matched 1.00)</b></div>
+              <div class="rf-hdr"><span>3. vision.find_image</span><span class="bp-dot">★ CHỌN</span></div>
+              <div class="rf-body">ID: <code>n-find-sys</code><br/>Mẫu: <code>system_apps.png</code><br/>Score: <b class="c-green">1.000 ≥ 0.90</b></div>
             </div>
           </div>
-          <div class="rf-row" style="margin-top:18px;">
-            <div class="rf-node action-node">
-              <div class="rf-hdr">4. action.random_safe_tap <span class="bp-red">● BP</span></div>
-              <div class="rf-body">ID: <code>n-tap-sys</code><br/>Safe Margin: <b>18% (0.18)</b><br/>Tap thực tế: <b>(111, 170)</b></div>
+          <div class="rf-row" style="margin-top:18px;gap:12px;">
+            <div class="rf-node action-node executing-node">
+              <div class="rf-hdr"><span>4. random_safe_tap</span><span class="bp-red">● BP</span></div>
+              <div class="rf-body">ID: <code>n-tap-sys</code> · <b class="c-cyan">▶ ĐANG CHẠY</b><br/>Safe Margin: <b>18%</b> · Tap <b>(111, 170)</b></div>
             </div>
             <div class="rf-arrow">➔</div>
             <div class="rf-node vision-node">
-              <div class="rf-hdr">5. vision.ocr (WinRT)</div>
-              <div class="rf-body">ID: <code>n-ocr</code><br/>Biến: <code>ocr_text</code><br/>KQ: <i>"Cài đặt Files... Play"</i></div>
+              <div class="rf-hdr"><span>5. vision.ocr (WinRT)</span><span class="tag tag-purple">OCR</span></div>
+              <div class="rf-body">ID: <code>n-ocr</code> · Biến: <code>ocr_text</code><br/><i>"Cài đặt, Files, Cửa hàng Play"</i></div>
             </div>
             <div class="rf-arrow">➔</div>
             <div class="rf-node cp-node">
-              <div class="rf-hdr">6. state.checkpoint</div>
-              <div class="rf-body">ID: <code>n-cp</code><br/>Key: <code>live_adb_verified</code><br/>Lưu SQLite WAL</div>
+              <div class="rf-hdr"><span>6. state.checkpoint</span><span class="tag tag-amber">WAL</span></div>
+              <div class="rf-body">ID: <code>n-cp</code><br/>Key: <code>live_adb_verified</code></div>
             </div>
           </div>
         </div>
-        <div class="exec-dock">
+        <div class="exec-dock" style="height:112px;padding:6px 12px;">
           <div class="dock-hdr">
-            <span><b>EXECUTION & DEBUG DOCK</b> — Tabs: [● Step Trace (19)] [Biến Runtime (ocr_text)] [Ảnh Khớp Mẫu] [Checkpoints (1)]</span>
-            <span class="tag tag-green">Job: mini-job-cf950745 · SUCCEEDED</span>
+            <span><b>EXECUTION & DEBUG DOCK</b> — [● Step Trace (19)] [Biến Runtime] [Khung hình Lỗi] · <span class="muted-xs">[▼ Thu gọn thành thanh 34px]</span></span>
+            <span class="tag tag-green">Job: mini-job-cf950745 · PASSED</span>
           </div>
-          <div class="dock-logs">
-            <div><code>09:42:01.513Z</code> | <b>n-find-sys</b> | <span class="c-green">verification_passed</span> | SSD score=1.000 &gt;= 0.90, bbox=[74, 135, 88, 88]</div>
-            <div><code>09:42:01.585Z</code> | <b>n-tap-sys</b>  | <span class="c-cyan">device_ack</span>          | Safe Random Tap margin=18% -&gt; adb shell input tap 111 170</div>
-            <div><code>09:42:04.727Z</code> | <b>n-ocr</b>      | <span class="c-green">verification_passed</span> | WinRT OCR extracted: "16:42 System Apps ... Cài đặt Files ... Cửa hàng Play"</div>
+          <div class="dock-logs" style="font-size:11px;line-height:1.45;">
+            <div><code>09:42:01.513Z</code> | <b>n-find-sys</b> | <span class="c-green">verification_passed</span> | SSD score=1.000 bbox=[74, 135, 88, 88] | [📍 Chọn Node]</div>
+            <div><code>09:42:01.585Z</code> | <b>n-tap-sys</b>  | <span class="c-cyan">device_ack</span>          | Safe Tap (margin 18%) -&gt; adb input tap 111 170</div>
           </div>
         </div>
       </div>
-      <div class="panel inspector-col">
-        <div class="panel-hdr"><span>NODE INSPECTOR</span><span class="tag tag-purple">n-find-sys</span></div>
+      <div class="panel inspector-col" style="padding:10px;">
+        <div class="panel-hdr"><span>NODE INSPECTOR</span><span class="tag tag-blue">n-find-sys</span></div>
         <div class="kv-list">
           <div><span>Loại Node:</span><code>vision.find_image</code></div>
-          <div><span>Node ID:</span><code>n-find-sys</code></div>
-          <div><span>Ảnh mẫu Project:</span><code>live_ldplayer_system_apps.png</code></div>
-          <div><span>Ngưỡng Confidence:</span><code>0.90 (Multiscale SSD)</code></div>
-          <div><span>Số lần Retry tối đa:</span><code>3 lần (Backoff: 800 ms)</code></div>
-          <div><span>Breakpoint Debug:</span><code>Bật dừng trước khi Tap</code></div>
+          <div><span>Ảnh mẫu:</span><code>system_apps.png</code></div>
+          <div><span>Ngưỡng SSD:</span><code>0.90 (Đa tỉ lệ)</code></div>
+          <div><span>Retry/Timeout:</span><code>3 lần · 800 ms</code></div>
+          <div><span>Breakpoint:</span><code class="c-red">Tạm dừng trước Tap</code></div>
         </div>
         <div class="sub-box" style="margin-top:8px;text-align:center;">
-          <div class="sub-title">ẢNH MẪU ĐANG GẮN (88×88 px)</div>
-          <img src="__B64_CROP__" style="width:64px;height:64px;border:1px solid #38BDF8;border-radius:6px;margin:4px auto;display:block;" />
+          <div class="sub-title">LIÊN KẾT DEVICE LAB ROI (88×88 px)</div>
+          <img src="__B64_CROP__" style="width:62px;height:62px;border:1.5px solid #38BDF8;border-radius:6px;margin:4px auto;display:block;" />
           <div class="muted-xs">Tọa độ gốc: (74, 135) · SHA: 3f7a9c...</div>
         </div>
         <div class="quick-actions" style="margin-top:8px;flex-direction:column;">
-          <span class="btn btn-sm btn-outline">✂️ Cắt ảnh mẫu mới từ Device Lab</span>
+          <span class="btn btn-sm btn-outline">✂️ Cắt ảnh mẫu từ Device Lab</span>
           <span class="btn btn-sm btn-primary">+ Đưa Workflow vào Task Library</span>
         </div>
       </div>
     </div>
     """.replace("__B64_CROP__", b64_crop)
+)
+
+# Screen 03B: Workflow Studio — 6 Mandatory Interactive States
+s03b_html = studio_shell(
+    2,
+    '<span class="btn btn-outline">1280×720 Compact (&gt;72% Canvas)</span><span class="btn btn-primary">1600×900 IDE (64% Canvas)</span>',
+    f"""
+    <div class="ws-header" style="margin-bottom:8px;padding-bottom:6px;">
+      <div>
+        <div class="ws-title">ẢNH 03B — ĐẶC TẢ 6 TRẠNG THÁI TƯƠNG TÁC WORKFLOW STUDIO &amp; CẦU NỐI DEVICE LAB ROI</div>
+        <div class="ws-desc">Hiển thị đầy đủ hành vi Canvas ở từng trạng thái vận hành: Mặc định, Chọn Node, Đang Thực thi, Lỗi + Debug, Breakpoint/Step Run và Crop ảnh từ Lab.</div>
+      </div>
+      <div class="ws-badges"><span class="tag tag-purple">6 Interactive UI States</span></div>
+    </div>
+    <div class="grid-3" style="gap:10px;flex:1;">
+      <div class="panel state-card">
+        <div class="panel-hdr"><span>1. CANVAS MẶC ĐỊNH (TỐI ĐA HÓA VÙNG VẼ)</span><span class="tag tag-blue">Default</span></div>
+        <div class="muted-xs">Ở <code>1280×720</code>: NavRail thu về 60px, Palette ẩn thành nút nổi <code>[+ Thêm Node]</code>, Dock thu 34px → Canvas đạt <b>&gt;72%</b> diện tích.</div>
+        <div class="mini-canvas-box">
+          <div class="mc-pill">[+ Node Palette]</div>
+          <div class="mc-flow"><span>flow.start</span> ➔ <span>capture</span> ➔ <span>find_image</span> ➔ <span>safe_tap</span></div>
+          <div class="muted-xs" style="margin-top:6px;">Dock thu gọn (34px): Sẵn sàng chạy · Fit View 100%</div>
+        </div>
+      </div>
+      <div class="panel state-card">
+        <div class="panel-hdr"><span>2. CHỌN NODE &amp; MỞ INSPECTOR</span><span class="tag tag-blue">Selected</span></div>
+        <div class="muted-xs">Click Node <code>n-find-sys</code> bật viền sáng xanh <code>#38BDF8</code> và tự mở Inspector bên phải để chỉnh tham số &amp; gán vào Task.</div>
+        <div class="mini-canvas-box">
+          <div class="mc-node mc-selected"><b>n-find-sys</b> · Confidence 0.90 · Margin 18%</div>
+          <div class="mc-insp-mini">Inspector: Đổi mẫu PNG · Retry=3 · <b>[+ Đưa vào Task Library]</b></div>
+        </div>
+      </div>
+      <div class="panel state-card">
+        <div class="panel-hdr"><span>3. NODE ĐANG THỰC THI (LIVE RUN)</span><span class="tag tag-green">Executing</span></div>
+        <div class="muted-xs">Node đang chạy có viền cyan phát sáng + badge thời gian thực, đường nối <code>edge</code> đổi màu chạy dữ liệu sang bước kế tiếp.</div>
+        <div class="mini-canvas-box">
+          <div class="mc-node mc-running">▶ RUNNING: <b>n-tap-sys</b> · Latency 52ms</div>
+          <div class="mc-dock-mini c-green">Trace: capture [OK] ➔ find_image [1.000] ➔ safe_tap [RUNNING]</div>
+        </div>
+      </div>
+      <div class="panel state-card">
+        <div class="panel-hdr"><span>4. WORKFLOW BỊ LỖI &amp; MỞ DEBUG</span><span class="tag tag-red">Error + Debug</span></div>
+        <div class="muted-xs">Node thất bại chuyển viền đỏ <code>#F27883</code>, mở khay Error Debug hiển thị ảnh chụp màn hình tại thời điểm lỗi.</div>
+        <div class="mini-canvas-box" style="border-color:#F27883;">
+          <div class="mc-node mc-error">✕ FAILED: <b>n-find-btn</b> · SSD Score 0.41 &lt; 0.85</div>
+          <div class="mc-insp-mini" style="color:#FCA5A5;">[🔍 So sánh ảnh Lỗi] · [📍 Mở Test &amp; Debug] · [✂️ Chụp mẫu lại]</div>
+        </div>
+      </div>
+      <div class="panel state-card">
+        <div class="panel-hdr"><span>5. ĐẶT BREAKPOINT &amp; STEP RUN</span><span class="tag tag-amber">Breakpoint</span></div>
+        <div class="muted-xs">Gắn chấm đỏ <code>● BP</code> trước Node hành động nguy hiểm; luồng dừng lại chờ người dùng kiểm tra biến trước khi Tap.</div>
+        <div class="mini-canvas-box" style="border-color:#E7B15B;">
+          <div class="mc-node mc-bp">● PAUSED @ <b>n-tap-sys</b> · target=(111,170)</div>
+          <div class="mc-insp-mini" style="color:#FCD34D;">[⏭ Step Over] · [▶ Continue] · [⏹ Stop] · Biến: target_found=true</div>
+        </div>
+      </div>
+      <div class="panel state-card">
+        <div class="panel-hdr"><span>6. CROP TỪ DEVICE LAB → VISION NODE</span><span class="tag tag-purple">Lab Bridge</span></div>
+        <div class="muted-xs">Bấm <code>[✂️ Cắt mẫu từ Lab]</code> trên Node mở ảnh <code>emulator-5554</code>, kéo vùng ROI lưu vào Project &amp; tự gán lại vào Node.</div>
+        <div class="mini-canvas-box" style="display:flex;align-items:center;gap:10px;">
+          <img src="{b64_crop}" style="width:52px;height:52px;border:2px solid #3BC38D;border-radius:6px;" />
+          <div style="text-align:left;font-size:11px;">
+            <div><b>ROI:</b> [74, 135, 88, 88]</div>
+            <div><b>Lưu:</b> <code>templates/system_apps.png</code></div>
+            <div class="c-green">✓ Đã gắn tự động vào Node <code>n-find-sys</code></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
 )
 
 # Screen 04: Tasks & Modules
@@ -518,13 +587,13 @@ s06_html = studio_shell(
         <div class="ws-desc">Truy vấn 100% từ bảng SQLite step_events thực tế (đã loại bỏ hoàn toàn job-demo-8492 giả lập), đối chiếu ảnh chụp Trước/Sau và tọa độ Safe Tap.</div>
       </div>
       <div class="ws-badges">
-        <span class="tag tag-green">Phiên: mini-job-cf950745 · PASS (19 Events)</span>
-        <span class="tag tag-amber">Phiên: mini-job-8812c · CANCELLED (User Stop)</span>
+        <span class="tag tag-blue">Lọc: [emulator-5554 ▾] [Tất cả / Lỗi / Checkpoint ▾]</span>
+        <span class="tag tag-green">Phiên: mini-job-cf950745 · PASS</span>
       </div>
     </div>
     <div class="grid-sidebar-main">
       <div class="panel">
-        <div class="panel-hdr"><span>1. DANH SÁCH PHIÊN & TIMELINE NODE TRACE (19 SỰ KIỆN)</span><span class="tag tag-green">LIVE_ADB</span></div>
+        <div class="panel-hdr"><span>1. TIMELINE NODE TRACE (TRUY VẤN SQLITE WAL)</span><span class="tag tag-purple">1-Click Nhảy tới Node Lỗi</span></div>
         <table class="mini-tbl">
           <tr><th>Bước</th><th>Node ID</th><th>Loại Sự kiện</th><th>Thời gian (UTC)</th><th>Chi tiết Payload / Kết quả</th></tr>
           <tr><td>#1-2</td><td><code>n-start</code></td><td><span class="tag tag-blue">device_ack</span></td><td>09:42:01.057</td><td>Khởi tạo phiên chạy trên <code>emulator-5554</code></td></tr>
@@ -563,78 +632,145 @@ s06_html = studio_shell(
     """
 )
 
-# Screen 07: Mini Tool Builder
+# Screen 07A: Visual No-Code Mini Tool Builder (3-Pane WYSIWYG)
 s07_html = studio_shell(
     6,
-    '<span class="btn btn-outline">🔍 Chạy Pre-Flight Audit (6/6)</span><span class="btn btn-amber">🚀 Build & Xuất Mini Tool (.EXE)</span>',
+    '<span class="btn btn-outline">💾 Lưu Schema v1.2</span><span class="btn btn-outline">🔍 Pre-Flight (6/6 PASS)</span><span class="btn btn-amber">🚀 Xuất Mini Tool (.EXE)</span>',
     """
-    <div class="ws-header">
+    <div class="ws-header" style="margin-bottom:8px;padding-bottom:6px;">
       <div>
-        <div class="ws-title">ẢNH 07 — MINI TOOL BUILDER (THIẾT KẾ GIAO DIỆN NO-CODE, CHỌN MODULE, LIVE PREVIEW & BUILD EXE)</div>
-        <div class="ws-desc">Cấu hình trọn vẹn sản phẩm Mini Auto-Tool cho từng Game Project: Branding, Layout Preset, cột chỉ số OCR động, 5-State Modules và xem trước trực tiếp.</div>
+        <div class="ws-title">ẢNH 07A — MINI TOOL BUILDER (TRÌNH DỰNG GIAO DIỆN TRỰC QUAN WYSIWYG — KHÔNG SỬA JSON TAY)</div>
+        <div class="ws-desc">Kéo thả sắp xếp khu vực UI, chọn/ẩn nhiệm vụ, click trực tiếp vào thành phần trên Preview để chỉnh thuộc tính &amp; liên kết biến Runtime.</div>
+      </div>
+      <div class="ws-badges">
+        <span class="tag tag-blue">Layout: [1 Cột] [● 2 Cột] [Expanded]</span>
+        <span class="tag tag-green">Preview: [● Online] [Offline] [Running] [Error]</span>
       </div>
     </div>
-    <div class="grid-sidebar-main">
-      <div class="panel">
-        <div class="panel-hdr"><span>1. CẤU HÌNH SẢN PHẨM MINI TOOL (ui-schema.json)</span><span class="tag tag-amber">Project: jx2-mobile</span></div>
-        <div class="sub-box">
-          <div class="sub-title">A. CHỌN GAME PROJECT, BRANDING & PHIÊN BẢN</div>
-          <div class="kv-list">
-            <div><span>Game Project:</span><code>Võ Hiệp Truyền Kỳ 2 Mobile (jx2-mobile · v1.0.0)</code></div>
-            <div><span>Tên file EXE & Cửa sổ:</span><code>Auto_JX2_Mobile.exe | "Auto Võ Hiệp 2 Mobile v1.0.0"</code></div>
-            <div><span>Màu thương hiệu (Accent):</span><code>#F59E0B (Võ Hiệp Amber) · Nền Header: #18131A</code></div>
-            <div><span>Biểu tượng nhúng PE:</span><code>projects/jx2-mobile/branding/icon.ico (7 icon layers)</code></div>
+    <div class="builder-3col">
+      <div class="panel" style="padding:10px;">
+        <div class="panel-hdr"><span>1. KHU VỰC UI &amp; NHIỆM VỤ</span><span class="tag tag-blue">Kéo thả</span></div>
+        <div class="sub-title">THỨ TỰ KHU VỰC GIAO DIỆN</div>
+        <div class="blk-row"><span>⋮⋮ [1] Header Thương hiệu</span><span>👁 🔒</span></div>
+        <div class="blk-row blk-active"><span>⋮⋮ [2] Bảng Thiết bị &amp; OCR</span><span>👁 🗑</span></div>
+        <div class="blk-row"><span>⋮⋮ [3] Danh sách Nhiệm vụ</span><span>👁 🗑</span></div>
+        <div class="blk-row"><span>⋮⋮ [4] Nhật ký Hoạt động</span><span>👁 🗑</span></div>
+        <div class="blk-row"><span>⋮⋮ [5] Thanh Hỗ trợ &amp; Cài đặt</span><span>👁 🗑</span></div>
+        <div class="btn btn-sm btn-outline" style="text-align:center;margin:4px 0 8px 0;">+ Thêm Khu vực UI Mới</div>
+        <div class="sub-title">CHỌN NHIỆM VỤ ĐƯA VÀO TOOL (4/5)</div>
+        <div class="mp-task">☑ <span class="tag tag-amber">[NV]</span> Chính Tuyến &amp; Dã Tẩu</div>
+        <div class="mp-task">☑ <span class="tag tag-amber">[NV]</span> Kiểm tra ADB + OCR</div>
+        <div class="mp-task">☑ <span class="tag tag-amber">[NV]</span> Tìm Kho Báu</div>
+        <div class="mp-task" style="opacity:0.55;">☐ <span class="tag tag-purple">[PB]</span> Bí Cảnh Tổ Đội (Đã ẩn)</div>
+      </div>
+      <div class="panel" style="padding:10px;background:#0C121B;">
+        <div class="panel-hdr"><span>2. INTERACTIVE VISUAL PREVIEW (CLICK THÀNH PHẦN ĐỂ CHỈNH)</span><span class="tag tag-amber">ui-schema v1.2</span></div>
+        <div class="mini-preview-frame" style="flex:1;">
+          <div class="mp-hdr">
+            <div><b>⚔️ Auto Võ Hiệp 2 Mobile v1.0.0</b> <span class="mp-badge">JX2 v1.0</span></div>
+            <div class="muted-xs">Ed25519 Verified (PE #7777)</div>
+          </div>
+          <div class="selected-preview-box">
+            <div class="sel-pill-tag">Đang chọn: DeviceGrid ➔ Cột OCR #2 ("Vàng")</div>
+            <table class="mini-tbl" style="margin:4px 0;">
+              <tr><th>☑</th><th>Thiết bị ADB</th><th>Trạng thái</th><th>Cấp (OCR)</th><th style="background:#3B2D17;color:#FCD34D;border:1.5px solid #F59E0B;">★ Vàng (OCR)</th><th>Bạc (OCR)</th></tr>
+              <tr><td>☑</td><td><code>emulator-5554</code></td><td><span class="tag tag-green">ONLINE</span></td><td>Chưa OCR (-)</td><td style="background:#261D10;"><b>Chưa OCR (-)</b></td><td>Chưa OCR (-)</td></tr>
+            </table>
+          </div>
+          <div class="grid-2" style="gap:8px;margin-top:8px;">
+            <div class="sub-box">
+              <div class="sub-title">ĐIỀU KHIỂN NHIỆM VỤ (4 TASKS)</div>
+              <div class="mp-task">☑ [NV] Chính Tuyến &amp; Dã Tẩu ⚙</div>
+              <div class="mp-task">☑ [NV] Kiểm tra Thiết bị ADB + OCR</div>
+              <div class="mp-task">☑ [NV] Tìm Kho Báu &amp; Đào Bảo Đồ</div>
+            </div>
+            <div class="sub-box">
+              <div class="sub-title">HOẠT ĐỘNG &amp; TRẠNG THÁI RUNTIME</div>
+              <div class="code-line">[READY] Khóa PE #7777 hợp lệ. Kết nối emulator-5554 OK.</div>
+              <div class="muted-xs" style="margin-top:6px;">Nút chạy: <span class="btn btn-sm btn-primary">▶ Bắt đầu Auto</span></div>
+            </div>
           </div>
         </div>
-        <div class="sub-box" style="margin-top:6px;">
-          <div class="sub-title">B. LAYOUT EDITOR & CỘT CHỈ SỐ OCR ĐỘNG (DEVICE COLUMNS)</div>
-          <div class="kv-list">
-            <div><span>Bố cục (Layout Preset):</span><code>compact_2_col (740×660 px · Bảng thiết bị + 2 cột Nhiệm vụ/Log)</code></div>
-            <div><span>Cột OCR #1:</span><code>Nhãn="Cấp"  | Biến="char_level"  | Fallback="Chưa OCR (-)"</code></div>
-            <div><span>Cột OCR #2:</span><code>Nhãn="Vàng" | Biến="char_gold"   | Fallback="Chưa OCR (-)"</code></div>
-            <div><span>Cột OCR #3:</span><code>Nhãn="Bạc"  | Biến="char_silver" | Fallback="Chưa OCR (-)"</code></div>
-          </div>
-        </div>
-        <div class="sub-box" style="margin-top:6px;">
-          <div class="sub-title">C. CHỌN WORKFLOWS (2), TASKS (5) & MODULES ĐÓNG GÓI (5/6)</div>
-          <div class="stat-pills">
-            <span class="tag tag-green">☑ mod.adb_core</span>
-            <span class="tag tag-green">☑ mod.vision_ocr</span>
-            <span class="tag tag-green">☑ mod.account_vault</span>
-            <span class="tag tag-green">☑ mod.proxy_network</span>
-            <span class="tag tag-red">☐ mod.adb_port_forward</span>
-            <span class="tag tag-green">☑ mod.emulator_optimizer</span>
-          </div>
+        <div class="warn-item ok" style="margin-top:6px;margin-bottom:0;">✅ Pre-Flight Audit 6/6 PASS · Không cần sửa JSON tay khi cấu hình thông thường.</div>
+      </div>
+      <div class="panel" style="padding:10px;">
+        <div class="panel-hdr"><span>3. THUỘC TÍNH THÀNH PHẦN</span><span class="tag tag-amber">Cột #2: Vàng</span></div>
+        <div class="form-grp"><label>Nhãn hiển thị (Column Label)</label><div class="fake-input">Vàng</div></div>
+        <div class="form-grp"><label>Liên kết Biến Runtime (Data Binding)</label><div class="fake-input c-cyan">runtime.ocr.char_gold ▾</div></div>
+        <div class="form-grp"><label>Giá trị mặc định (Khi chưa OCR)</label><div class="fake-input">Chưa OCR (-)</div></div>
+        <div class="form-grp"><label>Màu nhấn Thương hiệu (Branding)</label><div class="fake-input"><span style="color:#F59E0B;">■</span> #F59E0B (Võ Hiệp Amber) ▾</div></div>
+        <div class="form-grp"><label>Module Đóng gói (5-State Matrix)</label><div class="muted-xs">☑ adb_core · ☑ vision_ocr · ☑ account_vault · ☑ proxy · ☐ port_fwd</div></div>
+        <div class="quick-actions" style="flex-direction:column;margin-top:auto;">
+          <span class="btn btn-sm btn-outline">💾 Lưu Phiên bản UI Schema (v1.2)</span>
+          <span class="btn btn-sm btn-amber">🚀 Build &amp; Xuất Auto_JX2_Mobile.exe</span>
+          <div class="muted-xs" style="text-align:center;">&lt;/&gt; Xem JSON đọc-chỉ (Tùy chọn Dev nâng cao)</div>
         </div>
       </div>
-      <div class="panel">
-        <div class="panel-hdr"><span>2. LIVE INTERACTIVE PREVIEW (XEM TRƯỚC GIAO DIỆN MINI TOOL NGAY TRONG STUDIO)</span><span class="tag tag-green">Render 100% từ Schema</span></div>
-        <div class="mini-preview-frame">
-          <div class="mp-hdr">
-            <div><b>⚔️ Auto Võ Hiệp 2 Mobile v1.0.0</b> <span class="mp-badge">JX2-MMORPG v1.0</span></div>
-            <div class="muted-xs">Pkg: com.blackhole.jx2mobile · Ed25519 Verified (PE #7777)</div>
-          </div>
-          <table class="mini-tbl" style="margin:6px 0;">
-            <tr><th>Chọn</th><th>Thiết bị ADB</th><th>Trạng thái</th><th>Cấp (OCR)</th><th>Vàng (OCR)</th><th>Bạc (OCR)</th></tr>
-            <tr><td>☑</td><td><code>emulator-5554</code></td><td><span class="tag tag-green">ONLINE</span></td><td>Chưa OCR (-)</td><td>Chưa OCR (-)</td><td>Chưa OCR (-)</td></tr>
-          </table>
-          <div class="grid-2" style="gap:8px;">
-            <div class="sub-box">
-              <div class="sub-title">DANH SÁCH NHIỆM VỤ ([Tất cả] [NV] [PB] [HĐ])</div>
-              <div class="mp-task">☑ <span class="tag tag-amber">[NV]</span> Chính Tuyến & Đối thoại Dã Tẩu</div>
-              <div class="mp-task">☑ <span class="tag tag-amber">[NV]</span> Kiểm tra Thiết bị ADB Thật + OCR</div>
-              <div class="mp-task">☑ <span class="tag tag-amber">[NV]</span> Tìm Kho Báu & Đào Tàng Bảo Đồ</div>
-              <div class="mp-task">☑ <span class="tag tag-purple">[PB]</span> Sơn Tặc Mật Quật & Bí Cảnh</div>
-            </div>
-            <div class="sub-box">
-              <div class="sub-title">CẤU HÌNH TASK & NHẬT KÝ THỰC THI</div>
-              <div class="muted-xs">☑ Tự động bỏ qua hội thoại NPC</div>
-              <div class="muted-xs">Số chuỗi Dã Tẩu tối đa: [ 10 ]</div>
-              <div class="code-line" style="margin-top:4px;">[READY] Đã xác thực chữ ký Ed25519 qua khóa PE RT_RCDATA #7777.</div>
-            </div>
-          </div>
+    </div>
+    """
+)
+
+# Screen 07B: Mini Tool Builder — 3 Layout Modes & 4 Runtime Preview States
+s07b_html = studio_shell(
+    6,
+    '<span class="btn btn-outline">3 Kiểu Bố cục (1 Cột / 2 Cột / Expanded)</span><span class="btn btn-primary">4 Trạng thái Preview Trực quan</span>',
+    """
+    <div class="ws-header" style="margin-bottom:8px;padding-bottom:6px;">
+      <div>
+        <div class="ws-title">ẢNH 07B — CHẾ ĐỘ XEM TRƯỚC BỐ CỤC (1 CỘT / 2 CỘT / EXPANDED) &amp; 4 TRẠNG THÁI RUNTIME MINI TOOL</div>
+        <div class="ws-desc">Kiểm chứng ngay trong Mini Tool Builder cách giao diện thay đổi theo kích thước cửa sổ và 4 trạng thái thực thi (Online / Offline / Running / Error).</div>
+      </div>
+    </div>
+    <div class="sub-title" style="margin-bottom:6px;">A. CHUYỂN ĐỔI 3 KIỂU BỐ CỤC (LAYOUT PRESETS) TRÊN CÙNG MỘT UI-SCHEMA</div>
+    <div class="grid-3" style="gap:10px;margin-bottom:10px;">
+      <div class="panel state-card">
+        <div class="panel-hdr"><span>1. COMPACT 1 CỘT (520×660)</span><span class="tag tag-blue">Siêu gọn</span></div>
+        <div class="mini-canvas-box" style="text-align:left;">
+          <div class="mc-hdr-bar">Header + Chọn Máy ADB</div>
+          <div class="mc-box-row">Danh sách Nhiệm vụ (Chồng dọc)</div>
+          <div class="mc-box-row">Nhật ký Log Thu gọn (3 dòng)</div>
         </div>
-        <div class="warn-item ok" style="margin-top:6px;">✅ Pre-Flight Audit 6/6 PASS: Workflows hợp lệ · 4 PNGs tồn tại · Icon 7 lớp · Keystore sẵn sàng · Runtime binary sẵn sàng!</div>
+      </div>
+      <div class="panel state-card" style="border-color:#F59E0B;">
+        <div class="panel-hdr"><span>2. BỐ CỤC 2 CỘT (740×660 · MẶC ĐỊNH)</span><span class="tag tag-amber">Standard</span></div>
+        <div class="mini-canvas-box" style="text-align:left;">
+          <div class="mc-hdr-bar">Header + Bảng Máy &amp; Cột OCR</div>
+          <div class="grid-2" style="gap:6px;"><div class="mc-box-row">Trái: Nhiệm vụ</div><div class="mc-box-row">Phải: Hoạt động / Log</div></div>
+        </div>
+      </div>
+      <div class="panel state-card">
+        <div class="panel-hdr"><span>3. EXPANDED WORKSTATION (1020×700)</span><span class="tag tag-green">Mở rộng</span></div>
+        <div class="mini-canvas-box" style="text-align:left;">
+          <div class="mc-hdr-bar">Header + Bảng Đa Thiết Bị Đầy Đủ</div>
+          <div class="grid-3" style="gap:6px;"><div class="mc-box-row">Nhiệm vụ</div><div class="mc-box-row">Tham số Task</div><div class="mc-box-row">Log + Trợ giúp</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="sub-title" style="margin-bottom:6px;">B. XEM TRƯỚC 4 TRẠNG THÁI RUNTIME TRONG LIVE PREVIEW</div>
+    <div class="grid-2" style="gap:10px;flex:1;">
+      <div class="grid-2" style="gap:10px;">
+        <div class="panel state-card">
+          <div class="panel-hdr"><span>1. ONLINE (SẴN SÀNG)</span><span class="tag tag-green">ONLINE</span></div>
+          <div class="muted-xs"><code>emulator-5554</code> kết nối OK · Các cột OCR hiển thị trung thực <code>"Chưa OCR (-)"</code> trước khi quét.</div>
+          <div class="code-line">[READY] PE #7777 hợp lệ · Bấm Bắt đầu để chạy.</div>
+        </div>
+        <div class="panel state-card">
+          <div class="panel-hdr"><span>2. OFFLINE (CHƯA CÓ ADB)</span><span class="tag tag-amber">OFFLINE</span></div>
+          <div class="muted-xs">Nút Chạy tự động khóa an toàn; hiển thị hướng dẫn bật USB Debugging / mở LDPlayer kèm nút <code>Quét lại</code>.</div>
+          <div class="code-line" style="color:#E7B15B;">[WAITING] Không tìm thấy thiết bị ADB online.</div>
+        </div>
+      </div>
+      <div class="grid-2" style="gap:10px;">
+        <div class="panel state-card">
+          <div class="panel-hdr"><span>3. RUNNING (ĐANG THỰC THI)</span><span class="tag tag-blue">RUNNING</span></div>
+          <div class="muted-xs">Hiển thị nhiệm vụ đang chạy, bước hiện tại, thanh tiến độ và nút <code>Dừng an toàn (Cancel)</code>.</div>
+          <div class="code-line">[RUN] Task #1 (Bước 4/6) · SafeTap(111,170)</div>
+        </div>
+        <div class="panel state-card" style="border-color:#F27883;">
+          <div class="panel-hdr"><span>4. ERROR (LỖI / FAIL-CLOSED)</span><span class="tag tag-red">ERROR</span></div>
+          <div class="muted-xs">Hiển thị rõ mã lỗi (<code>ED25519_PUBKEY_UNTRUSTED</code> hoặc mất kết nối ADB giữa chừng) và chặn thực thi.</div>
+          <div class="code-line" style="color:#FCA5A5;">[BLOCKED] Chữ ký bundle bị sai lệch — Đã dừng!</div>
+        </div>
       </div>
     </div>
     """
@@ -662,7 +798,7 @@ s08_html = studio_shell(
           <td>12,515,840 B</td>
           <td><code>55c051cba31c269c7d307301...</code></td>
           <td><code>acb43ebd9ab499f0... (#7777)</code></td>
-          <td><span class="tag tag-green">8/8 PASS (1.09s)</span></td>
+          <td><span class="tag tag-green">8/8 PASS · Đo: 1097ms</span></td>
         </tr>
         <tr>
           <td><b>rel-slg-1.0.0</b> (kingdom-slg)</td>
@@ -671,7 +807,7 @@ s08_html = studio_shell(
           <td>12,516,352 B</td>
           <td><code>95732232077c0747fe611def...</code></td>
           <td><code>acb43ebd9ab499f0... (#7777)</code></td>
-          <td><span class="tag tag-green">8/8 PASS (1.12s)</span></td>
+          <td><span class="tag tag-green">8/8 PASS · Đo: 1127ms</span></td>
         </tr>
       </table>
     </div>
@@ -828,10 +964,12 @@ MOCKUP_PAGES = [
     ("ui_01_new_dashboard.png", s01_html),
     ("ui_02_game_projects.png", s02_html),
     ("ui_03_workflow_studio.png", s03_html),
+    ("ui_03b_workflow_studio_states.png", s03b_html),
     ("ui_04_tasks_and_modules.png", s04_html),
     ("ui_05_device_lab.png", s05_html),
     ("ui_06_test_and_debug.png", s06_html),
     ("ui_07_mini_tool_builder.png", s07_html),
+    ("ui_07b_mini_builder_layouts_states.png", s07b_html),
     ("ui_08_release_management.png", s08_html),
     ("ui_res_1280x720.png", r_1280),
     ("ui_res_1600x900.png", r_1600),
@@ -914,15 +1052,15 @@ HTML_DOC = """<!DOCTYPE html>
   .project-pill { border-color: #1878F5; }
   .device-pill { border-color: #3BC38D; }
   .ctx-tag { font-size: 10px; font-weight: 700; color: #8FA2BC; }
-  .ctx-val { font-size: 12.5px; font-weight: 700; color: #fff; }
+  .ctx-val { font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; }
   .dot-on {
     display: inline-block; width: 8px; height: 8px;
     border-radius: 50%; background: #3BC38D; margin-right: 3px;
   }
   .hdr-actions { display: flex; gap: 8px; align-items: center; }
   .btn {
-    padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
-    display: inline-block;
+    padding: 5px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600;
+    display: inline-block; white-space: nowrap;
   }
   .btn-sm { padding: 5px 10px; font-size: 11.5px; }
   .btn-primary { background: #1878F5; color: #fff; border: 1px solid #38BDF8; }
@@ -1108,6 +1246,31 @@ HTML_DOC = """<!DOCTYPE html>
   }
   .mp-task { padding: 5px 0; border-bottom: 1px dashed #253142; font-size: 11.5px; }
   .nav-icon-only { font-size: 13px; line-height: 2.3; text-align: center; color: #38BDF8; font-weight: 700; }
+  .studio-3col-wide { display: grid; grid-template-columns: 205px 1fr 275px; gap: 10px; flex: 1; }
+  .builder-3col { display: grid; grid-template-columns: 310px 1fr 315px; gap: 10px; flex: 1; }
+  .executing-node { border: 2px solid #3BC38D; box-shadow: 0 0 0 2px rgba(59,195,141,0.28); }
+  .c-red { color: #F27883 !important; font-weight: 700; }
+  .state-card { justify-content: flex-start; gap: 6px; }
+  .mini-canvas-box { background: #0C121B; border: 1px solid #2A3647; border-radius: 7px; padding: 10px; margin-top: 4px; flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; }
+  .mc-pill { display: inline-block; background: #173355; color: #38BDF8; border: 1px solid #1878F5; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 700; margin: 0 auto 8px auto; }
+  .mc-flow { font-size: 11.5px; color: #CAD5E2; }
+  .mc-flow span { background: #16202F; border: 1px solid #2A3647; padding: 4px 7px; border-radius: 4px; }
+  .mc-node { padding: 8px 10px; border-radius: 6px; background: #16202F; font-size: 11.5px; margin-bottom: 6px; }
+  .mc-selected { border: 2px solid #38BDF8; }
+  .mc-running { border: 2px solid #3BC38D; }
+  .mc-error { border: 2px solid #F27883; background: #2A161D; }
+  .mc-bp { border: 2px solid #E7B15B; background: #292014; }
+  .mc-insp-mini { font-size: 11px; color: #8FA2BC; }
+  .mc-dock-mini { font-family: Consolas, monospace; font-size: 10.5px; }
+  .mc-hdr-bar { background: #172334; border: 1px solid #2A3647; border-radius: 4px; padding: 5px 8px; font-size: 11px; font-weight: 700; margin-bottom: 6px; }
+  .mc-box-row { background: #141C28; border: 1px dashed #334257; border-radius: 4px; padding: 8px; font-size: 11px; color: #CAD5E2; margin-bottom: 4px; }
+  .blk-row { background: #121A26; border: 1px solid #2A3647; border-radius: 5px; padding: 6px 8px; margin-bottom: 4px; display: flex; justify-content: space-between; font-size: 11.5px; }
+  .blk-row.blk-active { border-color: #38BDF8; background: #172B42; font-weight: 700; }
+  .selected-preview-box { border: 2px dashed #38BDF8; border-radius: 7px; padding: 8px 6px 4px 6px; position: relative; margin-top: 10px; background: rgba(24,120,245,0.06); }
+  .sel-pill-tag { position: absolute; top: -11px; left: 10px; background: #1878F5; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 4px; }
+  .form-grp { margin-bottom: 7px; }
+  .form-grp label { display: block; font-size: 11px; color: #8FA2BC; margin-bottom: 3px; font-weight: 600; }
+  .fake-input { background: #0C121A; border: 1px solid #2E3D52; border-radius: 5px; padding: 5px 9px; font-size: 12px; color: #EDF3FC; }
   .status-bar {
     height: 28px; background: #121924; border-top: 1px solid #2A3647;
     padding: 0 16px; display: flex; align-items: center; justify-content: space-between;

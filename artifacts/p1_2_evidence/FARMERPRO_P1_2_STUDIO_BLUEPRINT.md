@@ -724,3 +724,37 @@ Nếu `fp-mini-runtime.exe` chỉ đọc khóa công khai từ tệp văn bản 
 }
 ```
 > **Kết luận**: Ngay cả khi kẻ tấn công thay thế đồng thời cả `bundle/trusted_publisher.pub` và `bundle/signature.fpbundle.json` bằng một cặp khóa Ed25519 khác (Case 5), `Auto_JX2_Mobile.exe` vẫn từ chối khởi chạy ngay lập tức (`ED25519_PUBKEY_UNTRUSTED`) vì khóa công khai gốc `acb43ebd9ab499f0...` được đọc trực tiếp từ tài nguyên nhị phân **`PE_RT_RCDATA_7777`** bên trong file `.exe`!
+
+
+---
+
+## 11. BẢN SỬA ĐỔI v1.2.1-REVIEW (BỔ SUNG & HIỆU CHỈNH THEO YÊU CẦU KIỂM ĐỊNH)
+
+### 11.1. Tóm tắt Thay đổi từ `v1.2.0-P1.2-GATE` sang `v1.2.1-REVIEW`
+
+| # | Yêu cầu Kiểm định | Nội dung Hiệu chỉnh trong `v1.2.1-REVIEW` |
+|---|---|---|
+| **1** | **Chất lượng PDF & Khả năng đọc 100–125%** | Tăng cỡ chữ chuẩn toàn tài liệu (`body 12px`, bảng `10.8–11.5px`, loại bỏ cỡ `6.5pt`), tách 10 sơ đồ kiến trúc `IV.1–IV.10` thành **1 sơ đồ/trang** (~136mm), phóng to ảnh UI lên ~128–134mm, sửa ngắt chữ giữa từ, bổ sung **PDF Bookmarks (Outline)** và tối ưu khoảng trắng dưới đáy trang. |
+| **2** | **Thiết kế Tương tác Workflow Studio** | Bổ sung `Ảnh 03A` (ưu tiên Canvas `>72% @ 1280×720`, `~64% @ 1600×900`) và `Ảnh 03B` minh họa đủ **6 trạng thái tương tác**: Canvas mặc định, Chọn Node + Inspector, Đang thực thi, Lỗi + Debug, Đặt Breakpoint/Step Run, Crop ảnh từ Device Lab vào Vision Node. |
+| **3** | **Trình dựng Trực quan Mini Tool Builder** | Thiết kế lại `Ảnh 07A` theo bố cục **WYSIWYG 3 khung** (Thêm/xóa/sắp xếp khu vực UI, chọn nhiệm vụ, click thành phần trên Preview để chỉnh nhãn & liên kết biến Runtime — **không bắt sửa JSON tay**), kèm `Ảnh 07B` cho **3 Layout Presets** (`1 cột / 2 cột / Expanded`) & **4 Preview States** (`Online / Offline / Running / Error`). |
+| **4** | **Ma trận Phân loại Thực tế 5 Trạng thái** | Loại bỏ nhãn *"Bảo toàn 100% tính năng"*; phân tách rạch ròi **Bảo toàn Thiết kế/Cấu trúc UI** vs **Trạng thái Backend Thực tế** (`IMPLEMENTED / PARTIAL / MOCK / MISSING / PLANNED`), kiểm toán đúng `CredentialVault` (`HashMap`), `NetworkView` (`setTimeout` + static `forwardRules`), `TasksView`, `RunsView` (`job-demo-8492`), `jx2Workflows.ts` và `Checkpoint Restore`. |
+| **5** | **Đóng gói Hồ sơ Evidence Di động** | Đóng gói thư mục độc lập `artifacts/p1_2_v1_2_1_evidence_pack/` gồm raw logs (`cargo test --workspace` fresh run, `cargo tree`, live ADB, tamper JSON), screenshots gốc, SVG/MMD, Git & OS metadata, `CHANGELOG` và `EVIDENCE_MANIFEST_SHA256.json`. |
+| **6** | **Chuẩn hóa Tiêu chí Chấp thuận P4–P6** | Gỡ bỏ ràng buộc *"1,1 giây tuyệt đối"* (báo cáo thực đo từng bước Step 1–8 từ `1097–1127 ms` và nêu rõ yếu tố ảnh hưởng); bắt buộc E2E test từ P4–P6 phải thao tác trực tiếp trên GUI Studio thay vì chỉ CLI/mockup. |
+| **7** | **Kỷ luật Stage-Gate & Phiên bản Bàn giao** | Giữ nguyên 100% `apps/desktop/src` và production `farmerpro.db`; phát hành PDF **v1.2.1-REVIEW** cùng bộ Artifact QA mới. |
+
+### 11.2. Ma trận Kiểm toán Trung thực 6 Khu vực Cốt lõi & 10 Màn hình (5 Trạng thái)
+
+| Thành phần Kiểm toán | Nguồn Code Thực tế Đã Xác minh | Thiết kế / Cấu trúc UI | Trạng thái Backend Thực tế | Ghi chú Kế hoạch P2–P5 |
+|---|---|---|---|---|
+| **CredentialVault / Keyring** | `crates/fp-security/src/lib.rs` + `AccountsView.tsx` | Đã thiết kế ở `3. Tasks & Modules` | **`MOCK`** (`Arc<Mutex<HashMap>>`, `AccountsView` dùng state tĩnh; `SecretRedactor`/`Guard` = `IMPLEMENTED`) | Tích hợp OS Credential Manager + SQLite `project_id` ở **P2–P3** (`PLANNED`) |
+| **Proxy Test & ADB Forward** | `apps/desktop/src/features/network/NetworkView.tsx` + `crates/fp-adb` | Đã thiết kế ở `3. Tasks & Modules` | **`MOCK`** (`handleTestProxy` dùng `setTimeout(600)` fake `38ms`; `forwardRules` tĩnh, `fp-adb` chưa có `adb forward`) | Implement probe thật & `adb forward/reverse` ở **P3** (`PLANNED`) |
+| **Tasks Planner & Scheduler** | `TasksView.tsx` + `crates/fp-scheduler/src/lib.rs` | Đã thiết kế ở `3. Tasks & Modules` | **`PARTIAL`** (`fp-scheduler` core queue/lease/fencing = `IMPLEMENTED`; `TasksView` hiện là dữ liệu tĩnh `MOCK`) | Nối bảng `task_definitions` theo Project ở **P2–P4** (`PLANNED`) |
+| **Checkpoint Restore** | `crates/fp-workflow-runtime` (`L574`) + `fp-storage` (`L107`) + `RunsView.tsx` | Đã thiết kế ở `5. Test & Debug` | **`PARTIAL`** (`fp-storage` lưu event DB = `IMPLEMENTED`; runtime mới ghi biến nhớ, chưa có `resume_from_checkpoint`, UI = `MOCK`) | Xây dựng engine `resume_from_checkpoint` từ SQLite ở **P3** (`PLANNED`) |
+| **Workflow Library JX2** | `apps/desktop/src/data/jx2Workflows.ts` + `WorkflowsView.tsx` | Di chuyển sang `2. Workflow Studio` & `1. Game Projects` | **`PARTIAL`** (10 đồ thị JX2 hợp lệ làm dữ liệu mẫu, nhưng hardcode tĩnh cho 1 game) | Migrate vào bảng `workflows` của `proj-jx2-mobile-001` ở **P2** (`PLANNED`) |
+| **RunsView Demo Fallback** | `apps/desktop/src/features/runs/RunsView.tsx` (`L22–80`) | Di chuyển sang `5. Test & Debug` | **`MOCK`** (Còn fallback `job-demo-8492` khi chưa có run thật; `step_events` DB = `IMPLEMENTED`) | Xóa bỏ hoàn toàn fallback giả lập ở **P3–P4** (`PLANNED`) |
+| **Core Automation & Crypto** | `fp-adb`, `fp-vision`, `fp-actions`, `fp-device`, `fp-bundle-verify`, `fp-builder` CLI | Tích hợp với Studio IDE | **`IMPLEMENTED`** (34/34 unit tests PASS, Live ADB `emulator-5554` 19 events, PE `RT_RCDATA #7777` chặn 5/5 Tamper) | Kết hợp chữ ký OS Windows Authenticode (`signtool.exe`) ở **P5** |
+| **Studio New UI & Builder GUI** | `apps/desktop/src` (chưa sửa theo P1.2 Gate) | `Ảnh 01` → `Ảnh 08` (Bao gồm `03B` & `07B`) | **`MISSING`** (Builder hiện chỉ chạy qua `fp-cli export-poc`, chưa có GUI trong `FarmerPro.exe`) | Triển khai UI 6 khu vực + WYSIWYG Builder ở **P4–P5** (`PLANNED`) |
+
+### 11.3. Chuẩn hóa Tiêu chí Chấp thuận P4–P6 (Không dùng Mốc Thời gian Tuyệt đối)
+- **Telemetry Build Pipeline thực tế (không áp ngưỡng cứng "1,1 giây")**: Thời gian đóng gói phụ thuộc kích thước assets, `./bin/adb.exe`, tốc độ đĩa và trình quét Antivirus/Windows Defender. Ở giai đoạn PoC (`export_poc_tools_pe_root_of_trust.json`), tổng thời gian thực đo đạt `1097 ms` (`Auto_JX2_Mobile.exe`: Step 1–3 `1ms`, Step 4 Copy `22ms`, Step 5 PE Resource `1038ms`, Step 6 Package `20ms`, Step 7 Ed25519 `3ms`, Step 8 Verify `13ms`) và `1127 ms` (`Auto_Kingdom_SLG.exe`: Step 5 `1058ms`). Từ P5 trở đi, báo cáo `build-report.json` bắt buộc ghi rõ **durationMs từng bước (Step 1–8)** và kích thước gói thay vì lấy một mốc thời gian cố định làm điều kiện Pass/Fail.
+- **Bắt buộc kiểm thử E2E trên GUI thật (P4–P6)**: Mọi kiểm thử từ P4–P6 không được chỉ chạy bằng CLI hay đối chiếu mockup; phải chứng minh người dùng thực hiện trọn vẹn trên giao diện `FarmerPro.exe` từ: Tạo Game Project → Cắt mẫu ROI tại Device Lab → Kéo nối Node tại Workflow Studio → Tạo Task tại Tasks & Modules → Dựng giao diện tại Mini Tool Builder → Xuất EXE tại Release Management → Đóng Studio và chạy độc lập 2 Mini Tools trên giả lập/thiết bị ADB thật.

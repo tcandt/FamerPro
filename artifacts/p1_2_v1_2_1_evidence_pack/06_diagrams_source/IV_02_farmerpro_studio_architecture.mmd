@@ -1,0 +1,24 @@
+flowchart LR
+    subgraph UI["Frontend: Tauri v2 WebView + React 19 + TypeScript + Tailwind v4"]
+        HDR["Global Context Bar (Active Project + Active Lab Device)"]
+        WS["6 Studio Workspaces (Projects, Workflow Studio, Tasks/Modules, Device Lab, Test/Debug, Mini Builder)"]
+        RF["React Flow Graph Canvas + CustomWorkflowNode + Auto-Layout"]
+        ZUS["Zustand Studio Store (Multi-Project Context & Reactive State)"]
+    end
+    subgraph IPC["Tauri v2 Typed IPC Commands"]
+        CMD["studio_list_projects · studio_crop_and_save_template\nstudio_upsert_project_task · studio_save_ui_schema\nstudio_preflight_check_release · studio_build_mini_tool_release"]
+    end
+    subgraph BACKEND["Rust Studio Backend (src-tauri)"]
+        STOR["fp-storage (SQLite WAL farmerpro.db v2 Multi-Project)"]
+        DEVLAB["fp-adb + fp-device + fp-vision (Live Snapshot & ROI Cropper)"]
+        WFRT["fp-workflow-runtime + fp-scheduler (Step-Run & Trace Engine)"]
+        BLD["fp-builder + ProducerKeyManager (8-Step EXE Packager)"]
+    end
+    HDR --> ZUS
+    WS --> ZUS
+    RF --> ZUS
+    ZUS <--> CMD
+    CMD --> STOR
+    CMD --> DEVLAB
+    CMD --> WFRT
+    CMD --> BLD

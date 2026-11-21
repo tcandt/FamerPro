@@ -1,0 +1,13 @@
+{
+  "test": "windows_ntfs_acl_readonly_fallback",
+  "username": "TINH-NGUYEN",
+  "icaclsCommand": "icacls e:/DATA/FarmerPro\\artifacts\\p1_1_evidence\\acl_readonly_test\\Auto_Kingdom_SLG\\data /deny TINH-NGUYEN:(OI)(CI)(W,DC)",
+  "icaclsOutput": "processed file: e:/DATA/FarmerPro\\artifacts\\p1_1_evidence\\acl_readonly_test\\Auto_Kingdom_SLG\\data\r\nSuccessfully processed 1 files; Failed processing 0 files",
+  "directPythonWriteBlockedByOs": true,
+  "directPythonWriteOsError": "[Errno 13] Permission denied: 'e:/DATA/FarmerPro\\\\artifacts\\\\p1_1_evidence\\\\acl_readonly_test\\\\Auto_Kingdom_SLG\\\\data\\\\test_write.txt'",
+  "miniRuntimeDetectedReadOnly": true,
+  "miniRuntimeWriteProbeError": "write_probe failed: Access is denied. (os error 5) (os error Some(5))",
+  "fallbackToLocalAppdataUsed": true,
+  "resolvedSqliteDbPath": "C:\\Users\\TINH-NGUYEN\\AppData\\Local\\FarmerPro\\MiniTools\\kingdom-slg\\data\\runtime_kingdom-slg.db",
+  "passed": true
+}

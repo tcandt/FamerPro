@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 520" width="1400" height="520">
+  <defs>
+    <style>
+      text { font-family: 'Segoe UI', Inter, Roboto, Arial, sans-serif; fill: #EDF3FC; }
+      .mono { font-family: Consolas, 'Courier New', monospace; }
+      .title { font-size: 20px; font-weight: 700; fill: #FFFFFF; }
+      .subtitle { font-size: 12.5px; font-weight: 500; fill: #8FA2BC; }
+      .zone-title { font-size: 13.5px; font-weight: 700; letter-spacing: 0.4px; }
+      .box-title { font-size: 13px; font-weight: 700; fill: #FFFFFF; }
+      .box-sub { font-size: 11px; font-weight: 400; fill: #A9B8CC; }
+      .box-code { font-family: Consolas, monospace; font-size: 10.5px; fill: #38BDF8; }
+      .badge { font-size: 10px; font-weight: 700; }
+      .edge-label { font-size: 10px; font-weight: 600; fill: #38BDF8; }
+    </style>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38BDF8"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#3BC38D"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#E7B15B"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#F27883"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B291F7"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1400" height="520" rx="10" fill="#0D131D" stroke="#2A3647" stroke-width="2"/>
+  <rect x="0" y="0" width="1400" height="56" rx="10" fill="#141C28"/>
+  <line x1="0" y1="56" x2="1400" y2="56" stroke="#2A3647" stroke-width="1.5"/>
+  <text x="22" y="25" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="18.5" font-weight="700">SƠ ĐỒ IV.2 — FARMERPRO STUDIO IDE INTERNAL ARCHITECTURE</text>
+  <text x="22" y="45" fill="#9FB2CC" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="500">Luồng dữ liệu hai chiều giữa React 19 + React Flow + Zustand qua Tauri v2 Typed IPC xuống Rust Core Services</text>
+  
+  <rect x="18" y="72" width="544" height="430" rx="8" fill="#111927" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="30" y="61" width="520" height="21" rx="4" fill="#16202F" stroke="#38BDF8" stroke-width="1.2"/>
+  <text x="38" y="76" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">FRONTEND: TAURI V2 WEBVIEW (React 19 + TypeScript + Vite + Tailwind v4)</text>
+<rect x="34" y="98" width="512" height="52" rx="6" fill="#172538" stroke="#1878F5" stroke-width="1.5"/>
+  <rect x="34" y="98" width="5" height="52" rx="2" fill="#38BDF8"/>
+  <text x="48" y="118" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Global Context Header &amp; Navigation Rail</text>
+  <text x="48" y="135" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.02">Project Switcher (Active GameProject) | Lab Device Selector | 6 Workspace Tabs | System Drawer</text>
+<rect x="34" y="160" width="250" height="82" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
+  <rect x="34" y="160" width="5" height="82" rx="2" fill="#1878F5"/>
+  <text x="48" y="180" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">1. Game Projects &amp; Assets UI</text>
+  <text x="48" y="197" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Project Cards, Manifest Form,</text>
+  <text x="48" y="211.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Template PNG Gallery, Health</text>
+<rect x="296" y="160" width="250" height="82" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
+  <rect x="296" y="160" width="5" height="82" rx="2" fill="#B291F7"/>
+  <text x="310" y="180" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">2. Workflow Studio (React Flow)</text>
+  <text x="310" y="197" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Collapsible Palette, Graph Canvas,</text>
+  <text x="310" y="211.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Node Inspector, Execution Dock</text>
+<rect x="34" y="252" width="250" height="82" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
+  <rect x="34" y="252" width="5" height="82" rx="2" fill="#3BC38D"/>
+  <text x="48" y="272" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">3. Tasks &amp; Modules Config UI</text>
+  <text x="48" y="289" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Task Library, Priority Queue,</text>
+  <text x="48" y="303.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Vault, SOCKS5 Proxy, Watchdog</text>
+<rect x="296" y="252" width="250" height="82" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
+  <rect x="296" y="252" width="5" height="82" rx="2" fill="#38BDF8"/>
+  <text x="310" y="272" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">4. Device Lab &amp; ROI Cropper</text>
+  <text x="310" y="289" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">ADB Fleet, LDPlayer Control,</text>
+  <text x="310" y="303.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Interactive PNG Cropper &amp; OCR</text>
+<rect x="34" y="344" width="250" height="82" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
+  <rect x="34" y="344" width="5" height="82" rx="2" fill="#E7B15B"/>
+  <text x="48" y="364" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">5. Test &amp; Debug Inspector</text>
+  <text x="48" y="381" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Live Step Trace, Before/After</text>
+  <text x="48" y="395.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Safe Tap Overlay, Checkpoints</text>
+<rect x="296" y="344" width="250" height="82" rx="6" fill="#21221E" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="296" y="344" width="5" height="82" rx="2" fill="#E7B15B"/>
+  <text x="310" y="364" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">6. Mini Tool Builder &amp; Release</text>
+  <text x="310" y="381" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Form Layout Designer, Preview,</text>
+  <text x="310" y="395.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Pre-Flight Audit, 8-Step Build</text>
+<rect x="34" y="436" width="512" height="54" rx="6" fill="#142030" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="34" y="436" width="5" height="54" rx="2" fill="#38BDF8"/>
+  <text x="48" y="456" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Zustand Reactive Studio Store (useStudioStore.ts)</text>
+  <text x="48" y="473" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.24">Đồng bộ trạng thái activeProjectId, activeDeviceId, workflows, tasks, uiSchema, buildReports</text>
+
+  <rect x="596" y="72" width="224" height="430" rx="8" fill="#151828" stroke="#B291F7" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="608" y="61" width="200" height="21" rx="4" fill="#16202F" stroke="#B291F7" stroke-width="1.2"/>
+  <text x="616" y="76" fill="#B291F7" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">TAURI V2 TYPED IPC BRIDGE</text>
+<rect x="610" y="104" width="196" height="380" rx="6" fill="#1A1F33" stroke="#B291F7" stroke-width="1.5"/>
+  <rect x="610" y="104" width="5" height="380" rx="2" fill="#B291F7"/>
+  <text x="624" y="124" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">11 Studio IPC Commands</text>
+  <text x="624" y="141" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">studio_list_projects</text>
+  <text x="624" y="155.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">studio_create_project</text>
+  <text x="624" y="170.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">studio_update_project</text>
+  <text x="624" y="184.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">studio_list_project_tasks</text>
+  <text x="624" y="199.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">studio_upsert_project_task</text>
+  <text x="624" y="213.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">studio_save_ui_schema</text>
+  <text x="624" y="228.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">studio_crop_save_template</text>
+  <text x="624" y="242.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">studio_test_template_match</text>
+  <text x="624" y="257.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">studio_preflight_check</text>
+  <text x="624" y="271.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">studio_build_mini_release</text>
+  <text x="624" y="286.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">studio_smoke_test_release</text>
+  <text x="624" y="300.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">-------------------------</text>
+  <text x="624" y="315.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">+ Existing ADB, Device,</text>
+  <text x="624" y="329.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  Workflow, Vault &amp; Proxy</text>
+  <text x="624" y="344.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  Tauri Commands</text>
+  <text x="624" y="358.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">-------------------------</text>
+  <text x="624" y="373.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Zero Raw Shell Strings;</text>
+  <text x="624" y="387.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Typed Serde JSON Payloads</text>
+
+  <rect x="856" y="72" width="526" height="430" rx="8" fill="#101E24" stroke="#3BC38D" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <rect x="868" y="61" width="483" height="21" rx="4" fill="#16202F" stroke="#3BC38D" stroke-width="1.2"/>
+  <text x="876" y="76" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">BACKEND: RUST CORE ENGINE (apps/desktop/src-tauri + 14 Crates)</text>
+<rect x="872" y="98" width="494" height="86" rx="6" fill="#152628" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="872" y="98" width="5" height="86" rx="2" fill="#3BC38D"/>
+  <text x="886" y="118" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Multi-Project Persistence Service (fp-storage)</text>
+  <text x="886" y="135" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• SQLite WAL Mode (farmerpro.db v2 Schema: projects, project_modules,</text>
+  <text x="886" y="149.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  vision_templates, task_definitions, mini_tool_schemas, project_releases)</text>
+  <text x="886" y="164.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Online Backup API + PRAGMA integrity_check + Atomic Transactions</text>
+<rect x="872" y="196" width="494" height="92" rx="6" fill="#152232" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="872" y="196" width="5" height="92" rx="2" fill="#38BDF8"/>
+  <text x="886" y="216" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Device Lab, Vision &amp; Workflow Runtime Service</text>
+  <text x="886" y="233" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• fp-adb + fp-device: Quản lý thiết bị, chụp screencap PNG theo yêu cầu</text>
+  <text x="886" y="247.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• fp-vision + fp-actions: Cắt mẫu ROI, khớp mẫu SSD đa tỉ lệ, WinRT OCR</text>
+  <text x="886" y="262.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• fp-workflow-runtime + fp-scheduler: Chạy kiểm thử bước, ghi StepEvent thật</text>
+<rect x="872" y="300" width="494" height="92" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="872" y="300" width="5" height="92" rx="2" fill="#E7B15B"/>
+  <text x="886" y="320" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Mini Tool Packager &amp; Security Service (fp-builder + fp-security)</text>
+  <text x="886" y="337" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• ProducerKeyManager: Quản lý khóa ký Ed25519 tại %LOCALAPPDATA%</text>
+  <text x="886" y="351.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• MiniToolPackager: Đóng gói 8 bước, nhúng PE Icon + RT_RCDATA #7777</text>
+  <text x="886" y="366.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Smoke Test Runner: Gọi tiến trình con --verify-bundle &amp; --test-tamper-suite</text>
+<rect x="872" y="404" width="494" height="84" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
+  <rect x="872" y="404" width="5" height="84" rx="2" fill="#8FA2BC"/>
+  <text x="886" y="424" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Filesystem Project &amp; Release Artifact Tree</text>
+  <text x="886" y="441" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• projects/&lt;slug&gt;/{project.fpproj.json, ui-schema.json, workflows/, templates/}</text>
+  <text x="886" y="455.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• releases/&lt;slug&gt;/Auto_&lt;Game&gt;.exe + bundle/ + bin/ + data/ + build-report.json</text>
+<line x1="546" y1="290" x2="610" y2="290" stroke="#B291F7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+  <rect x="554.6" y="282.5" width="46.8" height="15.0" rx="3" fill="#0D131D" stroke="#B291F7" stroke-width="1"/>
+  <text x="578.0" y="293.2" text-anchor="middle" fill="#B291F7" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">invoke</text>
+<line x1="806" y1="150" x2="872" y2="150" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="815.6" y="142.5" width="46.8" height="15.0" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
+  <text x="839.0" y="153.2" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">SQLite</text>
+<line x1="806" y1="245" x2="872" y2="245" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="815.6" y="237.5" width="46.8" height="15.0" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
+  <text x="839.0" y="248.2" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">Vision</text>
+<line x1="806" y1="345" x2="872" y2="345" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
+  <rect x="818.5" y="337.5" width="41.0" height="15.0" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
+  <text x="839.0" y="348.2" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">Build</text>
+</svg>

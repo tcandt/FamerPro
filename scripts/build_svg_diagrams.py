@@ -251,7 +251,7 @@ part1b_body = "\n".join([
         "• Đọc lại khóa từ PE RT_RCDATA #7777",
         "• Kiểm tra chữ ký & bảng băm SHA-256",
         "• Đóng gói kèm ./bin/adb.exe + 2 DLLs",
-        "code:Xuất build-report.json (~1.1 giây)"
+        "code:Xuất build-report.json (đo thời gian từng bước)"
     ], "#3BC38D", "#142624", "#3BC38D"),
 
     zone(1073, 68, 309, 412, "4. STANDALONE MINI RUNTIME", "#3BC38D", "#101E22", "#3BC38D"),
@@ -308,14 +308,14 @@ part2_body = "\n".join([
         "❌ Không có khái niệm GameProject | ❌ Không có giao diện Mini Tool Builder & Release Management"
     ], "#F27883", "#2A151D", "#F27883"),
 
-    zone(660, 72, 720, 430, "KIẾN TRÚC ĐỀ XUẤT P1.2 (Context-Driven Multi-Game Studio IDE - 0% Mất Chức Năng)", "#3BC38D", "#101D24", "#3BC38D"),
+    zone(660, 72, 720, 430, "KIẾN TRÚC ĐỀ XUẤT P1.2 (Context-Driven Multi-Game Studio IDE — Phân Loại Thực Tế)", "#3BC38D", "#101D24", "#3BC38D"),
     node_box(678, 98, 684, 46, "Global Context Header (44px): [Game Project Switcher ▾] + [Active Lab Device ▾] + [⚙️ System Settings]", [
         "Loại bỏ hoàn toàn nút Mở/Tắt App trùng lặp trên Header — Mọi khu vực tự động lọc theo Project đang chọn"
     ], "#1878F5", "#16263B", "#38BDF8"),
     node_box(678, 154, 334, 78, "1. Game Projects / Workspace", [
         "◀ Ánh xạ từ: [01. Tổng quan] + [03. Kho Quy trình]",
         "• Quản lý đa dự án game, Package ID, Assets, Templates",
-        "code:Bảo toàn 100% 10 quy trình JX2 vào project jx2-mobile"
+        "code:Migrate 10 quy trình JX2 vào project jx2-mobile (P2)"
     ], "#2A3647", "#16202F", "#1878F5"),
     node_box(1028, 154, 334, 78, "2. Workflow Studio (IDE Core)", [
         "◀ Ánh xạ từ: [04. Workflow Studio] + [03. Kho Quy trình]",
@@ -325,11 +325,11 @@ part2_body = "\n".join([
     node_box(678, 242, 334, 78, "3. Tasks & Modules (Scoped to Project)", [
         "◀ Ánh xạ từ: [05. Bộ Nhiệm vụ] + [07. Vault] + [08. Proxy]",
         "• Task Library động + Sub-tabs: Vault, Proxy, Watchdog",
-        "code:Giữ 100% CRED_MGR://, SOCKS5 test & ADB forward"
+        "code:Giữ UI Vault/Proxy/Forward; Backend Mock -> Thật ở P2–P3"
     ], "#2A3647", "#16202F", "#3BC38D"),
     node_box(1028, 242, 334, 78, "4. Device Lab (Hardware & Vision Lab)", [
         "◀ Ánh xạ từ: [02. Thiết bị Android] + [01. Điều khiển LD]",
-        "• Giữ 100% Quét LAN, Auto-Discover, LDPlayer, Packages",
+        "• Giữ Quét LAN, Auto-Discover, LDPlayer, Packages",
         "code:+ Mới: On-Demand Screen Inspector & ROI Cropper"
     ], "#2A3647", "#16202F", "#38BDF8"),
     node_box(678, 330, 334, 78, "5. Test & Debug (Real Evidence Center)", [
@@ -349,7 +349,7 @@ part2_body = "\n".join([
     ], "#2A3647", "#141D2A", "#38BDF8"),
 
     arrow(578, 190, 660, 190, "#38BDF8", "arrow-blue", "Refactor"),
-    arrow(578, 280, 660, 280, "#3BC38D", "arrow-green", "100% Kept"),
+    arrow(578, 280, 660, 280, "#3BC38D", "arrow-green", "Map UI"),
     arrow(578, 390, 660, 440, "#E7B15B", "arrow-amber", "Settings"),
 ])
 
@@ -892,7 +892,7 @@ iv08_body = "\n".join([
         "• Kiểm toán phụ thuộc: ADB DLLs, WebView2",
         "  Evergreen, WinRT OCR, quyền ghi SQLite",
         "• Xuất `build-report.json` kèm SHA-256 EXE",
-        "code:Status: PASS (13 ms | Total: ~1.1s)"
+        "code:Status: PASS (Verify: 13ms | PoC Total: 1097–1127ms)"
     ], "#3BC38D", "#142624", "#3BC38D"),
 
     arrow(349, 186, 372, 186, "#38BDF8", "arrow-blue", ""),
@@ -1039,7 +1039,7 @@ iv10_body = "\n".join([
         "code:SHA256: 95732232077c0747fe611def3afba858327df6f4..."
     ], "#3BC38D", "#142624", "#3BC38D"),
     node_box(940, 366, 426, 118, "Release #N: Auto_<NewGame>.exe (Sẵn sàng mở rộng)", [
-        "• Xuất bản trong ~1.1 giây từ `MiniToolPackager`",
+        "• Đóng gói bằng `MiniToolPackager` & đo thời gian từng bước",
         "• Mỗi sản phẩm có nhận diện thương hiệu, bộ nhiệm vụ, cột OCR",
         "  và phạm vi module hoàn toàn riêng biệt",
         "code:Kiến trúc Nhà máy Phần mềm (Software Factory) Đích thực"
@@ -1048,9 +1048,9 @@ iv10_body = "\n".join([
     arrow(378, 160, 442, 160, "#B291F7", "arrow-purple", "Shared"),
     arrow(378, 290, 442, 290, "#B291F7", "arrow-purple", "Shared"),
     arrow(378, 420, 442, 420, "#B291F7", "arrow-purple", "Shared"),
-    arrow(876, 160, 940, 160, "#E7B15B", "arrow-amber", "1.1s EXE"),
-    arrow(876, 290, 940, 290, "#3BC38D", "arrow-green", "1.1s EXE"),
-    arrow(876, 420, 940, 420, "#38BDF8", "arrow-blue", "1.1s EXE"),
+    arrow(876, 160, 940, 160, "#E7B15B", "arrow-amber", "Build #1"),
+    arrow(876, 290, 940, 290, "#3BC38D", "arrow-green", "Build #2"),
+    arrow(876, 420, 940, 420, "#38BDF8", "arrow-blue", "Build #N"),
 ])
 
 # -------------------------------------------------------------------------
@@ -1106,7 +1106,7 @@ part6_body = "\n".join([
         "• Chạy Pre-Flight Audit 6 điểm",
         "• Copy `fp-mini-runtime.exe`, nhúng PE Icon",
         "  + khóa công khai vào `PE RT_RCDATA #7777`",
-        "• Ký số RFC 8032 Ed25519 (~1.1 giây)"
+        "• Ký số RFC 8032 Ed25519 (đo telemetry từng bước)"
     ], "#F27883", "#251920", "#F27883"),
     node_box(964, 250, 398, 115, "BƯỚC 8: Kiểm tra & Xuất Release", [
         "• Khu vực: `6. Release Management`",
@@ -1163,7 +1163,7 @@ part8_body = "\n".join([
         "  PRAGMA integrity_check",
         "• Migration v1 -> v2",
         "  (6 bảng mới + 3 FK)",
-        "• Bảo toàn 100% 10 luồng",
+        "• Migrate 10 quy trình",
         "  JX2 vào project mặc định",
         "• ProducerKeyManager IPC",
         "-------------------------",
@@ -1253,7 +1253,7 @@ part8_body = "\n".join([
 SVG_SPECS = [
     ("00_part1_overall_product_architecture.svg", "SƠ ĐỒ 1.1 — KIẾN TRÚC TỔNG QUAN FARMERPRO (NỀN TẢNG SẢN XUẤT ĐA AUTO TOOLS)", "Cấu trúc tổng thể hệ sinh thái FarmerPro: Studio IDE, Shared Rust Core Crates và các gói Mini Auto-Tools độc lập", part1_body),
     ("00_part1b_studio_engine_builder_runtime_relationship.svg", "SƠ ĐỒ 1.2 — SƠ ĐỒ QUAN HỆ GIỮA STUDIO, WORKFLOW ENGINE, BUILDER VÀ MINI RUNTIME", "Luồng chuyển giao đặc tả, liên kết biên dịch, cô lập khóa bí mật và thực thi độc lập giữa 4 phân hệ cốt lõi", part1b_body),
-    ("00_part2_before_vs_proposed_architecture.svg", "SƠ ĐỒ 2.1 — SO SÁNH KIẾN TRÚC CŨ (10 TAB PHẲNG) VÀ KIẾN TRÚC ĐỀ XUẤT P1.2 (6 KHU VỰC + HỆ THỐNG)", "Ánh xạ 100% chức năng từ 10 màn hình hiện tại sang cấu trúc Studio IDE đa dự án — Đảm bảo 0% mất tính năng", part2_body),
+    ("00_part2_before_vs_proposed_architecture.svg", "SƠ ĐỒ 2.1 — SO SÁNH KIẾN TRÚC CŨ (10 TAB PHẲNG) VÀ KIẾN TRÚC ĐỀ XUẤT P1.2 (6 KHU VỰC + HỆ THỐNG)", "Ánh xạ 10 màn hình hiện tại sang Studio IDE đa dự án — Phân tách Thiết kế UI vs Trạng thái Backend", part2_body),
     ("IV_01_cargo_workspace_dependency_graph.svg", "SƠ ĐỒ IV.1 — RUST CARGO WORKSPACE DEPENDENCY GRAPH (14 CRATES & 3 APPS)", "Ranh giới bảo mật thời điểm biên dịch: fp-mini-runtime hoàn toàn không phụ thuộc vào fp-builder", iv01_body),
     ("IV_02_farmerpro_studio_architecture.svg", "SƠ ĐỒ IV.2 — FARMERPRO STUDIO IDE INTERNAL ARCHITECTURE", "Luồng dữ liệu hai chiều giữa React 19 + React Flow + Zustand qua Tauri v2 Typed IPC xuống Rust Core Services", iv02_body),
     ("IV_03_gameproject_data_model.svg", "SƠ ĐỒ IV.3 — GAMEPROJECT DATA MODEL & SQLITE MIGRATION V1 → V2 ER DIAGRAM", "Mô hình dữ liệu đa dự án trong SQLite WAL: 6 bảng mới + mở rộng khóa ngoại project_id bảo toàn dữ liệu cũ", iv03_body),

@@ -1,0 +1,34 @@
+flowchart TB
+    subgraph APPS["Application Binaries (apps/*)"]
+        DESKTOP["apps/desktop (FarmerPro.exe Studio IDE)"]
+        CLI["apps/cli (fp-cli.exe Diagnostic & Builder CLI)"]
+        MINI["apps/mini-runtime (fp-mini-runtime.exe -> Auto_<Game>.exe)"]
+    end
+    subgraph BUILD_LAYER["Producer Packaging Layer (Studio/CLI Only)"]
+        FP_BUILDER["crates/fp-builder (8-Step Packager, PE Icon & RT_RCDATA #7777 Injector, Ed25519 Signer)"]
+    end
+    subgraph BUNDLE_LAYER["Bundle Contract & Verification Layer"]
+        FP_VERIFY["crates/fp-bundle-verify (PE RT_RCDATA #7777 Reader, RFC 8032 Verifier, Path Guard)"]
+        FP_CONTRACT["crates/fp-bundle-contract (Zero-Crypto Schemas, 5-State Module Matrix, Dependency Audit)"]
+    end
+    subgraph RUNTIME_CORE["Shared Automation Core Crates (Unchanged Across Games)"]
+        FP_WF_RT["crates/fp-workflow-runtime"]
+        FP_WF_SC["crates/fp-workflow-schema"]
+        FP_SCHED["crates/fp-scheduler"]
+        FP_DEV["crates/fp-device"]
+        FP_ADB["crates/fp-adb"]
+        FP_VIS["crates/fp-vision"]
+        FP_ACT["crates/fp-actions"]
+        FP_STOR["crates/fp-storage"]
+        FP_SEC["crates/fp-security"]
+        FP_DOM["crates/fp-domain"]
+    end
+    DESKTOP --> FP_BUILDER
+    CLI --> FP_BUILDER
+    FP_BUILDER --> FP_VERIFY
+    FP_BUILDER --> FP_CONTRACT
+    MINI --> FP_VERIFY
+    MINI --> FP_CONTRACT
+    MINI -. "NEVER DEPENDS ON (Compile-Time Isolation)" .-> FP_BUILDER
+    DESKTOP --> RUNTIME_CORE
+    MINI --> RUNTIME_CORE

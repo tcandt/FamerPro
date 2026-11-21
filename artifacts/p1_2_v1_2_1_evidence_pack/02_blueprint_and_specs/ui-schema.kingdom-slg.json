@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "projectSlug": "kingdom-slg",
+  "windowTitle": "Auto Kingdom Rise: Tactics SLG v1.2.0",
+  "versionBadge": "4X-SLG v1.2",
+  "themeAccentHex": "#38BDF8",
+  "headerBgHex": "#111827",
+  "layoutPreset": "compact2_col",
+  "defaultWindowSize": [
+    740,
+    660
+  ],
+  "sectionsOrder": [
+    "device_table",
+    "task_and_log_split",
+    "footer_controls"
+  ],
+  "hiddenComponents": [
+    "proxy_settings_panel"
+  ],
+  "deviceColumns": [
+    {
+      "id": "col-castle",
+      "label": "Thành Chính",
+      "runtimeVarKey": "castle_tier",
+      "fallbackDisplay": "Chưa OCR (-)",
+      "minWindowWidth": 360,
+      "badgeColor": "#A78BFA"
+    },
+    {
+      "id": "col-food",
+      "label": "Lương Thực",
+      "runtimeVarKey": "food_stock",
+      "fallbackDisplay": "Chưa OCR (-)",
+      "minWindowWidth": 460,
+      "badgeColor": "#34D399"
+    },
+    {
+      "id": "col-wood",
+      "label": "Gỗ",
+      "runtimeVarKey": "wood_stock",
+      "fallbackDisplay": "Chưa OCR (-)",
+      "minWindowWidth": 540,
+      "badgeColor": "#FBBF24"
+    },
+    {
+      "id": "col-power",
+      "label": "Quân Lực",
+      "runtimeVarKey": "troop_power",
+      "fallbackDisplay": "Chưa OCR (-)",
+      "minWindowWidth": 620,
+      "badgeColor": "#38BDF8"
+    }
+  ],
+  "taskCategories": [
+    {
+      "id": "cat-eco",
+      "shortTag": "[Nông Nghiệp]",
+      "displayName": "Kinh tế & Thu hoạch",
+      "colorHex": "#34D399"
+    },
+    {
+      "id": "cat-mil",
+      "shortTag": "[Quân Sự]",
+      "displayName": "Huấn luyện & Trinh sát",
+      "colorHex": "#F87171"
+    },
+    {
+      "id": "cat-ally",
+      "shortTag": "[Liên Minh]",
+      "displayName": "Pháo đài & Công thành",
+      "colorHex": "#38BDF8"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-slg-harvest",
+      "title": "Thu hoạch Lương Thực, Gỗ & Đá trong Thành",
+      "categoryId": "cat-eco",
+      "workflowId": "wf-slg-harvest-and-train",
+      "defaultEnabled": true,
+      "priority": 1,
+      "estimateSec": 30,
+      "settingsSchema": [
+        {
+          "key": "use_production_boost",
+          "label": "Dùng Thẻ Tăng Sản Lượng 25%",
+          "fieldType": "boolean",
+          "defaultValue": true,
+          "options": null
+        }
+      ]
+    },
+    {
+      "id": "task-slg-cavalry",
+      "title": "Huấn luyện Kỵ Binh Hạng Nặng (Tier 4)",
+      "categoryId": "cat-mil",
+      "workflowId": "wf-slg-harvest-and-train",
+      "defaultEnabled": true,
+      "priority": 2,
+      "estimateSec": 50,
+      "settingsSchema": [
+        {
+          "key": "troop_tier",
+          "label": "Cấp Binh Chủng",
+          "fieldType": "select",
+          "defaultValue": "Tier 4 - Thiết Kỵ",
+          "options": [
+            "Tier 3 - Kỵ Binh",
+            "Tier 4 - Thiết Kỵ",
+            "Tier 5 - Hoàng Gia"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "task-slg-barbarians",
+      "title": "Phái Đạo Quân Tiêu Diệt Man Tộc Cấp 15",
+      "categoryId": "cat-mil",
+      "workflowId": "wf-slg-harvest-and-train",
+      "defaultEnabled": true,
+      "priority": 3,
+      "estimateSec": 90,
+      "settingsSchema": []
+    },
+    {
+      "id": "task-slg-alliance",
+      "title": "Bấm Hỗ Trợ Xây Dựng & Tiếp Viện Pháo Đài Liên Minh",
+      "categoryId": "cat-ally",
+      "workflowId": "wf-slg-harvest-and-train",
+      "defaultEnabled": true,
+      "priority": 4,
+      "estimateSec": 25,
+      "settingsSchema": []
+    }
+  ],
+  "utilities": [
+    {
+      "id": "util-peace-shield",
+      "label": "Tự bật Khiên Hòa Bình 8h khi bị Trinh Sát",
+      "defaultEnabled": true,
+      "requiredModule": null,
+      "settingsSchema": []
+    },
+    {
+      "id": "util-hospital-heal",
+      "label": "Tự động Cứu Chữa Thương Binh tại Quân Y Viện",
+      "defaultEnabled": true,
+      "requiredModule": null,
+      "settingsSchema": []
+    }
+  ],
+  "initialRuntimeVars": {}
+}
