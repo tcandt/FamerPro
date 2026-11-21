@@ -11,7 +11,18 @@ import { SettingsView } from './features/settings/SettingsView';
 import { ComponentGalleryView } from './features/gallery/ComponentGalleryView';
 
 export const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState('studio');
+  const [currentView, setCurrentView] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view');
+      if (viewParam) return viewParam;
+      if (window.location.hash) {
+        const hash = window.location.hash.replace('#', '');
+        if (hash) return hash;
+      }
+    }
+    return 'overview';
+  });
 
   return (
     <AppShell currentView={currentView} onSelectView={setCurrentView}>

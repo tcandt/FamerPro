@@ -132,7 +132,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ onNavigate }) => {
             <CheckCircle2 size={16} className="text-[#3BC38D]" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-[#3BC38D]">21 / 21</span>
+            <span className="text-2xl font-bold font-mono text-[#3BC38D]">24 / 24</span>
             <span className="text-xs text-[#74869D] font-medium">unit tests đạt</span>
           </div>
           <div className="text-[11px] text-[#74869D] mt-1.5 border-t border-[#2A3647]/50 pt-1.5 flex items-center justify-between">

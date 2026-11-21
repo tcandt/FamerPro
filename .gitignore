@@ -12,3 +12,11 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+/bin/
+
+
+*.db
+*.db-wal
+*.db-shm
+

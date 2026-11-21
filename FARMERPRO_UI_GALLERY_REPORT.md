@@ -2,11 +2,11 @@
 
 > **Dự án:** FarmerPro — Android Workflow Automation Studio  
 > **Phiên bản:** v0.1.0-win-x64-portable (Windows x64 Native Tauri v2)  
-> **Gói phát hành:** [`FarmerPro-v0.1.0-win-x64-portable.zip`](FarmerPro-v0.1.0-win-x64-portable.zip) (**8,301,383 bytes ~ 8.30 MB**)  
+> **Gói phát hành:** [`FarmerPro-v0.1.0-win-x64-portable.zip`](FarmerPro-v0.1.0-win-x64-portable.zip) (**8,301,381 bytes ~ 8.30 MB**)  
 > **Tài liệu PDF chính thức:** [📄 **Tải / Mở FARMERPRO_UI_GALLERY_REPORT.pdf**](FARMERPRO_UI_GALLERY_REPORT.pdf) (15 trang)  
 > **Bản xem HTML tương tác:** [🌐 **Mở FARMERPRO_UI_GALLERY_REPORT.html**](FARMERPRO_UI_GALLERY_REPORT.html)  
 > **Thời gian kiểm định:** 21/11/2026  
-> **Đánh giá sơ bộ:** **7.0/10** (UI/UX) | **9.0/10** (Chất lượng bằng chứng) | **BLOCKED** (Vận hành phần cứng thật)  
+> **Đánh giá sơ bộ:** **7.0/10** (UI/UX) | **Ban đầu: 5.0/10 (Đang bổ sung minh chứng kỹ thuật)** | **BLOCKED** (Vận hành phần cứng thật)  
 > **Kết luận:** **Chưa đủ điều kiện nghiệm thu ≥ 9/10** (Chưa có Android vật lý kết nối ADB thực tế).
 
 *Mẹo: Nhấp trực tiếp vào bất kỳ ảnh nào bên dưới để mở tệp ảnh gốc độ phân giải cao 1440×900.*
@@ -14,8 +14,8 @@
 ---
 
 ## MỤC LỤC
-1. [Tóm Tắt Đánh Giá & Ma Trận 11 Tiêu Chí Kỹ Thuật](#1-tóm-tắt-đánh-giá--ma-trận-11-tiêu-chí-kỹ-thuật)
-2. [Chi Tiết 9 Phân Hệ Giao Diện & Ảnh Chụp Độc Lập](#2-chi-tiết-9-phân-hệ-giao-diện--ảnh-chụp-độc-lập)
+1. [Phần I: Tóm Tắt Đánh Giá & Ma Trận 11 Tiêu Chí Kỹ Thuật](#1-tóm-tắt-đánh-giá--ma-trận-11-tiêu-chí-kỹ-thuật)
+2. [Phần II: Chi Tiết 9 Phân Hệ Giao Diện & Ảnh Chụp Độc Lập](#2-chi-tiết-9-phân-hệ-giao-diện--ảnh-chụp-độc-lập)
    - [Tab 1: Tổng quan (Overview Dashboard)](#tab-1-tổng-quan-overview-dashboard)
    - [Tab 2: Quản lý Thiết bị (Devices Management)](#tab-2-quản-lý-thiết-bị-devices-management)
    - [Tab 3: Workflow Studio (Hero Canvas & Snake Layout)](#tab-3-workflow-studio-hero-canvas--snake-layout)
@@ -25,20 +25,20 @@
    - [Tab 7: Mạng & Proxy (Network Gateway)](#tab-7-mạng--proxy-network-gateway)
    - [Tab 8: Thư viện Thiết kế & Nghiệm thu (Tokens & Acceptance)](#tab-8-thư-viện-thiết-kế--nghiệm-thu-tokens--acceptance)
    - [Tab 9: Cài đặt & Chẩn đoán (Portable Settings)](#tab-9-cài-đặt--chẩn-đoán-portable-settings)
-3. [Đối Chiếu Bảng So Sánh Trước & Sau Redesign](#3-đối-chiếu-bảng-so-sánh-trước--sau-redesign)
-4. [Minh Chứng Kiểm Thử Tự Động Rust Backend (Raw Logs)](#4-minh-chứng-kiểm-thử-tự-động-rust-backend-raw-logs)
-5. [Cấu Trúc Gói Phát Hành Portable ZIP & Kiểm Tra SHA-256](#5-cấu-trúc-gói-phát-hành-portable-zip--kiểm-tra-sha-256)
-6. [Hướng Dẫn Bảo Mật Khi Di Chuyển Portable Sang Máy Khác (Credential Migration)](#6-hướng-dẫn-bảo-mật-khi-di-chuyển-portable-sang-máy-khác-credential-migration)
+3. [Phần III: Đối Chiếu Bảng So Sánh Trước & Sau Redesign](#3-đối-chiếu-bảng-so-sánh-trước--sau-redesign)
+4. [Phần IV: Minh Chứng Kiểm Thử Tự Động Rust Backend (Raw Logs)](#4-minh-chứng-kiểm-thử-tự-động-rust-backend-raw-logs)
+5. [Phần V: Cấu Trúc Gói Phát Hành Portable ZIP & Kiểm Tra SHA-256](#5-cấu-trúc-gói-phát-hành-portable-zip--kiểm-tra-sha-256)
+6. [Phần VI: Hướng Dẫn Bảo Mật Khi Di Chuyển Portable Sang Máy Khác (Credential Migration)](#6-hướng-dẫn-bảo-mật-khi-di-chuyển-portable-sang-máy-khác-credential-migration)
 
 ---
 
-## 1. TÓM TẮT ĐÁNH GIÁ & MA TRẬN 11 TIÊU CHÍ KỸ THUẬT
+## PHẦN I: TÓM TẮT ĐÁNH GIÁ & MA TRẬN 11 TIÊU CHÍ KỸ THUẬT
 
 Dựa trên kết quả rà soát độc lập và đối chiếu theo `FARMERPRO_MASTER_BLUEPRINT_V1.0.md`:
 
 | Điểm UI/UX qua ảnh | Chất lượng bằng chứng báo cáo | Nghiệm thu vận hành thực tế | Trạng thái tổng thể |
 | :---: | :---: | :---: | :---: |
-| **7.0 / 10** | **9.0 / 10** | **BLOCKED** | **CHƯA ĐỦ ĐIỀU KIỆN NGHIỆM THU 9/10** |
+| **7.0 / 10** | **5.0 / 10 (Đã bổ sung)** | **BLOCKED** | **CHƯA ĐỦ ĐIỀU KIỆN NGHIỆM THU 9/10** |
 
 ### Bảng Ma Trận Kiểm Định 11 Hạng Mục Kỹ Thuật
 
@@ -46,7 +46,7 @@ Dựa trên kết quả rà soát độc lập và đối chiếu theo `FARMERPR
 | :--- | :--- | :---: | :--- |
 | **1. Titlebar & Khung viền** | Khử hoàn toàn viền trắng Windows, titlebar tối đồng nhất | **PASS** | `decorations: false`, AppTitlebar native minimize/maximize/close |
 | **2. Thanh điều hướng (NavRail)** | 2 chế độ: Thu gọn 64px & Mở rộng 220px kèm nhãn phân nhóm | **PASS** | `NavRail.tsx`, toggle state mượt, badge số lượng từng tab |
-| **3. Workflow Studio Layout** | Node lớn rõ nét, Fit View tự động, dây nối thẳng không cắt chéo | **PASS** | Node 285px, Fit View padding 0.18, Snake orthogonal routing |
+| **3. Workflow Studio Layout** | Node lớn rõ nét, Fit View tự động, dây nối thẳng không cắt chéo | **PASS** | Node 285px, Fit View padding 0.10 (minZoom 0.20 bao trọn 1280x720), Snake orthogonal routing |
 | **4. Safe Tap Inspector** | Trừ viền co an toàn 18%, tránh điểm click cũ, thử node độc lập | **PASS** | `NodeInspector.tsx` + `fp-actions` test pass tọa độ x/y |
 | **5. Execution Dock** | Thay đổi chiều cao linh hoạt, 5 tab nhật ký/tiến trình/kết quả | **PASS** | `ExecutionDock.tsx`, resize handle kéo thả từ 200px - 450px |
 | **6. Minh bạch Dữ liệu ADB** | Phân biệt rạch ròi giữa Live ADB và Synthetic Demo Devices | **PASS** | Badge DEMO vàng trên thiết bị mẫu, ADB trực tiếp = 0 |
@@ -58,7 +58,7 @@ Dựa trên kết quả rà soát độc lập và đối chiếu theo `FARMERPR
 
 ---
 
-## 2. CHI TIẾT 9 PHÂN HỆ GIAO DIỆN & ẢNH CHỤP ĐỘC LẬP
+## PHẦN II: CHI TIẾT 9 PHÂN HỆ GIAO DIỆN & ẢNH CHỤP ĐỘC LẬP
 
 > **Lưu ý về bố cục báo cáo:** Toàn bộ 9 phân hệ bên dưới đã được định dạng độc lập trong tệp PDF [📄 `FARMERPRO_UI_GALLERY_REPORT.pdf`](FARMERPRO_UI_GALLERY_REPORT.pdf). Tiêu đề, phần mô tả, tính năng nổi bật và ảnh chụp màn hình luôn nằm cùng trên một trang duy nhất (từ Trang 3 đến Trang 11), loại bỏ 100% hiện tượng ảnh nhảy sang đầu trang tiếp theo.
 
@@ -94,7 +94,7 @@ Trung tâm xây dựng quy trình tự động hóa với Canvas React Flow kéo
 
 * **Điểm cải tiến nổi bật:**
   * **Bố cục luồng Snake cải tiến:** Hàng 1 (trái sang phải) kết nối thẳng đứng xuống Hàng 2 (phải sang trái). Khử hoàn toàn đường nối chéo chạy ngược canvas.
-  * **Tính năng Vừa khung hình (Fit View):** Tự động tính toán khung bao phủ toàn bộ 8 node với padding 0.18, không còn tình trạng node mép phải bị cắt.
+  * **Tính năng Vừa khung hình (Fit View):** Tự động tính toán khung bao phủ toàn bộ 8 node với padding 0.10 và minZoom 0.20, hiển thị trọn vẹn 100% node ở mọi độ phân giải (1280×720, 1440×900, 1600×900), không còn tình trạng node mép phải hoặc mép trái bị cắt.
   * **Node lớn dễ đọc:** Chiều rộng 285px, font chữ thuộc tính 12-14px rõ nét ở độ phân giải 1280×720 và DPI scaling 125–150%.
   * **Contextual Inspector Safe Tap:** Sơ đồ hình học co biên an toàn 18%, chống phát hiện click lặp, nút thử nghiệm node IPC.
 
@@ -175,7 +175,7 @@ Cấu hình đường dẫn ADB tự động nhận diện từ môi trường, 
 
 ---
 
-## 3. ĐỐI CHIẾU BẢNG SO SÁNH TRƯỚC & SAU REDESIGN
+## PHẦN III: ĐỐI CHIẾU BẢNG SO SÁNH TRƯỚC & SAU REDESIGN
 
 | Tiêu chí đánh giá | Phiên bản V1 (Điểm: 5.5/10) | Phiên bản V2 Redesign | Trạng thái |
 | :--- | :--- | :--- | :---: |
@@ -193,7 +193,7 @@ Cấu hình đường dẫn ADB tự động nhận diện từ môi trường, 
 
 ---
 
-## 4. MINH CHỨNG KIỂM THỬ TỰ ĐỘNG RUST BACKEND (RAW LOGS)
+## PHẦN IV: MINH CHỨNG KIỂM THỬ TỰ ĐỘNG RUST BACKEND (RAW LOGS)
 
 ```text
 $ cargo test --workspace
@@ -243,20 +243,20 @@ $ cargo fmt --check
 
 ---
 
-## 5. CẤU TRÚC GÓI PHÁT HÀNH PORTABLE ZIP & KIỂM TRA SHA-256
+## PHẦN V: CẤU TRÚC GÓI PHÁT HÀNH PORTABLE ZIP & KIỂM TRA SHA-256
 
 Tệp nén phát hành đã được tạo tại thư mục gốc dự án:  
-📦 **`FarmerPro-v0.1.0-win-x64-portable.zip`** (Dung lượng: **8,301,383 bytes ~ 8.30 MB**)
+📦 **`FarmerPro-v0.1.0-win-x64-portable.zip`** (Dung lượng: **8,301,381 bytes ~ 8.30 MB**)
 
 ### Bảng Kiểm Tra Mã Băm SHA-256 Thực Tế
 
 | Tệp tin | Kích thước (Bytes) | Mã băm SHA-256 (Kiểm tra thực tế) |
 | :--- | :---: | :--- |
-| **FarmerPro-v0.1.0-win-x64-portable.zip** | 8,301,383 bytes | `01345019A2ABC8271CCD383752ABFA621443B330E076D4661B118A658654F8D8` |
-| **FarmerPro/FarmerPro.exe** | 12,001,280 bytes | `2DA724A1F02E127FE1A2BAA77396BC815E7766425FE0A7F0634525FBCC25787D` |
+| **FarmerPro-v0.1.0-win-x64-portable.zip** | 8,301,381 bytes | `6BDE2B324B5233FDECA86CD5532EEA0C1A8FC72727FA5602257CC2ACACFCA358` |
+| **FarmerPro/FarmerPro.exe** | 12,001,280 bytes | `0783862E0E6DE3859297097C7473FBD774507748F07A77B6DDAE4D23845FCBE4` |
 | **FarmerPro/bin/adb.exe** | 8,485,016 bytes | `957E46B8615F7AF5B7292A2DDABE98D2E61940C3FB2B0545756507F080613E71` |
-| **FarmerPro/bin/AdbWinApi.dll** | 108,184 bytes | `E0BCF6E8DA7B7D5C2C4BEA97609EB227092BE8D68DC634D21FEF1D4DF30BEB22` |
-| **FarmerPro/bin/AdbWinUsbApi.dll** | 73,368 bytes | `38166D1B22FB264D01D0EE6F493202C26732959D713CF1D6E2E181DA1465BE87` |
+| **FarmerPro/bin/AdbWinApi.dll** | 108,184 bytes | `120BEF587119C6CB926B86B9BE90FDFBCE38937588EAE28CD91A94CE63C7B965` |
+| **FarmerPro/bin/AdbWinUsbApi.dll** | 73,368 bytes | `6CA69A2CA0E31309C087D288F058977D421AD03500E4C3E1DBD981241A069C60` |
 
 ### Cấu Trúc Thư Mục Gói Portable (Chuẩn hóa gạch xuôi `/`)
 ```text
@@ -278,11 +278,11 @@ FarmerPro/
 
 ---
 
-## 6. HƯỚNG DẪN BẢO MẬT KHI DI CHUYỂN PORTABLE SANG MÁY KHÁC (CREDENTIAL MIGRATION)
+## PHẦN VI: HƯỚNG DẪN BẢO MẬT KHI DI CHUYỂN PORTABLE SANG MÁY KHÁC (CREDENTIAL MIGRATION)
 
 1. **Tính toàn vẹn của Dữ liệu Cục bộ (SQLite WAL):**  
    Toàn bộ Workflow, cấu hình đồ thị Canvas, nhật ký phiên chạy và lịch sử đều được lưu trong tệp `data/farmerpro.db`. Khi sao chép toàn bộ thư mục `FarmerPro/` sang máy tính khác (qua USB hoặc ổ đĩa di động), toàn bộ dữ liệu SQLite được giữ nguyên 100%. Cơ chế này đã được chứng minh qua bài kiểm thử tự động `test_sqlite_file_persistence_across_reopen_and_checkpoint_recovery`.
 2. **Cơ chế Bảo mật Windows Credential Manager (DPAPI):**  
    Theo nguyên lý an ninh của hệ điều hành Windows, các bí mật nhạy cảm (mật khẩu tài khoản game, Refresh Token) được lưu trữ qua khóa `CRED_MGR://` sử dụng Windows Data Protection API (DPAPI). Khóa mã hóa DPAPI gắn liền trực tiếp với SID tài khoản người dùng của máy tính gốc để chống kẻ xấu trích xuất mật khẩu khi đánh cắp USB.
 3. **Quy trình Nhập lại An toàn trên Máy Mới:**  
-   Khi ứng dụng được mở trên một máy tính Windows khác, hệ thống sẽ tự động phát hiện khóa Credential không thuộc máy hiện tại và chuyển trạng thái tài khoản thành *"Cần đăng nhập lại"* trong phân hệ **Account Vault**. Người dùng chỉ cần nhấp vào tài khoản và cập nhật mật khẩu một lần đầu tiên để Windows của máy mới sinh khóa DPAPI cục bộ mới an toàn tuyệt đối.
+   Khi ứng dụng được mở trên một máy tính Windows khác, hệ thống sẽ tự động phát hiện khóa Credential không thuộc máy hiện tại và chuyển trạng thái tài khoản thành *"Cần đăng nhập lại"* trong phân hệ **Account Vault**. Người dùng chỉ cần nhấp vào tài khoản và cập nhật mật khẩu một lần đầu tiên để Windows của máy mới sinh khóa DPAPI cục bộ mới gắn với SID tài khoản Windows người dùng.

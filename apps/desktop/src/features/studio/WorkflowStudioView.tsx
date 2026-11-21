@@ -43,7 +43,7 @@ const CanvasToolbar: React.FC = () => {
       </button>
 
       <button
-        onClick={() => fitView({ duration: 300, padding: 0.2 })}
+        onClick={() => fitView({ duration: 300, padding: 0.1 })}
         className="flex items-center gap-1.5 px-2.5 py-1 text-[#A9B8CC] hover:text-white hover:bg-[#202B3B] rounded transition-colors"
         title="Thu phóng vừa vặn toàn bộ đồ thị (Fit View)"
       >
@@ -125,8 +125,8 @@ export const WorkflowStudioContent: React.FC = () => {
             onNodeClick={handleNodeClick}
             onPaneClick={handlePaneClick}
             fitView
-            fitViewOptions={{ padding: 0.18, minZoom: 0.45, maxZoom: 1.15 }}
-            minZoom={0.35}
+            fitViewOptions={{ padding: 0.1, minZoom: 0.2, maxZoom: 1.15 }}
+            minZoom={0.2}
             maxZoom={2.0}
             className="w-full h-full"
           >

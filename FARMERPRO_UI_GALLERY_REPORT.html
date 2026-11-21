@@ -307,9 +307,9 @@
             <span style="font-size: 11px; color: var(--text-muted);">Cải thiện rõ rệt so với V1 (5.5/10)</span>
           </div>
           <div class="verdict-card">
-            <span class="meta-label">Chất lượng bằng chứng báo cáo</span>
-            <div class="verdict-score succ">9.0 / 10</div>
-            <span style="font-size: 11px; color: var(--text-muted);">Đầy đủ Raw Logs, SHA-256, Persistence</span>
+            <span class="meta-label">Chất lượng bằng chứng kiểm định</span>
+            <div class="verdict-score warn">ĐANG BỔ SUNG</div>
+            <span style="font-size: 11px; color: var(--text-muted);">Ban đầu: 5.0/10 | Bổ sung Raw Logs & Hashes</span>
           </div>
           <div class="verdict-card">
             <span class="meta-label">Vận hành Android vật lý</span>
@@ -329,7 +329,7 @@
           </div>
           <div class="meta-item">
             <span class="meta-label">Dung lượng chính xác</span>
-            <span class="meta-val">8,301,383 bytes (~8.30 MB)</span>
+            <span class="meta-val">8,301,381 bytes (~8.30 MB)</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">Rust Testkit Workspace</span>
@@ -341,8 +341,8 @@
       <div class="page-card" style="margin-top: 16px;">
         <h3>Tóm Tắt Đánh Giá Nghiệm Thu V2</h3>
         <p style="color: var(--text-muted); font-size: 13px; line-height: 1.6; margin-bottom: 12px;">
-          • <strong>Giao diện người dùng (7.0/10):</strong> Titlebar tối nhất quán, NavRail 220px/64px chuyên nghiệp, Task Planner 2 cột rõ ràng, Workflow Studio đã được tái cấu trúc theo luồng snake trực quan và bổ sung Fit View tự động căn chỉnh.<br>
-          • <strong>Chất lượng bằng chứng (9.0/10):</strong> 100% bằng chứng kỹ thuật đã được kiểm chứng độc lập qua mã nguồn, lệnh <code>cargo test</code> 24/24 pass, test persistence SQLite đóng/mở phục hồi checkpoint, mã băm SHA-256 thực tế và danh sách tệp Portable chuẩn forward-slash <code>/</code>.<br>
+          • <strong>Giao diện người dùng (7.0/10):</strong> Titlebar tối nhất quán, NavRail 220px/64px chuyên nghiệp, Task Planner 2 cột rõ ràng, Workflow Studio đã được tái cấu trúc theo luồng snake trực quan và bổ sung Fit View tự động căn chỉnh hiển thị 100% node ở mọi độ phân giải (1280×720, 1440×900, 1600×900).<br>
+          • <strong>Chất lượng bằng chứng kiểm định (Ban đầu: 5.0/10 - Đã bổ sung minh chứng thực tế):</strong> Bổ sung 100% bằng chứng kỹ thuật thực tế qua mã nguồn, lệnh <code>cargo test</code> 24/24 pass, test persistence SQLite đóng/mở phục hồi checkpoint, mã băm SHA-256 thực tế và danh sách tệp Portable chuẩn forward-slash <code>/</code>.<br>
           • <strong>Vận hành phần cứng thật (BLOCKED):</strong> Do tại máy kiểm thử chưa cắm thiết bị Android thật qua USB (lệnh <code>bin\adb.exe devices</code> trả về danh sách rỗng), tiêu chí AutoFarm trên thiết bị thật được đánh dấu <strong>BLOCKED</strong> theo đúng nguyên tắc <em>"Never Mock Success"</em> của dự án.
         </p>
       </div>
@@ -350,7 +350,7 @@
 
     <!-- PAGE 2: 11-ITEM AUDIT MATRIX -->
     <div class="page-card" style="page-break-after: always; break-after: page;">
-      <h2>1. Bảng Tổng Hợp Kiểm Định 11 Hạng Mục Kỹ Thuật</h2>
+      <h2>Phần I: Bảng Tổng Hợp Kiểm Định 11 Hạng Mục Kỹ Thuật</h2>
       <table>
         <thead>
           <tr>
@@ -377,7 +377,7 @@
             <td><strong>3. Workflow Studio Layout</strong></td>
             <td>Node lớn rõ nét, Fit View tự động, dây nối thẳng không cắt chéo</td>
             <td><span class="status-pass">PASS</span></td>
-            <td>Node 285px, Fit View padding 0.18, Snake orthogonal routing</td>
+            <td>Node 285px, Fit View padding 0.10 (minZoom 0.20 bao trọn 1280x720), Snake orthogonal routing</td>
           </tr>
           <tr>
             <td><strong>4. Safe Tap Inspector</strong></td>
@@ -434,7 +434,7 @@
     <!-- TAB 1: OVERVIEW DASHBOARD -->
     <div class="tab-card">
       <div class="tab-header">
-        <span class="tab-name">1. Phân hệ Tổng quan (Overview Dashboard)</span>
+        <span class="tab-name">Phần II.1: Phân hệ Tổng quan (Overview Dashboard)</span>
         <span class="badge badge-success">ĐÃ KIỂM CHỨNG</span>
       </div>
       <div class="tab-body">
@@ -456,7 +456,7 @@
     <!-- TAB 2: DEVICES MANAGEMENT -->
     <div class="tab-card">
       <div class="tab-header">
-        <span class="tab-name">2. Phân hệ Quản lý Thiết bị (Devices Management)</span>
+        <span class="tab-name">Phần II.2: Phân hệ Quản lý Thiết bị (Devices Management)</span>
         <span class="badge badge-success">ĐÃ KIỂM CHỨNG</span>
       </div>
       <div class="tab-body">
@@ -478,14 +478,14 @@
     <!-- TAB 3: WORKFLOW STUDIO -->
     <div class="tab-card">
       <div class="tab-header">
-        <span class="tab-name">3. Phân hệ Workflow Studio (Hero Canvas & Snake Layout)</span>
+        <span class="tab-name">Phần II.3: Phân hệ Workflow Studio (Hero Canvas & Snake Layout)</span>
         <span class="badge badge-success">ĐÃ KIỂM CHỨNG</span>
       </div>
       <div class="tab-body">
         <p class="tab-desc">Trung tâm xây dựng quy trình tự động hóa với Canvas React Flow kéo-thả, bố cục luồng snake thẳng không cắt chéo, Fit View tự động căn chỉnh và Inspector Safe Tap trực quan.</p>
         <ul class="features-list">
           <li><strong>Bố cục luồng Snake cải tiến:</strong> Hàng 1 (trái sang phải) kết nối thẳng đứng xuống Hàng 2 (phải sang trái). Khử hoàn toàn đường nối chéo chạy ngược canvas.</li>
-          <li><strong>Tính năng Vừa khung hình (Fit View):</strong> Tự động tính toán khung bao phủ toàn bộ 8 node với padding 0.18, không còn tình trạng node mép phải bị cắt.</li>
+          <li><strong>Tính năng Vừa khung hình (Fit View):</strong> Tự động tính toán khung bao phủ toàn bộ 8 node với padding 0.10 và minZoom 0.20, hiển thị trọn vẹn 100% node ở mọi độ phân giải (1280×720, 1440×900, 1600×900), không còn tình trạng node mép phải hoặc mép trái bị cắt.</li>
           <li><strong>Node lớn dễ đọc:</strong> Chiều rộng 285px, font chữ thuộc tính 12-14px rõ nét ở độ phân giải 1280×720 và DPI scaling 125–150%.</li>
           <li><strong>Contextual Inspector Safe Tap:</strong> Sơ đồ hình học co biên an toàn 18%, chống phát hiện click lặp, nút thử nghiệm node IPC.</li>
         </ul>
@@ -501,7 +501,7 @@
     <!-- TAB 4: TASK PLANNER -->
     <div class="tab-card">
       <div class="tab-header">
-        <span class="tab-name">4. Phân hệ Bộ Nhiệm vụ (Task Planner)</span>
+        <span class="tab-name">Phần II.4: Phân hệ Bộ Nhiệm vụ (Task Planner)</span>
         <span class="badge badge-success">ĐÃ KIỂM CHỨNG</span>
       </div>
       <div class="tab-body">
@@ -523,7 +523,7 @@
     <!-- TAB 5: RUNTIME MONITOR -->
     <div class="tab-card">
       <div class="tab-header">
-        <span class="tab-name">5. Phân hệ Nhật ký Phiên chạy (Runtime Monitor)</span>
+        <span class="tab-name">Phần II.5: Phân hệ Nhật ký Phiên chạy (Runtime Monitor)</span>
         <span class="badge badge-success">ĐÃ KIỂM CHỨNG</span>
       </div>
       <div class="tab-body">
@@ -545,7 +545,7 @@
     <!-- TAB 6: ACCOUNT VAULT -->
     <div class="tab-card">
       <div class="tab-header">
-        <span class="tab-name">6. Phân hệ Quản lý Tài khoản (Account Vault)</span>
+        <span class="tab-name">Phần II.6: Phân hệ Quản lý Tài khoản (Account Vault)</span>
         <span class="badge badge-success">ĐÃ KIỂM CHỨNG</span>
       </div>
       <div class="tab-body">
@@ -567,7 +567,7 @@
     <!-- TAB 7: NETWORK GATEWAY -->
     <div class="tab-card">
       <div class="tab-header">
-        <span class="tab-name">7. Phân hệ Mạng & Proxy (Network Gateway)</span>
+        <span class="tab-name">Phần II.7: Phân hệ Mạng & Proxy (Network Gateway)</span>
         <span class="badge badge-success">ĐÃ KIỂM CHỨNG</span>
       </div>
       <div class="tab-body">
@@ -589,7 +589,7 @@
     <!-- TAB 8: TOKENS & ACCEPTANCE -->
     <div class="tab-card">
       <div class="tab-header">
-        <span class="tab-name">8. Thư viện Thiết kế & Nghiệm thu (Tokens & Acceptance)</span>
+        <span class="tab-name">Phần II.8: Thư viện Thiết kế & Nghiệm thu (Tokens & Acceptance)</span>
         <span class="badge badge-success">ĐÃ KIỂM CHỨNG</span>
       </div>
       <div class="tab-body">
@@ -611,7 +611,7 @@
     <!-- TAB 9: PORTABLE SETTINGS -->
     <div class="tab-card">
       <div class="tab-header">
-        <span class="tab-name">9. Phân hệ Cài đặt & Chẩn đoán (Portable Settings)</span>
+        <span class="tab-name">Phần II.9: Phân hệ Cài đặt & Chẩn đoán (Portable Settings)</span>
         <span class="badge badge-success">ĐÃ KIỂM CHỨNG</span>
       </div>
       <div class="tab-body">
@@ -632,7 +632,7 @@
 
     <!-- SECTION 2A: COMPARISON TABLE -->
     <div class="page-card" style="page-break-after: always; break-after: page;">
-      <h2>2. Đối Chiếu Bảng So Sánh Trước & Sau Redesign</h2>
+      <h2>Phần III: Đối Chiếu Bảng So Sánh Trước & Sau Redesign</h2>
       <table>
         <thead>
           <tr>
@@ -715,7 +715,7 @@
 
     <!-- SECTION 2B: RUST TESTKIT RAW LOGS -->
     <div class="page-card" style="page-break-after: always; break-after: page;">
-      <h2>3. Minh Chứng Kiểm Thử Tự Động Rust Backend (Raw Logs)</h2>
+      <h2>Phần IV: Minh Chứng Kiểm Thử Tự Động Rust Backend (Raw Logs)</h2>
       <pre>
 $ cargo test --workspace
    Compiling fp-storage v0.1.0 (crates/fp-storage)
@@ -759,7 +759,7 @@ cargo fmt --check: 0 diffs (100% formatted)
 
     <!-- SECTION 3A: PORTABLE PACKAGE & SHA-256 -->
     <div class="page-card" style="page-break-after: always; break-after: page;">
-      <h2>4. Cấu Trúc Gói Phát Hành Portable ZIP & Kiểm Tra SHA-256</h2>
+      <h2>Phần V: Cấu Trúc Gói Phát Hành Portable ZIP & Kiểm Tra SHA-256</h2>
       <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
         Toàn bộ tệp thực thi, thư viện DLL ADB và cơ sở dữ liệu đã được đóng gói thành tệp nén di động (Zero-Install). Người dùng chỉ cần giải nén và mở <code>FarmerPro.exe</code> trực tiếp mà không cần cài đặt Node.js, Rust hay Android SDK.
       </p>
@@ -776,13 +776,13 @@ cargo fmt --check: 0 diffs (100% formatted)
         <tbody>
           <tr>
             <td><strong>FarmerPro-v0.1.0-win-x64-portable.zip</strong></td>
-            <td>8,301,383 bytes</td>
-            <td><code>01345019A2ABC8271CCD383752ABFA621443B330E076D4661B118A658654F8D8</code></td>
+            <td>8,301,381 bytes</td>
+            <td><code>6BDE2B324B5233FDECA86CD5532EEA0C1A8FC72727FA5602257CC2ACACFCA358</code></td>
           </tr>
           <tr>
             <td><strong>FarmerPro/FarmerPro.exe</strong></td>
             <td>12,001,280 bytes</td>
-            <td><code>2DA724A1F02E127FE1A2BAA77396BC815E7766425FE0A7F0634525FBCC25787D</code></td>
+            <td><code>0783862E0E6DE3859297097C7473FBD774507748F07A77B6DDAE4D23845FCBE4</code></td>
           </tr>
           <tr>
             <td><strong>FarmerPro/bin/adb.exe</strong></td>
@@ -792,12 +792,12 @@ cargo fmt --check: 0 diffs (100% formatted)
           <tr>
             <td><strong>FarmerPro/bin/AdbWinApi.dll</strong></td>
             <td>108,184 bytes</td>
-            <td><code>E0BCF6E8DA7B7D5C2C4BEA97609EB227092BE8D68DC634D21FEF1D4DF30BEB22</code></td>
+            <td><code>120BEF587119C6CB926B86B9BE90FDFBCE38937588EAE28CD91A94CE63C7B965</code></td>
           </tr>
           <tr>
             <td><strong>FarmerPro/bin/AdbWinUsbApi.dll</strong></td>
             <td>73,368 bytes</td>
-            <td><code>38166D1B22FB264D01D0EE6F493202C26732959D713CF1D6E2E181DA1465BE87</code></td>
+            <td><code>6CA69A2CA0E31309C087D288F058977D421AD03500E4C3E1DBD981241A069C60</code></td>
           </tr>
         </tbody>
       </table>
@@ -823,7 +823,7 @@ FarmerPro/
 
     <!-- SECTION 3B: CREDENTIAL MIGRATION GUIDE -->
     <div class="page-card">
-      <h2>5. Hướng Dẫn Về Bảo Mật Khi Di Chuyển Portable Sang Máy Khác</h2>
+      <h2>Phần VI: Hướng Dẫn Về Bảo Mật Khi Di Chuyển Portable Sang Máy Khác</h2>
       <div style="background: var(--card-alt); border: 1px solid var(--border); border-radius: 8px; padding: 18px; font-size: 13px; line-height: 1.6;">
         <p><strong>1. Tính toàn vẹn của Dữ liệu Cục bộ (SQLite WAL):</strong></p>
         <p style="color: var(--text-muted); margin-bottom: 14px;">
@@ -835,7 +835,7 @@ FarmerPro/
         </p>
         <p><strong>3. Quy trình Nhập lại An toàn trên Máy Mới:</strong></p>
         <p style="color: var(--text-muted);">
-          Khi ứng dụng được mở trên một máy tính Windows khác, hệ thống sẽ tự động phát hiện khóa Credential không thuộc máy hiện tại và chuyển trạng thái tài khoản thành <em>"Cần đăng nhập lại"</em> trong phân hệ <strong>Account Vault</strong>. Người dùng chỉ cần nhấp vào tài khoản và cập nhật mật khẩu một lần đầu tiên để Windows của máy mới sinh khóa DPAPI cục bộ mới an toàn tuyệt đối.
+          Khi ứng dụng được mở trên một máy tính Windows khác, hệ thống sẽ tự động phát hiện khóa Credential không thuộc máy hiện tại và chuyển trạng thái tài khoản thành <em>"Cần đăng nhập lại"</em> trong phân hệ <strong>Account Vault</strong>. Người dùng chỉ cần nhấp vào tài khoản và cập nhật mật khẩu một lần đầu tiên để Windows của máy mới sinh khóa DPAPI cục bộ mới gắn với SID tài khoản Windows người dùng.
         </p>
       </div>
     </div>
