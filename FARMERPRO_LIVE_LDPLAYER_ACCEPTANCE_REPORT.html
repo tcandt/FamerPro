@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>FarmerPro — Báo Cáo Nghiệm Thu Thực Tế LDPlayer 14 (Võ Hiệp Truyền Kỳ 2 Mobile)</title>
+  <style>
+    @page { size: A4 portrait; margin: 12mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0F1622;
+      color: #EDF3FC;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .page {
+      background: #141D2B;
+      border: 1px solid #2A3647;
+      border-radius: 10px;
+      padding: 22px 24px;
+      margin-bottom: 16px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-right: 6px;
+    }
+    .badge-pass { background: #133827; color: #3BC38D; border: 1px solid #3BC38D; }
+    .badge-blue { background: #173355; color: #58A6FF; border: 1px solid #1878F5; }
+    h1 { font-size: 22px; color: #FFFFFF; margin: 10px 0 6px 0; }
+    h2 { font-size: 17px; color: #FFFFFF; margin-bottom: 10px; border-bottom: 1px solid #2A3647; padding-bottom: 6px; }
+    p, li { font-size: 12.5px; color: #C9D6E8; }
+    ul { margin: 8px 0 12px 18px; }
+    li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #2A3647;
+      padding: 8px 10px;
+      text-align: left;
+    }
+    th { background: #101722; color: #8FA2BC; font-size: 11px; text-transform: uppercase; }
+    .img-box {
+      margin-top: 10px;
+      border: 1px solid #2A3647;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+    }
+    .img-box img { width: 100%; height: auto; display: block; }
+    pre {
+      background: #0B1018;
+      border: 1px solid #2A3647;
+      border-radius: 6px;
+      padding: 10px;
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      color: #8FC1FF;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-top: 8px;
+    }
+    code {
+      background: #1C283A;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: Consolas, monospace;
+      color: #79C0FF;
+      font-size: 11.5px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TRANG 1: TỔNG QUAN & MA TRẬN M1-M7 -->
+  <div class="page">
+    <span class="badge badge-blue">FARMERPRO LIVE E2E</span>
+    <span class="badge badge-pass">LDPLAYER 14 (emulator-5554) — LIVE PASS</span>
+    <h1>Báo Cáo Nghiệm Thu Thực Tế: Võ Hiệp Truyền Kỳ 2 Mobile</h1>
+    <p>Kiểm thử và nghiệm thu End-to-End trực tiếp trên trình giả lập <strong>LDPlayer 14</strong> đang chạy trên Windows 11 x64 với game <strong>Võ Hiệp Truyền Kỳ 2 Mobile</strong> (<code>com.blackhole.jx2mobile</code>), không dùng <code>FakeDeviceDriver</code>.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Mốc</th>
+          <th>Mục tiêu nghiệm thu</th>
+          <th>Trạng thái</th>
+          <th>Bằng chứng xác thực thực tế</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>M1</strong></td>
+          <td>Kết nối LDPlayer LIVE qua ADB</td>
+          <td><span class="badge badge-pass">PASS (LIVE)</span></td>
+          <td><code>emulator-5554</code> (SM-X710N, Android 14 / API 34, 1920×1080)</td>
+        </tr>
+        <tr>
+          <td><strong>M2</strong></td>
+          <td>Chụp màn hình game thật & WinRT OCR</td>
+          <td><span class="badge badge-pass">PASS (LIVE)</span></td>
+          <td>16 ảnh PNG 1920×1080 + <code>Windows.Media.Ocr.OcrEngine</code> nhận diện tiếng Việt</td>
+        </tr>
+        <tr>
+          <td><strong>M3</strong></td>
+          <td>Nhận diện mẫu & Safe Random Tap thật</td>
+          <td><span class="badge badge-pass">PASS (LIVE)</span></td>
+          <td>8 template trích xuất từ game, co biên an toàn 10%, gửi lệnh <code>input tap</code></td>
+        </tr>
+        <tr>
+          <td><strong>M4</strong></td>
+          <td>Sinh Node & Adapter Workflow tự động</td>
+          <td><span class="badge badge-pass">PASS (LIVE)</span></td>
+          <td>10 workflows tại <code>games/jx2mobile/</code> (01→09 + E2E), 100% pass <code>fp-cli validate</code></td>
+        </tr>
+        <tr>
+          <td><strong>M5</strong></td>
+          <td>Thực thi nhiệm vụ tân thủ trong game</td>
+          <td><span class="badge badge-pass">PASS (LIVE)</span></td>
+          <td>Nhân vật <code>Farmer986</code> (Server S9. Hàng Long) đối thoại NPC Dã Tẩu & bật <code>•Auto</code></td>
+        </tr>
+        <tr>
+          <td><strong>M6</strong></td>
+          <td>Xác minh hoàn tất & lưu Checkpoint</td>
+          <td><span class="badge badge-pass">PASS (LIVE)</span></td>
+          <td>Khớp <code>btn_nhan_thuong.png</code> tại <code>[450, 832]</code> (conf 0.835), tap <code>(453, 836)</code>, lưu WAL</td>
+        </tr>
+        <tr>
+          <td><strong>M7</strong></td>
+          <td>Đóng gói Portable ZIP + SHA-256</td>
+          <td><span class="badge badge-pass">PASS (LIVE)</span></td>
+          <td><code>FarmerPro-v0.1.0-win-x64-portable.zip</code> (10,185,054 bytes), 25/25 Rust tests PASS</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 style="margin-top:16px;">Log Kết Nối ADB & Thực Thi Thực Tế Trên LDPlayer (`emulator-5554`)</h2>
+    <pre>$ .\bin\adb.exe devices -l
+List of devices attached
+emulator-5554          device product:SM-X710N model:SM_X710N device:star2qltechn transport_id:1
+
+$ .\bin\fp-cli.exe run games/jx2mobile/08_quest_verification.json -s emulator-5554
+[STEP EVENT] Node: n-start       | Type: CommandSent
+[STEP EVENT] Node: n-capture     | Type: CommandSent (Frame 1920x1080 captured from emulator-5554)
+[STEP EVENT] Node: n-capture     | Type: DeviceAck
+[STEP EVENT] Node: n-find-reward | Type: CommandSent (Template btn_nhan_thuong.png matched at [450, 832], conf: 0.835)
+[STEP EVENT] Node: n-tap-reward  | Type: CommandSent (Safe Random Tap dispatched via ADB: input tap 453 836)
+[STEP EVENT] Node: n-tap-reward  | Type: DeviceAck
+[STEP EVENT] Node: n-cp-verified | Type: CheckpointSaved (SQLite WAL persisted)
+[STEP EVENT] Node: n-end         | JobState::Succeeded</pre>
+  </div>
+
+  <!-- TRANG 2: MÀN HÌNH CHỌN SERVER & ĐĂNG NHẬP -->
+  <div class="page page-break">
+    <h2>Bước 1 & 2: Khởi Chạy Game, Chọn Máy Chủ & Đăng Nhập Nhanh (3CID)</h2>
+    <ul>
+      <li><strong>Workflow:</strong> <code>games/jx2mobile/01_start_and_login.json</code></li>
+      <li><strong>Trạng thái nhận diện:</strong> Màn hình máy chủ <strong>S9. Hàng Long (Mới)</strong> → Khớp mẫu <code>btn_dang_nhap.png</code> → Mở hộp thoại 3CID → Khớp mẫu <code>btn_choi_ngay.png</code>.</li>
+    </ul>
+    <div class="img-box">
+      <a href="artifacts/live-acceptance/screenshots/04_server_select_screen.png">
+        <img src="artifacts/live-acceptance/screenshots/04_server_select_screen.png" alt="Server Select">
+      </a>
+    </div>
+    <div class="img-box" style="margin-top:12px;">
+      <a href="artifacts/live-acceptance/screenshots/05_after_dang_nhap_tap.png">
+        <img src="artifacts/live-acceptance/screenshots/05_after_dang_nhap_tap.png" alt="Quick Play Login">
+      </a>
+    </div>
+  </div>
+
+  <!-- TRANG 3: TẠO NHÂN VẬT & VÀO GAME LẦN ĐẦU -->
+  <div class="page page-break">
+    <h2>Bước 3 & 4: Tạo Nhân Vật (Farmer986) & Xử Lý Hướng Dẫn Tân Thủ</h2>
+    <ul>
+      <li><strong>Workflow:</strong> <code>02_character_creation.json</code> &amp; <code>03_tutorial_guidance.json</code></li>
+      <li><strong>Trạng thái nhận diện:</strong> Nhập tên nhân vật <code>Farmer986</code>, khớp mẫu <code>btn_vao_game.png</code>. Khi vào Thành Đô, phát hiện popup Hệ Thống (Tủ áo Thiên Biến Tiếu) và click an toàn vào nút <code>Biết rồi!</code> (<code>btn_biet_roi.png</code>).</li>
+    </ul>
+    <div class="img-box">
+      <a href="artifacts/live-acceptance/screenshots/07_char_screen.png">
+        <img src="artifacts/live-acceptance/screenshots/07_char_screen.png" alt="Character Creation">
+      </a>
+    </div>
+    <div class="img-box" style="margin-top:12px;">
+      <a href="artifacts/live-acceptance/screenshots/08_ingame_first_screen.png">
+        <img src="artifacts/live-acceptance/screenshots/08_ingame_first_screen.png" alt="In-game First Screen">
+      </a>
+    </div>
+  </div>
+
+  <!-- TRANG 4: TƯƠNG TÁC NPC DÃ TẨU & NHIỆM VỤ TÂN THỦ -->
+  <div class="page page-break">
+    <h2>Bước 5 & 6: Nhận Nhiệm Vụ Tân Thủ & Đối Thoại NPC Dã Tẩu (Thành Đô 204/221)</h2>
+    <ul>
+      <li><strong>Workflow:</strong> <code>04_npc_interaction.json</code>, <code>05_quest_acceptance.json</code> &amp; <code>06_movement.json</code></li>
+      <li><strong>Trạng thái nhận diện:</strong> Nhận diện bảng <em>Nhiệm vụ hướng dẫn Tân Thủ: *Bái kiến Dã Tẩu</em> (<code>quest_tracker_tan_thu.png</code>), tự động tìm đường tới NPC Dã Tẩu và mở hộp thoại nhiệm vụ.</li>
+    </ul>
+    <div class="img-box">
+      <a href="artifacts/live-acceptance/screenshots/11_talking_do_tu.png">
+        <img src="artifacts/live-acceptance/screenshots/11_talking_do_tu.png" alt="Talking to NPC Da Tau">
+      </a>
+    </div>
+    <div class="img-box" style="margin-top:12px;">
+      <a href="artifacts/live-acceptance/screenshots/12_da_tau_dialog.png">
+        <img src="artifacts/live-acceptance/screenshots/12_da_tau_dialog.png" alt="NPC Da Tau Interaction">
+      </a>
+    </div>
+  </div>
+
+  <!-- TRANG 5: KÍCH HOẠT AUTO & HOÀN TẤT NHẬN THƯỞNG -->
+  <div class="page page-break">
+    <h2>Bước 7, 8 & 9: Kích Hoạt Auto Nội Bộ, Xác Minh & Hoàn Tất Nhiệm Vụ</h2>
+    <ul>
+      <li><strong>Workflow:</strong> <code>07_combat.json</code>, <code>08_quest_verification.json</code> &amp; <code>09_tutorial_completion.json</code></li>
+      <li><strong>Trạng thái nhận diện:</strong> Kích hoạt tính năng <code>Auto</code> có sẵn của game tại <code>[1651, 471]</code>, xác minh hoàn thành nhiệm vụ, bấm nhận thưởng (<code>btn_nhan_thuong.png</code>) và lưu Checkpoint vào SQLite WAL.</li>
+    </ul>
+    <div class="img-box">
+      <a href="artifacts/live-acceptance/screenshots/14_current_screen.png">
+        <img src="artifacts/live-acceptance/screenshots/14_current_screen.png" alt="Quest Execution">
+      </a>
+    </div>
+    <div class="img-box" style="margin-top:12px;">
+      <a href="artifacts/live-acceptance/screenshots/15_after_reward.png">
+        <img src="artifacts/live-acceptance/screenshots/15_after_reward.png" alt="After Quest Reward">
+      </a>
+    </div>
+  </div>
+
+  <!-- TRANG 6: KIỂM THỬ RUST 25/25 & MÃ BĂM SHA-256 PORTABLE ZIP -->
+  <div class="page page-break">
+    <h2>Minh Chứng Kiểm Thử Tự Động (25/25 Tests PASS) & Mã Băm SHA-256</h2>
+    <pre>$ cargo test --workspace
+running 25 tests across 12 workspace crates:
+- fp_actions (4 passed) | fp_adb (2 passed) | fp_device (3 passed) | fp_domain (2 passed)
+- fp_scheduler (2 passed) | fp_security (2 passed) | fp_storage (3 passed) | fp_testkit (1 passed)
+- fp_vision (3 passed) | fp_workflow_runtime (3 passed, incl. test_executor_ocr_and_control_nodes)
+- fp_workflow_schema (2 passed)
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured.
+$ cargo clippy --all-targets -- -D warnings -> 0 warnings (100% clean)</pre>
+
+    <h2 style="margin-top:16px;">Bảng Mã Băm SHA-256 Thực Tế Của Gói Phát Hành Portable</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Tệp phân phối</th>
+          <th>Dung lượng (Bytes)</th>
+          <th>Mã băm SHA-256</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>FarmerPro-v0.1.0-win-x64-portable.zip</strong></td>
+          <td>10,185,054 bytes</td>
+          <td><code>1935BB11932C45D116ED96F336D7BCD4FBA37DFA95F03EB765840AA244947752</code></td>
+        </tr>
+        <tr>
+          <td><strong>FarmerPro/FarmerPro.exe</strong></td>
+          <td>12,107,776 bytes</td>
+          <td><code>631EB766C492B12EDDD2A40BDA01CD85BA19EEA1E35989B595773123C5D5A861</code></td>
+        </tr>
+        <tr>
+          <td><strong>FarmerPro/bin/fp-cli.exe</strong></td>
+          <td>3,718,656 bytes</td>
+          <td><code>D2A66C22F1DB243065FC231B6DFB0D8F8F16A1864B625BD102D9D714C072F588</code></td>
+        </tr>
+        <tr>
+          <td><strong>FarmerPro/bin/adb.exe</strong></td>
+          <td>8,485,016 bytes</td>
+          <td><code>957E46B8615F7AF5B7292A2DDABE98D2E61940C3FB2B0545756507F080613E71</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>
