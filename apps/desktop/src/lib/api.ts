@@ -1,5 +1,13 @@
 import { invoke } from '@tauri-apps/api/core';
-import { DeviceSummary, DeviceDetail, StepEvent, ValidationReport } from '../types';
+import {
+  DeviceSummary,
+  DeviceDetail,
+  StepEvent,
+  ValidationReport,
+  AppPackageInfo,
+  LdPlayerInstance,
+  ScanRangeResult,
+} from '../types';
 
 export const isTauri = (): boolean => {
   return typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
@@ -167,6 +175,87 @@ export const api = {
       return await invoke<string | null>('get_workflow_draft', { workflowId });
     } catch (e) {
       console.warn('Failed to call get_workflow_draft:', e);
+      return null;
+    }
+  },
+
+  async adbConnectEndpoint(endpoint: string): Promise<string> {
+    if (!isTauri()) return `Connected to ${endpoint} (mock)`;
+    return await invoke<string>('adb_connect_endpoint', { endpoint });
+  },
+
+  async adbDisconnectEndpoint(endpoint: string): Promise<string> {
+    if (!isTauri()) return `Disconnected from ${endpoint} (mock)`;
+    return await invoke<string>('adb_disconnect_endpoint', { endpoint });
+  },
+
+  async adbScanRange(
+    subnet?: string,
+    port?: number,
+    emulatorPorts?: boolean
+  ): Promise<ScanRangeResult> {
+    if (!isTauri()) {
+      return { scanned_count: 0, connected_endpoints: [] };
+    }
+    return await invoke<ScanRangeResult>('adb_scan_range', {
+      subnet,
+      port,
+      emulatorPorts,
+    });
+  },
+
+  async autoDiscoverDevices(): Promise<DeviceSummary[]> {
+    if (!isTauri()) return [];
+    return await invoke<DeviceSummary[]>('auto_discover_devices');
+  },
+
+  async listDevicePackages(
+    deviceId: string,
+    userOnly: boolean = true
+  ): Promise<AppPackageInfo[]> {
+    if (!isTauri()) return [];
+    return await invoke<AppPackageInfo[]>('list_device_packages', {
+      deviceId,
+      userOnly,
+    });
+  },
+
+  async launchDeviceApp(deviceId: string, packageName: string): Promise<string> {
+    if (!isTauri()) return `Launched ${packageName} (mock)`;
+    return await invoke<string>('launch_device_app', { deviceId, packageName });
+  },
+
+  async stopDeviceApp(deviceId: string, packageName: string): Promise<string> {
+    if (!isTauri()) return `Stopped ${packageName} (mock)`;
+    return await invoke<string>('stop_device_app', { deviceId, packageName });
+  },
+
+  async isDeviceAppRunning(deviceId: string, packageName: string): Promise<boolean> {
+    if (!isTauri()) return false;
+    return await invoke<boolean>('is_device_app_running', { deviceId, packageName });
+  },
+
+  async ldplayerListInstances(): Promise<LdPlayerInstance[]> {
+    if (!isTauri()) return [];
+    try {
+      return await invoke<LdPlayerInstance[]>('ldplayer_list_instances');
+    } catch (e) {
+      console.warn('Failed to call ldplayer_list_instances:', e);
+      return [];
+    }
+  },
+
+  async ldplayerAction(action: string, index?: number): Promise<string> {
+    if (!isTauri()) return `Executed ${action} (mock)`;
+    return await invoke<string>('ldplayer_action', { action, index });
+  },
+
+  async ldplayerDetectPath(): Promise<string | null> {
+    if (!isTauri()) return null;
+    try {
+      return await invoke<string | null>('ldplayer_detect_path');
+    } catch (e) {
+      console.warn('Failed to call ldplayer_detect_path:', e);
       return null;
     }
   },

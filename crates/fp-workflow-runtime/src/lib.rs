@@ -751,17 +751,20 @@ foreach ($l in $result.Lines) {
             let _ = std::fs::write(&script_file, ocr_script_content);
         }
 
-        let output = tokio::process::Command::new("powershell")
-            .args([
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                &script_file.to_string_lossy(),
-                &temp_img_path.to_string_lossy(),
-            ])
-            .output()
-            .await;
+        let mut cmd = tokio::process::Command::new("powershell");
+        #[cfg(windows)]
+        {
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+        cmd.args([
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            &script_file.to_string_lossy(),
+            &temp_img_path.to_string_lossy(),
+        ]);
+        let output = cmd.output().await;
 
         let _ = std::fs::remove_file(&temp_img_path);
 

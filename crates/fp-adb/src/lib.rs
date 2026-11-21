@@ -6,6 +6,7 @@ use fp_domain::{
 use std::time::Duration;
 use tokio::process::Command;
 
+#[derive(Debug, Clone)]
 pub struct AdbRunner {
     pub adb_path: String,
     pub timeout: Duration,
@@ -54,7 +55,25 @@ impl AdbRunner {
             return cwd_bin.to_string_lossy().to_string();
         }
 
-        // 4. Fallback to system adb on PATH
+        // 4. Check common LDPlayer and Android SDK paths on Windows
+        #[cfg(windows)]
+        {
+            let common_candidates = [
+                r"C:\LDPlayer\LDPlayer14\adb.exe",
+                r"C:\LDPlayer\LDPlayer9\adb.exe",
+                r"C:\LDPlayer\LDPlayer4\adb.exe",
+                r"D:\LDPlayer\LDPlayer14\adb.exe",
+                r"D:\LDPlayer\LDPlayer9\adb.exe",
+                r"E:\LDPlayer\LDPlayer14\adb.exe",
+            ];
+            for candidate in common_candidates {
+                if std::path::Path::new(candidate).exists() {
+                    return candidate.to_string();
+                }
+            }
+        }
+
+        // 5. Fallback to system adb on PATH
         "adb".to_string()
     }
 
@@ -67,6 +86,10 @@ impl AdbRunner {
 
     pub async fn run_args(&self, args: &[&str]) -> Result<String> {
         let mut cmd = Command::new(&self.adb_path);
+        #[cfg(windows)]
+        {
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
         cmd.args(args);
 
         let output = tokio::time::timeout(self.timeout, cmd.output())
@@ -88,6 +111,10 @@ impl AdbRunner {
 
     pub async fn run_raw_bytes(&self, args: &[&str]) -> Result<Vec<u8>> {
         let mut cmd = Command::new(&self.adb_path);
+        #[cfg(windows)]
+        {
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
         cmd.args(args);
 
         let output = tokio::time::timeout(self.timeout, cmd.output())
@@ -106,6 +133,34 @@ impl AdbRunner {
     pub async fn list_devices(&self) -> Result<Vec<DeviceSummary>> {
         let output = self.run_args(&["devices", "-l"]).await?;
         Self::parse_devices_output(&output)
+    }
+
+    pub async fn connect(&self, endpoint: &str) -> Result<String> {
+        self.run_args(&["connect", endpoint]).await
+    }
+
+    pub async fn disconnect(&self, endpoint: &str) -> Result<String> {
+        self.run_args(&["disconnect", endpoint]).await
+    }
+
+    pub async fn list_packages(&self, serial: &str, user_only: bool) -> Result<Vec<String>> {
+        let args = if user_only {
+            vec!["-s", serial, "shell", "pm", "list", "packages", "-3"]
+        } else {
+            vec!["-s", serial, "shell", "pm", "list", "packages"]
+        };
+        let out = self.run_args(&args).await?;
+        let mut packages = Vec::new();
+        for line in out.lines() {
+            let line = line.trim();
+            if let Some(pkg) = line.strip_prefix("package:") {
+                let pkg_clean = pkg.trim();
+                if !pkg_clean.is_empty() {
+                    packages.push(pkg_clean.to_string());
+                }
+            }
+        }
+        Ok(packages)
     }
 
     pub fn parse_devices_output(output: &str) -> Result<Vec<DeviceSummary>> {
@@ -310,7 +365,18 @@ impl DeviceDriver for AdbDeviceDriver {
             ])
             .await;
 
-        if monkey_res.is_err() {
+        let need_fallback = match &monkey_res {
+            Ok(output) => {
+                let lower = output.to_lowercase();
+                lower.contains("no activities found")
+                    || lower.contains("aborted")
+                    || lower.contains("** error")
+                    || lower.contains("events injected: 0")
+            }
+            Err(_) => true,
+        };
+
+        if need_fallback {
             // Android 14+ / emulator fallback: resolve launcher activity and use am start
             let resolve_out = self
                 .runner

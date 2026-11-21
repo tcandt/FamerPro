@@ -254,7 +254,7 @@ export const TasksView: React.FC = () => {
             >
               {devices.map((d) => (
                 <option key={d.id} value={d.id} className="bg-[#161E29] text-[#EDF3FC]">
-                  {d.alias} {d.is_mock ? '(Demo)' : '(Live)'}
+                  {d.alias} ({d.adb_serial})
                 </option>
               ))}
             </select>

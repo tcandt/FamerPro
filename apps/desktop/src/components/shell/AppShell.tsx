@@ -36,11 +36,11 @@ export const AppShell: React.FC<AppShellProps> = ({
     fetchDevices();
     fetchStatus();
 
-    // Auto-poll ADB devices every 4 seconds for live detection (e.g. LDPlayer emulator-5554)
+    // Auto-poll ADB devices every 5 seconds for live detection
     const interval = setInterval(() => {
-      fetchDevices();
+      fetchDevices(false);
       fetchStatus();
-    }, 4000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [fetchDevices, fetchStatus]);
@@ -99,7 +99,7 @@ export const AppShell: React.FC<AppShellProps> = ({
     };
 
     const selectedDev = devices.find((d) => d.id === selectedDeviceId);
-    const isMock = selectedDev ? !!selectedDev.is_mock : true;
+    const isMock = selectedDev ? !!selectedDev.is_mock : false;
 
     try {
       const resp = await api.executeWorkflow(

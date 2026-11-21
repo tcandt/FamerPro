@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Bot,
-  Search,
   Minus,
   Square,
   X,
@@ -11,6 +10,7 @@ import {
   AlertCircle,
   Smartphone,
   RefreshCw,
+  Layers,
 } from 'lucide-react';
 import { useWorkflowStore } from '../../stores/workflowStore';
 import { useDeviceStore } from '../../stores/deviceStore';
@@ -44,7 +44,42 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onRefreshDevices,
 }) => {
   const { workflowName, isDirty, isRunning, validationReport } = useWorkflowStore();
-  const { devices, selectedDeviceId, selectDevice } = useDeviceStore();
+  const {
+    devices,
+    selectedDeviceId,
+    selectDevice,
+    packages,
+    selectedPackageName,
+    setSelectedPackageName,
+    launchApp,
+    stopApp,
+  } = useDeviceStore();
+
+  const [headerNotice, setHeaderNotice] = useState<string | null>(null);
+
+  const handleHeaderLaunchApp = async () => {
+    if (!selectedDeviceId || !selectedPackageName) return;
+    try {
+      const res = await launchApp(selectedDeviceId, selectedPackageName);
+      setHeaderNotice(res);
+      setTimeout(() => setHeaderNotice(null), 3000);
+    } catch (e: any) {
+      setHeaderNotice(`Lỗi: ${e.message || e}`);
+      setTimeout(() => setHeaderNotice(null), 3500);
+    }
+  };
+
+  const handleHeaderStopApp = async () => {
+    if (!selectedDeviceId || !selectedPackageName) return;
+    try {
+      const res = await stopApp(selectedDeviceId, selectedPackageName);
+      setHeaderNotice(res);
+      setTimeout(() => setHeaderNotice(null), 3000);
+    } catch (e: any) {
+      setHeaderNotice(`Lỗi: ${e.message || e}`);
+      setTimeout(() => setHeaderNotice(null), 3500);
+    }
+  };
 
   const handleMinimize = () => {
     api.windowMinimize();
@@ -100,33 +135,74 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </div>
       </div>
 
-      {/* Center: Quick Switcher / Global Command search */}
-      <div className="flex items-center gap-2" data-tauri-drag-region>
-        {currentView === 'studio' && (
-          <div className="flex items-center gap-1.5 bg-[#101722] border border-[#2A3647] rounded-md px-2 py-1 text-xs text-[#EDF3FC]">
-            <Smartphone size={13} className="text-[#1878F5] shrink-0" />
-            <span className="text-[11px] text-[#74869D]">Thiết bị:</span>
-            <select
-              value={selectedDeviceId || ''}
-              onChange={(e) => selectDevice(e.target.value)}
-              className="bg-transparent text-[#EDF3FC] outline-none cursor-pointer text-xs font-medium max-w-[170px] truncate"
-            >
-              {devices.map((d) => (
+      {/* Center: Device & App Quick Launcher */}
+      <div className="flex items-center gap-1.5" data-tauri-drag-region>
+        {/* Quick Device Selector */}
+        <div className="flex items-center gap-1 bg-[#101722] border border-[#2A3647] rounded-md px-2 py-0.5 text-xs text-[#EDF3FC]">
+          <Smartphone size={12} className="text-[#1878F5] shrink-0" />
+          <select
+            value={selectedDeviceId || ''}
+            onChange={(e) => selectDevice(e.target.value)}
+            className="bg-transparent text-[#EDF3FC] outline-none cursor-pointer text-xs font-medium max-w-[150px] truncate"
+            title="Chọn thiết bị điều khiển"
+          >
+            {devices.length === 0 ? (
+              <option value="" className="bg-[#161E29] text-[#74869D]">
+                Chưa có thiết bị
+              </option>
+            ) : (
+              devices.map((d) => (
                 <option key={d.id} value={d.id} className="bg-[#161E29] text-[#EDF3FC]">
-                  {d.alias} {d.is_mock ? '(Demo)' : '(Live)'}
+                  {d.alias} ({d.adb_serial})
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+
+        {/* Quick App Selector & Open/Stop */}
+        {packages.length > 0 && (
+          <div className="flex items-center gap-1 bg-[#101722] border border-[#2A3647] rounded-md px-1.5 py-0.5 text-xs text-[#EDF3FC]">
+            <Layers size={12} className="text-[#38BDF8] shrink-0" />
+            <select
+              value={selectedPackageName || ''}
+              onChange={(e) => setSelectedPackageName(e.target.value)}
+              className="bg-transparent text-[#EDF3FC] outline-none cursor-pointer text-xs font-medium max-w-[150px] truncate"
+              title="Chọn app"
+            >
+              {packages.map((pkg) => (
+                <option key={pkg.package_name} value={pkg.package_name} className="bg-[#161E29] text-[#EDF3FC]">
+                  {pkg.is_game ? '🎮 ' : '📱 '}
+                  {pkg.display_name}
                 </option>
               ))}
             </select>
+            <button
+              onClick={handleHeaderLaunchApp}
+              disabled={!selectedDeviceId || !selectedPackageName}
+              className="px-1.5 py-0.5 bg-[#1878F5] hover:bg-[#2F8CFF] text-white rounded text-[10px] font-semibold flex items-center gap-0.5 transition-colors cursor-pointer disabled:opacity-40"
+              title="Mở ứng dụng ngay"
+            >
+              <Play size={10} fill="currentColor" />
+              <span>Mở</span>
+            </button>
+            <button
+              onClick={handleHeaderStopApp}
+              disabled={!selectedDeviceId || !selectedPackageName}
+              className="px-1.5 py-0.5 bg-[#3B1717] hover:bg-[#F27883] text-[#F27883] hover:text-white rounded text-[10px] font-semibold flex items-center gap-0.5 border border-[#F27883]/30 transition-colors cursor-pointer disabled:opacity-40"
+              title="Tắt ứng dụng"
+            >
+              <StopSquare size={10} fill="currentColor" />
+              <span>Tắt</span>
+            </button>
           </div>
         )}
 
-        <button
-          className="flex items-center gap-2 bg-[#101722] hover:bg-[#192230] border border-[#2A3647] rounded-md px-2.5 py-1 text-xs text-[#74869D] hover:text-[#A9B8CC] transition-colors cursor-pointer"
-          title="Mở bảng lệnh nhanh"
-        >
-          <Search size={12} />
-          <span className="text-[11px]">Lệnh nhanh (Ctrl+K)</span>
-        </button>
+        {headerNotice && (
+          <span className="text-[11px] text-[#3BC38D] font-medium px-2 py-0.5 rounded bg-[#133528] border border-[#3BC38D]/40 truncate max-w-[180px]">
+            {headerNotice}
+          </span>
+        )}
       </div>
 
       {/* Right: View-specific Primary Actions & Window Controls */}

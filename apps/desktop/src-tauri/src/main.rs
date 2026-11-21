@@ -12,8 +12,35 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc, Mutex,
 };
+use std::time::Duration;
 use tauri::State;
 use tokio::sync::watch;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AppPackageInfo {
+    pub package_name: String,
+    pub display_name: String,
+    pub is_game: bool,
+    pub is_system: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LdPlayerInstance {
+    pub index: u32,
+    pub name: String,
+    pub is_running: bool,
+    pub pid: i32,
+    pub top_handle: u64,
+    pub width: u32,
+    pub height: u32,
+    pub dpi: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ScanRangeResult {
+    pub scanned_count: usize,
+    pub connected_endpoints: Vec<String>,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppStatus {
@@ -196,17 +223,30 @@ async fn inspect_device(device_id: String) -> Result<DeviceDetail, String> {
     };
 
     let packages_out = runner
-        .run_args(&["-s", &device_id, "shell", "pm", "list", "packages"])
+        .run_args(&["-s", &device_id, "shell", "pm", "list", "packages", "-3"])
         .await
         .unwrap_or_default();
     let mut installed_packages = Vec::new();
     for line in packages_out.lines() {
         if let Some(pkg) = line.trim().strip_prefix("package:") {
-            installed_packages.push(pkg.to_string());
+            let clean = pkg.trim();
+            if !clean.is_empty() {
+                installed_packages.push(clean.to_string());
+            }
         }
     }
     if installed_packages.is_empty() {
-        installed_packages.push("com.blackhole.jx2mobile".to_string());
+        // Fallback to all packages if no 3rd-party packages found
+        if let Ok(all_pkgs) = runner.run_args(&["-s", &device_id, "shell", "pm", "list", "packages"]).await {
+            for line in all_pkgs.lines() {
+                if let Some(pkg) = line.trim().strip_prefix("package:") {
+                    let clean = pkg.trim();
+                    if !clean.is_empty() {
+                        installed_packages.push(clean.to_string());
+                    }
+                }
+            }
+        }
     }
 
     Ok(DeviceDetail {
@@ -426,6 +466,521 @@ async fn execute_test_node(
     }
 }
 
+#[tauri::command]
+async fn adb_connect_endpoint(
+    endpoint: String,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<String, String> {
+    let adb_path = {
+        let st = state.lock().unwrap();
+        st.adb_runner.adb_path.clone()
+    };
+    let runner = AdbRunner::new(Some(adb_path));
+    let cleaned = endpoint.trim();
+    if cleaned.is_empty() {
+        return Err("Địa chỉ IP:Port không được để trống".to_string());
+    }
+    let res = runner.connect(cleaned).await.map_err(|e| e.to_string())?;
+    Ok(res)
+}
+
+#[tauri::command]
+async fn adb_disconnect_endpoint(
+    endpoint: String,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<String, String> {
+    let adb_path = {
+        let st = state.lock().unwrap();
+        st.adb_runner.adb_path.clone()
+    };
+    let runner = AdbRunner::new(Some(adb_path));
+    let cleaned = endpoint.trim();
+    if cleaned.is_empty() {
+        return Err("Địa chỉ IP:Port không được để trống".to_string());
+    }
+    let res = runner.disconnect(cleaned).await.map_err(|e| e.to_string())?;
+    Ok(res)
+}
+
+#[tauri::command]
+async fn adb_scan_range(
+    subnet: Option<String>,
+    port: Option<u16>,
+    emulator_ports: Option<bool>,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<ScanRangeResult, String> {
+    let adb_path = {
+        let st = state.lock().unwrap();
+        st.adb_runner.adb_path.clone()
+    };
+    let runner = AdbRunner::new(Some(adb_path));
+
+    let scan_emulators = emulator_ports.unwrap_or(true);
+    let mut targets_to_probe: Vec<(String, u16)> = Vec::new();
+
+    if scan_emulators {
+        // Standard Android emulator & LDPlayer ports on localhost: 5555..=5595
+        for p in 5555..=5595 {
+            targets_to_probe.push(("127.0.0.1".to_string(), p));
+        }
+        // Nox ports
+        for p in 62001..=62025 {
+            targets_to_probe.push(("127.0.0.1".to_string(), p));
+        }
+        // Memu ports
+        for p in (21503..=21523).step_by(10) {
+            targets_to_probe.push(("127.0.0.1".to_string(), p));
+        }
+        // MuMu & WSA ports
+        targets_to_probe.push(("127.0.0.1".to_string(), 7555));
+        targets_to_probe.push(("127.0.0.1".to_string(), 58526));
+    }
+
+    if let Some(sub) = subnet {
+        let sub_clean = sub.trim().trim_end_matches('.');
+        if !sub_clean.is_empty() {
+            let target_port = port.unwrap_or(5555);
+            for i in 1..=254 {
+                targets_to_probe.push((format!("{}.{}", sub_clean, i), target_port));
+            }
+        }
+    }
+
+    let scanned_count = targets_to_probe.len();
+    let mut open_endpoints = Vec::new();
+
+    let mut set = tokio::task::JoinSet::new();
+    for (ip, p) in targets_to_probe {
+        set.spawn(async move {
+            let addr_str = format!("{}:{}", ip, p);
+            if let Ok(addr) = addr_str.parse::<std::net::SocketAddr>() {
+                if let Ok(Ok(_)) = tokio::time::timeout(
+                    Duration::from_millis(220),
+                    tokio::net::TcpStream::connect(addr),
+                )
+                .await
+                {
+                    return Some(addr_str);
+                }
+            }
+            None
+        });
+    }
+
+    while let Some(res) = set.join_next().await {
+        if let Ok(Some(ep)) = res {
+            open_endpoints.push(ep);
+        }
+    }
+
+    let mut connected_endpoints = Vec::new();
+    for ep in open_endpoints {
+        if let Ok(msg) = runner.connect(&ep).await {
+            if msg.contains("connected to") || msg.contains("already connected") {
+                connected_endpoints.push(ep);
+            }
+        }
+    }
+
+    Ok(ScanRangeResult {
+        scanned_count,
+        connected_endpoints,
+    })
+}
+
+#[tauri::command]
+async fn auto_discover_devices(
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<Vec<DeviceSummary>, String> {
+    let adb_path = {
+        let st = state.lock().unwrap();
+        st.adb_runner.adb_path.clone()
+    };
+    let runner = AdbRunner::new(Some(adb_path));
+
+    let mut ports_to_probe: Vec<u16> = (5555..=5595).collect();
+    ports_to_probe.extend_from_slice(&[62001, 62025, 21503, 21513, 21523, 7555, 58526]);
+
+    let mut set = tokio::task::JoinSet::new();
+    for p in ports_to_probe {
+        set.spawn(async move {
+            let addr_str = format!("127.0.0.1:{}", p);
+            if let Ok(addr) = addr_str.parse::<std::net::SocketAddr>() {
+                if let Ok(Ok(_)) = tokio::time::timeout(
+                    Duration::from_millis(150),
+                    tokio::net::TcpStream::connect(addr),
+                )
+                .await
+                {
+                    return Some(addr_str);
+                }
+            }
+            None
+        });
+    }
+
+    let mut open_addrs = Vec::new();
+    while let Some(res) = set.join_next().await {
+        if let Ok(Some(addr_str)) = res {
+            open_addrs.push(addr_str);
+        }
+    }
+
+    // Connect to all open emulator ports concurrently
+    let mut conn_set = tokio::task::JoinSet::new();
+    for addr_str in open_addrs {
+        let r = runner.clone();
+        conn_set.spawn(async move {
+            let _ = r.connect(&addr_str).await;
+        });
+    }
+    while conn_set.join_next().await.is_some() {}
+
+    let devices = runner.list_devices().await.unwrap_or_default();
+    let st = state.lock().unwrap();
+    for d in &devices {
+        let _ = st.storage.upsert_device(d);
+    }
+
+    Ok(devices)
+}
+
+fn resolve_app_info(pkg: &str) -> (String, bool) {
+    let friendly = match pkg {
+        "com.blackhole.jx2mobile" => Some("Võ Hiệp Truyền Kỳ 2 Mobile"),
+        "com.vng.pubgmobile" => Some("PUBG Mobile VN"),
+        "com.garena.game.kgvn" => Some("Liên Quân Mobile"),
+        "com.vng.cuuam" => Some("Cửu Âm Chân Kinh VNG"),
+        "com.vng.vltkm" => Some("Võ Lâm Truyền Kỳ Mobile"),
+        "com.vng.vltkm2" => Some("Võ Lâm Truyền Kỳ 2 Mobile"),
+        "com.playfun.kiemthe" => Some("Kiếm Thế Origin"),
+        "com.miHoYo.GenshinImpact" => Some("Genshin Impact"),
+        "com.riotgames.league.wildriftvn" => Some("Liên Minh: Tốc Chiến VN"),
+        "com.dts.freefireth" => Some("Free Fire"),
+        "com.garena.game.codm" => Some("Call of Duty Mobile"),
+        "com.google.android.youtube" => Some("YouTube"),
+        "com.android.chrome" => Some("Google Chrome"),
+        "com.iot.hunonic" => Some("Hunonic Smart"),
+        _ => None,
+    };
+
+    if let Some(name) = friendly {
+        let is_game = !matches!(
+            pkg,
+            "com.google.android.youtube" | "com.android.chrome" | "com.iot.hunonic"
+        );
+        (format!("{} ({})", name, pkg), is_game)
+    } else {
+        let lower = pkg.to_lowercase();
+        let is_game = lower.contains("game")
+            || lower.contains("mobile")
+            || lower.contains("play")
+            || lower.contains("blackhole")
+            || lower.contains("vng")
+            || lower.contains("garena")
+            || lower.contains("tencent")
+            || lower.contains("jx2")
+            || lower.contains("vltk");
+
+        let last_part = pkg.split('.').next_back().unwrap_or(pkg);
+        let mut capitalized = String::new();
+        for word in last_part.split('_') {
+            if !capitalized.is_empty() {
+                capitalized.push(' ');
+            }
+            let mut chars = word.chars();
+            if let Some(first) = chars.next() {
+                capitalized.extend(first.to_uppercase());
+                capitalized.push_str(chars.as_str());
+            }
+        }
+        if capitalized.trim().is_empty() {
+            capitalized = pkg.to_string();
+        }
+        (format!("{} ({})", capitalized, pkg), is_game)
+    }
+}
+
+#[tauri::command]
+async fn list_device_packages(
+    device_id: String,
+    user_only: Option<bool>,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<Vec<AppPackageInfo>, String> {
+    let adb_path = {
+        let st = state.lock().unwrap();
+        st.adb_runner.adb_path.clone()
+    };
+    let runner = AdbRunner::new(Some(adb_path));
+    let user_apps_only = user_only.unwrap_or(true);
+
+    let raw_packages = runner
+        .list_packages(&device_id, user_apps_only)
+        .await
+        .unwrap_or_default();
+
+    let mut result = Vec::new();
+    for pkg in raw_packages {
+        let (display_name, is_game) = resolve_app_info(&pkg);
+        result.push(AppPackageInfo {
+            package_name: pkg,
+            display_name,
+            is_game,
+            is_system: !user_apps_only,
+        });
+    }
+
+    result.sort_by(|a, b| {
+        b.is_game
+            .cmp(&a.is_game)
+            .then_with(|| a.display_name.to_lowercase().cmp(&b.display_name.to_lowercase()))
+    });
+
+    Ok(result)
+}
+
+#[tauri::command]
+async fn launch_device_app(
+    device_id: String,
+    package_name: String,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<String, String> {
+    let adb_path = {
+        let st = state.lock().unwrap();
+        st.adb_runner.adb_path.clone()
+    };
+    let driver = fp_adb::AdbDeviceDriver::new(device_id, AdbRunner::new(Some(adb_path)));
+    driver
+        .launch_app(&package_name)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(format!("Đã khởi chạy ứng dụng {}", package_name))
+}
+
+#[tauri::command]
+async fn stop_device_app(
+    device_id: String,
+    package_name: String,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<String, String> {
+    let adb_path = {
+        let st = state.lock().unwrap();
+        st.adb_runner.adb_path.clone()
+    };
+    let driver = fp_adb::AdbDeviceDriver::new(device_id, AdbRunner::new(Some(adb_path)));
+    driver
+        .stop_app(&package_name)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(format!("Đã tắt ứng dụng {}", package_name))
+}
+
+#[tauri::command]
+async fn is_device_app_running(
+    device_id: String,
+    package_name: String,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<bool, String> {
+    let adb_path = {
+        let st = state.lock().unwrap();
+        st.adb_runner.adb_path.clone()
+    };
+    let runner = AdbRunner::new(Some(adb_path));
+    let out = runner
+        .run_args(&["-s", &device_id, "shell", "pidof", &package_name])
+        .await
+        .unwrap_or_default();
+    Ok(!out.trim().is_empty())
+}
+
+fn find_ldplayer_console() -> Option<std::path::PathBuf> {
+    if let Ok(env_val) = std::env::var("LDPLAYER_PATH") {
+        let p = std::path::PathBuf::from(env_val);
+        if p.exists() {
+            if p.is_file() {
+                return Some(p);
+            }
+            let candidate = p.join("ldconsole.exe");
+            if candidate.exists() {
+                return Some(candidate);
+            }
+        }
+    }
+
+    let candidates = [
+        r"C:\LDPlayer\LDPlayer14\ldconsole.exe",
+        r"C:\LDPlayer\LDPlayer9\ldconsole.exe",
+        r"C:\LDPlayer\LDPlayer4\ldconsole.exe",
+        r"C:\LDPlayer\LDPlayer\ldconsole.exe",
+        r"C:\LDPlayer\LDPlayer14\dnconsole.exe",
+        r"C:\LDPlayer\LDPlayer9\dnconsole.exe",
+        r"C:\LDPlayer\LDPlayer4\dnconsole.exe",
+        r"D:\LDPlayer\LDPlayer14\ldconsole.exe",
+        r"D:\LDPlayer\LDPlayer9\ldconsole.exe",
+        r"D:\LDPlayer\LDPlayer4\ldconsole.exe",
+        r"D:\LDPlayer\LDPlayer\ldconsole.exe",
+        r"E:\LDPlayer\LDPlayer14\ldconsole.exe",
+        r"E:\LDPlayer\LDPlayer9\ldconsole.exe",
+        r"E:\LDPlayer\LDPlayer4\ldconsole.exe",
+        r"C:\leidian\LDPlayer9\ldconsole.exe",
+        r"D:\leidian\LDPlayer9\ldconsole.exe",
+        r"E:\leidian\LDPlayer9\ldconsole.exe",
+    ];
+
+    for path in &candidates {
+        let pb = std::path::PathBuf::from(path);
+        if pb.exists() {
+            return Some(pb);
+        }
+    }
+    None
+}
+
+#[tauri::command]
+async fn ldplayer_list_instances() -> Result<Vec<LdPlayerInstance>, String> {
+    let ldconsole = match find_ldplayer_console() {
+        Some(p) => p,
+        None => return Ok(Vec::new()),
+    };
+
+    let mut cmd = tokio::process::Command::new(ldconsole);
+    #[cfg(windows)]
+    {
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    cmd.arg("list2");
+
+    let output = cmd.output().await.map_err(|e| e.to_string())?;
+    if !output.status.success() {
+        return Ok(Vec::new());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut list = Vec::new();
+
+    for line in stdout.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = line.split(',').collect();
+        if parts.len() >= 7 {
+            let index = parts[0].trim().parse::<u32>().unwrap_or(0);
+            let name = parts[1].trim().to_string();
+            let top_handle = parts[2].trim().parse::<u64>().unwrap_or(0);
+            let is_in_android = parts[4].trim() == "1";
+            let pid = parts[5].trim().parse::<i32>().unwrap_or(-1);
+            let width = if parts.len() > 7 {
+                parts[7].trim().parse::<u32>().unwrap_or(1920)
+            } else {
+                1920
+            };
+            let height = if parts.len() > 8 {
+                parts[8].trim().parse::<u32>().unwrap_or(1080)
+            } else {
+                1080
+            };
+            let dpi = if parts.len() > 9 {
+                parts[9].trim().parse::<u32>().unwrap_or(280)
+            } else {
+                280
+            };
+
+            list.push(LdPlayerInstance {
+                index,
+                name,
+                is_running: is_in_android || pid > 0,
+                pid,
+                top_handle,
+                width,
+                height,
+                dpi,
+            });
+        }
+    }
+
+    Ok(list)
+}
+
+#[tauri::command]
+async fn ldplayer_action(action: String, index: Option<u32>) -> Result<String, String> {
+    let ldconsole = find_ldplayer_console()
+        .ok_or_else(|| "Không tìm thấy đường dẫn LDPlayer (ldconsole.exe)".to_string())?;
+
+    let idx = index.unwrap_or(0);
+    let action_lower = action.to_lowercase();
+
+    match action_lower.as_str() {
+        "launch" | "activate" => {
+            let mut cmd = tokio::process::Command::new(&ldconsole);
+            #[cfg(windows)]
+            {
+                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+            }
+            cmd.args(["launch", "--index", &idx.to_string()]);
+            cmd.output().await.map_err(|e| e.to_string())?;
+            Ok(format!("Đã yêu cầu mở / kích hoạt LDPlayer instance {}", idx))
+        }
+        "reboot" => {
+            let mut cmd = tokio::process::Command::new(&ldconsole);
+            #[cfg(windows)]
+            {
+                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+            }
+            cmd.args(["reboot", "--index", &idx.to_string()]);
+            cmd.output().await.map_err(|e| e.to_string())?;
+            Ok(format!("Đã yêu cầu khởi động lại LDPlayer instance {}", idx))
+        }
+        "quit" | "kill" => {
+            let mut cmd = tokio::process::Command::new(&ldconsole);
+            #[cfg(windows)]
+            {
+                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+            }
+            cmd.args(["quit", "--index", &idx.to_string()]);
+            let _ = cmd.output().await;
+            Ok(format!("Đã tắt LDPlayer instance {}", idx))
+        }
+        "kill_all" => {
+            let mut cmd = tokio::process::Command::new(&ldconsole);
+            #[cfg(windows)]
+            {
+                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+            }
+            cmd.arg("quitall");
+            let _ = cmd.output().await;
+
+            #[cfg(windows)]
+            {
+                let mut kill_cmd = tokio::process::Command::new("taskkill");
+                kill_cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+                kill_cmd.args([
+                    "/F",
+                    "/IM",
+                    "dnplayer.exe",
+                    "/IM",
+                    "Ld9BoxHeadless.exe",
+                    "/IM",
+                    "LdVBoxHeadless.exe",
+                    "/IM",
+                    "LdBoxHeadless.exe",
+                    "/IM",
+                    "dnmultiplayer.exe",
+                ]);
+                let _ = kill_cmd.output().await;
+            }
+
+            Ok("Đã tắt toàn bộ tiến trình LDPlayer".to_string())
+        }
+        _ => Err(format!("Hành động không hợp lệ: {}", action)),
+    }
+}
+
+#[tauri::command]
+fn ldplayer_detect_path() -> Result<Option<String>, String> {
+    Ok(find_ldplayer_console().map(|p| p.to_string_lossy().to_string()))
+}
+
 fn base64_encode(bytes: &[u8]) -> String {
     const CHARSET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut result = String::with_capacity(bytes.len().div_ceil(3) * 4);
@@ -510,7 +1065,18 @@ fn main() {
             validate_workflow,
             execute_workflow,
             get_audit_events,
-            execute_test_node
+            execute_test_node,
+            adb_connect_endpoint,
+            adb_disconnect_endpoint,
+            adb_scan_range,
+            auto_discover_devices,
+            list_device_packages,
+            launch_device_app,
+            stop_device_app,
+            is_device_app_running,
+            ldplayer_list_instances,
+            ldplayer_action,
+            ldplayer_detect_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

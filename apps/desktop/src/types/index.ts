@@ -82,3 +82,26 @@ export interface AppStatus {
   db_status: string;
   devices_count: number;
 }
+
+export interface AppPackageInfo {
+  package_name: string;
+  display_name: string;
+  is_game: boolean;
+  is_system: boolean;
+}
+
+export interface LdPlayerInstance {
+  index: number;
+  name: string;
+  is_running: boolean;
+  pid: number;
+  top_handle: number;
+  width: number;
+  height: number;
+  dpi: number;
+}
+
+export interface ScanRangeResult {
+  scanned_count: number;
+  connected_endpoints: string[];
+}
