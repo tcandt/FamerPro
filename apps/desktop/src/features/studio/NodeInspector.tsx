@@ -1,10 +1,41 @@
 import React, { useState } from 'react';
-import { Sliders, ArrowLeftRight, RefreshCw, FileText, Info, Trash2 } from 'lucide-react';
+import {
+  Sliders,
+  ArrowLeftRight,
+  RefreshCw,
+  Info,
+  Trash2,
+  Play,
+  CheckCircle2,
+  AlertCircle,
+  ShieldCheck,
+  ChevronRight,
+} from 'lucide-react';
 import { useWorkflowStore } from '../../stores/workflowStore';
+import { api } from '../../lib/api';
 
 export const NodeInspector: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'config' | 'ports' | 'retry' | 'notes'>('config');
-  const { nodes, selectedNodeId, updateNodeConfig, setNodes, selectNode } = useWorkflowStore();
+  const [activeTab, setActiveTab] = useState<'config' | 'retry' | 'ports'>('config');
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+    pointTapped?: { x: number; y: number } | null;
+  } | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+
+  const {
+    nodes,
+    selectedNodeId,
+    updateNodeConfig,
+    setNodes,
+    selectNode,
+    isInspectorCollapsed,
+    toggleInspector,
+  } = useWorkflowStore();
+
+  if (isInspectorCollapsed) {
+    return null;
+  }
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
@@ -14,15 +45,41 @@ export const NodeInspector: React.FC = () => {
     selectNode(null);
   };
 
+  const handleTestNode = async () => {
+    if (!selectedNode) return;
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const res = await api.executeTestNode(
+        'emulator-5554',
+        selectedNode.data.nodeType,
+        JSON.stringify(selectedNode.data.config || {})
+      );
+      setTestResult({
+        success: res.success,
+        message: res.message,
+        pointTapped: res.point_tapped,
+      });
+    } catch (err: any) {
+      setTestResult({
+        success: false,
+        message: `Lỗi: ${err?.message || String(err)}`,
+        pointTapped: null,
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   if (!selectedNode) {
     return (
-      <div className="w-[312px] bg-[#161E29] border-l border-[#2A3647] flex flex-col items-center justify-center p-6 text-center select-none shrink-0 z-20">
-        <div className="w-10 h-10 rounded-full bg-[#192230] border border-[#2A3647] flex items-center justify-center text-[#74869D] mb-3">
-          <Info size={18} />
+      <div className="w-[320px] bg-[#141C28] border-l border-[#2A3647] flex flex-col items-center justify-center p-6 text-center select-none shrink-0 z-20">
+        <div className="w-12 h-12 rounded-xl bg-[#192230] border border-[#2A3647] flex items-center justify-center text-[#74869D] mb-3 shadow-inner">
+          <Info size={22} className="text-[#38BDF8]" />
         </div>
-        <h4 className="text-xs font-semibold text-[#EDF3FC] mb-1">Chưa chọn Node</h4>
-        <p className="text-[11px] text-[#74869D] leading-relaxed">
-          Nhấp vào bất kỳ node nào trên đồ thị để xem và chỉnh sửa thuộc tính, chính sách retry và tham số kiểm tra.
+        <h4 className="text-xs font-bold text-[#EDF3FC] mb-1">Chưa chọn Node nào</h4>
+        <p className="text-[11px] text-[#74869D] leading-relaxed max-w-[240px]">
+          Nhấp vào bất kỳ node nào trên đồ thị Canvas để cấu hình tham số, điều chỉnh vùng an toàn hoặc thử nghiệm độc lập.
         </p>
       </div>
     );
@@ -30,189 +87,294 @@ export const NodeInspector: React.FC = () => {
 
   const { data } = selectedNode;
   const config = data.config || {};
+  const marginRatio = config.marginRatio ?? 0.18;
+  const minConfidence = config.minConfidence ?? 0.9;
 
   return (
-    <div className="w-[312px] bg-[#161E29] border-l border-[#2A3647] flex flex-col h-full select-none shrink-0 z-20">
+    <div className="w-[320px] bg-[#141C28] border-l border-[#2A3647] flex flex-col h-full select-none shrink-0 z-20">
       {/* Header */}
-      <div className="p-3 border-b border-[#2A3647] flex items-center justify-between">
-        <div>
-          <span className="text-[10px] text-[#74869D] uppercase font-mono">{selectedNode.id}</span>
-          <h3 className="text-xs font-semibold text-[#EDF3FC]">{data.label}</h3>
+      <div className="p-3 border-b border-[#2A3647] flex items-center justify-between bg-[#16202F]">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-[#74869D] uppercase font-mono">{selectedNode.id}</span>
+            <span className="text-[9px] px-1 rounded bg-[#202B3B] text-[#7BA6D6] font-mono">
+              {data.nodeType}
+            </span>
+          </div>
+          <h3 className="text-xs font-bold text-[#EDF3FC] truncate">{data.label}</h3>
         </div>
-        <button
-          onClick={handleDeleteNode}
-          className="p-1.5 text-[#74869D] hover:text-[#F27883] hover:bg-[#202B3B] rounded transition-colors"
-          title="Xóa node"
-        >
-          <Trash2 size={14} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleDeleteNode}
+            className="p-1.5 text-[#74869D] hover:text-[#F27883] hover:bg-[#202B3B] rounded transition-colors"
+            title="Xóa node này khỏi đồ thị"
+          >
+            <Trash2 size={14} />
+          </button>
+          <button
+            onClick={toggleInspector}
+            className="p-1.5 text-[#74869D] hover:text-[#EDF3FC] hover:bg-[#202B3B] rounded transition-colors"
+            title="Thu gọn bảng Inspector"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-[#2A3647] bg-[#121A26]">
+      <div className="flex border-b border-[#2A3647] bg-[#101722]">
         <button
           onClick={() => setActiveTab('config')}
-          className={`flex-1 py-2 text-[11px] font-medium flex items-center justify-center gap-1 border-b-2 ${
+          className={`flex-1 py-2 text-[11px] font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-colors ${
             activeTab === 'config'
-              ? 'text-[#1878F5] border-[#1878F5] bg-[#161E29]'
+              ? 'text-[#38BDF8] border-[#38BDF8] bg-[#141C28]'
               : 'text-[#74869D] border-transparent hover:text-[#A9B8CC]'
           }`}
         >
           <Sliders size={12} />
-          <span>Thiết lập</span>
+          <span>Thuộc tính</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('retry')}
+          className={`flex-1 py-2 text-[11px] font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-colors ${
+            activeTab === 'retry'
+              ? 'text-[#38BDF8] border-[#38BDF8] bg-[#141C28]'
+              : 'text-[#74869D] border-transparent hover:text-[#A9B8CC]'
+          }`}
+        >
+          <RefreshCw size={12} />
+          <span>Chính sách Retry</span>
         </button>
         <button
           onClick={() => setActiveTab('ports')}
-          className={`flex-1 py-2 text-[11px] font-medium flex items-center justify-center gap-1 border-b-2 ${
+          className={`flex-1 py-2 text-[11px] font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-colors ${
             activeTab === 'ports'
-              ? 'text-[#1878F5] border-[#1878F5] bg-[#161E29]'
+              ? 'text-[#38BDF8] border-[#38BDF8] bg-[#141C28]'
               : 'text-[#74869D] border-transparent hover:text-[#A9B8CC]'
           }`}
         >
           <ArrowLeftRight size={12} />
           <span>Cổng IO</span>
         </button>
-        <button
-          onClick={() => setActiveTab('retry')}
-          className={`flex-1 py-2 text-[11px] font-medium flex items-center justify-center gap-1 border-b-2 ${
-            activeTab === 'retry'
-              ? 'text-[#1878F5] border-[#1878F5] bg-[#161E29]'
-              : 'text-[#74869D] border-transparent hover:text-[#A9B8CC]'
-          }`}
-        >
-          <RefreshCw size={12} />
-          <span>Retry</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('notes')}
-          className={`flex-1 py-2 text-[11px] font-medium flex items-center justify-center gap-1 border-b-2 ${
-            activeTab === 'notes'
-              ? 'text-[#1878F5] border-[#1878F5] bg-[#161E29]'
-              : 'text-[#74869D] border-transparent hover:text-[#A9B8CC]'
-          }`}
-        >
-          <FileText size={12} />
-          <span>Ghi chú</span>
-        </button>
       </div>
 
-      {/* Form Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+      {/* Form Body */}
+      <div className="flex-1 overflow-y-auto p-3.5 space-y-4 text-xs">
         {activeTab === 'config' && (
-          <div className="space-y-3">
+          <div className="space-y-3.5">
+            {/* Label rename */}
+            <div>
+              <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                Tên hiển thị Node
+              </label>
+              <input
+                type="text"
+                value={data.label}
+                onChange={(e) => {
+                  const newLabel = e.target.value;
+                  setNodes(
+                    nodes.map((n) =>
+                      n.id === selectedNode.id
+                        ? { ...n, data: { ...n.data, label: newLabel } }
+                        : n
+                    )
+                  );
+                }}
+                className="w-full bg-[#101722] border border-[#2A3647] rounded-md px-2.5 py-1.5 text-[#EDF3FC] focus:border-[#38BDF8] outline-none text-xs"
+              />
+            </div>
+
             {/* Package Id (for app.launch) */}
             {data.nodeType === 'app.launch' && (
               <div>
-                <label className="block text-[#A9B8CC] mb-1 font-medium">Tên gói (Package Name)</label>
+                <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                  Tên gói (Package Name)
+                </label>
                 <input
                   type="text"
                   value={config.packageId || ''}
-                  onChange={(e) => updateNodeConfig(selectedNode.id, { packageId: e.target.value })}
+                  onChange={(e) =>
+                    updateNodeConfig(selectedNode.id, { packageId: e.target.value })
+                  }
                   placeholder="com.example.game"
-                  className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] focus:border-[#4B9CFF] outline-none"
+                  className="w-full bg-[#101722] border border-[#2A3647] rounded-md px-2.5 py-1.5 text-[#EDF3FC] focus:border-[#38BDF8] outline-none font-mono text-xs"
                 />
               </div>
             )}
 
-            {/* Template Ref (for vision.find_image / verify) */}
-            {(data.nodeType === 'vision.find_image' || data.nodeType === 'verify.wait_for_image') && (
-              <>
+            {/* Template Ref & Confidence */}
+            {(data.nodeType === 'vision.find_image' ||
+              data.nodeType === 'verify.wait_for_image') && (
+              <div className="space-y-3 p-3 rounded-lg bg-[#101722] border border-[#2A3647]">
                 <div>
-                  <label className="block text-[#A9B8CC] mb-1 font-medium">Tệp ảnh mẫu (Template)</label>
+                  <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                    Tệp ảnh mẫu (Template Path)
+                  </label>
                   <input
                     type="text"
                     value={config.templateRef || ''}
-                    onChange={(e) => updateNodeConfig(selectedNode.id, { templateRef: e.target.value })}
+                    onChange={(e) =>
+                      updateNodeConfig(selectedNode.id, { templateRef: e.target.value })
+                    }
                     placeholder="assets/templates/marker.png"
-                    className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] focus:border-[#4B9CFF] outline-none"
+                    className="w-full bg-[#17202E] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] focus:border-[#38BDF8] outline-none font-mono text-xs"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#A9B8CC] mb-1 font-medium">
-                    Độ tin cậy tối thiểu ({(config.minConfidence ?? 0.9) * 100}%)
-                  </label>
+                  <div className="flex justify-between mb-1">
+                    <label className="text-[#A9B8CC] font-semibold text-[11px]">
+                      Độ tin cậy tối thiểu
+                    </label>
+                    <span className="font-mono text-[#3BC38D] font-bold">
+                      {(minConfidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
                   <input
                     type="range"
                     min="0.5"
                     max="1.0"
                     step="0.01"
-                    value={config.minConfidence ?? 0.9}
+                    value={minConfidence}
                     onChange={(e) =>
-                      updateNodeConfig(selectedNode.id, { minConfidence: parseFloat(e.target.value) })
+                      updateNodeConfig(selectedNode.id, {
+                        minConfidence: parseFloat(e.target.value),
+                      })
                     }
-                    className="w-full accent-[#1878F5]"
+                    className="w-full accent-[#38BDF8]"
                   />
+                  <p className="text-[10px] text-[#74869D] mt-1">
+                    Ngưỡng SSD chuẩn hóa: &gt;90% đảm bảo không nhận diện nhầm chi tiết nền.
+                  </p>
                 </div>
-              </>
+              </div>
             )}
 
-            {/* Safe Random Tap configuration */}
+            {/* Safe Random Tap configuration + Interactive Visualizer */}
             {data.nodeType === 'action.random_safe_tap' && (
-              <>
+              <div className="space-y-3 p-3 rounded-lg bg-[#101722] border border-[#2A3647]">
+                <div className="flex items-center gap-1.5 text-[#38BDF8] font-bold text-[11px]">
+                  <ShieldCheck size={14} />
+                  <span>Chính sách Tap Ngẫu Nhiên An Toàn</span>
+                </div>
+
+                {/* Interactive SVG Diagram representing safe inner margin */}
+                <div className="w-full h-28 bg-[#17202E] border border-[#2A3647] rounded-md flex flex-col items-center justify-center p-2 relative overflow-hidden">
+                  <div className="text-[9px] text-[#74869D] absolute top-1 left-2 font-mono">
+                    Khung phát hiện: 120×60px
+                  </div>
+                  <div className="w-48 h-18 border border-dashed border-[#F27883]/60 relative flex items-center justify-center rounded">
+                    <div
+                      className="border-2 border-[#38BDF8] bg-[#38BDF8]/20 flex items-center justify-center text-[10px] text-[#38BDF8] font-bold transition-all rounded"
+                      style={{
+                        width: `${(1 - marginRatio * 2) * 100}%`,
+                        height: `${(1 - marginRatio * 2) * 100}%`,
+                      }}
+                    >
+                      <span>Vùng Safe Tap</span>
+                    </div>
+                  </div>
+                  <div className="text-[9px] text-[#A9B8CC] mt-1">
+                    Biên loại trừ: {(marginRatio * 100).toFixed(0)}% mỗi phía
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-[#A9B8CC] mb-1 font-medium">
-                    Tỷ lệ co biên an toàn (Margin: {(config.marginRatio ?? 0.18) * 100}%)
-                  </label>
+                  <div className="flex justify-between mb-1">
+                    <label className="text-[#A9B8CC] font-semibold text-[11px]">
+                      Tỷ lệ co biên an toàn (Margin)
+                    </label>
+                    <span className="font-mono text-[#38BDF8] font-bold">
+                      {(marginRatio * 100).toFixed(0)}%
+                    </span>
+                  </div>
                   <input
                     type="range"
                     min="0.05"
-                    max="0.4"
+                    max="0.35"
                     step="0.01"
-                    value={config.marginRatio ?? 0.18}
+                    value={marginRatio}
                     onChange={(e) =>
-                      updateNodeConfig(selectedNode.id, { marginRatio: parseFloat(e.target.value) })
+                      updateNodeConfig(selectedNode.id, {
+                        marginRatio: parseFloat(e.target.value),
+                      })
                     }
-                    className="w-full accent-[#1878F5]"
+                    className="w-full accent-[#38BDF8]"
                   />
-                  <p className="text-[10px] text-[#74869D] mt-1">
-                    Co khung nhận diện vào trong để điểm click không nằm sát mép nút.
-                  </p>
                 </div>
+
                 <div>
-                  <label className="block text-[#A9B8CC] mb-1 font-medium">Tránh N điểm bấm gần nhất</label>
+                  <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                    Tránh N điểm bấm gần nhất (Anti-pattern)
+                  </label>
                   <input
                     type="number"
                     min="1"
                     max="20"
                     value={config.avoidRecentPoints ?? 5}
                     onChange={(e) =>
-                      updateNodeConfig(selectedNode.id, { avoidRecentPoints: parseInt(e.target.value) || 1 })
+                      updateNodeConfig(selectedNode.id, {
+                        avoidRecentPoints: parseInt(e.target.value) || 1,
+                      })
                     }
-                    className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] outline-none"
+                    className="w-full bg-[#17202E] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] outline-none text-xs font-mono"
                   />
                 </div>
-              </>
+              </div>
             )}
 
             {/* Checkpoint Name */}
             {data.nodeType === 'state.checkpoint' && (
               <div>
-                <label className="block text-[#A9B8CC] mb-1 font-medium">Tên mốc (Checkpoint Name)</label>
+                <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                  Tên mốc kiểm tra (Checkpoint Identifier)
+                </label>
                 <input
                   type="text"
                   value={config.name || ''}
-                  onChange={(e) => updateNodeConfig(selectedNode.id, { name: e.target.value })}
+                  onChange={(e) =>
+                    updateNodeConfig(selectedNode.id, { name: e.target.value })
+                  }
                   placeholder="quest_active"
-                  className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] outline-none"
+                  className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] outline-none font-mono text-xs"
                 />
               </div>
             )}
-          </div>
-        )}
 
-        {activeTab === 'ports' && (
-          <div className="space-y-3">
-            <div>
-              <span className="text-[#74869D] font-medium">Cổng vào (Input Port):</span>
-              <div className="p-2 bg-[#101722] rounded border border-[#2A3647] mt-1 text-[#EDF3FC]">
-                flow: Execution Context
-              </div>
-            </div>
-            <div>
-              <span className="text-[#74869D] font-medium">Cổng ra (Output Port):</span>
-              <div className="p-2 bg-[#101722] rounded border border-[#2A3647] mt-1 text-[#EDF3FC]">
-                flow: Next Node
-              </div>
+            {/* Test Node Button */}
+            <div className="pt-2 border-t border-[#2A3647]">
+              <button
+                onClick={handleTestNode}
+                disabled={isTesting}
+                className="w-full py-1.5 bg-[#202B3B] hover:bg-[#2A3647] text-[#38BDF8] text-xs font-semibold rounded-md border border-[#2A3647] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Play size={12} fill="currentColor" />
+                <span>{isTesting ? 'Đang chạy kiểm tra...' : 'Thử nghiệm node này'}</span>
+              </button>
+
+              {testResult && (
+                <div
+                  className={`mt-2 p-2.5 rounded border text-[11px] space-y-1 ${
+                    testResult.success
+                      ? 'bg-[#133528] border-[#3BC38D]/40 text-[#3BC38D]'
+                      : 'bg-[#F27883]/10 border-[#F27883]/40 text-[#F27883]'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    {testResult.success ? (
+                      <CheckCircle2 size={13} className="shrink-0" />
+                    ) : (
+                      <AlertCircle size={13} className="shrink-0" />
+                    )}
+                    <span>{testResult.message}</span>
+                  </div>
+                  {testResult.pointTapped && (
+                    <div className="text-[10px] text-[#A9B8CC] font-mono pl-4">
+                      Tọa độ an toàn: ({testResult.pointTapped.x.toFixed(1)},{' '}
+                      {testResult.pointTapped.y.toFixed(1)}) · Co biên an toàn
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -220,42 +382,54 @@ export const NodeInspector: React.FC = () => {
         {activeTab === 'retry' && (
           <div className="space-y-3">
             <div>
-              <label className="block text-[#A9B8CC] mb-1 font-medium">Số lần thử lại tối đa (Max Attempts)</label>
+              <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                Số lần thử lại tối đa (Max Retries)
+              </label>
               <input
                 type="number"
                 min="1"
                 max="10"
                 defaultValue={3}
-                className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] outline-none"
+                className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] outline-none font-mono text-xs"
               />
             </div>
             <div>
-              <label className="block text-[#A9B8CC] mb-1 font-medium">Thời gian chờ giãn cách (Backoff ms)</label>
+              <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                Thời gian chờ giãn cách (Backoff ms)
+              </label>
               <input
                 type="number"
                 step="100"
                 defaultValue={1200}
-                className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] outline-none"
+                className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] outline-none font-mono text-xs"
               />
             </div>
             <div>
-              <label className="block text-[#A9B8CC] mb-1 font-medium">Hành vi khi lỗi liên tục</label>
-              <select className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] outline-none">
-                <option value="pause">Tạm dừng để người dùng duyệt (Pause for review)</option>
-                <option value="fail">Đánh dấu thất bại (Fail closed)</option>
+              <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                Hành vi khi thử lại thất bại
+              </label>
+              <select className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] outline-none text-xs">
+                <option value="pause">Tạm dừng để người dùng xử lý (Pause for review)</option>
+                <option value="fail">Đóng khẩn cấp an toàn (Fail closed)</option>
               </select>
             </div>
           </div>
         )}
 
-        {activeTab === 'notes' && (
-          <div>
-            <label className="block text-[#A9B8CC] mb-1 font-medium">Ghi chú hướng dẫn</label>
-            <textarea
-              rows={4}
-              placeholder="Nhập hướng dẫn dành cho người vận hành..."
-              className="w-full bg-[#101722] border border-[#2A3647] rounded p-2 text-[#EDF3FC] outline-none resize-none"
-            />
+        {activeTab === 'ports' && (
+          <div className="space-y-3">
+            <div>
+              <span className="text-[#74869D] font-semibold text-[11px]">Cổng vào (Input Port):</span>
+              <div className="p-2.5 bg-[#101722] rounded border border-[#2A3647] mt-1 text-[#EDF3FC] font-mono text-[11px]">
+                flow: Execution Context (Frame + Target)
+              </div>
+            </div>
+            <div>
+              <span className="text-[#74869D] font-semibold text-[11px]">Cổng ra (Output Port):</span>
+              <div className="p-2.5 bg-[#101722] rounded border border-[#2A3647] mt-1 text-[#EDF3FC] font-mono text-[11px]">
+                flow: Next Step Signal
+              </div>
+            </div>
           </div>
         )}
       </div>

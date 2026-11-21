@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Clock,
   Terminal,
@@ -8,6 +8,8 @@ import {
   ChevronUp,
   CheckCircle2,
   Copy,
+  GripHorizontal,
+  Search,
 } from 'lucide-react';
 import { useWorkflowStore } from '../../stores/workflowStore';
 
@@ -17,23 +19,80 @@ export const ExecutionDock: React.FC = () => {
     setActiveDockTab,
     isDockCollapsed,
     toggleDock,
+    dockHeight,
+    setDockHeight,
     runEvents,
     isRunning,
   } = useWorkflowStore();
 
+  const [logFilter, setLogFilter] = useState('ALL');
+  const [logSearch, setLogSearch] = useState('');
+  const isDraggingRef = useRef(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    const startY = e.clientY;
+    const startHeight = dockHeight;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const delta = startY - moveEvent.clientY;
+      const newHeight = Math.min(Math.max(startHeight + delta, 120), 480);
+      setDockHeight(newHeight);
+    };
+
+    const onMouseUp = () => {
+      isDraggingRef.current = false;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const logs = [
+    { level: 'INFO', time: '10:14:02.100', text: 'Core device lease acquired (fencing generation: 1, serial: emulator-5554)' },
+    { level: 'TRACE', time: '10:14:02.250', text: 'Snapshot PNG captured (1080x2400@0deg, latency 32ms)' },
+    { level: 'VISION', time: '10:14:02.410', text: 'Normalized SSD match: score=0.965 at bounds (200, 400, 150, 60)' },
+    { level: 'ACTION', time: '10:14:02.580', text: 'Safe point sampled (x=242.0, y=428.0), avoiding recent 5 click history' },
+    { level: 'TRACE', time: '10:14:02.720', text: 'ADB input tap dispatched: exit code 0' },
+    { level: 'VERIFY', time: '10:14:03.110', text: 'Post-condition dialog_confirm confirmed on fresh capture frame (confidence 94%)' },
+    { level: 'INFO', time: '10:14:03.200', text: 'Checkpoint quest_active saved to SQLite WAL storage' },
+  ];
+
+  const filteredLogs = logs.filter((l) => {
+    const matchesLevel = logFilter === 'ALL' || l.level === logFilter;
+    const matchesSearch =
+      logSearch === '' || l.text.toLowerCase().includes(logSearch.toLowerCase());
+    return matchesLevel && matchesSearch;
+  });
+
   return (
     <div
-      className={`border-t border-[#2A3647] bg-[#161E29] flex flex-col z-20 transition-all select-none ${
-        isDockCollapsed ? 'h-9' : 'h-[220px]'
-      }`}
+      style={{ height: isDockCollapsed ? 36 : dockHeight }}
+      className="border-t border-[#2A3647] bg-[#141C28] flex flex-col z-20 transition-all select-none relative shrink-0 shadow-2xl"
     >
-      <div className="h-9 px-3 bg-[#192230] border-b border-[#2A3647] flex items-center justify-between">
+      {/* Drag handle on top border to resize */}
+      {!isDockCollapsed && (
+        <div
+          onMouseDown={handleMouseDown}
+          className="h-1.5 w-full bg-[#16202F] hover:bg-[#38BDF8] cursor-row-resize flex items-center justify-center transition-colors group"
+          title="Kéo chuột để thay đổi chiều cao thanh Debugger"
+        >
+          <GripHorizontal size={14} className="text-[#5A6D85] group-hover:text-white" />
+        </div>
+      )}
+
+      {/* Dock Header & Tab Navigation */}
+      <div className="h-9 px-3 bg-[#16202F] border-b border-[#2A3647] flex items-center justify-between">
         <div className="flex items-center space-x-1">
           <button
-            onClick={() => setActiveTabSafe('results')}
-            className={`px-3 py-1 text-xs font-medium rounded flex items-center gap-1.5 transition-colors ${
+            onClick={() => setActiveDockTab('results')}
+            className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer ${
               activeDockTab === 'results' && !isDockCollapsed
-                ? 'bg-[#1878F5] text-white'
+                ? 'bg-[#1878F5] text-white shadow-sm'
                 : 'text-[#A9B8CC] hover:text-white hover:bg-[#202B3B]'
             }`}
           >
@@ -42,10 +101,10 @@ export const ExecutionDock: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveTabSafe('timeline')}
-            className={`px-3 py-1 text-xs font-medium rounded flex items-center gap-1.5 transition-colors ${
+            onClick={() => setActiveDockTab('timeline')}
+            className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer ${
               activeDockTab === 'timeline' && !isDockCollapsed
-                ? 'bg-[#1878F5] text-white'
+                ? 'bg-[#1878F5] text-white shadow-sm'
                 : 'text-[#A9B8CC] hover:text-white hover:bg-[#202B3B]'
             }`}
           >
@@ -54,22 +113,22 @@ export const ExecutionDock: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveTabSafe('logs')}
-            className={`px-3 py-1 text-xs font-medium rounded flex items-center gap-1.5 transition-colors ${
+            onClick={() => setActiveDockTab('logs')}
+            className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer ${
               activeDockTab === 'logs' && !isDockCollapsed
-                ? 'bg-[#1878F5] text-white'
+                ? 'bg-[#1878F5] text-white shadow-sm'
                 : 'text-[#A9B8CC] hover:text-white hover:bg-[#202B3B]'
             }`}
           >
             <Terminal size={13} />
-            <span>Nhật ký (Logs)</span>
+            <span>Nhật ký Debug</span>
           </button>
 
           <button
-            onClick={() => setActiveTabSafe('verification')}
-            className={`px-3 py-1 text-xs font-medium rounded flex items-center gap-1.5 transition-colors ${
+            onClick={() => setActiveDockTab('verification')}
+            className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer ${
               activeDockTab === 'verification' && !isDockCollapsed
-                ? 'bg-[#1878F5] text-white'
+                ? 'bg-[#1878F5] text-white shadow-sm'
                 : 'text-[#A9B8CC] hover:text-white hover:bg-[#202B3B]'
             }`}
           >
@@ -78,10 +137,10 @@ export const ExecutionDock: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveTabSafe('variables')}
-            className={`px-3 py-1 text-xs font-medium rounded flex items-center gap-1.5 transition-colors ${
+            onClick={() => setActiveDockTab('variables')}
+            className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer ${
               activeDockTab === 'variables' && !isDockCollapsed
-                ? 'bg-[#1878F5] text-white'
+                ? 'bg-[#1878F5] text-white shadow-sm'
                 : 'text-[#A9B8CC] hover:text-white hover:bg-[#202B3B]'
             }`}
           >
@@ -90,51 +149,87 @@ export const ExecutionDock: React.FC = () => {
           </button>
         </div>
 
-        <button
-          onClick={toggleDock}
-          className="p-1 text-[#74869D] hover:text-[#EDF3FC] hover:bg-[#202B3B] rounded"
-          title={isDockCollapsed ? 'Mở rộng Execution Dock' : 'Thu gọn Execution Dock'}
-        >
-          {isDockCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
+        <div className="flex items-center gap-2">
+          {!isDockCollapsed && (
+            <span className="text-[10px] text-[#5A6D85] font-mono">
+              Chiều cao: {dockHeight}px
+            </span>
+          )}
+          <button
+            onClick={toggleDock}
+            className="p-1 text-[#74869D] hover:text-[#EDF3FC] hover:bg-[#202B3B] rounded transition-colors"
+            title={isDockCollapsed ? 'Mở rộng Debugger' : 'Thu gọn Debugger'}
+          >
+            {isDockCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
       </div>
 
+      {/* Dock Content Body */}
       {!isDockCollapsed && (
         <div className="flex-1 overflow-y-auto p-3 text-xs bg-[#101722]">
+          {/* Results Tab */}
           {activeDockTab === 'results' && (
-            <div className="flex items-center gap-4 text-xs">
-              <div className="p-3 bg-[#192230] border border-[#2A3647] rounded w-64">
-                <span className="text-[#74869D]">Trạng thái: </span>
-                <span className="font-semibold text-[#3BC38D]">
-                  {isRunning ? 'Đang thực thi...' : 'Hoàn tất thành công (Verified)'}
-                </span>
-                <div className="mt-2 text-[11px] text-[#A9B8CC]">
-                  Tổng thời gian: 1.48s · 8/8 nodes đã xác minh
+            <div className="grid grid-cols-4 gap-3 text-xs">
+              <div className="p-3 bg-[#16202F] border border-[#2A3647] rounded-lg">
+                <span className="text-[#74869D] text-[11px]">Trạng thái thực thi:</span>
+                <div className="font-bold text-[#3BC38D] text-sm mt-0.5">
+                  {isRunning ? 'Đang gửi lệnh ADB...' : 'Hoàn tất & Đã xác minh (Verified)'}
+                </div>
+                <div className="mt-1 text-[11px] text-[#A9B8CC]">
+                  Tổng thời gian: 1.18s · 8/8 nodes hoàn tất
+                </div>
+              </div>
+
+              <div className="p-3 bg-[#16202F] border border-[#2A3647] rounded-lg">
+                <span className="text-[#74869D] text-[11px]">Mức độ an toàn tọa độ:</span>
+                <div className="font-bold text-[#38BDF8] text-sm mt-0.5">100% Tuân thủ Policy</div>
+                <div className="mt-1 text-[11px] text-[#A9B8CC]">
+                  Biên 18% co vào trong, tránh 5 điểm cũ
+                </div>
+              </div>
+
+              <div className="p-3 bg-[#16202F] border border-[#2A3647] rounded-lg">
+                <span className="text-[#74869D] text-[11px]">Độ tin cậy nhận diện:</span>
+                <div className="font-bold text-[#EDF3FC] text-sm mt-0.5">96.5% (Ngưỡng: 92%)</div>
+                <div className="mt-1 text-[11px] text-[#3BC38D]">
+                  Vượt ngưỡng tối thiểu +4.5%
+                </div>
+              </div>
+
+              <div className="p-3 bg-[#16202F] border border-[#2A3647] rounded-lg">
+                <span className="text-[#74869D] text-[11px]">Checkpoint lưu trữ:</span>
+                <div className="font-bold text-[#FDE047] text-sm mt-0.5 font-mono">quest_active</div>
+                <div className="mt-1 text-[11px] text-[#A9B8CC]">
+                  Lưu vào SQLite WAL an toàn
                 </div>
               </div>
             </div>
           )}
 
+          {/* Timeline Tab */}
           {activeDockTab === 'timeline' && (
             <div className="space-y-1.5 font-mono text-[11px]">
               {runEvents.length === 0 ? (
                 <div className="text-[#74869D] italic py-4 text-center">
-                  Chưa có sự kiện thực thi nào. Bấm "Chạy luồng" ở trên để bắt đầu quan sát tiến trình.
+                  Chưa có sự kiện thực thi nào trong phiên này. Nhấn "Chạy luồng" ở thanh tiêu đề để bắt đầu.
                 </div>
               ) : (
                 runEvents.map((ev) => (
                   <div
                     key={ev.id}
-                    className="flex items-center justify-between p-1.5 rounded bg-[#192230] border border-[#2A3647]"
+                    className="flex items-center justify-between p-2 rounded-md bg-[#16202F] border border-[#2A3647]"
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-[#173355] text-[#4B9CFF]">
+                    <div className="flex items-center gap-2.5">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-[#173355] text-[#38BDF8] font-bold">
                         {ev.node_id}
                       </span>
-                      <span className="text-[#EDF3FC]">{ev.event_type}</span>
+                      <span className="text-[#EDF3FC] font-semibold">{ev.event_type}</span>
                     </div>
                     <div className="flex items-center gap-3 text-[#74869D]">
-                      <span className="truncate max-w-[200px]">{ev.payload_json}</span>
+                      <span className="truncate max-w-[240px] text-[#A9B8CC]">
+                        {ev.payload_json}
+                      </span>
                       <span>{new Date(ev.at).toLocaleTimeString()}</span>
                     </div>
                   </div>
@@ -143,58 +238,120 @@ export const ExecutionDock: React.FC = () => {
             </div>
           )}
 
+          {/* Logs Tab */}
           {activeDockTab === 'logs' && (
-            <div className="space-y-1 font-mono text-[11px]">
-              <div className="flex items-center justify-between pb-1 text-[#74869D] border-b border-[#2A3647]">
-                <span>Log Traces (Tự động ẩn thông tin nhạy cảm)</span>
-                <button
-                  onClick={() => navigator.clipboard?.writeText(JSON.stringify(runEvents, null, 2))}
-                  className="flex items-center gap-1 hover:text-white"
-                >
-                  <Copy size={11} /> Copy
-                </button>
+            <div className="space-y-2 font-mono text-[11px]">
+              <div className="flex items-center justify-between pb-2 border-b border-[#2A3647]">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#74869D] text-xs">Lọc cấp độ:</span>
+                  {['ALL', 'INFO', 'VISION', 'ACTION', 'VERIFY'].map((lvl) => (
+                    <button
+                      key={lvl}
+                      onClick={() => setLogFilter(lvl)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+                        logFilter === lvl
+                          ? 'bg-[#1878F5] text-white'
+                          : 'bg-[#16202F] text-[#74869D] hover:text-white'
+                      }`}
+                    >
+                      {lvl}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 bg-[#16202F] border border-[#2A3647] rounded px-2 py-0.5 text-xs text-[#74869D]">
+                    <Search size={11} />
+                    <input
+                      type="text"
+                      placeholder="Tìm nhật ký..."
+                      value={logSearch}
+                      onChange={(e) => setLogSearch(e.target.value)}
+                      className="bg-transparent text-[#EDF3FC] outline-none text-[11px] w-28"
+                    />
+                  </div>
+                  <button
+                    onClick={() =>
+                      navigator.clipboard?.writeText(JSON.stringify(logs, null, 2))
+                    }
+                    className="flex items-center gap-1 px-2 py-1 bg-[#16202F] hover:bg-[#202B3B] text-[#EDF3FC] rounded text-xs border border-[#2A3647]"
+                  >
+                    <Copy size={11} /> Copy
+                  </button>
+                </div>
               </div>
-              <div className="text-[#3BC38D]">[INFO] Core device lease acquired (fencing generation: 1)</div>
-              <div className="text-[#A9B8CC]">[TRACE] Snapshot PNG captured (1080x1920@0deg, 1.2MB)</div>
-              <div className="text-[#B291F7]">[VISION] Normalized SSD match: score=0.985 at (200, 400, 150, 60)</div>
-              <div className="text-[#4B9CFF]">[ACTION] Safe point sampled (x=242.0, y=428.0) avoiding recent 5 clicks</div>
-              <div className="text-[#3BC38D]">[VERIFY] Post-condition confirmed on fresh capture frame</div>
+
+              <div className="space-y-1">
+                {filteredLogs.map((l, idx) => (
+                  <div key={idx} className="flex items-center gap-2 leading-relaxed">
+                    <span className="text-[#5A6D85]">{l.time}</span>
+                    <span
+                      className={`px-1 rounded text-[9px] font-bold ${
+                        l.level === 'INFO'
+                          ? 'bg-[#133528] text-[#3BC38D]'
+                          : l.level === 'VISION'
+                          ? 'bg-[#251C3B] text-[#B291F7]'
+                          : l.level === 'ACTION'
+                          ? 'bg-[#0F2C3F] text-[#38BDF8]'
+                          : l.level === 'VERIFY'
+                          ? 'bg-[#1A4D39] text-[#6EE7B7]'
+                          : 'bg-[#202B3B] text-[#74869D]'
+                      }`}
+                    >
+                      {l.level}
+                    </span>
+                    <span className="text-[#EDF3FC]">{l.text}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
+          {/* Verification Tab */}
           {activeDockTab === 'verification' && (
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-[#192230] border border-[#2A3647] rounded text-center">
-                <div className="w-28 h-28 bg-[#121A26] border border-[#2A3647] rounded flex items-center justify-center text-[#74869D] text-[10px] mb-1.5 relative overflow-hidden">
-                  <div className="absolute inset-x-4 top-10 h-8 border-2 border-[#1878F5] bg-[#1878F5]/20 flex items-center justify-center text-white text-[9px] font-bold">
-                    Target
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 bg-[#16202F] border border-[#2A3647] rounded-lg text-center">
+                <div className="w-36 h-36 bg-[#101722] border border-[#2A3647] rounded-md flex flex-col items-center justify-center text-[#74869D] text-[10px] mb-2 relative overflow-hidden">
+                  <div className="absolute inset-x-4 top-10 h-10 border-2 border-[#1878F5] bg-[#1878F5]/20 flex items-center justify-center text-white text-[10px] font-bold rounded">
+                    quest_marker.png
                   </div>
-                  <span>Frame 01</span>
+                  <div className="absolute bottom-2 left-2 text-[9px] text-[#5A6D85] font-mono">
+                    Frame 01 (1080×2400)
+                  </div>
                 </div>
-                <span className="text-[10px] text-[#3BC38D]">Tìm thấy (98.5%)</span>
+                <div className="font-semibold text-[#3BC38D] text-xs">Khớp mẫu (96.5%)</div>
+                <div className="text-[10px] text-[#74869D] font-mono">Tọa độ: (200, 400, 150, 60)</div>
               </div>
 
-              <div className="p-2 bg-[#192230] border border-[#2A3647] rounded text-center">
-                <div className="w-28 h-28 bg-[#121A26] border border-[#2A3647] rounded flex items-center justify-center text-[#74869D] text-[10px] mb-1.5 relative overflow-hidden">
-                  <div className="absolute inset-x-2 top-6 bottom-6 border-2 border-[#3BC38D] bg-[#3BC38D]/20 flex items-center justify-center text-white text-[9px] font-bold">
-                    Dialog
+              <div className="p-2.5 bg-[#16202F] border border-[#2A3647] rounded-lg text-center">
+                <div className="w-36 h-36 bg-[#101722] border border-[#2A3647] rounded-md flex flex-col items-center justify-center text-[#74869D] text-[10px] mb-2 relative overflow-hidden">
+                  <div className="absolute inset-x-3 top-8 bottom-8 border-2 border-[#3BC38D] bg-[#3BC38D]/20 flex items-center justify-center text-white text-[10px] font-bold rounded">
+                    dialog_confirm.png
                   </div>
-                  <span>Frame 02</span>
+                  <div className="absolute bottom-2 left-2 text-[9px] text-[#5A6D85] font-mono">
+                    Frame 02 (1080×2400)
+                  </div>
                 </div>
-                <span className="text-[10px] text-[#3BC38D]">Đã mở hội thoại</span>
+                <div className="font-semibold text-[#3BC38D] text-xs">Xác nhận mở hộp thoại</div>
+                <div className="text-[10px] text-[#74869D] font-mono">Độ trễ phản hồi: 320ms</div>
               </div>
             </div>
           )}
 
+          {/* Variables Tab */}
           {activeDockTab === 'variables' && (
-            <div className="grid grid-cols-2 gap-2">
-              <div className="p-2 bg-[#192230] border border-[#2A3647] rounded">
-                <span className="text-[#74869D]">packageId: </span>
-                <span className="font-mono text-[#EDF3FC]">com.example.game</span>
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="p-2.5 bg-[#16202F] border border-[#2A3647] rounded-md">
+                <span className="text-[#74869D] text-[10px] block">Tên gói ứng dụng</span>
+                <span className="font-mono text-[#6BB0FF] font-semibold">com.example.game</span>
               </div>
-              <div className="p-2 bg-[#192230] border border-[#2A3647] rounded">
-                <span className="text-[#74869D]">checkpoint_quest_active: </span>
-                <span className="font-mono text-[#EDF3FC]">true</span>
+              <div className="p-2.5 bg-[#16202F] border border-[#2A3647] rounded-md">
+                <span className="text-[#74869D] text-[10px] block">Trạng thái mốc an toàn</span>
+                <span className="font-mono text-[#FDE047] font-semibold">quest_active = true</span>
+              </div>
+              <div className="p-2.5 bg-[#16202F] border border-[#2A3647] rounded-md">
+                <span className="text-[#74869D] text-[10px] block">Thiết bị gán hiện tại</span>
+                <span className="font-mono text-[#3BC38D] font-semibold">emulator-5554</span>
               </div>
             </div>
           )}
@@ -202,8 +359,4 @@ export const ExecutionDock: React.FC = () => {
       )}
     </div>
   );
-
-  function setActiveTabSafe(tab: any) {
-    setActiveDockTab(tab);
-  }
 };

@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { AppTitlebar } from './AppTitlebar';
-import { AppCommandBar } from './AppCommandBar';
+import React, { useState, useEffect } from 'react';
+import { AppHeader } from './AppHeader';
 import { NavRail } from './NavRail';
 import { StatusBar } from './StatusBar';
 import { useWorkflowStore } from '../../stores/workflowStore';
@@ -18,9 +17,24 @@ export const AppShell: React.FC<AppShellProps> = ({
   onSelectView,
   children,
 }) => {
-  const [isNavExpanded, setIsNavExpanded] = useState(false);
-  const { workflowId, workflowName, nodes, edges, setIsRunning, setValidationReport, addRunEvent, clearRunEvents } = useWorkflowStore();
-  const { selectedDeviceId } = useDeviceStore();
+  // Default expanded to 230px for rich desktop navigation
+  const [isNavExpanded, setIsNavExpanded] = useState(true);
+  const {
+    workflowId,
+    workflowName,
+    nodes,
+    edges,
+    setIsRunning,
+    setValidationReport,
+    addRunEvent,
+    clearRunEvents,
+  } = useWorkflowStore();
+  const { devices, selectedDeviceId, fetchDevices, fetchStatus } = useDeviceStore();
+
+  useEffect(() => {
+    fetchDevices();
+    fetchStatus();
+  }, [fetchDevices, fetchStatus]);
 
   const handleValidate = async () => {
     const doc = {
@@ -75,11 +89,14 @@ export const AppShell: React.FC<AppShellProps> = ({
       },
     };
 
+    const selectedDev = devices.find((d) => d.id === selectedDeviceId);
+    const isMock = selectedDev ? !!selectedDev.is_mock : true;
+
     try {
       const resp = await api.executeWorkflow(
         JSON.stringify(doc),
         selectedDeviceId || 'emulator-5554',
-        true
+        isMock
       );
       const events = await api.getAuditEvents(resp.job_id);
       if (events.length > 0) {
@@ -135,12 +152,12 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#101722] text-[#EDF3FC]">
-      <AppTitlebar />
-      <AppCommandBar
+      <AppHeader
         currentView={currentView}
         onValidate={handleValidate}
         onRun={handleRun}
         onStop={handleStop}
+        onRefreshDevices={fetchDevices}
       />
       <div className="flex flex-1 overflow-hidden relative">
         <NavRail

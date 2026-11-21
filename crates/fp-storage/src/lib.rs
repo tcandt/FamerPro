@@ -224,6 +224,63 @@ impl StorageManager {
         }
     }
 
+    pub fn ensure_job_exists(
+        &self,
+        job_id: &str,
+        device_id: &str,
+        workflow_id: &str,
+        workflow_name: &str,
+        graph_json: &str,
+    ) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = Utc::now().to_rfc3339();
+
+        // 1. Ensure device exists
+        conn.execute(
+            "INSERT INTO devices (id, adb_serial, alias, width_px, height_px, rotation_deg, connection_state, updated_at)
+             VALUES (?1, ?1, ?1, 1080, 1920, 0, 'ready', ?2)
+             ON CONFLICT(id) DO NOTHING;",
+            params![device_id, now],
+        )?;
+
+        // 2. Ensure workflow exists
+        conn.execute(
+            "INSERT INTO workflows (id, name, draft_json, draft_updated_at)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(id) DO UPDATE SET draft_json = excluded.draft_json, draft_updated_at = excluded.draft_updated_at;",
+            params![workflow_id, workflow_name, graph_json, now],
+        )?;
+
+        // 3. Ensure workflow version exists
+        let version_id = format!("{}-v1", workflow_id);
+        conn.execute(
+            "INSERT INTO workflow_versions (id, workflow_id, version_no, graph_json, sha256, created_at)
+             VALUES (?1, ?2, 1, ?3, 'sha256-placeholder', ?4)
+             ON CONFLICT(workflow_id, version_no) DO NOTHING;",
+            params![version_id, workflow_id, graph_json, now],
+        )?;
+
+        // 4. Ensure job exists
+        conn.execute(
+            "INSERT INTO jobs (id, device_id, workflow_version_id, priority, state, created_at, updated_at)
+             VALUES (?1, ?2, ?3, 0, 'running', ?4, ?4)
+             ON CONFLICT(id) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at;",
+            params![job_id, device_id, version_id, now],
+        )?;
+
+        Ok(())
+    }
+
+    pub fn complete_job(&self, job_id: &str, state: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE jobs SET state = ?1, updated_at = ?2 WHERE id = ?3;",
+            params![state, now, job_id],
+        )?;
+        Ok(())
+    }
+
     pub fn insert_step_event(&self, event: &StepEvent) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let type_str = serde_json::to_string(&event.event_type)?.replace('"', "");
@@ -320,5 +377,35 @@ mod tests {
         let (name, draft) = storage.get_workflow_draft("wf-1").unwrap().unwrap();
         assert_eq!(name, "Quest Workflow");
         assert_eq!(draft, "{\"nodes\":[]}");
+    }
+
+    #[test]
+    fn test_sqlite_job_and_step_events_persistence() {
+        let storage = StorageManager::new_in_memory().unwrap();
+        let job_id = "job-unit-test-101";
+        let dev_id = "emulator-5554";
+        let wf_id = "wf-test-01";
+
+        storage
+            .ensure_job_exists(job_id, dev_id, wf_id, "Test Workflow", "{}")
+            .unwrap();
+
+        let event = StepEvent {
+            id: "evt-001".to_string(),
+            job_id: job_id.to_string(),
+            node_id: "n-start".to_string(),
+            event_type: fp_domain::StepEventType::CommandSent,
+            attempt_no: 1,
+            at: Utc::now(),
+            payload_json: "{\"status\":\"ok\"}".to_string(),
+        };
+
+        storage.insert_step_event(&event).unwrap();
+        let events = storage.list_step_events(Some(job_id)).unwrap();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].id, "evt-001");
+        assert_eq!(events[0].node_id, "n-start");
+
+        storage.complete_job(job_id, "Succeeded").unwrap();
     }
 }

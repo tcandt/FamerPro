@@ -18,6 +18,24 @@ export interface DeviceSummary {
   rotation_deg: number;
   connection_state: ConnectionState;
   updated_at: string;
+  is_mock?: boolean;
+}
+
+export function formatAndroidVersion(apiLevel?: number | null): string {
+  if (!apiLevel) return 'Android (Không rõ)';
+  const apiMap: Record<number, string> = {
+    35: 'Android 15 (API 35)',
+    34: 'Android 14 (API 34)',
+    33: 'Android 13 (API 33)',
+    32: 'Android 12L (API 32)',
+    31: 'Android 12 (API 31)',
+    30: 'Android 11 (API 30)',
+    29: 'Android 10 (API 29)',
+    28: 'Android 9 (API 28)',
+    27: 'Android 8.1 (API 27)',
+    26: 'Android 8.0 (API 26)',
+  };
+  return apiMap[apiLevel] || `Android API ${apiLevel}`;
 }
 
 export interface DeviceDetail {

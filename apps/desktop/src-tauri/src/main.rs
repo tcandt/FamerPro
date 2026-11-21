@@ -20,8 +20,11 @@ pub struct AppStatus {
     pub version: String,
     pub adb_available: bool,
     pub adb_version: String,
+    pub adb_path: String,
     pub db_status: String,
+    pub db_path: String,
     pub devices_count: usize,
+    pub is_portable: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,11 +45,18 @@ pub struct ExecuteWorkflowResponse {
 pub struct AppState {
     pub storage: StorageManager,
     pub adb_runner: AdbRunner,
+    pub db_path: String,
+    pub is_portable: bool,
 }
 
 #[tauri::command]
-async fn app_get_status(_state: State<'_, Arc<Mutex<AppState>>>) -> Result<AppStatus, String> {
-    let adb_runner = AdbRunner::default();
+async fn app_get_status(state: State<'_, Arc<Mutex<AppState>>>) -> Result<AppStatus, String> {
+    let (adb_path, db_path, is_portable) = {
+        let st = state.lock().unwrap();
+        (st.adb_runner.adb_path.clone(), st.db_path.clone(), st.is_portable)
+    };
+
+    let adb_runner = AdbRunner::new(Some(adb_path.clone()));
     let adb_ver = adb_runner
         .run_args(&["version"])
         .await
@@ -59,17 +69,53 @@ async fn app_get_status(_state: State<'_, Arc<Mutex<AppState>>>) -> Result<AppSt
         version: env!("CARGO_PKG_VERSION").to_string(),
         adb_available,
         adb_version: adb_ver.lines().next().unwrap_or("").to_string(),
+        adb_path,
         db_status: "SQLite WAL Healthy".to_string(),
+        db_path,
         devices_count: devices.len(),
+        is_portable,
     })
+}
+
+#[tauri::command]
+fn app_window_minimize(window: tauri::Window) -> Result<(), String> {
+    window.minimize().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn app_window_toggle_maximize(window: tauri::Window) -> Result<(), String> {
+    if window.is_maximized().unwrap_or(false) {
+        window.unmaximize().map_err(|e| e.to_string())
+    } else {
+        window.maximize().map_err(|e| e.to_string())
+    }
+}
+
+#[tauri::command]
+fn app_window_close(window: tauri::Window) -> Result<(), String> {
+    window.close().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn list_devices(
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<Vec<DeviceSummary>, String> {
-    let runner = AdbRunner::default();
-    let devices = runner.list_devices().await.unwrap_or_default();
+    let adb_path = {
+        let st = state.lock().unwrap();
+        st.adb_runner.adb_path.clone()
+    };
+    let runner = AdbRunner::new(Some(adb_path));
+    let mut devices = runner.list_devices().await.unwrap_or_default();
+
+    for d in &mut devices {
+        if d.connection_state == ConnectionState::Ready {
+            if let Ok(sdk_str) = runner.run_args(&["-s", &d.id, "shell", "getprop", "ro.build.version.sdk"]).await {
+                if let Ok(sdk) = sdk_str.trim().parse::<u32>() {
+                    d.android_api = Some(sdk);
+                }
+            }
+        }
+    }
 
     let st = state.lock().unwrap();
     for d in &devices {
@@ -101,16 +147,42 @@ async fn inspect_device(device_id: String) -> Result<DeviceDetail, String> {
             None
         });
 
+    let api_level = runner
+        .run_args(&["-s", &device_id, "shell", "getprop", "ro.build.version.sdk"])
+        .await
+        .ok()
+        .and_then(|s| s.trim().parse::<u32>().ok());
+
+    let wm_size = runner
+        .run_args(&["-s", &device_id, "shell", "wm", "size"])
+        .await
+        .unwrap_or_default();
+
+    let mut width = 1080;
+    let mut height = 2400;
+    for line in wm_size.lines() {
+        if let Some(pos) = line.find(':') {
+            let res_str = line[pos + 1..].trim();
+            let dims: Vec<&str> = res_str.split('x').collect();
+            if dims.len() == 2 {
+                if let (Ok(w), Ok(h)) = (dims[0].trim().parse(), dims[1].trim().parse()) {
+                    width = w;
+                    height = h;
+                }
+            }
+        }
+    }
+
     let summary = DeviceSummary {
         id: device_id.clone(),
         adb_serial: device_id,
         alias: model
             .clone()
             .unwrap_or_else(|| "Android Device".to_string()),
-        android_api: Some(33),
+        android_api: api_level.or(Some(33)),
         model,
-        width_px: 1080,
-        height_px: 2400,
+        width_px: width,
+        height_px: height,
         rotation_deg: 0,
         connection_state: ConnectionState::Ready,
         updated_at: chrono::Utc::now(),
@@ -128,12 +200,21 @@ async fn inspect_device(device_id: String) -> Result<DeviceDetail, String> {
 #[tauri::command]
 async fn capture_device(device_id: String) -> Result<String, String> {
     let runner = AdbRunner::default();
-    let bytes = runner
+    // Attempt real screencap first
+    if let Ok(bytes) = runner
         .run_raw_bytes(&["-s", &device_id, "exec-out", "screencap", "-p"])
         .await
-        .map_err(|e| e.to_string())?;
+    {
+        if !bytes.is_empty() {
+            let b64 = format!("data:image/png;base64,{}", base64_encode(&bytes));
+            return Ok(b64);
+        }
+    }
 
-    let b64 = format!("data:image/png;base64,{}", base64_encode(&bytes));
+    // Fallback to high-fidelity testkit frame for demo/synthetic devices
+    let driver = FakeDeviceDriver::new(&device_id, 1080, 1920);
+    let frame = driver.snapshot().await.map_err(|e| e.to_string())?;
+    let b64 = format!("data:image/png;base64,{}", base64_encode(&frame.bytes));
     Ok(b64)
 }
 
@@ -188,40 +269,51 @@ async fn execute_workflow(
 ) -> Result<ExecuteWorkflowResponse, String> {
     let doc = WorkflowValidator::parse_and_validate(&workflow_json).map_err(|e| e.to_string())?;
 
+    let (adb_path, storage) = {
+        let st = state.lock().unwrap();
+        (st.adb_runner.adb_path.clone(), st.storage.clone())
+    };
+
     let driver: Arc<dyn DeviceDriver> =
         if mock || device_id.is_empty() || device_id.starts_with("fake") {
             Arc::new(FakeDeviceDriver::new(&device_id, 1080, 1920))
         } else {
             Arc::new(fp_adb::AdbDeviceDriver::new(
                 device_id.clone(),
-                AdbRunner::default(),
+                AdbRunner::new(Some(adb_path)),
             ))
         };
 
+    let job_id = format!("job-{}", uuid::Uuid::new_v4());
+    let _ = storage.ensure_job_exists(
+        &job_id,
+        &device_id,
+        &doc.workflow_id,
+        &doc.name,
+        &workflow_json,
+    );
+
     let (_tx, rx) = watch::channel(ExecutionSignal::Running);
     let mut executor = WorkflowExecutor::new(driver, rx);
-    let job_id = format!("job-{}", uuid::Uuid::new_v4());
     let mut ctx = ExecutionContext::new(job_id.clone(), device_id);
-
-    let storage = {
-        let st = state.lock().unwrap();
-        st.storage.clone()
-    };
 
     let events_counter = Arc::new(AtomicUsize::new(0));
     let counter_clone = events_counter.clone();
 
+    let storage_clone = storage.clone();
     let job_state = executor
         .execute_workflow(
             &doc,
             &mut ctx,
             Some(Arc::new(move |evt| {
                 counter_clone.fetch_add(1, Ordering::SeqCst);
-                let _ = storage.insert_step_event(&evt);
+                let _ = storage_clone.insert_step_event(&evt);
             })),
         )
         .await
         .map_err(|e| e.to_string())?;
+
+    let _ = storage.complete_job(&job_id, &format!("{:?}", job_state));
 
     Ok(ExecuteWorkflowResponse {
         job_id,
@@ -324,18 +416,50 @@ fn base64_encode(bytes: &[u8]) -> String {
     result
 }
 
+fn resolve_portable_paths() -> (std::path::PathBuf, bool) {
+    // 1. Check next to executable: <exe_dir>/data
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let data_dir = exe_dir.join("data");
+            if std::fs::create_dir_all(&data_dir).is_ok() {
+                let db_path = data_dir.join("farmerpro.db");
+                return (db_path, true);
+            }
+        }
+    }
+
+    // 2. Check current working dir data/
+    let local_data = std::path::Path::new("data");
+    if std::fs::create_dir_all(local_data).is_ok() {
+        return (local_data.join("farmerpro.db"), true);
+    }
+
+    // 3. Fallback to current working dir farmerpro.db
+    (std::path::PathBuf::from("farmerpro.db"), false)
+}
+
 fn main() {
-    let storage = StorageManager::new("farmerpro.db")
+    let (db_path_buf, is_portable) = resolve_portable_paths();
+    let db_path_str = db_path_buf.to_string_lossy().to_string();
+
+    let storage = StorageManager::new(&db_path_buf)
         .unwrap_or_else(|_| StorageManager::new_in_memory().expect("Failed to initialize storage"));
+    let adb_runner = AdbRunner::default();
+
     let app_state = Arc::new(Mutex::new(AppState {
         storage,
-        adb_runner: AdbRunner::default(),
+        adb_runner,
+        db_path: db_path_str,
+        is_portable,
     }));
 
     tauri::Builder::default()
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![
             app_get_status,
+            app_window_minimize,
+            app_window_toggle_maximize,
+            app_window_close,
             list_devices,
             inspect_device,
             capture_device,

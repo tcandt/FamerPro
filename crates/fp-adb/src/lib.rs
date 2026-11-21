@@ -14,16 +14,53 @@ pub struct AdbRunner {
 impl Default for AdbRunner {
     fn default() -> Self {
         Self {
-            adb_path: "adb".to_string(),
+            adb_path: Self::discover_adb_path(),
             timeout: Duration::from_secs(15),
         }
     }
 }
 
 impl AdbRunner {
+    pub fn discover_adb_path() -> String {
+        // 1. Check FARMERPRO_ADB_PATH env var
+        if let Ok(env_path) = std::env::var("FARMERPRO_ADB_PATH") {
+            if !env_path.trim().is_empty() && std::path::Path::new(&env_path).exists() {
+                return env_path;
+            }
+        }
+
+        let adb_name = if cfg!(windows) { "adb.exe" } else { "adb" };
+
+        // 2. Check relative to current executable: <exe_dir>/bin/adb.exe
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                let bin_adb = exe_dir.join("bin").join(adb_name);
+                if bin_adb.exists() {
+                    return bin_adb.to_string_lossy().to_string();
+                }
+                let adjacent_adb = exe_dir.join(adb_name);
+                if adjacent_adb.exists() {
+                    return adjacent_adb.to_string_lossy().to_string();
+                }
+            }
+        }
+
+        // 3. Check current working directory: ./bin/adb.exe
+        let cwd_bin = std::path::Path::new("bin").join(adb_name);
+        if cwd_bin.exists() {
+            if let Ok(canonical) = cwd_bin.canonicalize() {
+                return canonical.to_string_lossy().to_string();
+            }
+            return cwd_bin.to_string_lossy().to_string();
+        }
+
+        // 4. Fallback to system adb on PATH
+        "adb".to_string()
+    }
+
     pub fn new(adb_path: Option<String>) -> Self {
         Self {
-            adb_path: adb_path.unwrap_or_else(|| "adb".to_string()),
+            adb_path: adb_path.unwrap_or_else(Self::discover_adb_path),
             timeout: Duration::from_secs(15),
         }
     }
@@ -315,5 +352,11 @@ emulator-5554          device product:sdk_gphone64_x86_64 model:Pixel_6 device:e
         assert_eq!(devices[0].connection_state, ConnectionState::Ready);
         assert_eq!(devices[1].adb_serial, "192.168.1.50:5555");
         assert_eq!(devices[1].connection_state, ConnectionState::Unauthorized);
+    }
+
+    #[test]
+    fn test_discover_adb_path() {
+        let path = AdbRunner::discover_adb_path();
+        assert!(!path.is_empty());
     }
 }
