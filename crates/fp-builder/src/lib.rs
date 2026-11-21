@@ -194,8 +194,9 @@ impl MiniToolPackager {
         // STEP 5: Inject Custom PE Icon Resource AND Pin Ed25519 Public Key in PE RT_RCDATA #7777 BEFORE Signing
         let t5 = Instant::now();
         let layers_injected = inject_ico_into_pe_exe(&target_exe_path, &icon_path)?;
-        let (grp_bytes, ico1_bytes) = verify_pe_icon_resource(&target_exe_path)?;
         inject_ed25519_pubkey_into_pe_exe(&target_exe_path, &key_meta.public_key_hex)?;
+        // Verify BOTH PE Icon resources and PE RT_RCDATA #7777 Public Key after all PE resource updates complete
+        let (grp_bytes, ico1_bytes) = verify_pe_icon_resource(&target_exe_path)?;
         let verified_pe_pubkey =
             verify_pe_embedded_pubkey_resource(&target_exe_path, &key_meta.public_key_hex)?;
         steps.push(BuildStepMetric {
@@ -997,10 +998,20 @@ mod tests {
         let bundle_dir = temp_dir.join("bundle");
         std::fs::create_dir_all(&bundle_dir).unwrap();
 
-        // 1. Copy the current test runner PE .exe into temp_dir and inject the Producer's Ed25519 Public Key into RT_RCDATA #7777
+        // 1. Copy the current test runner PE .exe into temp_dir and verify it initially fails closed with PE_ROOT_OF_TRUST_MISSING
         let current_pe = std::env::current_exe().unwrap();
         let target_exe = temp_dir.join("MiniTool_PE_RootOfTrust_Test.exe");
         std::fs::copy(&current_pe, &target_exe).unwrap();
+
+        let missing_res = read_pe_embedded_pubkey_from_exe(&target_exe);
+        assert!(missing_res.is_err());
+        assert!(missing_res
+            .unwrap_err()
+            .to_string()
+            .contains("PE_ROOT_OF_TRUST_MISSING"));
+
+        // Reject malformed public key lengths
+        assert!(inject_ed25519_pubkey_into_pe_exe(&target_exe, "short_hex").is_err());
 
         let (producer_sk, producer_meta) =
             ProducerKeyManager::load_or_create_signing_key(&keystore_dir).unwrap();
@@ -1058,8 +1069,37 @@ mod tests {
             &rogue_sk,
             &rogue_meta.key_id,
             sha256_hex(manifest_bytes),
+            rogue_checksums.clone(),
+        );
+
+        // Also verify deterministic RFC 8032 rogue vector used by mini-runtime Case 5 tamper suite
+        let det_seed = fp_bundle_verify::hex_decode(
+            "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+        )
+        .unwrap();
+        let det_sk = ed25519_dalek::SigningKey::from_bytes(det_seed.as_slice().try_into().unwrap());
+        let det_env = ProducerKeyManager::sign_bundle_ed25519(
+            &det_sk,
+            "fp-ed25519-rogue-attacker",
+            sha256_hex(manifest_bytes),
             rogue_checksums,
         );
+        assert_eq!(
+            det_env.signature_ed25519_hex,
+            "e407316b446d120cc627328f731a68d371db3e23a73fcaccb1767bedfb588953676b5331dddf799b0c95f72cc587df25e1f7b5f5cb0d18221ffdf24e08ed9c02"
+        );
+        assert!(det_env
+            .verify_ed25519_with_public_key(
+                &bundle_dir,
+                "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+            )
+            .is_ok());
+
+        // Verify that the rogue envelope IS 100% cryptographically valid against the disk trusted_publisher.pub
+        let disk_pubkey = std::fs::read_to_string(bundle_dir.join("trusted_publisher.pub")).unwrap();
+        assert!(rogue_env
+            .verify_ed25519_with_public_key(&bundle_dir, &disk_pubkey)
+            .is_ok());
 
         // Even though rogue_env is cryptographically valid under rogue_meta.public_key_hex (on disk),
         // verifying against the PE-embedded Root of Trust public key inside target_exe FAILS CLOSED!

@@ -92,14 +92,19 @@ fn resolve_bundle_dir() -> PathBuf {
             }
         }
     }
-    PathBuf::from("bundle")
+    std::env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join("bundle")
 }
 
 fn load_and_verify_bundle(bundle_dir: &Path, is_demo_mode: bool) -> Result<MiniRuntimeState> {
     let exe_dir = bundle_dir
         .parent()
+        .filter(|p| !p.as_os_str().is_empty())
         .map(|p| p.to_path_buf())
-        .unwrap_or_else(|| PathBuf::from("."));
+        .unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+        });
 
     // 1. Read Pinned Root-of-Trust Ed25519 Public Key directly from this executable's PE RT_RCDATA #7777 resource!
     //    An attacker CANNOT bypass verification by editing `bundle/trusted_publisher.pub` on disk.
@@ -642,25 +647,56 @@ fn run_cli_mode(args: &[String]) -> Result<bool> {
                 .unwrap_or_default();
             let _ = std::fs::remove_dir_all(&r4);
 
-            // Case 5: Attacker replaces BOTH trusted_publisher.pub AND signature.fpbundle.json with a rogue Ed25519 keypair
-            //         Prove that PE-embedded Root of Trust (RT_RCDATA #7777 inside the .exe) blocks disk key replacement!
+            // Case 5: Attacker modifies bundle files, signs them with a real rogue Ed25519 keypair,
+            //         and replaces BOTH trusted_publisher.pub AND signature.fpbundle.json on disk.
+            //         Prove that:
+            //         (a) The forged bundle IS 100% cryptographically valid against disk trusted_publisher.pub, AND
+            //         (b) load_and_verify_bundle STILL rejects it with ED25519_PUBKEY_UNTRUSTED because
+            //             Root of Trust is pinned in PE RT_RCDATA #7777 inside the .exe!
             let (r5, b5) = clone_bundle("rogue_keypair_full_replace")?;
             let rogue_pubkey = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
-            let rogue_sig = "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b";
+            let rogue_manifest = b"{\"project\":\"jx2-mobile\"}";
+            let rogue_ui = b"{\"windowTitle\":\"HACKED BY ROGUE KEYPAIR\"}";
+            std::fs::write(b5.join("manifest.fpbundle.json"), rogue_manifest)?;
+            std::fs::write(b5.join("ui-schema.json"), rogue_ui)?;
             std::fs::write(b5.join("trusted_publisher.pub"), rogue_pubkey.as_bytes())?;
-            let mut env5: SignedBundleEnvelope =
-                serde_json::from_slice(&std::fs::read(b5.join("signature.fpbundle.json"))?)?;
-            env5.publisher_public_key_hex = rogue_pubkey.to_string();
-            env5.signature_ed25519_hex = rogue_sig.to_string();
+
+            let mut rogue_checksums = std::collections::BTreeMap::new();
+            rogue_checksums.insert(
+                "manifest.fpbundle.json".to_string(),
+                sha256_hex(rogue_manifest),
+            );
+            rogue_checksums.insert("ui-schema.json".to_string(), sha256_hex(rogue_ui));
+            let rogue_table_json = serde_json::to_string(&rogue_checksums)?;
+
+            let env5 = SignedBundleEnvelope {
+                algorithm: "Ed25519-RFC8032-SHA256".to_string(),
+                key_id: "fp-ed25519-rogue-attacker".to_string(),
+                publisher_public_key_hex: rogue_pubkey.to_string(),
+                manifest_sha256: sha256_hex(rogue_manifest),
+                checksums_table_sha256: sha256_hex(rogue_table_json.as_bytes()),
+                file_checksums: rogue_checksums,
+                signature_ed25519_hex: "e407316b446d120cc627328f731a68d371db3e23a73fcaccb1767bedfb588953676b5331dddf799b0c95f72cc587df25e1f7b5f5cb0d18221ffdf24e08ed9c02".to_string(),
+                signed_at_utc: chrono::Utc::now().to_rfc3339(),
+            };
             std::fs::write(
                 b5.join("signature.fpbundle.json"),
                 serde_json::to_vec_pretty(&env5)?,
             )?;
+
+            // Confirm the rogue signature is 100% cryptographically valid under the replaced disk public key
+            let valid_against_disk_pubkey = env5
+                .verify_ed25519_with_public_key(&b5, rogue_pubkey)
+                .is_ok();
+
             let err5 = load_and_verify_bundle(&b5, false)
                 .err()
                 .map(|e| format!("{:#}", e))
                 .unwrap_or_default();
             let _ = std::fs::remove_dir_all(&r5);
+
+            let case5_passed =
+                valid_against_disk_pubkey && err5.contains("ED25519_PUBKEY_UNTRUSTED");
 
             let report = serde_json::json!({
                 "command": "test-tamper-suite",
@@ -670,13 +706,18 @@ fn run_cli_mode(args: &[String]) -> Result<bool> {
                     && err2.contains("PE_ROOT_OF_TRUST_MISMATCH")
                     && err3.contains("ED25519_SIGNATURE_INVALID")
                     && !err4.is_empty()
-                    && err5.contains("ED25519_PUBKEY_UNTRUSTED"),
+                    && case5_passed,
                 "cases": [
                     { "case": "1_modify_bundle_and_recompute_sha256", "rejected": err1.contains("ED25519_SIGNATURE_INVALID"), "error": err1 },
                     { "case": "2_replace_disk_trusted_publisher_pub", "rejected": err2.contains("PE_ROOT_OF_TRUST_MISMATCH"), "error": err2 },
                     { "case": "3_replace_signature_bytes", "rejected": err3.contains("ED25519_SIGNATURE_INVALID"), "error": err3 },
                     { "case": "4_missing_manifest_or_file", "rejected": !err4.is_empty(), "error": err4 },
-                    { "case": "5_rogue_keypair_replace_both_disk_pubkey_and_signature_blocked_by_pe_rcdata_7777", "rejected": err5.contains("ED25519_PUBKEY_UNTRUSTED"), "error": err5 }
+                    {
+                        "case": "5_rogue_keypair_replace_both_disk_pubkey_and_signature_blocked_by_pe_rcdata_7777",
+                        "rogueSignatureValidAgainstDiskPubkey": valid_against_disk_pubkey,
+                        "rejected": case5_passed,
+                        "error": err5
+                    }
                 ]
             });
             println!("{}", serde_json::to_string_pretty(&report)?);
