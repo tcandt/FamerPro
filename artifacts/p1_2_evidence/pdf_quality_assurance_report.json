@@ -1,12 +1,12 @@
 {
   "pdfPathMain": "E:\\DATA\\FarmerPro\\FARMERPRO_P1_2_ARCHITECTURE_UX_ACCEPTANCE_REPORT.pdf",
   "pdfPathEvidenceCopy": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\FARMERPRO_P1_2_ARCHITECTURE_UX_ACCEPTANCE_REPORT.pdf",
-  "fileSizeBytes": 12120644,
-  "fileSizeMB": 11.56,
-  "sha256": "5d5ddfcc3ef66c4e2fa3680f9f768bb07433a0ba96a9266fbab11e786ec52898",
+  "fileSizeBytes": 12414933,
+  "fileSizeMB": 11.84,
+  "sha256": "310550c5b578fecb2bb251b0cee71eb4dfba4950c4dcc55b318c5a9e3f9505f2",
   "sha256MatchesCopy": true,
-  "totalPages": 33,
-  "totalEmbeddedImageInstances": 38,
+  "totalPages": 34,
+  "totalEmbeddedImageInstances": 39,
   "allPagesA4Landscape": true,
   "allFootersSequential": true,
   "encodingErrors": [],
@@ -31,9 +31,9 @@
       "orientation": "A4 Landscape",
       "embeddedImages": 0,
       "footerVerified": true,
-      "maxContentBottomPt": 474.3,
+      "maxContentBottomPt": 496.8,
       "footerTopPt": 565.1,
-      "clearancePt": 90.9,
+      "clearancePt": 68.4,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_02.png"
     },
     {
@@ -51,15 +51,26 @@
       "page": 4,
       "dimensionsPt": "842x595",
       "orientation": "A4 Landscape",
+      "embeddedImages": 1,
+      "footerVerified": true,
+      "maxContentBottomPt": 460.0,
+      "footerTopPt": 565.1,
+      "clearancePt": 105.1,
+      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_04.png"
+    },
+    {
+      "page": 5,
+      "dimensionsPt": "842x595",
+      "orientation": "A4 Landscape",
       "embeddedImages": 6,
       "footerVerified": true,
       "maxContentBottomPt": 481.0,
       "footerTopPt": 565.1,
       "clearancePt": 84.1,
-      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_04.png"
+      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_05.png"
     },
     {
-      "page": 5,
+      "page": 6,
       "dimensionsPt": "842x595",
       "orientation": "A4 Landscape",
       "embeddedImages": 2,
@@ -67,10 +78,10 @@
       "maxContentBottomPt": 423.3,
       "footerTopPt": 565.1,
       "clearancePt": 141.9,
-      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_05.png"
+      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_06.png"
     },
     {
-      "page": 6,
+      "page": 7,
       "dimensionsPt": "842x595",
       "orientation": "A4 Landscape",
       "embeddedImages": 1,
@@ -78,10 +89,10 @@
       "maxContentBottomPt": 496.0,
       "footerTopPt": 565.1,
       "clearancePt": 69.1,
-      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_06.png"
+      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_07.png"
     },
     {
-      "page": 7,
+      "page": 8,
       "dimensionsPt": "842x595",
       "orientation": "A4 Landscape",
       "embeddedImages": 0,
@@ -89,17 +100,6 @@
       "maxContentBottomPt": 520.0,
       "footerTopPt": 565.1,
       "clearancePt": 45.1,
-      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_07.png"
-    },
-    {
-      "page": 8,
-      "dimensionsPt": "842x595",
-      "orientation": "A4 Landscape",
-      "embeddedImages": 1,
-      "footerVerified": true,
-      "maxContentBottomPt": 466.8,
-      "footerTopPt": 565.1,
-      "clearancePt": 98.3,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_08.png"
     },
     {
@@ -108,9 +108,9 @@
       "orientation": "A4 Landscape",
       "embeddedImages": 1,
       "footerVerified": true,
-      "maxContentBottomPt": 476.6,
+      "maxContentBottomPt": 466.8,
       "footerTopPt": 565.1,
-      "clearancePt": 88.6,
+      "clearancePt": 98.3,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_09.png"
     },
     {
@@ -119,9 +119,9 @@
       "orientation": "A4 Landscape",
       "embeddedImages": 1,
       "footerVerified": true,
-      "maxContentBottomPt": 490.1,
+      "maxContentBottomPt": 476.6,
       "footerTopPt": 565.1,
-      "clearancePt": 75.1,
+      "clearancePt": 88.6,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_10.png"
     },
     {
@@ -141,9 +141,9 @@
       "orientation": "A4 Landscape",
       "embeddedImages": 1,
       "footerVerified": true,
-      "maxContentBottomPt": 476.6,
+      "maxContentBottomPt": 490.1,
       "footerTopPt": 565.1,
-      "clearancePt": 88.6,
+      "clearancePt": 75.1,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_12.png"
     },
     {
@@ -152,9 +152,9 @@
       "orientation": "A4 Landscape",
       "embeddedImages": 1,
       "footerVerified": true,
-      "maxContentBottomPt": 490.1,
+      "maxContentBottomPt": 476.6,
       "footerTopPt": 565.1,
-      "clearancePt": 75.1,
+      "clearancePt": 88.6,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_13.png"
     },
     {
@@ -183,11 +183,11 @@
       "page": 16,
       "dimensionsPt": "842x595",
       "orientation": "A4 Landscape",
-      "embeddedImages": 2,
+      "embeddedImages": 1,
       "footerVerified": true,
-      "maxContentBottomPt": 489.3,
+      "maxContentBottomPt": 490.1,
       "footerTopPt": 565.1,
-      "clearancePt": 75.9,
+      "clearancePt": 75.1,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_16.png"
     },
     {
@@ -238,11 +238,11 @@
       "page": 21,
       "dimensionsPt": "842x595",
       "orientation": "A4 Landscape",
-      "embeddedImages": 0,
+      "embeddedImages": 2,
       "footerVerified": true,
-      "maxContentBottomPt": 513.3,
+      "maxContentBottomPt": 489.3,
       "footerTopPt": 565.1,
-      "clearancePt": 51.9,
+      "clearancePt": 75.9,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_21.png"
     },
     {
@@ -251,13 +251,24 @@
       "orientation": "A4 Landscape",
       "embeddedImages": 0,
       "footerVerified": true,
-      "maxContentBottomPt": 452.6,
+      "maxContentBottomPt": 513.3,
       "footerTopPt": 565.1,
-      "clearancePt": 112.5,
+      "clearancePt": 51.9,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_22.png"
     },
     {
       "page": 23,
+      "dimensionsPt": "842x595",
+      "orientation": "A4 Landscape",
+      "embeddedImages": 0,
+      "footerVerified": true,
+      "maxContentBottomPt": 452.6,
+      "footerTopPt": 565.1,
+      "clearancePt": 112.5,
+      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_23.png"
+    },
+    {
+      "page": 24,
       "dimensionsPt": "842x595",
       "orientation": "A4 Landscape",
       "embeddedImages": 3,
@@ -265,17 +276,6 @@
       "maxContentBottomPt": 390.2,
       "footerTopPt": 565.1,
       "clearancePt": 174.9,
-      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_23.png"
-    },
-    {
-      "page": 24,
-      "dimensionsPt": "842x595",
-      "orientation": "A4 Landscape",
-      "embeddedImages": 0,
-      "footerVerified": true,
-      "maxContentBottomPt": 336.3,
-      "footerTopPt": 565.1,
-      "clearancePt": 228.9,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_24.png"
     },
     {
@@ -284,13 +284,24 @@
       "orientation": "A4 Landscape",
       "embeddedImages": 0,
       "footerVerified": true,
-      "maxContentBottomPt": 341.5,
+      "maxContentBottomPt": 336.3,
       "footerTopPt": 565.1,
-      "clearancePt": 223.6,
+      "clearancePt": 228.9,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_25.png"
     },
     {
       "page": 26,
+      "dimensionsPt": "842x595",
+      "orientation": "A4 Landscape",
+      "embeddedImages": 0,
+      "footerVerified": true,
+      "maxContentBottomPt": 341.5,
+      "footerTopPt": 565.1,
+      "clearancePt": 223.6,
+      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_26.png"
+    },
+    {
+      "page": 27,
       "dimensionsPt": "842x595",
       "orientation": "A4 Landscape",
       "embeddedImages": 1,
@@ -298,10 +309,10 @@
       "maxContentBottomPt": 455.4,
       "footerTopPt": 565.1,
       "clearancePt": 109.7,
-      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_26.png"
+      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_27.png"
     },
     {
-      "page": 27,
+      "page": 28,
       "dimensionsPt": "842x595",
       "orientation": "A4 Landscape",
       "embeddedImages": 2,
@@ -309,10 +320,10 @@
       "maxContentBottomPt": 454.8,
       "footerTopPt": 565.1,
       "clearancePt": 110.4,
-      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_27.png"
+      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_28.png"
     },
     {
-      "page": 28,
+      "page": 29,
       "dimensionsPt": "842x595",
       "orientation": "A4 Landscape",
       "embeddedImages": 3,
@@ -320,10 +331,10 @@
       "maxContentBottomPt": 514.0,
       "footerTopPt": 565.1,
       "clearancePt": 51.1,
-      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_28.png"
+      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_29.png"
     },
     {
-      "page": 29,
+      "page": 30,
       "dimensionsPt": "842x595",
       "orientation": "A4 Landscape",
       "embeddedImages": 0,
@@ -331,10 +342,10 @@
       "maxContentBottomPt": 327.3,
       "footerTopPt": 565.1,
       "clearancePt": 237.9,
-      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_29.png"
+      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_30.png"
     },
     {
-      "page": 30,
+      "page": 31,
       "dimensionsPt": "842x595",
       "orientation": "A4 Landscape",
       "embeddedImages": 1,
@@ -342,17 +353,6 @@
       "maxContentBottomPt": 473.4,
       "footerTopPt": 565.1,
       "clearancePt": 91.7,
-      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_30.png"
-    },
-    {
-      "page": 31,
-      "dimensionsPt": "842x595",
-      "orientation": "A4 Landscape",
-      "embeddedImages": 0,
-      "footerVerified": true,
-      "maxContentBottomPt": 355.0,
-      "footerTopPt": 565.1,
-      "clearancePt": 210.1,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_31.png"
     },
     {
@@ -361,9 +361,9 @@
       "orientation": "A4 Landscape",
       "embeddedImages": 0,
       "footerVerified": true,
-      "maxContentBottomPt": 317.5,
+      "maxContentBottomPt": 355.0,
       "footerTopPt": 565.1,
-      "clearancePt": 247.6,
+      "clearancePt": 210.1,
       "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_32.png"
     },
     {
@@ -372,10 +372,21 @@
       "orientation": "A4 Landscape",
       "embeddedImages": 0,
       "footerVerified": true,
+      "maxContentBottomPt": 317.5,
+      "footerTopPt": 565.1,
+      "clearancePt": 247.6,
+      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_33.png"
+    },
+    {
+      "page": 34,
+      "dimensionsPt": "842x595",
+      "orientation": "A4 Landscape",
+      "embeddedImages": 0,
+      "footerVerified": true,
       "maxContentBottomPt": 409.6,
       "footerTopPt": 565.1,
       "clearancePt": 155.5,
-      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_33.png"
+      "renderedPng": "E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_rendered_pages\\page_34.png"
     }
   ]
 }

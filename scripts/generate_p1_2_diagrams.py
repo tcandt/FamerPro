@@ -3,7 +3,7 @@ import os
 DIAGRAM_DIR = r"E:\DATA\FarmerPro\artifacts\p1_2_evidence\diagrams"
 os.makedirs(DIAGRAM_DIR, exist_ok=True)
 
-# 1. Save editable Mermaid (.mmd) source files for all architecture diagrams
+# Save 15 editable Mermaid (.mmd) source files matching all 15 SVG diagrams 1-to-1
 MERMAID_SOURCES = {
     "00_part1_overall_product_architecture.mmd": """flowchart LR
     subgraph STUDIO["FarmerPro Studio IDE (FarmerPro.exe)"]
@@ -29,6 +29,34 @@ MERMAID_SOURCES = {
     BUILDER --> CONTRACT
     BUILDER ==> M1
     BUILDER ==> M2
+""",
+    "00_part1b_studio_engine_builder_runtime_relationship.mmd": """flowchart LR
+    subgraph S1["1. FarmerPro Studio IDE (Design & Authoring)"]
+        A1["GameProjectManifest (project.fpproj.json)"]
+        A2["Workflow Graphs (workflows/*.json + templates/*.png)"]
+        A3["MiniToolUiSchema (ui-schema.json + 5-State Modules)"]
+    end
+    subgraph S2["2. Shared Workflow Engine (12 Core Crates)"]
+        E1["fp-workflow-schema + fp-workflow-runtime"]
+        E2["fp-vision (Multiscale SSD + WinRT OCR) + fp-actions (Safe Tap 18%)"]
+        E3["fp-adb + fp-device (Generation Fencing) + fp-scheduler (Leases)"]
+        E4["fp-storage (SQLite WAL) + fp-security (CRED_MGR://)"]
+    end
+    subgraph S3["3. fp-builder (Compile-Time Isolated Packager)"]
+        B1["Step 1-4: Validate Graph/Paths/Modules & Copy fp-mini-runtime.exe"]
+        B2["Step 5: Inject 7-Layer PE Icon + PE RT_RCDATA #7777 Public Key"]
+        B3["Step 6-8: Sign bundle/ via External Ed25519 Keystore & Verify"]
+    end
+    subgraph S4["4. Mini Runtime (Auto_<Game>.exe — End-User Execution)"]
+        R1["fp-bundle-verify: Read PubKey from Self PE #7777 & Verify Ed25519"]
+        R2["fp-bundle-contract: Render Dynamic UI from Signed ui-schema.json"]
+        R3["Execute Workflows via Identical Shared Workflow Engine + Local SQLite"]
+    end
+    S1 -->|Author & Test| S2
+    S1 -->|Export Specs| S3
+    S3 -->|Produce Signed Release| S4
+    S2 -->|Linked at Compile Time| S4
+    S4 -. "ZERO Dependency on fp-builder or Secret Key" .-> S3
 """,
     "00_part2_before_vs_proposed_architecture.mmd": """flowchart TB
     subgraph BEFORE["KIẾN TRÚC CŨ (v0.1.0 - 10 Tab Vận Hành Phẳng)"]
@@ -180,12 +208,12 @@ MERMAID_SOURCES = {
         LEASE["Per-Device Lease Table\\n(device_id -> LeaseHolder + Generation u64)"]
     end
     subgraph WORKERS["Isolated Tokio Device Workers"]
-        W_A["Worker A: emulator-5554\\n(Lease Gen #14)"]
+        W_A["Worker A: emulator-5554\\n(Lease Gen #15)"]
         W_B["Worker B: emulator-5556\\n(Lease Gen #08)"]
     end
     T1 & T2 & T3 --> PQ
     PQ --> LEASE
-    LEASE -->|Exclusive Lease Gen #14| W_A
+    LEASE -->|Exclusive Lease Gen #15| W_A
     LEASE -->|Exclusive Lease Gen #08| W_B
 """,
     "IV_07_mini_tool_ui_schema_renderer.mmd": """flowchart LR
@@ -246,6 +274,23 @@ MERMAID_SOURCES = {
     CRATES --> BLD
     P_A & P_B & P_N --> BLD
     BLD --> OUT_A & OUT_B & OUT_N
+""",
+    "VI_01_9step_production_workflow.mmd": """flowchart LR
+    B1["Bước 1: Tạo Game Project\\n(1. Game Projects)"] --> B2["Bước 2: Kết nối Thiết bị Android\\n(4. Device Lab & ROI Cropper)"]
+    B2 --> B3["Bước 3: Thiết kế Workflow\\n(2. Workflow Studio)"]
+    B3 --> B4["Bước 4: Tạo Task & Cấu hình Modules\\n(3. Tasks & Modules)"]
+    B4 --> B5["Bước 5: Chạy Test & Debug\\n(5. Test & Debug)"]
+    B5 --> B6["Bước 6: Thiết kế Giao diện Mini Tool\\n(6. Mini Tool Builder)"]
+    B6 --> B7["Bước 7: Build EXE 8 Bước\\n(fp-builder + PE #7777)"]
+    B7 --> B8["Bước 8: Kiểm tra & Xuất Release\\n(6. Release Management)"]
+    B8 --> B9["Bước 9: Đóng Studio & Chạy Độc lập\\n(Auto_JX2_Mobile.exe & Auto_Kingdom_SLG.exe)"]
+""",
+    "VIII_01_p2_to_p6_roadmap_timeline.mmd": """flowchart LR
+    GATE["Gate P1.2 (Hiện tại)\\n34/34 Tests PASS · PE #7777\\nTrình duyệt Báo cáo PDF"] -->|Phê duyệt QD-01..07| P2["Giai đoạn P2\\nGameProject, Storage,\\nMigration v2 & Security"]
+    P2 --> P3["Giai đoạn P3\\nWorkflow Engine, Scheduler\\n& Device Lab IPC"]
+    P3 --> P4["Giai đoạn P4\\nStudio UX Redesign (6 Khu vực)\\n& Mini Tool Builder UI"]
+    P4 --> P5["Giai đoạn P5\\nBuild/Release Integration,\\nPE Icon & Authenticode"]
+    P5 --> P6["Giai đoạn P6\\nEnd-to-End Multi-Game\\nAcceptance Verification"]
 """
 }
 

@@ -11,7 +11,7 @@
       .box-sub { font-size: 11px; font-weight: 400; fill: #A9B8CC; }
       .box-code { font-family: Consolas, monospace; font-size: 10.5px; fill: #38BDF8; }
       .badge { font-size: 10px; font-weight: 700; }
-      .edge-label { font-size: 10.5px; font-weight: 600; fill: #38BDF8; }
+      .edge-label { font-size: 10px; font-weight: 600; fill: #38BDF8; }
     </style>
     <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1 L 10 5 L 0 9 z" fill="#38BDF8"/>
@@ -37,92 +37,92 @@
   
   <rect x="18" y="72" width="1364" height="430" rx="8" fill="#101824" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="4,2"/>
   <rect x="30" y="61" width="631" height="21" rx="4" fill="#16202F" stroke="#38BDF8" stroke-width="1.2"/>
-  <text x="38" y="76" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">SQLITE WAL MULTI-PROJECT SCHEMA V2 (Tương Thích Ngược 100% — Không Mất Dữ Liệu v1)</text>
-<rect x="490" y="96" width="400" height="155" rx="6" fill="#16253A" stroke="#1878F5" stroke-width="1.5"/>
-  <rect x="490" y="96" width="5" height="155" rx="2" fill="#38BDF8"/>
-  <text x="504" y="116" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">TABLE: projects (Root Entity - Mới ở P2)</text>
-  <text x="504" y="133" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">id TEXT PRIMARY KEY       -- &#x27;proj-jx2-mobile-001&#x27;</text>
-  <text x="504" y="147.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">slug TEXT UNIQUE NOT NULL -- &#x27;jx2-mobile&#x27;</text>
-  <text x="504" y="162.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">name TEXT NOT NULL        -- &#x27;Võ Hiệp Truyền Kỳ 2&#x27;</text>
-  <text x="504" y="176.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">game_package_id TEXT      -- &#x27;com.blackhole.jx2mobile&#x27;</text>
-  <text x="504" y="191.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">version TEXT, exe_name TEXT, window_title TEXT</text>
-  <text x="504" y="205.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">icon_rel_path TEXT, target_width_px INT, target_height_px INT</text>
-  <text x="504" y="220.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">bundle_adb INT, project_dir_path TEXT, updated_at TEXT</text>
-<rect x="36" y="96" width="390" height="118" rx="6" fill="#142426" stroke="#3BC38D" stroke-width="1.5"/>
-  <rect x="36" y="96" width="5" height="118" rx="2" fill="#3BC38D"/>
-  <text x="50" y="116" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">TABLE: project_modules (5-State Config - Mới)</text>
-  <text x="50" y="133" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">project_id TEXT REFERENCES projects(id)</text>
-  <text x="50" y="147.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">module_id TEXT -- &#x27;mod.adb_core&#x27;, &#x27;mod.account_vault&#x27;...</text>
-  <text x="50" y="162.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">packaged_in_release INT NOT NULL DEFAULT 1</text>
-  <text x="50" y="176.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">enabled_by_default INT NOT NULL DEFAULT 1</text>
-  <text x="50" y="191.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">config_json TEXT, PRIMARY KEY (project_id, module_id)</text>
-<rect x="36" y="232" width="390" height="128" rx="6" fill="#1A1D30" stroke="#B291F7" stroke-width="1.5"/>
-  <rect x="36" y="232" width="5" height="128" rx="2" fill="#B291F7"/>
-  <text x="50" y="252" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">TABLE: vision_templates (Project PNGs - Mới)</text>
-  <text x="50" y="269" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">id TEXT PRIMARY KEY</text>
-  <text x="50" y="283.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">project_id TEXT REFERENCES projects(id)</text>
-  <text x="50" y="298.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">name TEXT, rel_path TEXT -- &#x27;templates/sys_apps.png&#x27;</text>
-  <text x="50" y="312.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">width_px INT, height_px INT, source_crop_x/y INT</text>
-  <text x="50" y="327.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">default_confidence REAL, sha256 TEXT NOT NULL</text>
+  <text x="38" y="76" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">SQLITE WAL MULTI-PROJECT SCHEMA V2 (Tương Thích Ngược 100% — Không Mất Dữ Liệu v1)</text>
+<rect x="490" y="94" width="400" height="150" rx="6" fill="#16253A" stroke="#1878F5" stroke-width="1.5"/>
+  <rect x="490" y="94" width="5" height="150" rx="2" fill="#38BDF8"/>
+  <text x="504" y="114" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">TABLE: projects (Root Entity - Mới ở P2)</text>
+  <text x="504" y="131" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">id TEXT PRIMARY KEY       -- &#x27;proj-jx2-mobile-001&#x27;</text>
+  <text x="504" y="145.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">slug TEXT UNIQUE NOT NULL -- &#x27;jx2-mobile&#x27;</text>
+  <text x="504" y="160.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">name TEXT NOT NULL        -- &#x27;Võ Hiệp Truyền Kỳ 2&#x27;</text>
+  <text x="504" y="174.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">game_package_id TEXT      -- &#x27;com.blackhole.jx2mobile&#x27;</text>
+  <text x="504" y="189.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">version TEXT, exe_name TEXT, window_title TEXT</text>
+  <text x="504" y="203.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">icon_rel_path TEXT, target_width_px INT, target_height_px INT</text>
+  <text x="504" y="218.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">bundle_adb INT, project_dir_path TEXT, updated_at TEXT</text>
+<rect x="36" y="94" width="390" height="118" rx="6" fill="#142426" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="36" y="94" width="5" height="118" rx="2" fill="#3BC38D"/>
+  <text x="50" y="114" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">TABLE: project_modules (5-State Config - Mới)</text>
+  <text x="50" y="131" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">project_id TEXT REFERENCES projects(id)</text>
+  <text x="50" y="145.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">module_id TEXT -- &#x27;mod.adb_core&#x27;, &#x27;mod.account_vault&#x27;...</text>
+  <text x="50" y="160.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">packaged_in_release INT NOT NULL DEFAULT 1</text>
+  <text x="50" y="174.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">enabled_by_default INT NOT NULL DEFAULT 1</text>
+  <text x="50" y="189.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">config_json TEXT, PRIMARY KEY (project_id, module_id)</text>
+<rect x="36" y="230" width="390" height="128" rx="6" fill="#1A1D30" stroke="#B291F7" stroke-width="1.5"/>
+  <rect x="36" y="230" width="5" height="128" rx="2" fill="#B291F7"/>
+  <text x="50" y="250" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">TABLE: vision_templates (Project PNGs - Mới)</text>
+  <text x="50" y="267" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">id TEXT PRIMARY KEY</text>
+  <text x="50" y="281.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">project_id TEXT REFERENCES projects(id)</text>
+  <text x="50" y="296.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">name TEXT, rel_path TEXT -- &#x27;templates/sys_apps.png&#x27;</text>
+  <text x="50" y="310.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">width_px INT, height_px INT, source_crop_x/y INT</text>
+  <text x="50" y="325.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">default_confidence REAL, sha256 TEXT NOT NULL</text>
 <rect x="36" y="376" width="390" height="112" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
   <rect x="36" y="376" width="5" height="112" rx="2" fill="#E7B15B"/>
-  <text x="50" y="396" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">TABLE: mini_tool_schemas (UI Schema - Mới)</text>
-  <text x="50" y="413" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">project_id TEXT PRIMARY KEY REFERENCES projects(id)</text>
-  <text x="50" y="427.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">schema_version INT NOT NULL DEFAULT 1</text>
-  <text x="50" y="442.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">ui_schema_json TEXT NOT NULL -- MiniToolUiSchema</text>
-  <text x="50" y="456.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">updated_at TEXT NOT NULL</text>
-<rect x="954" y="96" width="410" height="126" rx="6" fill="#142426" stroke="#3BC38D" stroke-width="1.5"/>
-  <rect x="954" y="96" width="5" height="126" rx="2" fill="#3BC38D"/>
-  <text x="968" y="116" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">TABLE: task_definitions (Task Library - Mới)</text>
-  <text x="968" y="133" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">id TEXT PRIMARY KEY</text>
-  <text x="968" y="147.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">project_id TEXT REFERENCES projects(id)</text>
-  <text x="968" y="162.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">workflow_id TEXT REFERENCES workflows(id)</text>
-  <text x="968" y="176.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">category_id, category_short_tag, category_color_hex</text>
-  <text x="968" y="191.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">title TEXT, priority INT, estimate_sec INT</text>
-  <text x="968" y="205.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">settings_schema_json TEXT -- Dynamic task fields</text>
-<rect x="954" y="238" width="410" height="126" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
-  <rect x="954" y="238" width="5" height="126" rx="2" fill="#E7B15B"/>
-  <text x="968" y="258" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">TABLE: project_releases (Build History - Mới)</text>
-  <text x="968" y="275" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">id TEXT PRIMARY KEY, project_id TEXT REFERENCES projects(id)</text>
-  <text x="968" y="289.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">version TEXT, output_dir_path TEXT, exe_path TEXT</text>
-  <text x="968" y="304.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">exe_size_bytes INT, exe_sha256 TEXT, key_id TEXT</text>
-  <text x="968" y="318.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">publisher_public_key_hex TEXT, pe_rcdata_pubkey_id INT (7777)</text>
-  <text x="968" y="333.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">signature_ed25519_hex TEXT, build_report_json TEXT</text>
-<rect x="490" y="272" width="400" height="108" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
-  <rect x="490" y="272" width="5" height="108" rx="2" fill="#38BDF8"/>
-  <text x="504" y="292" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">EXISTING TABLES: workflows &amp; workflow_versions</text>
-  <text x="504" y="309" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">id TEXT PRIMARY KEY, name TEXT, current_version INT</text>
-  <text x="504" y="323.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">+ ALTER ADD project_id TEXT REFERENCES projects(id)</text>
-  <text x="504" y="338.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">+ ALTER ADD category TEXT NOT NULL DEFAULT &#x27;Chung&#x27;</text>
-  <text x="504" y="352.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Auto-migrates all existing JX2 workflows to &#x27;proj-jx2-mobile-001&#x27;</text>
+  <text x="50" y="396" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">TABLE: mini_tool_schemas (UI Schema - Mới)</text>
+  <text x="50" y="413" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">project_id TEXT PRIMARY KEY REFERENCES projects(id)</text>
+  <text x="50" y="427.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">schema_version INT NOT NULL DEFAULT 1</text>
+  <text x="50" y="442.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">ui_schema_json TEXT NOT NULL -- MiniToolUiSchema</text>
+  <text x="50" y="456.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">updated_at TEXT NOT NULL</text>
+<rect x="954" y="94" width="410" height="126" rx="6" fill="#142426" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="954" y="94" width="5" height="126" rx="2" fill="#3BC38D"/>
+  <text x="968" y="114" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">TABLE: task_definitions (Task Library - Mới)</text>
+  <text x="968" y="131" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">id TEXT PRIMARY KEY</text>
+  <text x="968" y="145.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">project_id TEXT REFERENCES projects(id)</text>
+  <text x="968" y="160.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">workflow_id TEXT REFERENCES workflows(id)</text>
+  <text x="968" y="174.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">category_id, category_short_tag, category_color_hex</text>
+  <text x="968" y="189.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">title TEXT, priority INT, estimate_sec INT</text>
+  <text x="968" y="203.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">settings_schema_json TEXT -- Dynamic task fields</text>
+<rect x="954" y="240" width="410" height="126" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="954" y="240" width="5" height="126" rx="2" fill="#E7B15B"/>
+  <text x="968" y="260" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">TABLE: project_releases (Build History - Mới)</text>
+  <text x="968" y="277" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">id TEXT PRIMARY KEY, project_id TEXT REFERENCES projects(id)</text>
+  <text x="968" y="291.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">version TEXT, output_dir_path TEXT, exe_path TEXT</text>
+  <text x="968" y="306.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">exe_size_bytes INT, exe_sha256 TEXT, key_id TEXT</text>
+  <text x="968" y="320.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">publisher_public_key_hex TEXT, pe_rcdata_pubkey_id INT (7777)</text>
+  <text x="968" y="335.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">signature_ed25519_hex TEXT, build_report_json TEXT</text>
+<rect x="490" y="268" width="400" height="102" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
+  <rect x="490" y="268" width="5" height="102" rx="2" fill="#38BDF8"/>
+  <text x="504" y="288" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">EXISTING TABLES: workflows &amp; workflow_versions</text>
+  <text x="504" y="305" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">id TEXT PRIMARY KEY, name TEXT, current_version INT</text>
+  <text x="504" y="319.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">+ ALTER ADD project_id TEXT REFERENCES projects(id)</text>
+  <text x="504" y="334.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">+ ALTER ADD category TEXT NOT NULL DEFAULT &#x27;Chung&#x27;</text>
+  <text x="504" y="348.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Auto-migrates all existing JX2 workflows to &#x27;proj-jx2-mobile-001&#x27;</text>
 <rect x="490" y="394" width="400" height="94" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="490" y="394" width="5" height="94" rx="2" fill="#F27883"/>
-  <text x="504" y="414" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">EXISTING TABLES: accounts, jobs, step_events, checkpoints</text>
-  <text x="504" y="431" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">accounts: + ALTER ADD project_id TEXT REFERENCES projects(id)</text>
-  <text x="504" y="445.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">jobs:     + ALTER ADD project_id TEXT REFERENCES projects(id)</text>
-  <text x="504" y="460.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">step_events &amp; checkpoints link via job_id -&gt; jobs(id)</text>
+  <text x="504" y="414" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11.84" font-weight="700">EXISTING TABLES: accounts, jobs, step_events, checkpoints</text>
+  <text x="504" y="431" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">accounts: + ALTER ADD project_id TEXT REFERENCES projects(id)</text>
+  <text x="504" y="445.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">jobs:     + ALTER ADD project_id TEXT REFERENCES projects(id)</text>
+  <text x="504" y="460.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">step_events &amp; checkpoints link via job_id -&gt; jobs(id)</text>
 <line x1="490" y1="145" x2="426" y2="145" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
-  <rect x="434.8" y="135.0" width="46.5" height="17" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
-  <text x="458.0" y="147.0" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">1 : N</text>
+  <rect x="437.5" y="137.5" width="41.0" height="15.0" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
+  <text x="458.0" y="148.2" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">1 : N</text>
 <line x1="490" y1="200" x2="426" y2="285" stroke="#B291F7" stroke-width="2" marker-end="url(#arrow-purple)"/>
-  <rect x="434.8" y="232.5" width="46.5" height="17" rx="3" fill="#0D131D" stroke="#B291F7" stroke-width="1"/>
-  <text x="458.0" y="244.5" text-anchor="middle" fill="#B291F7" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">1 : N</text>
-<line x1="490" y1="235" x2="426" y2="425" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
-  <rect x="434.8" y="320.0" width="46.5" height="17" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
-  <text x="458.0" y="332.0" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">1 : 1</text>
+  <rect x="437.5" y="235.0" width="41.0" height="15.0" rx="3" fill="#0D131D" stroke="#B291F7" stroke-width="1"/>
+  <text x="458.0" y="245.7" text-anchor="middle" fill="#B291F7" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">1 : N</text>
+<line x1="490" y1="232" x2="426" y2="425" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
+  <rect x="437.5" y="321.0" width="41.0" height="15.0" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
+  <text x="458.0" y="331.7" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">1 : 1</text>
 <line x1="890" y1="145" x2="954" y2="145" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
-  <rect x="898.8" y="135.0" width="46.5" height="17" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
-  <text x="922.0" y="147.0" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">1 : N</text>
+  <rect x="901.5" y="137.5" width="41.0" height="15.0" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
+  <text x="922.0" y="148.2" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">1 : N</text>
 <line x1="890" y1="215" x2="954" y2="290" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
-  <rect x="898.8" y="242.5" width="46.5" height="17" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
-  <text x="922.0" y="254.5" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">1 : N</text>
-<line x1="690" y1="251" x2="690" y2="272" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
-  <rect x="666.8" y="251.5" width="46.5" height="17" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
-  <text x="690.0" y="263.5" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">1 : N</text>
-<line x1="890" y1="320" x2="954" y2="190" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
-  <rect x="879.2" y="245.0" width="85.5" height="17" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
-  <text x="922.0" y="257.0" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">workflow_id</text>
-<line x1="690" y1="380" x2="690" y2="394" stroke="#F27883" stroke-width="2" marker-end="url(#arrow-red)"/>
-  <rect x="650.5" y="377.0" width="79.0" height="17" rx="3" fill="#0D131D" stroke="#F27883" stroke-width="1"/>
-  <text x="690.0" y="389.0" text-anchor="middle" fill="#F27883" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">project_id</text>
+  <rect x="901.5" y="245.0" width="41.0" height="15.0" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
+  <text x="922.0" y="255.7" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">1 : N</text>
+<line x1="690" y1="244" x2="690" y2="268" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="675.3" y="248.5" width="29.4" height="15.0" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
+  <text x="690.0" y="259.2" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">1:N</text>
+<line x1="890" y1="315" x2="954" y2="190" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="901.5" y="245.0" width="41.0" height="15.0" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
+  <text x="922.0" y="255.7" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">wf_id</text>
+<line x1="690" y1="370" x2="690" y2="394" stroke="#F27883" stroke-width="2" marker-end="url(#arrow-red)"/>
+  <rect x="663.7" y="374.5" width="52.6" height="15.0" rx="3" fill="#0D131D" stroke="#F27883" stroke-width="1"/>
+  <text x="690.0" y="385.2" text-anchor="middle" fill="#F27883" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">proj_id</text>
 </svg>

@@ -11,7 +11,7 @@
       .box-sub { font-size: 11px; font-weight: 400; fill: #A9B8CC; }
       .box-code { font-family: Consolas, monospace; font-size: 10.5px; fill: #38BDF8; }
       .badge { font-size: 10px; font-weight: 700; }
-      .edge-label { font-size: 10.5px; font-weight: 600; fill: #38BDF8; }
+      .edge-label { font-size: 10px; font-weight: 600; fill: #38BDF8; }
     </style>
     <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1 L 10 5 L 0 9 z" fill="#38BDF8"/>
@@ -37,113 +37,113 @@
   
   <rect x="18" y="72" width="1364" height="96" rx="8" fill="#111A27" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="4,2"/>
   <rect x="30" y="61" width="305" height="21" rx="4" fill="#16202F" stroke="#38BDF8" stroke-width="1.2"/>
-  <text x="38" y="76" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">LAYER 1: APPLICATION BINARIES (apps/*)</text>
+  <text x="38" y="76" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">LAYER 1: APPLICATION BINARIES (apps/*)</text>
 <rect x="36" y="94" width="420" height="64" rx="6" fill="#162234" stroke="#1878F5" stroke-width="1.5"/>
   <rect x="36" y="94" width="5" height="64" rx="2" fill="#1878F5"/>
-  <text x="50" y="114" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">apps/desktop (FarmerPro.exe - Studio IDE)</text>
-  <text x="50" y="131" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Tauri v2 Desktop Host + Studio IPC Commands + Builder UI Host</text>
-  <text x="50" y="145.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Phụ thuộc cả Runtime Core lẫn fp-builder (Ký &amp; Xuất gói)</text>
+  <text x="50" y="114" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">apps/desktop (FarmerPro.exe - Studio IDE)</text>
+  <text x="50" y="131" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Tauri v2 Desktop Host + Studio IPC Commands + Builder UI Host</text>
+  <text x="50" y="145.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Phụ thuộc cả Runtime Core lẫn fp-builder (Ký &amp; Xuất gói)</text>
 <rect x="486" y="94" width="410" height="64" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="486" y="94" width="5" height="64" rx="2" fill="#38BDF8"/>
-  <text x="500" y="114" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">apps/cli (fp-cli.exe - Diagnostic &amp; Build Runner)</text>
-  <text x="500" y="131" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">CLI kiểm thử tự động, export-poc, live ADB runner, keygen</text>
-  <text x="500" y="145.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Phụ thuộc Runtime Core + fp-builder</text>
+  <text x="500" y="114" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">apps/cli (fp-cli.exe - Diagnostic &amp; Build Runner)</text>
+  <text x="500" y="131" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">CLI kiểm thử tự động, export-poc, live ADB runner, keygen</text>
+  <text x="500" y="145.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Phụ thuộc Runtime Core + fp-builder</text>
 <rect x="926" y="94" width="438" height="64" rx="6" fill="#122624" stroke="#3BC38D" stroke-width="1.5"/>
   <rect x="926" y="94" width="5" height="64" rx="2" fill="#3BC38D"/>
-  <text x="940" y="114" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">apps/mini-runtime (fp-mini-runtime.exe -&gt; Auto_&lt;Game&gt;.exe)</text>
-  <text x="940" y="131" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Binary độc lập giao cho người dùng cuối của từng tựa game</text>
-  <text x="940" y="145.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">CẤM PHỤ THUỘC fp-builder (Đã kiểm chứng bằng cargo tree)</text>
+  <text x="940" y="114" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">apps/mini-runtime (fp-mini-runtime.exe -&gt; Auto_&lt;Game&gt;.exe)</text>
+  <text x="940" y="131" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Binary độc lập giao cho người dùng cuối của từng tựa game</text>
+  <text x="940" y="145.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">CẤM PHỤ THUỘC fp-builder (Đã kiểm chứng bằng cargo tree)</text>
 
   <rect x="18" y="192" width="1364" height="114" rx="8" fill="#161B24" stroke="#E7B15B" stroke-width="1.5" stroke-dasharray="4,2"/>
   <rect x="30" y="181" width="224" height="21" rx="4" fill="#16202F" stroke="#E7B15B" stroke-width="1.2"/>
-  <text x="38" y="196" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">LAYER 2: BUNDLE &amp; PACKAGING</text>
+  <text x="38" y="196" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">LAYER 2: BUNDLE &amp; PACKAGING</text>
 <rect x="36" y="214" width="420" height="82" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
   <rect x="36" y="214" width="5" height="82" rx="2" fill="#E7B15B"/>
-  <text x="50" y="234" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-builder (Producer Packager &amp; Signer)</text>
-  <text x="50" y="251" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• MiniToolPackager (Pipeline đóng gói 8 bước)</text>
-  <text x="50" y="265.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• ProducerKeyManager (Đọc khóa bí mật từ %LOCALAPPDATA%)</text>
-  <text x="50" y="280.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• pe_icon.rs: Win32 UpdateResourceW (PE Icon + RT_RCDATA #7777)</text>
+  <text x="50" y="234" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-builder (Producer Packager &amp; Signer)</text>
+  <text x="50" y="251" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• MiniToolPackager (Pipeline đóng gói 8 bước)</text>
+  <text x="50" y="265.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• ProducerKeyManager (Đọc khóa bí mật từ %LOCALAPPDATA%)</text>
+  <text x="50" y="280.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• pe_icon.rs: Win32 UpdateResourceW (PE Icon + RT_RCDATA #7777)</text>
 <rect x="486" y="214" width="410" height="82" rx="6" fill="#142424" stroke="#3BC38D" stroke-width="1.5"/>
   <rect x="486" y="214" width="5" height="82" rx="2" fill="#3BC38D"/>
-  <text x="500" y="234" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-bundle-verify (PE Root of Trust &amp; Verifier)</text>
-  <text x="500" y="251" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Đọc khóa công khai gốc từ PE RT_RCDATA #7777 của tiến trình</text>
-  <text x="500" y="265.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Xác thực chữ ký RFC 8032 Ed25519 (ed25519-dalek VerifyingKey)</text>
-  <text x="500" y="280.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Chống Path Traversal (validate_safe_relative_path)</text>
+  <text x="500" y="234" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-bundle-verify (PE Root of Trust &amp; Verifier)</text>
+  <text x="500" y="251" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Đọc khóa công khai gốc từ PE RT_RCDATA #7777 của tiến trình</text>
+  <text x="500" y="265.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Xác thực chữ ký RFC 8032 Ed25519 (ed25519-dalek VerifyingKey)</text>
+  <text x="500" y="280.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Chống Path Traversal (validate_safe_relative_path)</text>
 <rect x="926" y="214" width="438" height="82" rx="6" fill="#152232" stroke="#38BDF8" stroke-width="1.5"/>
   <rect x="926" y="214" width="5" height="82" rx="2" fill="#38BDF8"/>
-  <text x="940" y="234" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-bundle-contract (Zero-Crypto Data Schemas)</text>
-  <text x="940" y="251" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• GameProjectManifest, MiniToolUiSchema, ReleaseBundleManifest</text>
-  <text x="940" y="265.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Mô hình Module 5 Trạng thái (ModuleRuntimeStatus)</text>
-  <text x="940" y="280.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Kiểm toán phụ thuộc &amp; NTFS Read-Only Fallback (%LOCALAPPDATA%)</text>
+  <text x="940" y="234" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-bundle-contract (Zero-Crypto Data Schemas)</text>
+  <text x="940" y="251" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• GameProjectManifest, MiniToolUiSchema, ReleaseBundleManifest</text>
+  <text x="940" y="265.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Mô hình Module 5 Trạng thái (ModuleRuntimeStatus)</text>
+  <text x="940" y="280.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kiểm toán phụ thuộc &amp; NTFS Read-Only Fallback (%LOCALAPPDATA%)</text>
 
   <rect x="18" y="322" width="1364" height="180" rx="8" fill="#121824" stroke="#B291F7" stroke-width="1.5" stroke-dasharray="4,2"/>
   <rect x="30" y="311" width="683" height="21" rx="4" fill="#16202F" stroke="#B291F7" stroke-width="1.2"/>
-  <text x="38" y="326" fill="#B291F7" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">LAYER 3: SHARED AUTOMATION CORE CRATES (Dùng Chung Cho Mọi Tựa Game — Không Cần Sửa Code)</text>
+  <text x="38" y="326" fill="#B291F7" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">LAYER 3: SHARED AUTOMATION CORE CRATES (Dùng Chung Cho Mọi Tựa Game — Không Cần Sửa Code)</text>
 <rect x="36" y="346" width="250" height="66" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="36" y="346" width="5" height="66" rx="2" fill="#B291F7"/>
-  <text x="50" y="366" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-workflow-runtime</text>
-  <text x="50" y="383" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">State Machine Executor, Retry,</text>
-  <text x="50" y="397.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Checkpoints, WinRT OCR, Safe Tap</text>
+  <text x="50" y="366" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-workflow-runtime</text>
+  <text x="50" y="383" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">State Machine Executor, Retry,</text>
+  <text x="50" y="397.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Checkpoints, WinRT OCR, Safe Tap</text>
 <rect x="304" y="346" width="250" height="66" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="304" y="346" width="5" height="66" rx="2" fill="#B291F7"/>
-  <text x="318" y="366" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-workflow-schema</text>
-  <text x="318" y="383" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Versioned Graph JSON Validator,</text>
-  <text x="318" y="397.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Start/End &amp; Edge Integrity</text>
+  <text x="318" y="366" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-workflow-schema</text>
+  <text x="318" y="383" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Versioned Graph JSON Validator,</text>
+  <text x="318" y="397.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Start/End &amp; Edge Integrity</text>
 <rect x="572" y="346" width="250" height="66" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="572" y="346" width="5" height="66" rx="2" fill="#38BDF8"/>
-  <text x="586" y="366" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-scheduler</text>
-  <text x="586" y="383" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Multi-Device Exclusive Leases,</text>
-  <text x="586" y="397.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Priority Queue, Fencing Tokens</text>
+  <text x="586" y="366" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-scheduler</text>
+  <text x="586" y="383" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Multi-Device Exclusive Leases,</text>
+  <text x="586" y="397.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Priority Queue, Fencing Tokens</text>
 <rect x="840" y="346" width="250" height="66" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="840" y="346" width="5" height="66" rx="2" fill="#38BDF8"/>
-  <text x="854" y="366" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-device</text>
-  <text x="854" y="383" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">DeviceActor Mailbox, Geometry,</text>
-  <text x="854" y="397.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Rotation Transform, Fencing</text>
+  <text x="854" y="366" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-device</text>
+  <text x="854" y="383" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">DeviceActor Mailbox, Geometry,</text>
+  <text x="854" y="397.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Rotation Transform, Fencing</text>
 <rect x="1108" y="346" width="256" height="66" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="1108" y="346" width="5" height="66" rx="2" fill="#38BDF8"/>
-  <text x="1122" y="366" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-adb</text>
-  <text x="1122" y="383" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Tokio Command Runner (No Shell),</text>
-  <text x="1122" y="397.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">USB/TCP Discovery, Screencap</text>
+  <text x="1122" y="366" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-adb</text>
+  <text x="1122" y="383" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Tokio Command Runner (No Shell),</text>
+  <text x="1122" y="397.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">USB/TCP Discovery, Screencap</text>
 <rect x="36" y="424" width="250" height="66" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="36" y="424" width="5" height="66" rx="2" fill="#3BC38D"/>
-  <text x="50" y="444" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-vision</text>
-  <text x="50" y="461" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Multiscale SSD Template Match,</text>
-  <text x="50" y="475.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Bounding Box Normalization</text>
+  <text x="50" y="444" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-vision</text>
+  <text x="50" y="461" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Multiscale SSD Template Match,</text>
+  <text x="50" y="475.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Bounding Box Normalization</text>
 <rect x="304" y="424" width="250" height="66" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="304" y="424" width="5" height="66" rx="2" fill="#3BC38D"/>
-  <text x="318" y="444" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-actions</text>
-  <text x="318" y="461" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Safe Random Tap Policy (18%),</text>
-  <text x="318" y="475.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Exclusion Masks, Swipe Gen</text>
+  <text x="318" y="444" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-actions</text>
+  <text x="318" y="461" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Safe Random Tap Policy (18%),</text>
+  <text x="318" y="475.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Exclusion Masks, Swipe Gen</text>
 <rect x="572" y="424" width="250" height="66" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="572" y="424" width="5" height="66" rx="2" fill="#E7B15B"/>
-  <text x="586" y="444" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-storage</text>
-  <text x="586" y="461" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">SQLite WAL Mode, Migrations,</text>
-  <text x="586" y="475.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Jobs, StepEvents, Checkpoints</text>
+  <text x="586" y="444" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-storage</text>
+  <text x="586" y="461" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">SQLite WAL Mode, Migrations,</text>
+  <text x="586" y="475.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Jobs, StepEvents, Checkpoints</text>
 <rect x="840" y="424" width="250" height="66" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="840" y="424" width="5" height="66" rx="2" fill="#F27883"/>
-  <text x="854" y="444" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-security</text>
-  <text x="854" y="461" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">CRED_MGR:// Vault Abstraction,</text>
-  <text x="854" y="475.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Secret Redaction, Guards</text>
+  <text x="854" y="444" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-security</text>
+  <text x="854" y="461" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">CRED_MGR:// Vault Abstraction,</text>
+  <text x="854" y="475.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Secret Redaction, Guards</text>
 <rect x="1108" y="424" width="256" height="66" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="1108" y="424" width="5" height="66" rx="2" fill="#8FA2BC"/>
-  <text x="1122" y="444" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">crates/fp-domain &amp; fp-testkit</text>
-  <text x="1122" y="461" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Core IDs, Rect/Point, Traits,</text>
-  <text x="1122" y="475.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Deterministic Fake Driver</text>
+  <text x="1122" y="444" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">crates/fp-domain &amp; fp-testkit</text>
+  <text x="1122" y="461" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Core IDs, Rect/Point, Traits,</text>
+  <text x="1122" y="475.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Deterministic Fake Driver</text>
 <line x1="340" y1="158" x2="340" y2="214" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
-  <rect x="294.0" y="176.0" width="92.0" height="17" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
-  <text x="340.0" y="188.0" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">Uses Builder</text>
+  <rect x="299.2" y="178.5" width="81.6" height="15.0" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
+  <text x="340.0" y="189.2" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">Uses Builder</text>
 <line x1="560" y1="158" x2="420" y2="214" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
-  <rect x="453.8" y="176.0" width="72.5" height="17" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
-  <text x="490.0" y="188.0" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">CLI Build</text>
+  <rect x="457.9" y="178.5" width="64.2" height="15.0" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
+  <text x="490.0" y="189.2" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">CLI Build</text>
 <line x1="1020" y1="158" x2="760" y2="214" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
-  <rect x="847.2" y="176.0" width="85.5" height="17" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
-  <text x="890.0" y="188.0" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">Verify Only</text>
+  <rect x="852.1" y="178.5" width="75.8" height="15.0" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
+  <text x="890.0" y="189.2" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">Verify Only</text>
 <line x1="1210" y1="158" x2="1210" y2="214" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
-  <rect x="1167.2" y="176.0" width="85.5" height="17" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
-  <text x="1210.0" y="188.0" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">UI Contract</text>
+  <rect x="1172.1" y="178.5" width="75.8" height="15.0" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
+  <text x="1210.0" y="189.2" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">UI Contract</text>
 <line x1="926" y1="145" x2="456" y2="225" stroke="#F27883" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arrow-red)"/>
-  <rect x="628.8" y="175.0" width="124.5" height="17" rx="3" fill="#0D131D" stroke="#F27883" stroke-width="1"/>
-  <text x="691.0" y="187.0" text-anchor="middle" fill="#F27883" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">FORBIDDEN (0 Dep)</text>
+  <rect x="635.7" y="177.5" width="110.6" height="15.0" rx="3" fill="#0D131D" stroke="#F27883" stroke-width="1"/>
+  <text x="691.0" y="188.2" text-anchor="middle" fill="#F27883" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">FORBIDDEN (0 Dep)</text>
 <line x1="456" y1="255" x2="486" y2="255" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
 <line x1="896" y1="255" x2="926" y2="255" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
 </svg>

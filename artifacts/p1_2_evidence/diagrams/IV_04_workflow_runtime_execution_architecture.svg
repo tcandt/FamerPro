@@ -11,7 +11,7 @@
       .box-sub { font-size: 11px; font-weight: 400; fill: #A9B8CC; }
       .box-code { font-family: Consolas, monospace; font-size: 10.5px; fill: #38BDF8; }
       .badge { font-size: 10px; font-weight: 700; }
-      .edge-label { font-size: 10.5px; font-weight: 600; fill: #38BDF8; }
+      .edge-label { font-size: 10px; font-weight: 600; fill: #38BDF8; }
     </style>
     <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1 L 10 5 L 0 9 z" fill="#38BDF8"/>
@@ -37,91 +37,93 @@
   
   <rect x="18" y="72" width="1364" height="240" rx="8" fill="#121825" stroke="#B291F7" stroke-width="1.5" stroke-dasharray="4,2"/>
   <rect x="30" y="61" width="468" height="21" rx="4" fill="#16202F" stroke="#B291F7" stroke-width="1.2"/>
-  <text x="38" y="76" fill="#B291F7" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">STATE MACHINE EXECUTOR PIPELINE (crates/fp-workflow-runtime)</text>
-<rect x="34" y="112" width="175" height="135" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
+  <text x="38" y="76" fill="#B291F7" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">STATE MACHINE EXECUTOR PIPELINE (crates/fp-workflow-runtime)</text>
+<rect x="34" y="112" width="170" height="135" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
   <rect x="34" y="112" width="5" height="135" rx="2" fill="#38BDF8"/>
-  <text x="48" y="132" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">1. flow.start</text>
-  <text x="48" y="149" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Khởi tạo JobContext</text>
-  <text x="48" y="163.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Kiểm tra Device Lease</text>
-  <text x="48" y="178.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Ghi StepEvent:</text>
-  <text x="48" y="192.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">command_sent</text>
-  <text x="48" y="207.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">device_ack</text>
-<rect x="242" y="112" width="195" height="135" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
-  <rect x="242" y="112" width="5" height="135" rx="2" fill="#B291F7"/>
-  <text x="256" y="132" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">2. vision.capture</text>
-  <text x="256" y="149" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Gọi AdbRunner:</text>
-  <text x="256" y="163.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">exec-out screencap -p</text>
-  <text x="256" y="178.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Giải mã PNG (1280x720)</text>
-  <text x="256" y="192.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Tính SHA-256 Frame</text>
-  <text x="256" y="207.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Zero Video Stream</text>
-<rect x="470" y="112" width="215" height="135" rx="6" fill="#1B1E32" stroke="#B291F7" stroke-width="1.5"/>
-  <rect x="470" y="112" width="5" height="135" rx="2" fill="#B291F7"/>
-  <text x="484" y="132" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">3. vision.find_image</text>
-  <text x="484" y="149" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Multiscale SSD Matcher</text>
-  <text x="484" y="163.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">So khớp mẫu PNG</text>
-  <text x="484" y="178.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Kiểm tra score &gt;= minConf</text>
-  <text x="484" y="192.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Trả về BoundingBox:</text>
-  <text x="484" y="207.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">[x:74, y:135, 88x88]</text>
-<rect x="718" y="112" width="215" height="135" rx="6" fill="#142624" stroke="#3BC38D" stroke-width="1.5"/>
-  <rect x="718" y="112" width="5" height="135" rx="2" fill="#3BC38D"/>
-  <text x="732" y="132" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">4. action.random_safe_tap</text>
-  <text x="732" y="149" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Thu hẹp biên an toàn 18%</text>
-  <text x="732" y="163.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Trừ vùng Exclusion Mask</text>
-  <text x="732" y="178.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Lấy mẫu tọa độ ngẫu nhiên</text>
-  <text x="732" y="192.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Gửi lệnh ADB:</text>
-  <text x="732" y="207.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">input tap 111 170</text>
-<rect x="966" y="112" width="190" height="135" rx="6" fill="#152334" stroke="#38BDF8" stroke-width="1.5"/>
-  <rect x="966" y="112" width="5" height="135" rx="2" fill="#38BDF8"/>
-  <text x="980" y="132" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">5. vision.ocr</text>
-  <text x="980" y="149" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Chụp khung hình mới</text>
-  <text x="980" y="163.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Gọi WinRT OcrEngine</text>
-  <text x="980" y="178.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Trích xuất văn bản</text>
-  <text x="980" y="192.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Cập nhật biến Runtime:</text>
-  <text x="980" y="207.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">ocr_text / char_gold</text>
-<rect x="1188" y="112" width="178" height="135" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
-  <rect x="1188" y="112" width="5" height="135" rx="2" fill="#E7B15B"/>
-  <text x="1202" y="132" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">6. state.checkpoint</text>
-  <text x="1202" y="149" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Lưu toàn bộ biến &amp;</text>
-  <text x="1202" y="163.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">node_id vào SQLite WAL</text>
-  <text x="1202" y="178.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">Cho phép Resume khi</text>
-  <text x="1202" y="192.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">mất kết nối đột ngột</text>
-  <text x="1202" y="207.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">checkpoint_saved</text>
-<line x1="209" y1="178" x2="242" y2="178" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
-<line x1="437" y1="178" x2="470" y2="178" stroke="#B291F7" stroke-width="2" marker-end="url(#arrow-purple)"/>
-  <rect x="436.8" y="168.0" width="33.5" height="17" rx="3" fill="#0D131D" stroke="#B291F7" stroke-width="1"/>
-  <text x="453.5" y="180.0" text-anchor="middle" fill="#B291F7" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">PNG</text>
-<line x1="685" y1="178" x2="718" y2="178" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
-  <rect x="665.2" y="168.0" width="72.5" height="17" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
-  <text x="701.5" y="180.0" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">score=1.0</text>
-<line x1="933" y1="178" x2="966" y2="178" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
-  <rect x="913.2" y="168.0" width="72.5" height="17" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
-  <text x="949.5" y="180.0" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">wait 1.2s</text>
-<line x1="1156" y1="178" x2="1188" y2="178" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
-  <rect x="1152.0" y="168.0" width="40.0" height="17" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
-  <text x="1172.0" y="180.0" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.5" font-weight="700">vars</text>
+  <text x="48" y="132" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">1. flow.start</text>
+  <text x="48" y="149" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Khởi tạo JobContext</text>
+  <text x="48" y="163.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Kiểm tra Device Lease</text>
+  <text x="48" y="178.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Ghi StepEvent:</text>
+  <text x="48" y="192.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">command_sent</text>
+  <text x="48" y="207.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">device_ack</text>
+<rect x="248" y="112" width="185" height="135" rx="6" fill="#16202F" stroke="#2A3647" stroke-width="1.5"/>
+  <rect x="248" y="112" width="5" height="135" rx="2" fill="#B291F7"/>
+  <text x="262" y="132" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">2. vision.capture</text>
+  <text x="262" y="149" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Gọi AdbRunner:</text>
+  <text x="262" y="163.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">exec-out screencap -p</text>
+  <text x="262" y="178.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Giải mã PNG (1280x720)</text>
+  <text x="262" y="192.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Tính SHA-256 Frame</text>
+  <text x="262" y="207.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Zero Video Stream</text>
+<rect x="478" y="112" width="198" height="135" rx="6" fill="#1B1E32" stroke="#B291F7" stroke-width="1.5"/>
+  <rect x="478" y="112" width="5" height="135" rx="2" fill="#B291F7"/>
+  <text x="492" y="132" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">3. vision.find_image</text>
+  <text x="492" y="149" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Multiscale SSD Matcher</text>
+  <text x="492" y="163.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">So khớp mẫu PNG</text>
+  <text x="492" y="178.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Kiểm tra score &gt;= minConf</text>
+  <text x="492" y="192.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Trả về BoundingBox:</text>
+  <text x="492" y="207.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">[x:74, y:135, 88x88]</text>
+<rect x="726" y="112" width="198" height="135" rx="6" fill="#142624" stroke="#3BC38D" stroke-width="1.5"/>
+  <rect x="726" y="112" width="5" height="135" rx="2" fill="#3BC38D"/>
+  <text x="740" y="132" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">4. action.random_safe_tap</text>
+  <text x="740" y="149" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Thu hẹp biên an toàn 18%</text>
+  <text x="740" y="163.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Trừ vùng Exclusion Mask</text>
+  <text x="740" y="178.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Lấy mẫu tọa độ ngẫu nhiên</text>
+  <text x="740" y="192.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Gửi lệnh ADB:</text>
+  <text x="740" y="207.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">input tap 111 170</text>
+<rect x="974" y="112" width="178" height="135" rx="6" fill="#152334" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="974" y="112" width="5" height="135" rx="2" fill="#38BDF8"/>
+  <text x="988" y="132" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">5. vision.ocr</text>
+  <text x="988" y="149" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Chụp khung hình mới</text>
+  <text x="988" y="163.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Gọi WinRT OcrEngine</text>
+  <text x="988" y="178.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Trích xuất văn bản</text>
+  <text x="988" y="192.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Cập nhật biến Runtime:</text>
+  <text x="988" y="207.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">ocr_text / char_gold</text>
+<rect x="1196" y="112" width="170" height="135" rx="6" fill="#22211C" stroke="#E7B15B" stroke-width="1.5"/>
+  <rect x="1196" y="112" width="5" height="135" rx="2" fill="#E7B15B"/>
+  <text x="1210" y="132" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">6. state.checkpoint</text>
+  <text x="1210" y="149" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Lưu toàn bộ biến &amp;</text>
+  <text x="1210" y="163.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">node_id vào SQLite WAL</text>
+  <text x="1210" y="178.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">Cho phép Resume khi</text>
+  <text x="1210" y="192.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">mất kết nối đột ngột</text>
+  <text x="1210" y="207.0" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">checkpoint_saved</text>
+<line x1="204" y1="178" x2="248" y2="178" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="208.4" y="170.5" width="35.2" height="15.0" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
+  <text x="226.0" y="181.2" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">init</text>
+<line x1="433" y1="178" x2="478" y2="178" stroke="#B291F7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+  <rect x="440.8" y="170.5" width="29.4" height="15.0" rx="3" fill="#0D131D" stroke="#B291F7" stroke-width="1"/>
+  <text x="455.5" y="181.2" text-anchor="middle" fill="#B291F7" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">PNG</text>
+<line x1="676" y1="178" x2="726" y2="178" stroke="#3BC38D" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <rect x="683.4" y="170.5" width="35.2" height="15.0" rx="3" fill="#0D131D" stroke="#3BC38D" stroke-width="1"/>
+  <text x="701.0" y="181.2" text-anchor="middle" fill="#3BC38D" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">1.00</text>
+<line x1="924" y1="178" x2="974" y2="178" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <rect x="931.4" y="170.5" width="35.2" height="15.0" rx="3" fill="#0D131D" stroke="#38BDF8" stroke-width="1"/>
+  <text x="949.0" y="181.2" text-anchor="middle" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">1.2s</text>
+<line x1="1152" y1="178" x2="1196" y2="178" stroke="#E7B15B" stroke-width="2" marker-end="url(#arrow-amber)"/>
+  <rect x="1156.4" y="170.5" width="35.2" height="15.0" rx="3" fill="#0D131D" stroke="#E7B15B" stroke-width="1"/>
+  <text x="1174.0" y="181.2" text-anchor="middle" fill="#E7B15B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.5" font-weight="700">vars</text>
 
   <rect x="18" y="330" width="1364" height="172" rx="8" fill="#101722" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="4,2"/>
   <rect x="30" y="319" width="394" height="21" rx="4" fill="#16202F" stroke="#38BDF8" stroke-width="1.2"/>
-  <text x="38" y="334" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">RETRY, BACKOFF, FENCING &amp; AUDIT LOGGING GUARANTEES</text>
+  <text x="38" y="334" fill="#38BDF8" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">RETRY, BACKOFF, FENCING &amp; AUDIT LOGGING GUARANTEES</text>
 <rect x="34" y="358" width="425" height="126" rx="6" fill="#1F201D" stroke="#E7B15B" stroke-width="1.5"/>
   <rect x="34" y="358" width="5" height="126" rx="2" fill="#E7B15B"/>
-  <text x="48" y="378" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Cơ chế Thử lại &amp; Chống kẹt (Retry &amp; Backoff Engine)</text>
-  <text x="48" y="395" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Nếu vision.find_image có score &lt; minConfidence (VD: &lt; 0.90):</text>
-  <text x="48" y="409.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Kiểm tra attempt_no &lt;= max_retries (mặc định 3 lần, backoff 800ms)</text>
-  <text x="48" y="424.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Tự động quay lại chụp khung hình mới trước khi đánh dấu step_failed</text>
-  <text x="48" y="438.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Đã kiểm chứng: test_executor_retry_logic (PASS)</text>
+  <text x="48" y="378" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Cơ chế Thử lại &amp; Chống kẹt (Retry &amp; Backoff Engine)</text>
+  <text x="48" y="395" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Nếu vision.find_image có score &lt; minConfidence (VD: &lt; 0.90):</text>
+  <text x="48" y="409.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Kiểm tra attempt_no &lt;= max_retries (mặc định 3 lần, backoff 800ms)</text>
+  <text x="48" y="424.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Tự động quay lại chụp khung hình mới trước khi đánh dấu step_failed</text>
+  <text x="48" y="438.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Đã kiểm chứng: test_executor_retry_logic (PASS)</text>
 <rect x="482" y="358" width="435" height="126" rx="6" fill="#142423" stroke="#3BC38D" stroke-width="1.5"/>
   <rect x="482" y="358" width="5" height="126" rx="2" fill="#3BC38D"/>
-  <text x="496" y="378" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Chính sách Chạm Ngẫu Nhiên An Toàn (Safe Random Tap Policy)</text>
-  <text x="496" y="395" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Tuyệt đối KHÔNG hardcode tọa độ cố định (AGENTS.md Rule #5)</text>
-  <text x="496" y="409.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Hộp khớp [74, 135, 88, 88] + marginRatio 0.18 -&gt; Vùng an toàn [90..146, 151..207]</text>
-  <text x="496" y="424.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Điểm chạm thực tế trên LDPlayer: (111, 170) nằm gọn trong tâm an toàn</text>
-  <text x="496" y="438.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Đã kiểm chứng: test_safe_margin_shrink &amp; Live ADB (PASS)</text>
+  <text x="496" y="378" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Chính sách Chạm Ngẫu Nhiên An Toàn (Safe Random Tap Policy)</text>
+  <text x="496" y="395" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Tuyệt đối KHÔNG hardcode tọa độ cố định (AGENTS.md Rule #5)</text>
+  <text x="496" y="409.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="9.57">• Hộp khớp [74, 135, 88, 88] + marginRatio 0.18 -&gt; Vùng an toàn [90..146, 151..207]</text>
+  <text x="496" y="424.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Điểm chạm thực tế trên LDPlayer: (111, 170) nằm gọn trong tâm an toàn</text>
+  <text x="496" y="438.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Đã kiểm chứng: test_safe_margin_shrink &amp; Live ADB (PASS)</text>
 <rect x="940" y="358" width="426" height="126" rx="6" fill="#152231" stroke="#38BDF8" stroke-width="1.5"/>
   <rect x="940" y="358" width="5" height="126" rx="2" fill="#38BDF8"/>
-  <text x="954" y="378" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.5" font-weight="700">Nhật ký Sự kiện Bước Toàn diện (SQLite WAL StepEvents)</text>
-  <text x="954" y="395" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Mỗi Node phát sinh chuỗi sự kiện: command_sent -&gt; device_ack -&gt;</text>
-  <text x="954" y="409.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">  verification_passed / step_failed -&gt; checkpoint_saved</text>
-  <text x="954" y="424.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="11">• Phiên chạy thật trên emulator-5554 ghi nhận đủ 19/19 sự kiện chuẩn xác</text>
-  <text x="954" y="438.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.5">Bằng chứng: 09_live_adb_workflow_execution.json</text>
+  <text x="954" y="378" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="12.2" font-weight="700">Nhật ký Sự kiện Bước Toàn diện (SQLite WAL StepEvents)</text>
+  <text x="954" y="395" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">• Mỗi Node phát sinh chuỗi sự kiện: command_sent -&gt; device_ack -&gt;</text>
+  <text x="954" y="409.5" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.8">  verification_passed / step_failed -&gt; checkpoint_saved</text>
+  <text x="954" y="424.0" fill="#CAD5E2" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="10.79">• Phiên chạy thật trên emulator-5554 ghi nhận đủ 19/19 sự kiện chuẩn xác</text>
+  <text x="954" y="438.5" fill="#38BDF8" font-family="Consolas, monospace" font-size="10.2">Bằng chứng: 09_live_adb_workflow_execution.json</text>
 </svg>

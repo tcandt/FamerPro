@@ -19,7 +19,7 @@ def img_b64(fname):
     with open(path, "rb") as f:
         return "data:image/png;base64," + base64.b64encode(f.read()).decode("ascii")
 
-TOTAL_PAGES = 33
+TOTAL_PAGES = 34
 
 def page_wrap(page_no, section_badge, page_title, inner_html):
     return f"""
@@ -97,7 +97,7 @@ pages.append(page_wrap(1, "HỒ SƠ NGHIỆM THU P1.2", "Trang Bìa & Thông Tin
         <tr><td><b>Bản sao bằng chứng</b></td><td><code>E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\FARMERPRO_P1_2_ARCHITECTURE_UX_ACCEPTANCE_REPORT.pdf</code></td></tr>
         <tr><td><b>Blueprint đối chiếu</b></td><td><code>E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\FARMERPRO_P1_2_STUDIO_BLUEPRINT.md</code></td></tr>
         <tr><td><b>Phiên bản &amp; Ngày lập</b></td><td><b>Phiên bản v1.2.0-P1.2-GATE</b> · Ngày lập: <b>2026-11-21</b></td></tr>
-        <tr><td><b>Quy chuẩn trình bày</b></td><td>A4 Ngang (297mm × 210mm) · 33 Trang · 100% Ảnh &amp; Vector nhúng trực tiếp trong PDF</td></tr>
+        <tr><td><b>Quy chuẩn trình bày</b></td><td>A4 Ngang (297mm × 210mm) · 34 Trang · 100% Ảnh &amp; Vector nhúng trực tiếp trong PDF</td></tr>
         <tr><td><b>Trạng thái Phê duyệt</b></td><td><span class="st-badge st-proposed">CHỜ NGƯỜI PHÊ DUYỆT XEM XÉT &amp; XÁC NHẬN (CHƯA CHUYỂN SANG P2–P6)</span></td></tr>
       </table>
     </div>
@@ -137,64 +137,65 @@ pages.append(page_wrap(1, "HỒ SƠ NGHIỆM THU P1.2", "Trang Bìa & Thông Tin
 # ==============================================================================
 # PAGE 02: TABLE OF CONTENTS & LIST OF FIGURES
 # ==============================================================================
-pages.append(page_wrap(2, "MỤC LỤC & DANH MỤC HÌNH ẢNH", "Mục Lục Hồ Sơ Nghiệm Thu & Danh Mục 25 Hình Ảnh + 14 Sơ Đồ Kỹ Thuật", """
+pages.append(page_wrap(2, "MỤC LỤC & DANH MỤC HÌNH ẢNH", "Mục Lục Hồ Sơ Nghiệm Thu & Danh Mục 25 Hình Ảnh + 15 Sơ Đồ Kỹ Thuật", """
   <div class="grid-2">
     <div class="card">
-      <div class="card-hdr">MỤC LỤC CHI TIẾT BÁO CÁO NGHIỆM THU (33 TRANG A4 NGANG)</div>
+      <div class="card-hdr">MỤC LỤC CHI TIẾT BÁO CÁO NGHIỆM THU (34 TRANG A4 NGANG)</div>
       <table class="tbl-compact">
         <tr><th style="width:15%;">Phần / Mục</th><th style="width:73%;">Nội dung Chi tiết</th><th style="width:12%;">Trang</th></tr>
         <tr><td><b>Mở đầu</b></td><td><a href="#page-01">Trang bìa, Thông tin định danh hồ sơ &amp; Tóm tắt kết quả kiểm chứng P1.2</a></td><td><a href="#page-01">01–02</a></td></tr>
-        <tr><td><b>PHẦN 1</b></td><td><a href="#page-03"><b>Tổng quan Dự án:</b> Định vị Studio IDE, Mini Runtime, giới hạn UI cũ, lịch sử P1→P1.2, ảnh Studio hiện tại &amp; 2 Mini Tools</a></td><td><a href="#page-03">03–05</a></td></tr>
-        <tr><td><b>PHẦN 2</b></td><td><a href="#page-06"><b>So sánh Kiến trúc Cũ và Mới:</b> Sơ đồ Before vs Proposed &amp; Bảng ánh xạ 10 màn hình cũ sang 6 khu vực mới (0% mất tính năng)</a></td><td><a href="#page-06">06–07</a></td></tr>
-        <tr><td><b>PHẦN 3</b></td><td><a href="#page-08"><b>Thiết kế Giao diện FarmerPro Studio Mới (Ảnh 01 → Ảnh 08):</b><br/>
-          • Ảnh 01: Dashboard mới (Trang 08) · Ảnh 02: Game Projects (Trang 09)<br/>
-          • Ảnh 03: Workflow Studio (Trang 10) · Ảnh 04: Tasks &amp; Modules (Trang 11)<br/>
-          • Ảnh 05: Device Lab (Trang 12) · Ảnh 06: Test &amp; Debug (Trang 13)<br/>
-          • Ảnh 07: Mini Tool Builder (Trang 14) · Ảnh 08: Release Management (Trang 15)</a></td><td><a href="#page-08">08–15</a></td></tr>
-        <tr><td><b>PHẦN 4</b></td><td><a href="#page-16"><b>10 Sơ đồ Kiến trúc Kỹ thuật Chất lượng cao (Sơ đồ IV.1 → IV.10):</b><br/>
-          • IV.1 Cargo Dependency Graph &amp; IV.2 Studio Architecture (Trang 16)<br/>
-          • IV.3 GameProject Data Model &amp; IV.4 Workflow Runtime Execution (Trang 17)<br/>
-          • IV.5 ADB/Emulator Adapter &amp; IV.6 Task Scheduler Multi-Device (Trang 18)<br/>
-          • IV.7 Mini Tool UI Schema Renderer &amp; IV.8 8-Step Build Pipeline (Trang 19)<br/>
-          • IV.9 Security Ed25519 Root of Trust &amp; IV.10 Multi-Game Lifecycle (Trang 20)</a></td><td><a href="#page-16">16–20</a></td></tr>
-        <tr><td><b>PHẦN 5</b></td><td><a href="#page-21"><b>Bằng chứng Bảo mật &amp; Kiểm thử:</b> 34/34 Unit Tests, đối chiếu 27→32→31→34, cargo tree, Ed25519 PE #7777, 5 Tamper Cases, Live ADB, SQLite Backup, NTFS ACL &amp; Ma trận 14 Test Cases (TC-01..TC-14)</a></td><td><a href="#page-21">21–25</a></td></tr>
-        <tr><td><b>PHẦN 6</b></td><td><a href="#page-26"><b>Minh họa Quy trình Sản xuất Mini Tool 9 Bước:</b> Đối chiếu trực quan trên 2 Game Projects (<code>jx2-mobile</code> &amp; <code>kingdom-slg</code>) &amp; chạy độc lập</a></td><td><a href="#page-26">26–27</a></td></tr>
-        <tr><td><b>PHẦN 7</b></td><td><a href="#page-28"><b>Đánh giá UI/UX &amp; Responsive:</b> Hình minh họa 3 độ phân giải (<code>1280×720</code>, <code>1600×900</code>, <code>1920×1080</code>) &amp; Bảng đánh giá 9 tiêu chí</a></td><td><a href="#page-28">28–29</a></td></tr>
-        <tr><td><b>PHẦN 8</b></td><td><a href="#page-30"><b>Lộ trình P2–P6:</b> Sơ đồ Roadmap &amp; Đặc tả 7 thuộc tính bắt buộc cho từng giai đoạn P2, P3, P4, P5, P6</a></td><td><a href="#page-30">30–31</a></td></tr>
-        <tr><td><b>PHẦN 9</b></td><td><a href="#page-32"><b>Kết luận &amp; Hồ sơ Phê duyệt:</b> Tổng hợp hiện trạng (Mục 1–5), Điều kiện trước P2 (Mục 6) &amp; 7 Quyết định Kiến trúc chờ duyệt (Mục 7)</a></td><td><a href="#page-32">32–33</a></td></tr>
+        <tr><td><b>PHẦN 1</b></td><td><a href="#page-03"><b>Tổng quan Dự án:</b> Định vị Studio IDE, Mini Runtime, quan hệ 4 phân hệ (Sơ đồ 1.1 &amp; 1.2), giới hạn UI cũ, ảnh Studio &amp; 2 Mini Tools</a></td><td><a href="#page-03">03–06</a></td></tr>
+        <tr><td><b>PHẦN 2</b></td><td><a href="#page-07"><b>So sánh Kiến trúc Cũ và Mới:</b> Sơ đồ Before vs Proposed &amp; Bảng ánh xạ 10 màn hình cũ sang 6 khu vực mới (0% mất tính năng)</a></td><td><a href="#page-07">07–08</a></td></tr>
+        <tr><td><b>PHẦN 3</b></td><td><a href="#page-09"><b>Thiết kế Giao diện FarmerPro Studio Mới (Ảnh 01 → Ảnh 08):</b><br/>
+          • Ảnh 01: Dashboard mới (Trang 09) · Ảnh 02: Game Projects (Trang 10)<br/>
+          • Ảnh 03: Workflow Studio (Trang 11) · Ảnh 04: Tasks &amp; Modules (Trang 12)<br/>
+          • Ảnh 05: Device Lab (Trang 13) · Ảnh 06: Test &amp; Debug (Trang 14)<br/>
+          • Ảnh 07: Mini Tool Builder (Trang 15) · Ảnh 08: Release Management (Trang 16)</a></td><td><a href="#page-09">09–16</a></td></tr>
+        <tr><td><b>PHẦN 4</b></td><td><a href="#page-17"><b>10 Sơ đồ Kiến trúc Kỹ thuật Chất lượng cao (Sơ đồ IV.1 → IV.10):</b><br/>
+          • IV.1 Cargo Dependency Graph &amp; IV.2 Studio Architecture (Trang 17)<br/>
+          • IV.3 GameProject Data Model &amp; IV.4 Workflow Runtime Execution (Trang 18)<br/>
+          • IV.5 ADB/Emulator Adapter &amp; IV.6 Task Scheduler Multi-Device (Trang 19)<br/>
+          • IV.7 Mini Tool UI Schema Renderer &amp; IV.8 8-Step Build Pipeline (Trang 20)<br/>
+          • IV.9 Security Ed25519 Root of Trust &amp; IV.10 Multi-Game Lifecycle (Trang 21)</a></td><td><a href="#page-17">17–21</a></td></tr>
+        <tr><td><b>PHẦN 5</b></td><td><a href="#page-22"><b>Bằng chứng Bảo mật &amp; Kiểm thử:</b> 34/34 Unit Tests, đối chiếu 27→32→31→34, cargo tree, Ed25519 PE #7777, 5 Tamper Cases, Live ADB, SQLite Backup, NTFS ACL &amp; Ma trận 14 Test Cases (TC-01..TC-14)</a></td><td><a href="#page-22">22–26</a></td></tr>
+        <tr><td><b>PHẦN 6</b></td><td><a href="#page-27"><b>Minh họa Quy trình Sản xuất Mini Tool 9 Bước:</b> Đối chiếu trực quan trên 2 Game Projects (<code>jx2-mobile</code> &amp; <code>kingdom-slg</code>) &amp; chạy độc lập</a></td><td><a href="#page-27">27–28</a></td></tr>
+        <tr><td><b>PHẦN 7</b></td><td><a href="#page-29"><b>Đánh giá UI/UX &amp; Responsive:</b> Hình minh họa 3 độ phân giải (<code>1280×720</code>, <code>1600×900</code>, <code>1920×1080</code>) &amp; Bảng đánh giá 9 tiêu chí</a></td><td><a href="#page-29">29–30</a></td></tr>
+        <tr><td><b>PHẦN 8</b></td><td><a href="#page-31"><b>Lộ trình P2–P6:</b> Sơ đồ Roadmap &amp; Đặc tả 7 thuộc tính bắt buộc cho từng giai đoạn P2, P3, P4, P5, P6</a></td><td><a href="#page-31">31–32</a></td></tr>
+        <tr><td><b>PHẦN 9</b></td><td><a href="#page-33"><b>Kết luận &amp; Hồ sơ Phê duyệt:</b> Tổng hợp hiện trạng (Mục 1–5), Điều kiện trước P2 (Mục 6) &amp; 7 Quyết định Kiến trúc chờ duyệt (Mục 7)</a></td><td><a href="#page-33">33–34</a></td></tr>
       </table>
     </div>
     <div class="card">
       <div class="card-hdr">DANH MỤC HÌNH ẢNH GIAO DIỆN &amp; SƠ ĐỒ KỸ THUẬT NHÚNG TRONG PDF</div>
       <table class="tbl-compact tbl-dense">
         <tr><th style="width:16%;">Mã Hình</th><th style="width:52%;">Tên Hình Ảnh / Sơ Đồ Minh Họa</th><th style="width:22%;">Trạng Thái</th><th style="width:10%;">Trang</th></tr>
-        <tr><td><b>Sơ đồ 1.1</b></td><td>Kiến trúc tổng quan FarmerPro &amp; Quan hệ Studio–Engine–Builder–Runtime</td><td><span class="st-badge st-diagram">DIAGRAM</span></td><td>03</td></tr>
-        <tr><td><b>Hình 1.2–1.7</b></td><td>Giao diện FarmerPro Studio v0.1.0 hiện tại (6 màn hình tiêu biểu trong 10 tab cũ)</td><td><span class="st-badge st-actual">ACTUAL</span></td><td>04</td></tr>
-        <tr><td><b>Hình 1.8–1.9</b></td><td>Hai Mini Tools độc lập đang chạy: <code>Auto_JX2_Mobile.exe</code> &amp; <code>Auto_Kingdom_SLG.exe</code></td><td><span class="st-badge st-actual">ACTUAL</span></td><td>05</td></tr>
-        <tr><td><b>Sơ đồ 2.1</b></td><td>So sánh trực quan Kiến trúc Cũ (10 Tab) vs Kiến trúc Đề xuất (6 Khu vực + Hệ thống)</td><td><span class="st-badge st-diagram">DIAGRAM</span></td><td>06</td></tr>
-        <tr><td><b>Ảnh 01</b></td><td>Thiết kế Giao diện Dashboard mới (<code>1. Game Projects / Workspace Hub</code>)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>08</td></tr>
-        <tr><td><b>Ảnh 02</b></td><td>Thiết kế Giao diện <code>Game Projects</code> (Quản lý Đa game, Assets, Version, Modules)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>09</td></tr>
-        <tr><td><b>Ảnh 03</b></td><td>Thiết kế Giao diện <code>Workflow Studio</code> (Palette, React Flow, Inspector, Dock)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>10</td></tr>
-        <tr><td><b>Ảnh 04</b></td><td>Thiết kế Giao diện <code>Tasks &amp; Modules</code> (Task Library, Tham số, Vault, Proxy)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>11</td></tr>
-        <tr><td><b>Ảnh 05</b></td><td>Thiết kế Giao diện <code>Device Lab</code> (ADB, LDPlayer, Live Screenshot &amp; ROI Cropper)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>12</td></tr>
-        <tr><td><b>Ảnh 06</b></td><td>Thiết kế Giao diện <code>Test &amp; Debug</code> (Timeline, Node Trace, Ảnh Trước/Sau)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>13</td></tr>
-        <tr><td><b>Ảnh 07</b></td><td>Thiết kế Giao diện <code>Mini Tool Builder</code> (Layout Editor, Live Preview, Build EXE)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>14</td></tr>
-        <tr><td><b>Ảnh 08</b></td><td>Thiết kế Giao diện <code>Release Management</code> (Releases, SHA-256, Ed25519, PE #7777)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>15</td></tr>
-        <tr><td><b>Sơ đồ IV.1–10</b></td><td>Bộ 10 Sơ đồ Kiến trúc Kỹ thuật bắt buộc (Mục IV.1 đến IV.10)</td><td><span class="st-badge st-diagram">DIAGRAM</span></td><td>16–20</td></tr>
-        <tr><td><b>Hình 5.1–5.3</b></td><td>Ảnh chụp màn hình LDPlayer thật Trước/Sau thao tác ADB &amp; Mẫu cắt <code>System Apps</code></td><td><span class="st-badge st-actual">ACTUAL</span></td><td>23</td></tr>
-        <tr><td><b>Sơ đồ VI.1</b></td><td>Quy trình 9 bước sản xuất Mini Tool đa dự án game trên FarmerPro Studio</td><td><span class="st-badge st-diagram">DIAGRAM</span></td><td>26</td></tr>
-        <tr><td><b>Hình 6.1–6.2</b></td><td>Chạy độc lập 2 Mini Tools sau khi đóng hoàn toàn FarmerPro Studio (Bước 9)</td><td><span class="st-badge st-actual">ACTUAL</span></td><td>27</td></tr>
-        <tr><td><b>Hình 7.1–7.3</b></td><td>Bố cục Responsive FarmerPro Studio ở <code>1280×720</code>, <code>1600×900</code> và <code>1920×1080</code></td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>28</td></tr>
-        <tr><td><b>Sơ đồ VIII.1</b></td><td>Timeline / Roadmap triển khai kỹ thuật giai đoạn P2 → P6</td><td><span class="st-badge st-diagram">DIAGRAM</span></td><td>30</td></tr>
+        <tr><td><b>Sơ đồ 1.1</b></td><td>Kiến trúc tổng quan FarmerPro (Nền tảng Sản xuất Đa Auto Tools)</td><td><span class="st-badge st-diagram">DIAGRAM</span></td><td>03</td></tr>
+        <tr><td><b>Sơ đồ 1.2</b></td><td>Quan hệ giữa Studio IDE, Workflow Engine, <code>fp-builder</code> &amp; Mini Runtime</td><td><span class="st-badge st-diagram">DIAGRAM</span></td><td>04</td></tr>
+        <tr><td><b>Hình 1.2–1.7</b></td><td>Giao diện FarmerPro Studio v0.1.0 hiện tại (6 màn hình tiêu biểu trong 10 tab cũ)</td><td><span class="st-badge st-actual">ACTUAL</span></td><td>05</td></tr>
+        <tr><td><b>Hình 1.8–1.9</b></td><td>Hai Mini Tools độc lập đang chạy: <code>Auto_JX2_Mobile.exe</code> &amp; <code>Auto_Kingdom_SLG.exe</code></td><td><span class="st-badge st-actual">ACTUAL</span></td><td>06</td></tr>
+        <tr><td><b>Sơ đồ 2.1</b></td><td>So sánh trực quan Kiến trúc Cũ (10 Tab) vs Kiến trúc Đề xuất (6 Khu vực + Hệ thống)</td><td><span class="st-badge st-diagram">DIAGRAM</span></td><td>07</td></tr>
+        <tr><td><b>Ảnh 01</b></td><td>Thiết kế Giao diện Dashboard mới (<code>1. Game Projects / Workspace Hub</code>)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>09</td></tr>
+        <tr><td><b>Ảnh 02</b></td><td>Thiết kế Giao diện <code>Game Projects</code> (Quản lý Đa game, Assets, Version, Modules)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>10</td></tr>
+        <tr><td><b>Ảnh 03</b></td><td>Thiết kế Giao diện <code>Workflow Studio</code> (Palette, React Flow, Inspector, Dock)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>11</td></tr>
+        <tr><td><b>Ảnh 04</b></td><td>Thiết kế Giao diện <code>Tasks &amp; Modules</code> (Task Library, Tham số, Vault, Proxy)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>12</td></tr>
+        <tr><td><b>Ảnh 05</b></td><td>Thiết kế Giao diện <code>Device Lab</code> (ADB, LDPlayer, Live Screenshot &amp; ROI Cropper)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>13</td></tr>
+        <tr><td><b>Ảnh 06</b></td><td>Thiết kế Giao diện <code>Test &amp; Debug</code> (Timeline, Node Trace, Ảnh Trước/Sau)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>14</td></tr>
+        <tr><td><b>Ảnh 07</b></td><td>Thiết kế Giao diện <code>Mini Tool Builder</code> (Layout Editor, Live Preview, Build EXE)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>15</td></tr>
+        <tr><td><b>Ảnh 08</b></td><td>Thiết kế Giao diện <code>Release Management</code> (Releases, SHA-256, Ed25519, PE #7777)</td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>16</td></tr>
+        <tr><td><b>Sơ đồ IV.1–10</b></td><td>Bộ 10 Sơ đồ Kiến trúc Kỹ thuật bắt buộc (Mục IV.1 đến IV.10)</td><td><span class="st-badge st-diagram">DIAGRAM</span></td><td>17–21</td></tr>
+        <tr><td><b>Hình 5.1–5.3</b></td><td>Ảnh chụp màn hình LDPlayer thật Trước/Sau thao tác ADB &amp; Mẫu cắt <code>System Apps</code></td><td><span class="st-badge st-actual">ACTUAL</span></td><td>24</td></tr>
+        <tr><td><b>Sơ đồ VI.1</b></td><td>Quy trình 9 bước sản xuất Mini Tool đa dự án game trên FarmerPro Studio</td><td><span class="st-badge st-diagram">DIAGRAM</span></td><td>27</td></tr>
+        <tr><td><b>Hình 6.1–6.2</b></td><td>Chạy độc lập 2 Mini Tools sau khi đóng hoàn toàn FarmerPro Studio (Bước 9)</td><td><span class="st-badge st-actual">ACTUAL</span></td><td>28</td></tr>
+        <tr><td><b>Hình 7.1–7.3</b></td><td>Bố cục Responsive FarmerPro Studio ở <code>1280×720</code>, <code>1600×900</code> và <code>1920×1080</code></td><td><span class="st-badge st-proposed">PROPOSED</span></td><td>29</td></tr>
+        <tr><td><b>Sơ đồ VIII.1</b></td><td>Timeline / Roadmap triển khai kỹ thuật giai đoạn P2 → P6</td><td><span class="st-badge st-diagram">DIAGRAM</span></td><td>31</td></tr>
       </table>
     </div>
   </div>
 """))
 
 # ==============================================================================
-# PAGE 03: PART 1 (1/3) — PROJECT OVERVIEW & OVERALL ARCHITECTURE DIAGRAM
+# PAGE 03: PART 1 (1/4) — PROJECT OVERVIEW & OVERALL ARCHITECTURE DIAGRAM
 # ==============================================================================
-pages.append(page_wrap(3, "PHẦN 1 — TỔNG QUAN DỰ ÁN (1/3)", "Định Vị Sản Phẩm FarmerPro, Vai Trò Studio IDE / Mini Runtime & Sơ Đồ Kiến Trúc Tổng Quan", f"""
+pages.append(page_wrap(3, "PHẦN 1 — TỔNG QUAN DỰ ÁN (1/4)", "Định Vị Sản Phẩm FarmerPro, Vai Trò Studio IDE / Mini Runtime & Sơ Đồ Kiến Trúc Tổng Quan", f"""
   <div class="grid-3" style="margin-bottom:2mm;">
     <div class="card">
       <div class="card-hdr">1. FARMERPRO LÀ GÌ &amp; VÌ SAO LÀ NỀN TẢNG ĐA AUTO TOOLS?</div>
@@ -213,13 +214,34 @@ pages.append(page_wrap(3, "PHẦN 1 — TỔNG QUAN DỰ ÁN (1/3)", "Định V�
       <p class="p-xs">• <b>P1.2:</b> Khôi phục &amp; nâng cấp <b>34/34 Unit Tests PASS</b>, cứng hóa khóa công khai gốc vào <b>PE <code>RT_RCDATA #7777</code></b> (chặn 5/5 kịch bản Tamper) &amp; hoàn tất Blueprint UX Studio mới.</p>
     </div>
   </div>
-  {fig_box(img_b64("diag_00_part1_overall_product_architecture.png"), "Sơ đồ 1.1", "Kiến trúc tổng quan FarmerPro & Quan hệ giữa FarmerPro Studio IDE, Shared Rust Workflow Engine, fp-builder và Standalone Mini Runtime", "artifacts/p1_2_evidence/diagrams/00_part1_overall_product_architecture.svg", "DIAGRAM", max_h="102mm")}
+  {fig_box(img_b64("diag_00_part1_overall_product_architecture.png"), "Sơ đồ 1.1", "Kiến trúc tổng quan FarmerPro (Nền tảng Sản xuất Đa Auto Tools — Multi-Game Software Factory)", "artifacts/p1_2_evidence/diagrams/00_part1_overall_product_architecture.svg", "DIAGRAM", max_h="102mm")}
 """))
 
 # ==============================================================================
-# PAGE 04: PART 1 (2/3) — CURRENT FARMERPRO STUDIO SCREENSHOTS & OLD UI LIMITS
+# PAGE 04: PART 1 (2/4) — RELATIONSHIP DIAGRAM: STUDIO, ENGINE, BUILDER, RUNTIME
 # ==============================================================================
-pages.append(page_wrap(4, "PHẦN 1 — TỔNG QUAN DỰ ÁN (2/3)", "Hình Ảnh FarmerPro Studio Hiện Tại (v0.1.0) & Phân Tích Giới Hạn Kiến Trúc Cũ", f"""
+pages.append(page_wrap(4, "PHẦN 1 — TỔNG QUAN DỰ ÁN (2/4)", "Sơ Đồ Quan Hệ Giữa FarmerPro Studio IDE, Shared Workflow Engine, fp-builder Và Mini Runtime", f"""
+  <div class="grid-3" style="margin-bottom:2mm;">
+    <div class="card">
+      <div class="card-hdr">1. CÔ LẬP BIÊN DỊCH &amp; MẬT MÃ (CRATE BOUNDARY)</div>
+      <p class="p-xs"><b>FarmerPro Studio IDE</b> liên kết với <code>fp-builder</code> và giữ khóa ký bí mật ngoài dự án tại <code>%LOCALAPPDATA%\\FarmerPro\\ProducerKeys\\</code>. Ngược lại, <b>Standalone Mini Runtime</b> (<code>fp-mini-runtime</code>) không có bất kỳ phụ thuộc nào vào <code>fp-builder</code> (xác thực qua <code>cargo tree</code>) và chỉ mang khóa công khai 32-byte trong tài nguyên PE <code>RT_RCDATA #7777</code>.</p>
+    </div>
+    <div class="card">
+      <div class="card-hdr">2. CHIA SẺ 100% LÕI TỰ ĐỘNG HÓA RUST</div>
+      <p class="p-xs">Cả Studio Lab lẫn Mini Tool thành phẩm đều thực thi trên cùng bộ Rust crates dùng chung: <code>fp-workflow-schema</code>, <code>fp-workflow-runtime</code>, <code>fp-vision</code> (SSD đa tỉ lệ + WinRT OCR), <code>fp-actions</code> (18% Safe Tap), <code>fp-adb</code>, <code>fp-device</code>, <code>fp-scheduler</code> và <code>fp-storage</code> — đảm bảo chạy thử trong Lab khớp hành vi 100% khi phát hành.</p>
+    </div>
+    <div class="card">
+      <div class="card-hdr">3. LUỒNG CHUYỂN GIAO ĐẶC TẢ KHÔNG MÃ NGUỒN</div>
+      <p class="p-xs">Để tạo Mini Tool cho game mới, Studio xuất dữ liệu đặc tả (<code>workflows/*.json</code>, <code>templates/*.png</code>, <code>ui-schema.json</code>, <code>modules.json</code>) vào pipeline 8 bước của <code>fp-builder</code>, rồi sao chép và đóng dấu ký số lên binary mẫu <code>fp-mini-runtime.exe</code> mà không phải biên dịch lại mã Rust cho từng game.</p>
+    </div>
+  </div>
+  {fig_box(img_b64("diag_00_part1b_studio_engine_builder_runtime_relationship.png"), "Sơ đồ 1.2", "Sơ đồ Quan hệ chi tiết giữa FarmerPro Studio IDE, Shared Rust Workflow Engine, fp-builder và Standalone Mini Runtime", "artifacts/p1_2_evidence/diagrams/00_part1b_studio_engine_builder_runtime_relationship.svg", "DIAGRAM", max_h="104mm")}
+"""))
+
+# ==============================================================================
+# PAGE 05: PART 1 (3/4) — CURRENT FARMERPRO STUDIO SCREENSHOTS & OLD UI LIMITS
+# ==============================================================================
+pages.append(page_wrap(5, "PHẦN 1 — TỔNG QUAN DỰ ÁN (3/4)", "Hình Ảnh FarmerPro Studio Hiện Tại (v0.1.0) & Phân Tích Giới Hạn Kiến Trúc Cũ", f"""
   <div class="card" style="margin-bottom:1.8mm;">
     <div class="card-hdr">5. NHỮNG GIỚI HẠN CỐT LÕI CỦA GIAO DIỆN VÀ KIẾN TRÚC FARMERPRO STUDIO CŨ (v0.1.0 — TRƯỚC KHI REFACTOR P4)</div>
     <div class="grid-3">
@@ -241,9 +263,9 @@ pages.append(page_wrap(4, "PHẦN 1 — TỔNG QUAN DỰ ÁN (2/3)", "Hình Ản
 """))
 
 # ==============================================================================
-# PAGE 05: PART 1 (3/3) — TWO EXPORTED STANDALONE MINI TOOLS (ACTUAL)
+# PAGE 06: PART 1 (4/4) — TWO EXPORTED STANDALONE MINI TOOLS (ACTUAL)
 # ==============================================================================
-pages.append(page_wrap(5, "PHẦN 1 — TỔNG QUAN DỰ ÁN (3/3)", "Hình Ảnh Thực Tế Hai Mini Tools Độc Lập Đã Xuất Từ Cùng Bộ Rust Core Crates", f"""
+pages.append(page_wrap(6, "PHẦN 1 — TỔNG QUAN DỰ ÁN (4/4)", "Hình Ảnh Thực Tế Hai Mini Tools Độc Lập Đã Xuất Từ Cùng Bộ Rust Core Crates", f"""
   <div class="grid-2">
     {fig_box(img_b64("actual_mini_tool_jx2_mobile.png"), "Hình 1.8", "Auto_JX2_Mobile.exe (Theme Võ Hiệp Amber #F59E0B, 5 Tasks, 3 cột OCR)", "screenshots/p1_poc/p1_1_auto_jx2_truthful.png", "ACTUAL", max_h="80mm", compact=True)}
     {fig_box(img_b64("actual_mini_tool_kingdom_slg.png"), "Hình 1.9", "Auto_Kingdom_SLG.exe (Theme Chiến Thuật Emerald #10B981, 4 Tasks, 4 cột OCR)", "screenshots/p1_poc/p1_1_auto_slg_truthful.png", "ACTUAL", max_h="80mm", compact=True)}
@@ -262,9 +284,9 @@ pages.append(page_wrap(5, "PHẦN 1 — TỔNG QUAN DỰ ÁN (3/3)", "Hình Ản
 """))
 
 # ==============================================================================
-# PAGE 06: PART 2 (1/2) — BEFORE VS PROPOSED ARCHITECTURE VISUAL COMPARISON
+# PAGE 07: PART 2 (1/2) — BEFORE VS PROPOSED ARCHITECTURE VISUAL COMPARISON
 # ==============================================================================
-pages.append(page_wrap(6, "PHẦN 2 — SO SÁNH KIẾN TRÚC CŨ VÀ MỚI (1/2)", "So Sánh Trực Quan Kiến Trúc Cũ (Before) Và Kiến Trúc Đề Xuất P1.2 (Proposed Architecture)", f"""
+pages.append(page_wrap(7, "PHẦN 2 — SO SÁNH KIẾN TRÚC CŨ VÀ MỚI (1/2)", "So Sánh Trực Quan Kiến Trúc Cũ (Before) Và Kiến Trúc Đề Xuất P1.2 (Proposed Architecture)", f"""
   {fig_box(img_b64("diag_00_part2_before_vs_proposed_architecture.png"), "Sơ đồ 2.1", "So sánh trực quan Kiến trúc Cũ (10 Tab Vận hành Phẳng) và Kiến trúc Đề xuất P1.2 (Context-Driven Multi-Game Studio IDE gồm 6 Khu vực + Hệ thống)", "artifacts/p1_2_evidence/diagrams/00_part2_before_vs_proposed_architecture.svg", "DIAGRAM", max_h="100mm")}
   <div class="grid-2" style="margin-top:2mm;">
     <div class="card">
@@ -293,7 +315,7 @@ pages.append(page_wrap(6, "PHẦN 2 — SO SÁNH KIẾN TRÚC CŨ VÀ MỚI (1/2
 # ==============================================================================
 # PAGE 07: PART 2 (2/2) — COMPLETE 10-SCREEN TO 6-WORKSPACE MAPPING TABLE
 # ==============================================================================
-pages.append(page_wrap(7, "PHẦN 2 — SO SÁNH KIẾN TRÚC CŨ VÀ MỚI (2/2)", "Bảng Ánh Xạ Đầy Đủ 10 Màn Hình Hiện Có Sang Cấu Trúc 6 Khu Vực Mới (0% Bỏ Sót Chức Năng)", """
+pages.append(page_wrap(8, "PHẦN 2 — SO SÁNH KIẾN TRÚC CŨ VÀ MỚI (2/2)", "Bảng Ánh Xạ Đầy Đủ 10 Màn Hình Hiện Có Sang Cấu Trúc 6 Khu Vực Mới (0% Bỏ Sót Chức Năng)", """
   <div class="card">
     <div class="card-hdr">BẢNG ĐỐI CHIẾU &amp; ÁNH XẠ TOÀN BỘ 10 MÀN HÌNH HIỆN TẠI (apps/desktop/src/features/*) SANG KIẾN TRÚC STUDIO MỚI</div>
     <table class="tbl-compact tbl-dense">
@@ -389,7 +411,7 @@ pages.append(page_wrap(7, "PHẦN 2 — SO SÁNH KIẾN TRÚC CŨ VÀ MỚI (2/2
 # PAGES 08 TO 15: PART 3 — 8 PROPOSED UI SCREENS (ẢNH 01 -> ẢNH 08)
 # ==============================================================================
 UI_SCREENS_SPEC = [
-    (8, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (1/8)", "Ảnh 01 — Dashboard Mới (Workspace Hub Đa Dự Án Game)", "ui_01_new_dashboard.png",
+    (9, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (1/8)", "Ảnh 01 — Dashboard Mới (Workspace Hub Đa Dự Án Game)", "ui_01_new_dashboard.png",
      "Ảnh 01 — Giao diện Dashboard mới (1. Game Projects / Workspace Hub)",
      "artifacts/p1_2_evidence/images/ui_01_new_dashboard.png",
      [
@@ -397,7 +419,7 @@ UI_SCREENS_SPEC = [
          ("2. Thiết bị thử nghiệm & Kết quả Test gần nhất", "Hiển thị trạng thái trực tuyến của thiết bị Lab đang chọn (emulator-5554 · SM_X710N) và tóm tắt phiên chạy kiểm thử thật gần nhất (19 StepEvents, tọa độ Safe Tap, Checkpoint)."),
          ("3. Bản Build/Release, Cảnh báo & Truy cập nhanh", "Liệt kê các gói Auto_<Game>.exe đã ký số Ed25519 + PE #7777, bảng kiểm toán cảnh báo thiếu tài nguyên hoặc lưu ý kỹ thuật (UDP Proxy, Authenticode) và cụm nút chuyển nhanh.")
      ]),
-    (9, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (2/8)", "Ảnh 02 — Game Projects (Quản Lý Đa Dự Án Game, Assets, Version & Modules)", "ui_02_game_projects.png",
+    (10, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (2/8)", "Ảnh 02 — Game Projects (Quản Lý Đa Dự Án Game, Assets, Version & Modules)", "ui_02_game_projects.png",
      "Ảnh 02 — Giao diện quản lý đa dự án Game Projects (Manifest, Templates PNG, Version & 5-State Modules)",
      "artifacts/p1_2_evidence/images/ui_02_game_projects.png",
      [
@@ -405,7 +427,7 @@ UI_SCREENS_SPEC = [
          ("2. Cấu hình Game Package, Version & Biểu tượng PE", "Quản lý định danh slug, Android game_package_id (com.blackhole.jx2mobile), phiên bản phát hành (v1.0.0), độ phân giải mục tiêu và file icon.ico đa lớp."),
          ("3. Thư viện Assets/Templates PNG & Ma trận Modules", "Quản lý tập trung toàn bộ ảnh mẫu Vision PNG kèm kích thước, tọa độ cắt gốc, mã băm SHA-256 và cấu hình bật/tắt 6 module hệ thống theo mô hình 5 trạng thái.")
      ]),
-    (10, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (3/8)", "Ảnh 03 — Workflow Studio (Node Palette, React Flow Canvas, Inspector & Execution Dock)", "ui_03_workflow_studio.png",
+    (11, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (3/8)", "Ảnh 03 — Workflow Studio (Node Palette, React Flow Canvas, Inspector & Execution Dock)", "ui_03_workflow_studio.png",
      "Ảnh 03 — Giao diện Workflow Studio (Môi trường thiết kế đồ thị tự động hóa & gỡ lỗi trực quan)",
      "artifacts/p1_2_evidence/images/ui_03_workflow_studio.png",
      [
@@ -413,7 +435,7 @@ UI_SCREENS_SPEC = [
          ("2. React Flow Canvas, Auto Layout, Fit View & Breakpoint", "Đồ thị trực quan hiển thị rõ trạng thái từng bước, hỗ trợ sắp xếp tự động (Auto Layout DAG), căn khung (Fit View), đặt điểm dừng (Breakpoint) và chạy từng bước (Step Run)."),
          ("3. Node Inspector & Execution/Debug Dock", "Cột phải cấu hình tham số Node (chọn ảnh mẫu từ Project, ngưỡng Confidence 0.90, Safe Margin 18%, Retry) kèm nút cầu nối '+ Đưa vào Task Library' và khung Execution Dock hiển thị Step Trace thời gian thực.")
      ]),
-    (11, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (4/8)", "Ảnh 04 — Tasks & Modules (Task Library Theo Game, Tham Số Động, Vault, Proxy & Scheduler)", "ui_04_tasks_and_modules.png",
+    (12, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (4/8)", "Ảnh 04 — Tasks & Modules (Task Library Theo Game, Tham Số Động, Vault, Proxy & Scheduler)", "ui_04_tasks_and_modules.png",
      "Ảnh 04 — Giao diện Tasks & Modules (Đóng gói nghiệp vụ người dùng & cấu hình tài nguyên theo Project)",
      "artifacts/p1_2_evidence/images/ui_04_tasks_and_modules.png",
      [
@@ -421,7 +443,7 @@ UI_SCREENS_SPEC = [
          ("2. Workflow Mapping & Cấu hình tham số động", "Liên kết mỗi Task với một Workflow đã kiểm chứng và định nghĩa danh sách trường cài đặt (boolean, number, select) để tự động sinh form cấu hình trong Mini Tool."),
          ("3. Tích hợp Module Vault, Proxy, Scheduler & Utilities", "Bảo toàn 100% tính năng quản lý tài khoản CRED_MGR://, kiểm tra SOCKS5/HTTP Proxy + bảng adb forward (kèm ghi chú trung thực về giới hạn UDP) và cấu hình Watchdog trong cùng khu vực.")
      ]),
-    (12, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (5/8)", "Ảnh 05 — Device Lab (ADB Discovery, Giả Lập, Live Screenshot & Công Cụ Cắt Mẫu Vision)", "ui_05_device_lab.png",
+    (13, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (5/8)", "Ảnh 05 — Device Lab (ADB Discovery, Giả Lập, Live Screenshot & Công Cụ Cắt Mẫu Vision)", "ui_05_device_lab.png",
      "Ảnh 05 — Giao diện Device Lab (Phòng thử nghiệm thiết bị thật/giả lập & công cụ kéo cắt ảnh mẫu ROI)",
      "artifacts/p1_2_evidence/images/ui_05_device_lab.png",
      [
@@ -429,7 +451,7 @@ UI_SCREENS_SPEC = [
          ("2. Live On-Demand Screenshot & Công cụ cắt ảnh Vision (ROI Cropper)", "Chụp màn hình PNG không nén từ thiết bị thật (như emulator-5554), cho phép kéo khung chọn vùng ROI (ví dụ biểu tượng System Apps 88×88 tại tọa độ 74, 135) và lưu thẳng vào Project Templates."),
          ("3. Chẩn đoán Thiết bị & Thử nghiệm khớp mẫu SSD / WinRT OCR", "Kiểm tra nhanh điểm số khớp mẫu đa tỉ lệ (score=1.000), điểm chạm Safe Random Tap dự kiến (111, 170) và kết quả đọc chữ WinRT OCR ngay trên ảnh vừa chụp.")
      ]),
-    (13, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (6/8)", "Ảnh 06 — Test & Debug (Danh Sách Phiên, Timeline, Node Trace, Ảnh Bằng Chứng & Error Inspector)", "ui_06_test_and_debug.png",
+    (14, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (6/8)", "Ảnh 06 — Test & Debug (Danh Sách Phiên, Timeline, Node Trace, Ảnh Bằng Chứng & Error Inspector)", "ui_06_test_and_debug.png",
      "Ảnh 06 — Giao diện Test & Debug (Trung tâm đối chiếu bằng chứng kiểm thử & khôi phục Checkpoint SQLite WAL)",
      "artifacts/p1_2_evidence/images/ui_06_test_and_debug.png",
      [
@@ -437,7 +459,7 @@ UI_SCREENS_SPEC = [
          ("2. Ảnh chụp màn hình Trước / Sau làm bằng chứng thị giác", "Đặt cạnh nhau ảnh chụp màn hình thiết bị trước và sau thao tác tap thật, đánh dấu rõ khung khớp mẫu Vision [74,135,88,88] và tọa độ điểm chạm Safe Random Tap (111, 170)."),
          ("3. Checkpoint / Retry Recovery & Error Inspector", "Hiển thị trạng thái các điểm lưu Checkpoint trong SQLite WAL (live_adb_verified), cho phép khôi phục chạy tiếp phiên gián đoạn và nhảy trực tiếp từ lỗi tới Node trên Canvas.")
      ]),
-    (14, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (7/8)", "Ảnh 07 — Mini Tool Builder (Chọn Project/Task/Modules, Branding, Layout Editor, Live Preview & Build)", "ui_07_mini_tool_builder.png",
+    (15, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (7/8)", "Ảnh 07 — Mini Tool Builder (Chọn Project/Task/Modules, Branding, Layout Editor, Live Preview & Build)", "ui_07_mini_tool_builder.png",
      "Ảnh 07 — Giao diện Mini Tool Builder (Thiết kế sản phẩm Mini Auto-Tool trực quan & xem trước thời gian thực)",
      "artifacts/p1_2_evidence/images/ui_07_mini_tool_builder.png",
      [
@@ -445,7 +467,7 @@ UI_SCREENS_SPEC = [
          ("2. Chọn Workflows, Tasks & Modules đóng gói (5-State)", "Tích chọn các quy trình, nhiệm vụ và module được phép đóng gói vào bản phát hành (ví dụ bật Proxy cho JX2 nhưng tắt Proxy cho Kingdom SLG)."),
          ("3. Live Interactive Preview, Pre-Flight Check & Nút Build EXE", "Khung bên phải dựng trực tiếp giao diện Mini Tool thật từ ui-schema.json ngay trong Studio; thanh kiểm tra Pre-Flight 6 điểm xác nhận đủ tài nguyên trước khi kích hoạt pipeline đóng gói 8 bước.")
      ]),
-    (15, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (8/8)", "Ảnh 08 — Release Management (Danh Sách Bản Phát Hành, Dependencies, SHA-256, Ed25519 & Build Report)", "ui_08_release_management.png",
+    (16, "PHẦN 3 — THIẾT KẾ GIAO DIỆN MỚI (8/8)", "Ảnh 08 — Release Management (Danh Sách Bản Phát Hành, Dependencies, SHA-256, Ed25519 & Build Report)", "ui_08_release_management.png",
      "Ảnh 08 — Giao diện Release Management (Quản lý lịch sử phát hành, chữ ký số Ed25519, PE #7777 & kiểm toán phụ thuộc)",
      "artifacts/p1_2_evidence/images/ui_08_release_management.png",
      [
@@ -471,19 +493,19 @@ for pg_no, sec_badge, pg_title, img_file, fig_num_str, src_path_str, notes in UI
 # PAGES 16 TO 20: PART 4 — 10 TECHNICAL ARCHITECTURE DIAGRAMS (2 PER PAGE)
 # ==============================================================================
 TECH_DIAG_PAGES = [
-    (16, "PHẦN 4 — SƠ ĐỒ KIẾN TRÚC KỸ THUẬT (1/5)", "Sơ Đồ IV.1 (Rust Cargo Workspace Dependency Graph) & Sơ Đồ IV.2 (FarmerPro Studio Architecture)",
+    (17, "PHẦN 4 — SƠ ĐỒ KIẾN TRÚC KỸ THUẬT (1/5)", "Sơ Đồ IV.1 (Rust Cargo Workspace Dependency Graph) & Sơ Đồ IV.2 (FarmerPro Studio Architecture)",
      ("diag_IV_01_cargo_workspace_dependency_graph.png", "Sơ đồ IV.1", "Rust Cargo Workspace Dependency Graph (14 Crates & 3 Apps — Cô lập hoàn toàn fp-builder khỏi fp-mini-runtime)", "artifacts/p1_2_evidence/diagrams/IV_01_cargo_workspace_dependency_graph.svg"),
      ("diag_IV_02_farmerpro_studio_architecture.png", "Sơ đồ IV.2", "FarmerPro Studio Architecture (React 19 + React Flow + Zustand <-> Tauri v2 Typed IPC <-> Rust Core Services)", "artifacts/p1_2_evidence/diagrams/IV_02_farmerpro_studio_architecture.svg")),
-    (17, "PHẦN 4 — SƠ ĐỒ KIẾN TRÚC KỸ THUẬT (2/5)", "Sơ Đồ IV.3 (GameProject Data Model SQLite v2) & Sơ Đồ IV.4 (Workflow Runtime Execution Architecture)",
+    (18, "PHẦN 4 — SƠ ĐỒ KIẾN TRÚC KỸ THUẬT (2/5)", "Sơ Đồ IV.3 (GameProject Data Model SQLite v2) & Sơ Đồ IV.4 (Workflow Runtime Execution Architecture)",
      ("diag_IV_03_gameproject_data_model.png", "Sơ đồ IV.3", "GameProject Data Model & SQLite WAL Migration v1 -> v2 (6 bảng đa dự án mới + mở rộng khóa ngoại project_id không mất dữ liệu)", "artifacts/p1_2_evidence/diagrams/IV_03_gameproject_data_model.svg"),
      ("diag_IV_04_workflow_runtime_execution_architecture.png", "Sơ đồ IV.4", "Workflow Runtime Execution Architecture (State Machine, Multiscale SSD Match, 18% Safe Random Tap, WinRT OCR & Checkpoints)", "artifacts/p1_2_evidence/diagrams/IV_04_workflow_runtime_execution_architecture.svg")),
-    (18, "PHẦN 4 — SƠ ĐỒ KIẾN TRÚC KỸ THUẬT (3/5)", "Sơ Đồ IV.5 (ADB / Emulator Adapter Architecture) & Sơ Đồ IV.6 (Task Scheduler & Multi-Device Execution)",
+    (19, "PHẦN 4 — SƠ ĐỒ KIẾN TRÚC KỸ THUẬT (3/5)", "Sơ Đồ IV.5 (ADB / Emulator Adapter Architecture) & Sơ Đồ IV.6 (Task Scheduler & Multi-Device Execution)",
      ("diag_IV_05_adb_emulator_adapter_architecture.png", "Sơ đồ IV.5", "ADB / Emulator Adapter Architecture (Zero Raw Shell Interpolation, DeviceActor Generation Fencing & Orientation Normalizer)", "artifacts/p1_2_evidence/diagrams/IV_05_adb_emulator_adapter_architecture.svg"),
      ("diag_IV_06_task_scheduler_multidevice_execution.png", "Sơ đồ IV.6", "Task Scheduler & Multi-Device Execution Architecture (Priority Queue, Exclusive Device Leases & Fencing Tokens)", "artifacts/p1_2_evidence/diagrams/IV_06_task_scheduler_multidevice_execution.svg")),
-    (19, "PHẦN 4 — SƠ ĐỒ KIẾN TRÚC KỸ THUẬT (4/5)", "Sơ Đồ IV.7 (Mini Tool UI Schema Renderer) & Sơ Đồ IV.8 (Mini Tool Build & Release Pipeline 8 Bước)",
+    (20, "PHẦN 4 — SƠ ĐỒ KIẾN TRÚC KỸ THUẬT (4/5)", "Sơ Đồ IV.7 (Mini Tool UI Schema Renderer) & Sơ Đồ IV.8 (Mini Tool Build & Release Pipeline 8 Bước)",
      ("diag_IV_07_mini_tool_ui_schema_renderer.png", "Sơ đồ IV.7", "Mini Tool UI Schema Renderer Architecture (Dựng giao diện động 100% từ bundle/ui-schema.json & kiểm soát Module 5 trạng thái)", "artifacts/p1_2_evidence/diagrams/IV_07_mini_tool_ui_schema_renderer.svg"),
      ("diag_IV_08_mini_tool_build_release_pipeline.png", "Sơ đồ IV.8", "Mini Tool Build & Release Pipeline (8-Step Packager: Validate -> PE Icon & RT_RCDATA #7777 -> Ed25519 Sign -> Verify)", "artifacts/p1_2_evidence/diagrams/IV_08_mini_tool_build_release_pipeline.svg")),
-    (20, "PHẦN 4 — SƠ ĐỒ KIẾN TRÚC KỸ THUẬT (5/5)", "Sơ Đồ IV.9 (Security Architecture — Ed25519 Root of Trust) & Sơ Đồ IV.10 (Studio → Mini Tool Production Lifecycle)",
+    (21, "PHẦN 4 — SƠ ĐỒ KIẾN TRÚC KỸ THUẬT (5/5)", "Sơ Đồ IV.9 (Security Architecture — Ed25519 Root of Trust) & Sơ Đồ IV.10 (Studio → Mini Tool Production Lifecycle)",
      ("diag_IV_09_security_architecture_ed25519_root_of_trust.png", "Sơ đồ IV.9", "Security Architecture — Ed25519 PE RT_RCDATA #7777 Root of Trust, 5 Kịch bản Chống Giả mạo & Vai trò Windows Authenticode", "artifacts/p1_2_evidence/diagrams/IV_09_security_architecture_ed25519_root_of_trust.svg"),
      ("diag_IV_10_studio_to_mini_tool_production_lifecycle.png", "Sơ đồ IV.10", "Studio -> Mini Tool Production Lifecycle (Cách 1 Studio dùng chung 14 Rust Crates để xuất nhiều Mini Tools không cần sửa Core Runtime)", "artifacts/p1_2_evidence/diagrams/IV_10_studio_to_mini_tool_production_lifecycle.svg")),
 ]
@@ -498,7 +520,7 @@ for pg_no, sec_badge, pg_title, d1, d2 in TECH_DIAG_PAGES:
 # ==============================================================================
 # PAGE 21: PART 5 (1/5) — UNIT TESTS (34/34), RECONCILIATION 27->32->31->34 & CARGO TREE
 # ==============================================================================
-pages.append(page_wrap(21, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM THỬ (1/5)", "Bằng Chứng cargo test --workspace (34/34 PASS), Đối Chiếu 27→32→31→34 Tests & Ranh Giới cargo tree", """
+pages.append(page_wrap(22, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM THỬ (1/5)", "Bằng Chứng cargo test --workspace (34/34 PASS), Đối Chiếu 27→32→31→34 Tests & Ranh Giới cargo tree", """
   <div class="grid-2">
     <div class="card">
       <div class="card-hdr">1. ĐỐI CHIẾU CHÍNH XÁC SỰ BIẾN ĐỘNG SỐ LƯỢNG UNIT TESTS: 27 → 32 → 31 → 34 PASS</div>
@@ -563,7 +585,7 @@ fp-mini-runtime v0.1.0 (E:\\DATA\\FarmerPro\\apps\\mini-runtime)
 # ==============================================================================
 # PAGE 22: PART 5 (2/5) — ED25519 RFC 8032, PE RT_RCDATA #7777, 5 TAMPER CASES & ROOT OF TRUST DISCLOSURE
 # ==============================================================================
-pages.append(page_wrap(22, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM THỬ (2/5)", "Bằng Chứng Ed25519 RFC 8032, PE RT_RCDATA #7777, 5 Kịch Bản Tamper Test & Phân Tích Root of Trust", """
+pages.append(page_wrap(23, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM THỬ (2/5)", "Bằng Chứng Ed25519 RFC 8032, PE RT_RCDATA #7777, 5 Kịch Bản Tamper Test & Phân Tích Root of Trust", """
   <div class="grid-2">
     <div class="card">
       <div class="card-hdr">1. RAW LOG 5 KỊCH BẢN TẤN CÔNG GIẢ MẠO (tamper_suite_5_cases_pe_root_of_trust.json)</div>
@@ -624,7 +646,7 @@ pages.append(page_wrap(22, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM TH�
 # ==============================================================================
 # PAGE 23: PART 5 (3/5) — LIVE ADB WORKFLOW, BEFORE/AFTER SCREENSHOTS, SQLITE BACKUP & NTFS ACL
 # ==============================================================================
-pages.append(page_wrap(23, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM THỬ (3/5)", "Bằng Chứng Live ADB Workflow Trên LDPlayer Thật, Ảnh Trước/Sau, SQLite Backup/Restore & NTFS ACL", f"""
+pages.append(page_wrap(24, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM THỬ (3/5)", "Bằng Chứng Live ADB Workflow Trên LDPlayer Thật, Ảnh Trước/Sau, SQLite Backup/Restore & NTFS ACL", f"""
   <div class="grid-3">
     {fig_box(img_b64("actual_adb_before_screen.png"), "Hình 5.1", "Ảnh LDPlayer thật TRƯỚC khi Tap (Phát hiện System Apps tại 74, 135)", "artifacts/p1_1_evidence/08_adb_before_screen.png", "ACTUAL", max_h="56mm", compact=True)}
     {fig_box(img_b64("actual_adb_after_screen.png"), "Hình 5.2", "Ảnh LDPlayer thật SAU khi Safe Tap (111, 170) — Hộp thoại System Apps mở", "artifacts/p1_1_evidence/10_adb_after_screen.png", "ACTUAL", max_h="56mm", compact=True)}
@@ -671,7 +693,7 @@ pages.append(page_wrap(23, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM TH�
 # ==============================================================================
 # PAGE 24: PART 5 (4/5) — STANDARDIZED TEST EXECUTION MATRIX (TC-01 TO TC-07)
 # ==============================================================================
-pages.append(page_wrap(24, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM THỬ (4/5)", "Bảng Hồ Sơ Kiểm Thử Chuẩn Hóa — Phần A: Kiểm Thử Workspace, Crate Boundary & Mật Mã Ed25519 (TC-01 → TC-07)", """
+pages.append(page_wrap(25, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM THỬ (4/5)", "Bảng Hồ Sơ Kiểm Thử Chuẩn Hóa — Phần A: Kiểm Thử Workspace, Crate Boundary & Mật Mã Ed25519 (TC-01 → TC-07)", """
   <div class="card">
     <div class="card-hdr">MA TRẬN HỒ SƠ KIỂM THỬ NGHIỆM THU KỸ THUẬT (PHẦN A: TC-01 ĐẾN TC-07 — ĐẦY ĐỦ 7 THUỘC TÍNH BẮT BUỘC)</div>
     <table class="tbl-compact">
@@ -754,7 +776,7 @@ pages.append(page_wrap(24, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM TH�
 # ==============================================================================
 # PAGE 25: PART 5 (5/5) — STANDARDIZED TEST EXECUTION MATRIX (TC-08 TO TC-14)
 # ==============================================================================
-pages.append(page_wrap(25, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM THỬ (5/5)", "Bảng Hồ Sơ Kiểm Thử Chuẩn Hóa — Phần B: Kiểm Thử Live ADB, NTFS ACL, SQLite Backup & Đa Thiết Bị (TC-08 → TC-14)", """
+pages.append(page_wrap(26, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM THỬ (5/5)", "Bảng Hồ Sơ Kiểm Thử Chuẩn Hóa — Phần B: Kiểm Thử Live ADB, NTFS ACL, SQLite Backup & Đa Thiết Bị (TC-08 → TC-14)", """
   <div class="card">
     <div class="card-hdr">MA TRẬN HỒ SƠ KIỂM THỬ NGHIỆM THU KỸ THUẬT (PHẦN B: TC-08 ĐẾN TC-14 — ĐẦY ĐỦ 7 THUỘC TÍNH BẮT BUỘC)</div>
     <table class="tbl-compact">
@@ -837,7 +859,7 @@ pages.append(page_wrap(25, "PHẦN 5 — BẰNG CHỨNG BẢO MẬT & KIỂM TH�
 # ==============================================================================
 # PAGE 26: PART 6 (1/2) — 9-STEP MINI TOOL PRODUCTION LIFECYCLE (STEPS 1 -> 5)
 # ==============================================================================
-pages.append(page_wrap(26, "PHẦN 6 — QUY TRÌNH SẢN XUẤT MINI TOOL (1/2)", "Sơ Đồ Quy Trình 9 Bước & Minh Họa Chi Tiết Bước 1 → Bước 5 Trên 2 Game Projects Khác Nhau", f"""
+pages.append(page_wrap(27, "PHẦN 6 — QUY TRÌNH SẢN XUẤT MINI TOOL (1/2)", "Sơ Đồ Quy Trình 9 Bước & Minh Họa Chi Tiết Bước 1 → Bước 5 Trên 2 Game Projects Khác Nhau", f"""
   {fig_box(img_b64("diag_VI_01_9step_production_workflow.png"), "Sơ đồ VI.1", "Quy trình khép kín 9 bước sản xuất Mini Auto-Tool cho nhiều tựa game khác nhau trên FarmerPro Studio", "artifacts/p1_2_evidence/diagrams/VI_01_9step_production_workflow.svg", "DIAGRAM", max_h="64mm")}
   <div class="card" style="margin-top:1.8mm;">
     <div class="card-hdr">MINH HỌA TRỰC QUAN BƯỚC 1 → BƯỚC 5 VỚI HAI DỰ ÁN GAME KHÁC NHAU (CHỨNG MINH KIẾN TRÚC ĐA GAME)</div>
@@ -885,7 +907,7 @@ pages.append(page_wrap(26, "PHẦN 6 — QUY TRÌNH SẢN XUẤT MINI TOOL (1/2)
 # ==============================================================================
 # PAGE 27: PART 6 (2/2) — 9-STEP MINI TOOL PRODUCTION LIFECYCLE (STEPS 6 -> 9)
 # ==============================================================================
-pages.append(page_wrap(27, "PHẦN 6 — QUY TRÌNH SẢN XUẤT MINI TOOL (2/2)", "Minh Họa Chi Tiết Bước 6 → Bước 9 & Bằng Chứng Đóng Studio Chạy Độc Lập 2 Mini Tools", f"""
+pages.append(page_wrap(28, "PHẦN 6 — QUY TRÌNH SẢN XUẤT MINI TOOL (2/2)", "Minh Họa Chi Tiết Bước 6 → Bước 9 & Bằng Chứng Đóng Studio Chạy Độc Lập 2 Mini Tools", f"""
   <div class="card" style="margin-bottom:2mm;">
     <div class="card-hdr">MINH HỌA TRỰC QUAN BƯỚC 6 → BƯỚC 9 VỚI HAI DỰ ÁN GAME KHÁC NHAU (TỪ THIẾT KẾ UI ĐẾN CHẠY ĐỘC LẬP)</div>
     <table class="tbl-compact tbl-dense">
@@ -930,7 +952,7 @@ pages.append(page_wrap(27, "PHẦN 6 — QUY TRÌNH SẢN XUẤT MINI TOOL (2/2)
 # ==============================================================================
 # PAGE 28: PART 7 (1/2) — UI/UX & RESPONSIVE DESIGN AT 3 RESOLUTIONS
 # ==============================================================================
-pages.append(page_wrap(28, "PHẦN 7 — ĐÁNH GIÁ UI/UX & RESPONSIVE (1/2)", "Hình Ảnh Minh Họa Bố Cục FarmerPro Studio Ở Ba Độ Phân Giải: 1280×720, 1600×900 Và 1920×1080", f"""
+pages.append(page_wrap(29, "PHẦN 7 — ĐÁNH GIÁ UI/UX & RESPONSIVE (1/2)", "Hình Ảnh Minh Họa Bố Cục FarmerPro Studio Ở Ba Độ Phân Giải: 1280×720, 1600×900 Và 1920×1080", f"""
   <div class="warn-box" style="margin-bottom:2mm;padding:1.5mm 3mm;">
     <b>GHI CHÚ TRẠNG THÁI BẮT BUỘC (MỤC VII):</b> Ba hình ảnh dưới đây là <b>Bản thiết kế bố cục thích ứng mục tiêu (<code>PROPOSED DESIGN — NOT IMPLEMENTED</code>)</b> phục vụ nghiệm thu kiến trúc giao diện P1.2, chưa phải kết quả kiểm thử ứng dụng sau khi triển khai giai đoạn P4.
   </div>
@@ -946,7 +968,7 @@ pages.append(page_wrap(28, "PHẦN 7 — ĐÁNH GIÁ UI/UX & RESPONSIVE (1/2)", 
 # ==============================================================================
 # PAGE 29: PART 7 (2/2) — DETAILED 9-CRITERIA UI/UX & RESPONSIVE EVALUATION TABLE
 # ==============================================================================
-pages.append(page_wrap(29, "PHẦN 7 — ĐÁNH GIÁ UI/UX & RESPONSIVE (2/2)", "Bảng Đánh Giá Chi Tiết 9 Tiêu Chí UI/UX & Responsive Trên Ba Độ Phân Giải Mục Tiêu", """
+pages.append(page_wrap(30, "PHẦN 7 — ĐÁNH GIÁ UI/UX & RESPONSIVE (2/2)", "Bảng Đánh Giá Chi Tiết 9 Tiêu Chí UI/UX & Responsive Trên Ba Độ Phân Giải Mục Tiêu", """
   <div class="card">
     <div class="card-hdr">ĐÁNH GIÁ KỸ THUẬT 9 TIÊU CHÍ BỐ CỤC, MẬT ĐỘ THÔNG TIN &amp; KHẢ NĂNG THÍCH ỨNG (1280×720 · 1600×900 · 1920×1080)</div>
     <table class="tbl-compact tbl-dense">
@@ -1023,7 +1045,7 @@ pages.append(page_wrap(29, "PHẦN 7 — ĐÁNH GIÁ UI/UX & RESPONSIVE (2/2)", 
 # ==============================================================================
 # PAGE 30: PART 8 (1/2) — ROADMAP P2-P6 VISUAL TIMELINE & DETAILS FOR P2, P3
 # ==============================================================================
-pages.append(page_wrap(30, "PHẦN 8 — LỘ TRÌNH P2–P6 (1/2)", "Sơ Đồ Roadmap Trực Quan P2 → P6 & Đặc Tả Chi Tiết Giai Đoạn P2, P3", f"""
+pages.append(page_wrap(31, "PHẦN 8 — LỘ TRÌNH P2–P6 (1/2)", "Sơ Đồ Roadmap Trực Quan P2 → P6 & Đặc Tả Chi Tiết Giai Đoạn P2, P3", f"""
   {fig_box(img_b64("diag_VIII_01_p2_to_p6_roadmap_timeline.png"), "Sơ đồ VIII.1", "Lộ trình triển khai kỹ thuật P2 -> P6 theo cơ chế Stage-Gate (Chỉ mở khóa sau khi Báo cáo Nghiệm thu P1.2 được phê duyệt)", "artifacts/p1_2_evidence/diagrams/VIII_01_p2_to_p6_roadmap_timeline.svg", "DIAGRAM", max_h="64mm")}
   <div class="card" style="margin-top:1.8mm;">
     <div class="card-hdr">ĐẶC TẢ KỸ THUẬT CHI TIẾT GIAI ĐOẠN P2 VÀ GIAI ĐOẠN P3 (ĐẦY ĐỦ 7 THUỘC TÍNH BẮT BUỘC)</div>
@@ -1075,7 +1097,7 @@ pages.append(page_wrap(30, "PHẦN 8 — LỘ TRÌNH P2–P6 (1/2)", "Sơ Đồ 
 # ==============================================================================
 # PAGE 31: PART 8 (2/2) — ROADMAP DETAILS FOR P4, P5, P6
 # ==============================================================================
-pages.append(page_wrap(31, "PHẦN 8 — LỘ TRÌNH P2–P6 (2/2)", "Đặc Tả Chi Tiết Giai Đoạn P4, P5 Và P6 (Đầy Đủ 7 Thuộc Tính Bắt Buộc Cho Từng Giai Đoạn)", """
+pages.append(page_wrap(32, "PHẦN 8 — LỘ TRÌNH P2–P6 (2/2)", "Đặc Tả Chi Tiết Giai Đoạn P4, P5 Và P6 (Đầy Đủ 7 Thuộc Tính Bắt Buộc Cho Từng Giai Đoạn)", """
   <div class="card">
     <div class="card-hdr">ĐẶC TẢ KỸ THUẬT CHI TIẾT GIAI ĐOẠN P4, GIAI ĐOẠN P5 VÀ GIAI ĐOẠN P6</div>
     <table class="tbl-compact">
@@ -1134,7 +1156,7 @@ pages.append(page_wrap(31, "PHẦN 8 — LỘ TRÌNH P2–P6 (2/2)", "Đặc T�
 # ==============================================================================
 # PAGE 32: PART 9 (1/2) — CONCLUSION & TRANSPARENT STATUS SUMMARY (ITEMS 1 -> 5)
 # ==============================================================================
-pages.append(page_wrap(32, "PHẦN 9 — KẾT LUẬN & HỒ SƠ PHÊ DUYỆT (1/2)", "Tổng Hợp Minh Bạch Hiện Trạng Kỹ Thuật: Đã Triển Khai, Còn Thiếu, Còn Mock/Hardcode & Rủi Ro", """
+pages.append(page_wrap(33, "PHẦN 9 — KẾT LUẬN & HỒ SƠ PHÊ DUYỆT (1/2)", "Tổng Hợp Minh Bạch Hiện Trạng Kỹ Thuật: Đã Triển Khai, Còn Thiếu, Còn Mock/Hardcode & Rủi Ro", """
   <div class="grid-2">
     <div class="card">
       <div class="card-hdr">1. TỔNG HỢP CÁC CHỨC NĂNG ĐÃ TRIỂN KHAI &amp; KIỂM CHỨNG (IMPLEMENTED &amp; TESTED)</div>
@@ -1180,7 +1202,7 @@ pages.append(page_wrap(32, "PHẦN 9 — KẾT LUẬN & HỒ SƠ PHÊ DUYỆT (1
 # ==============================================================================
 # PAGE 33: PART 9 (2/2) — PRE-P2 CONDITIONS, 7 ARCHITECTURAL DECISIONS FOR APPROVAL & DELIVERABLES
 # ==============================================================================
-pages.append(page_wrap(33, "PHẦN 9 — KẾT LUẬN & HỒ SƠ PHÊ DUYỆT (2/2)", "Điều Kiện Tiên Quyết Trước P2, 7 Quyết Định Kiến Trúc Cần Xác Nhận & Danh Mục Bàn Giao Cuối Cùng", """
+pages.append(page_wrap(34, "PHẦN 9 — KẾT LUẬN & HỒ SƠ PHÊ DUYỆT (2/2)", "Điều Kiện Tiên Quyết Trước P2, 7 Quyết Định Kiến Trúc Cần Xác Nhận & Danh Mục Bàn Giao Cuối Cùng", """
   <div class="grid-2">
     <div class="card">
       <div class="card-hdr">6. CÁC ĐIỀU KIỆN BẮT BUỘC CẦN HOÀN THÀNH TRƯỚC KHI BƯỚC SANG P2 (PRE-P2 GATE)</div>
@@ -1198,8 +1220,8 @@ pages.append(page_wrap(33, "PHẦN 9 — KẾT LUẬN & HỒ SƠ PHÊ DUYỆT (2
         <tr><th style="width:6%;">#</th><th style="width:32%;">Hạng mục Bàn giao</th><th style="width:62%;">Đường dẫn Lưu trữ Thực tế trong Workspace</th></tr>
         <tr><td><b>1</b></td><td>Báo cáo Nghiệm thu PDF (Bản chính + Bản sao)</td><td><code>E:\\DATA\\FarmerPro\\FARMERPRO_P1_2_ARCHITECTURE_UX_ACCEPTANCE_REPORT.pdf</code><br/><code>E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\FARMERPRO_P1_2_ARCHITECTURE_UX_ACCEPTANCE_REPORT.pdf</code></td></tr>
         <tr><td><b>2</b></td><td>Tài liệu Blueprint Kỹ thuật P1.2</td><td><code>E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\FARMERPRO_P1_2_STUDIO_BLUEPRINT.md</code></td></tr>
-        <tr><td><b>3</b></td><td>Thư mục Ảnh gốc nhúng trong PDF (40 ảnh PNG)</td><td><code>E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\images\\</code> (15 <code>actual_*</code>, 11 <code>ui_*</code>, 14 <code>diag_*</code>)</td></tr>
-        <tr><td><b>4</b></td><td>Thư mục Diagram Source chỉnh sửa được (26 tệp)</td><td><code>E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\diagrams\\</code> (14 tệp Vector <code>.svg</code> + 12 tệp Mermaid <code>.mmd</code>)</td></tr>
+        <tr><td><b>3</b></td><td>Thư mục Ảnh gốc nhúng trong PDF (41 ảnh PNG)</td><td><code>E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\images\\</code> (15 <code>actual_*</code>, 11 <code>ui_*</code>, 15 <code>diag_*</code>)</td></tr>
+        <tr><td><b>4</b></td><td>Thư mục Diagram Source chỉnh sửa được (30 tệp)</td><td><code>E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\diagrams\\</code> (15 tệp Vector <code>.svg</code> + 15 tệp Mermaid <code>.mmd</code>)</td></tr>
         <tr><td><b>5</b></td><td>Thư mục Raw Evidence &amp; Logs thực tế</td><td><code>E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\</code> &amp; <code>E:\\DATA\\FarmerPro\\artifacts\\p1_1_evidence\\</code></td></tr>
         <tr><td><b>6</b></td><td>Báo cáo Kiểm định Chất lượng PDF &amp; SHA-256</td><td><code>E:\\DATA\\FarmerPro\\artifacts\\p1_2_evidence\\pdf_quality_assurance_report.json</code></td></tr>
         <tr><td><b>7</b></td><td>Trạng thái Git &amp; Bảo toàn Dữ liệu</td><td><code>farmerpro.db</code> &amp; <code>apps/desktop/src</code> giữ nguyên 100% (chưa thực thi P2–P6)</td></tr>
@@ -1212,7 +1234,7 @@ pages.append(page_wrap(33, "PHẦN 9 — KẾT LUẬN & HỒ SƠ PHÊ DUYỆT (2
         <tr><th style="width:11%;">Mã QĐ</th><th style="width:67%;">Nội dung Quyết định Kiến trúc Trình Phê duyệt</th><th style="width:22%;">Xác nhận</th></tr>
         <tr>
           <td><b>QD-01</b></td>
-          <td><b>Cấu trúc điều hướng FarmerPro Studio mới:</b> Chuyển từ 10 tab phẳng sang <b>6 Khu vực Sản xuất chính + Global Context Header + Ngăn System Settings</b> (bảo toàn 100% tính năng cũ theo Trang 07).</td>
+          <td><b>Cấu trúc điều hướng FarmerPro Studio mới:</b> Chuyển từ 10 tab phẳng sang <b>6 Khu vực Sản xuất chính + Global Context Header + Ngăn System Settings</b> (bảo toàn 100% tính năng cũ theo Trang 08).</td>
           <td>☐ Đồng ý<br/>☐ Chỉnh sửa</td>
         </tr>
         <tr>

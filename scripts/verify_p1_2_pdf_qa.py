@@ -105,6 +105,7 @@ doc.close()
 required_keywords = [
     "PHẦN 1", "PHẦN 2", "PHẦN 3", "PHẦN 4", "PHẦN 5", "PHẦN 6", "PHẦN 7", "PHẦN 8", "PHẦN 9",
     "Ảnh 01", "Ảnh 02", "Ảnh 03", "Ảnh 04", "Ảnh 05", "Ảnh 06", "Ảnh 07", "Ảnh 08",
+    "Sơ đồ 1.1", "Sơ đồ 1.2", "Sơ đồ 2.1",
     "Sơ đồ IV.1", "Sơ đồ IV.2", "Sơ đồ IV.3", "Sơ đồ IV.4", "Sơ đồ IV.5",
     "Sơ đồ IV.6", "Sơ đồ IV.7", "Sơ đồ IV.8", "Sơ đồ IV.9", "Sơ đồ IV.10",
     "ACTUAL IMPLEMENTATION", "PROPOSED DESIGN — NOT IMPLEMENTED",
