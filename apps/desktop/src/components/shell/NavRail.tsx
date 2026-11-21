@@ -2,6 +2,7 @@ import React from 'react';
 import {
   LayoutDashboard,
   Smartphone,
+  FolderKanban,
   Workflow,
   ListChecks,
   Activity,
@@ -44,6 +45,13 @@ export const NavRail: React.FC<NavRailProps> = ({
           icon: Smartphone,
           badge: readyCount > 0 ? `${readyCount} online` : `${devices.length}`,
           badgeColor: readyCount > 0 ? 'bg-[#133528] text-[#3BC38D]' : 'bg-[#202B3B] text-[#74869D]',
+        },
+        {
+          id: 'workflows',
+          label: 'Kho Quy trình JX2',
+          icon: FolderKanban,
+          badge: '10 Luồng',
+          badgeColor: 'bg-[#173355] text-[#38BDF8]',
         },
         { id: 'studio', label: 'Workflow Studio', icon: Workflow, badge: 'Canvas' },
         { id: 'tasks', label: 'Bộ Nhiệm vụ', icon: ListChecks, badge: 'Queue' },

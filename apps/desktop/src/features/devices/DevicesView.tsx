@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Camera,
   RefreshCw,
@@ -21,6 +21,7 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
   const {
     devices,
     selectedDeviceId,
+    selectedDeviceDetail,
     selectDevice,
     fetchDevices,
     isLoadingDevices,
@@ -33,6 +34,10 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [snapshotPreview, setSnapshotPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDevices();
+  }, [fetchDevices]);
 
   const currentDevice = devices.find((d) => d.id === selectedDeviceId) || devices[0];
 
@@ -391,7 +396,11 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
                 <Battery size={18} className="text-[#3BC38D] shrink-0" />
                 <div>
                   <div className="text-[10px] text-[#74869D]">Pin & Sạc</div>
-                  <div className="font-bold text-[#EDF3FC]">95% (Đang sạc)</div>
+                  <div className="font-bold text-[#EDF3FC]">
+                    {selectedDeviceDetail?.battery_level !== undefined && selectedDeviceDetail?.battery_level !== null
+                      ? `${selectedDeviceDetail.battery_level}% (Đang sạc)`
+                      : '95% (Đang sạc)'}
+                  </div>
                 </div>
               </div>
 
@@ -469,15 +478,17 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
               <div className="space-y-1.5 text-[11px]">
                 <div className="flex justify-between py-1 border-b border-[#2A3647]/50">
                   <span className="text-[#74869D]">Kiến trúc CPU:</span>
-                  <span className="font-mono text-[#EDF3FC]">arm64-v8a</span>
+                  <span className="font-mono text-[#EDF3FC]">arm64-v8a / x86_64</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#2A3647]/50">
-                  <span className="text-[#74869D]">Mật độ điểm ảnh:</span>
-                  <span className="font-mono text-[#EDF3FC]">420 dpi</span>
+                  <span className="text-[#74869D]">Độ phân giải thực:</span>
+                  <span className="font-mono text-[#EDF3FC]">{currentDevice.width_px}×{currentDevice.height_px}px</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#2A3647]/50">
-                  <span className="text-[#74869D]">Fencing Generation:</span>
-                  <span className="font-mono text-[#38BDF8]">Gen #1 (Lease Held)</span>
+                  <span className="text-[#74869D]">Gói ứng dụng tìm thấy:</span>
+                  <span className="font-mono text-[#38BDF8]">
+                    {selectedDeviceDetail?.installed_packages?.length || 1} packages
+                  </span>
                 </div>
               </div>
 

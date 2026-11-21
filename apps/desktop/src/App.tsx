@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AppShell } from './components/shell/AppShell';
 import { OverviewView } from './features/overview/OverviewView';
 import { DevicesView } from './features/devices/DevicesView';
+import { WorkflowsView } from './features/workflows/WorkflowsView';
 import { WorkflowStudioView } from './features/studio/WorkflowStudioView';
 import { TasksView } from './features/tasks/TasksView';
 import { RunsView } from './features/runs/RunsView';
@@ -27,7 +28,8 @@ export const App: React.FC = () => {
   return (
     <AppShell currentView={currentView} onSelectView={setCurrentView}>
       {currentView === 'overview' && <OverviewView onNavigate={setCurrentView} />}
-      {currentView === 'devices' && <DevicesView />}
+      {currentView === 'devices' && <DevicesView onNavigate={setCurrentView} />}
+      {currentView === 'workflows' && <WorkflowsView onOpenStudio={() => setCurrentView('studio')} />}
       {currentView === 'studio' && <WorkflowStudioView />}
       {currentView === 'tasks' && <TasksView />}
       {currentView === 'runs' && <RunsView />}

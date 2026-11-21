@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Smartphone,
   Activity,
@@ -10,10 +10,12 @@ import {
   Database,
   ShieldCheck,
   RefreshCw,
+  Gamepad2,
 } from 'lucide-react';
 import { useDeviceStore } from '../../stores/deviceStore';
 import { useWorkflowStore } from '../../stores/workflowStore';
 import { formatAndroidVersion } from '../../types';
+import { jx2Workflows } from '../../data/jx2Workflows';
 
 interface OverviewViewProps {
   onNavigate: (view: string) => void;
@@ -27,6 +29,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ onNavigate }) => {
   const attentionDevices = devices.filter((d) => d.connection_state !== 'ready');
   const liveCount = devices.filter((d) => !d.is_mock).length;
   const demoCount = devices.filter((d) => d.is_mock).length;
+
+  useEffect(() => {
+    fetchDevices();
+  }, [fetchDevices]);
 
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#101722] text-[#EDF3FC]">
@@ -217,6 +223,51 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ onNavigate }) => {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+
+          {/* JX2 Mobile 10 Workflows Quick Access */}
+          <div className="rounded-xl bg-[#16202F] border border-[#2A3647] p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-xs font-bold text-[#EDF3FC] flex items-center gap-1.5">
+                  <Gamepad2 size={14} className="text-[#38BDF8]" />
+                  <span>Quy trình Võ Hiệp 2 Mobile ({jx2Workflows.length} luồng có sẵn)</span>
+                </h3>
+                <span className="text-[11px] text-[#74869D]">
+                  Bộ kịch bản tự động hóa tân thủ và cày cấp cho LDPlayer / Android
+                </span>
+              </div>
+              <button
+                onClick={() => onNavigate('workflows')}
+                className="text-xs text-[#38BDF8] hover:underline flex items-center gap-1 font-medium cursor-pointer"
+              >
+                <span>Xem tất cả ({jx2Workflows.length})</span>
+                <ArrowRight size={12} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {jx2Workflows.slice(0, 4).map((wf) => (
+                <div
+                  key={wf.id}
+                  onClick={() => {
+                    useWorkflowStore.getState().loadWorkflow(wf.data);
+                    onNavigate('studio');
+                  }}
+                  className="p-2.5 rounded-lg bg-[#101722] border border-[#2A3647] hover:border-[#1878F5] cursor-pointer transition-colors flex items-center justify-between group"
+                >
+                  <div className="truncate mr-2">
+                    <div className="text-xs font-bold text-[#EDF3FC] group-hover:text-[#38BDF8] truncate">
+                      {wf.name}
+                    </div>
+                    <div className="text-[10px] text-[#74869D] mt-0.5">
+                      {wf.category} · {wf.nodesCount} bước
+                    </div>
+                  </div>
+                  <Play size={12} className="text-[#38BDF8] shrink-0 opacity-70 group-hover:opacity-100" />
+                </div>
+              ))}
             </div>
           </div>
 

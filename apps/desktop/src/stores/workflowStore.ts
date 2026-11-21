@@ -164,6 +164,24 @@ const initialEdges: Edge[] = [
   },
 ];
 
+const getNodeFriendlyLabel = (type: string, config: any): string => {
+  if (config?.label) return config.label;
+  switch (type) {
+    case 'flow.start': return 'Bắt đầu luồng';
+    case 'flow.end': return 'Kết thúc hoàn tất';
+    case 'app.launch': return config?.packageId ? `Mở app: ${config.packageId}` : 'Mở ứng dụng game';
+    case 'control.wait': return `Chờ ${config?.durationMs || 1000}ms`;
+    case 'vision.capture': return 'Chụp màn hình (Vision)';
+    case 'vision.find_image': return config?.templateRef ? `Tìm ảnh: ${config.templateRef}` : 'Tìm ảnh khớp mẫu';
+    case 'action.random_safe_tap': return 'Chạm an toàn (Safe Tap)';
+    case 'action.tap_point': return `Chạm điểm (${config?.x || 0}, ${config?.y || 0})`;
+    case 'action.swipe': return 'Vuốt màn hình (Swipe)';
+    case 'verify.wait_for_image': return config?.templateRef ? `Xác minh ảnh: ${config.templateRef}` : 'Xác minh hình ảnh';
+    case 'state.checkpoint': return config?.name ? `Lưu Checkpoint: ${config.name}` : 'Lưu Checkpoint';
+    default: return type;
+  }
+};
+
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   workflowId: 'wf-beginner-quest-01',
   workflowName: 'Nhiệm vụ tân thủ — AutoFarm',
@@ -295,17 +313,22 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         type: 'custom',
         position: n.position || { x: 100, y: 100 },
         data: {
-          label: n.type,
+          label: getNodeFriendlyLabel(n.type, n.config),
           nodeType: n.type,
           category: (n.type.split('.')[0] || 'flow') as WorkflowNodeData['category'],
           config: n.config || {},
           timeoutMs: n.timeoutMs,
         },
       }));
-      const edges: Edge[] = (data.graph.edges || []).map((e: any) => ({
-        id: e.id,
+      const edges: Edge[] = (data.graph.edges || []).map((e: any, index: number) => ({
+        id: e.id || `e-loaded-${index}`,
         source: e.source,
         target: e.target,
+        sourceHandle: e.sourcePort || 'out-right',
+        targetHandle: e.targetPort || 'in-left',
+        type: 'smoothstep',
+        animated: false,
+        style: { stroke: '#38BDF8', strokeWidth: 2 },
       }));
       set({
         workflowId: data.workflowId || 'imported',

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Minus, Square, X, Bot } from 'lucide-react';
+import { api } from '../../lib/api';
 
 export const AppTitlebar: React.FC = () => {
   return (
@@ -21,20 +22,26 @@ export const AppTitlebar: React.FC = () => {
 
       <div className="flex items-center space-x-1">
         <button
-          className="w-8 h-6 flex items-center justify-center hover:bg-[#202B3B] text-[#A9B8CC] hover:text-white rounded"
+          onClick={() => api.windowMinimize()}
+          className="w-8 h-6 flex items-center justify-center hover:bg-[#202B3B] text-[#A9B8CC] hover:text-white rounded cursor-pointer"
           aria-label="Minimize"
+          title="Thu nhỏ cửa sổ"
         >
           <Minus size={13} />
         </button>
         <button
-          className="w-8 h-6 flex items-center justify-center hover:bg-[#202B3B] text-[#A9B8CC] hover:text-white rounded"
+          onClick={() => api.windowToggleMaximize()}
+          className="w-8 h-6 flex items-center justify-center hover:bg-[#202B3B] text-[#A9B8CC] hover:text-white rounded cursor-pointer"
           aria-label="Maximize"
+          title="Phóng to / Khôi phục cửa sổ"
         >
           <Square size={11} />
         </button>
         <button
-          className="w-8 h-6 flex items-center justify-center hover:bg-[#F27883] text-[#A9B8CC] hover:text-white rounded"
+          onClick={() => api.windowClose()}
+          className="w-8 h-6 flex items-center justify-center hover:bg-[#F27883] text-[#A9B8CC] hover:text-white rounded cursor-pointer"
           aria-label="Close"
+          title="Đóng ứng dụng"
         >
           <X size={13} />
         </button>

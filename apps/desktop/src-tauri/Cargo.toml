@@ -8,7 +8,7 @@ license.workspace = true
 tauri-build.workspace = true
 
 [dependencies]
-tauri.workspace = true
+tauri = { workspace = true, features = ["custom-protocol"] }
 fp-domain = { path = "../../../crates/fp-domain" }
 fp-adb = { path = "../../../crates/fp-adb" }
 fp-device = { path = "../../../crates/fp-device" }
@@ -27,3 +27,8 @@ anyhow.workspace = true
 tracing.workspace = true
 chrono.workspace = true
 uuid.workspace = true
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+

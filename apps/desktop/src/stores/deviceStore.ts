@@ -26,9 +26,9 @@ interface DeviceState {
 
 const mockDevices: DeviceSummary[] = [
   {
-    id: 'emulator-5554',
-    adb_serial: 'emulator-5554',
-    alias: 'Pixel 6 — Máy 01',
+    id: 'mock-pixel-6',
+    adb_serial: 'mock-pixel-6',
+    alias: 'Pixel 6 — Máy Mẫu 01',
     android_api: 33,
     model: 'Pixel_6',
     width_px: 1080,
@@ -39,9 +39,9 @@ const mockDevices: DeviceSummary[] = [
     is_mock: true,
   },
   {
-    id: '192.168.1.105:5555',
+    id: 'mock-galaxy-s22',
     adb_serial: '192.168.1.105:5555',
-    alias: 'Galaxy S22 — Máy 02',
+    alias: 'Galaxy S22 — Máy Mẫu 02',
     android_api: 31,
     model: 'SM-S901B',
     width_px: 1080,
@@ -52,9 +52,9 @@ const mockDevices: DeviceSummary[] = [
     is_mock: true,
   },
   {
-    id: '192.168.1.112:5555',
+    id: 'mock-xiaomi-12',
     adb_serial: '192.168.1.112:5555',
-    alias: 'Xiaomi 12 — Máy 03',
+    alias: 'Xiaomi 12 — Máy Mẫu 03',
     android_api: 29,
     model: '2201123G',
     width_px: 1080,
@@ -68,13 +68,13 @@ const mockDevices: DeviceSummary[] = [
 
 export const useDeviceStore = create<DeviceState>((set, get) => ({
   devices: mockDevices,
-  selectedDeviceId: 'emulator-5554',
+  selectedDeviceId: 'mock-pixel-6',
   selectedDeviceDetail: {
     summary: mockDevices[0],
     battery_level: 95,
     is_screen_on: true,
     ip_address: '127.0.0.1',
-    installed_packages: ['com.example.game', 'com.android.chrome'],
+    installed_packages: ['com.blackhole.jx2mobile', 'com.android.chrome'],
   },
   capturedScreenshot: null,
   isLoadingDevices: false,
@@ -83,7 +83,32 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
   showDemoDevices: true,
 
   setDevices: (devices) => set({ devices }),
-  selectDevice: (id) => set({ selectedDeviceId: id }),
+  selectDevice: async (id) => {
+    set({ selectedDeviceId: id });
+    if (id && isTauri()) {
+      try {
+        const detail = await api.inspectDevice(id);
+        if (detail) {
+          set({ selectedDeviceDetail: detail });
+        }
+      } catch (e) {
+        console.warn('Failed to inspect device:', e);
+      }
+    } else {
+      const matchMock = get().devices.find((d) => d.id === id);
+      if (matchMock) {
+        set({
+          selectedDeviceDetail: {
+            summary: matchMock,
+            battery_level: 95,
+            is_screen_on: true,
+            ip_address: '127.0.0.1',
+            installed_packages: ['com.blackhole.jx2mobile', 'com.android.chrome'],
+          },
+        });
+      }
+    }
+  },
   setSelectedDeviceDetail: (detail) => set({ selectedDeviceDetail: detail }),
   setCapturedScreenshot: (dataUrl) => set({ capturedScreenshot: dataUrl }),
   setIsLoadingDevices: (loading) => set({ isLoadingDevices: loading }),
@@ -109,22 +134,43 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
       const markedReal = realDevices.map((d) => ({ ...d, is_mock: false }));
 
       if (markedReal.length > 0) {
-        const combined = showDemo ? [...markedReal, ...mockDevices] : markedReal;
+        const uniqueMock = mockDevices.filter((m) => !markedReal.some((r) => r.id === m.id || r.adb_serial === m.adb_serial));
+        const combined = showDemo ? [...markedReal, ...uniqueMock] : markedReal;
         const currentSelected = get().selectedDeviceId;
-        const nextSelected = combined.some((d) => d.id === currentSelected)
-          ? currentSelected
-          : markedReal[0].id;
+        // If current selection is null or a mock device, prefer the first real LIVE device (e.g. emulator-5554)
+        const isCurrentReal = markedReal.some((d) => d.id === currentSelected);
+        const nextSelected = isCurrentReal ? currentSelected : markedReal[0].id;
 
         set({
           devices: combined,
           selectedDeviceId: nextSelected,
         });
+
+        if (nextSelected) {
+          try {
+            const detail = await api.inspectDevice(nextSelected);
+            if (detail) {
+              set({ selectedDeviceDetail: detail });
+            }
+          } catch (e) {
+            console.warn('Failed to inspect live device:', e);
+          }
+        }
       } else {
         set({
           devices: showDemo ? mockDevices : [],
-          selectedDeviceId: showDemo ? mockDevices[0].id : null,
+          selectedDeviceId: showDemo ? mockDevices[0]?.id || null : null,
+          selectedDeviceDetail: showDemo ? {
+            summary: mockDevices[0],
+            battery_level: 95,
+            is_screen_on: true,
+            ip_address: '127.0.0.1',
+            installed_packages: ['com.blackhole.jx2mobile', 'com.android.chrome'],
+          } : null,
         });
       }
+    } catch (err) {
+      console.warn('Failed to fetch devices:', err);
     } finally {
       set({ isLoadingDevices: false });
     }

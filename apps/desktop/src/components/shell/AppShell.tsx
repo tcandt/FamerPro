@@ -32,8 +32,17 @@ export const AppShell: React.FC<AppShellProps> = ({
   const { devices, selectedDeviceId, fetchDevices, fetchStatus } = useDeviceStore();
 
   useEffect(() => {
+    // Initial fetch on app start
     fetchDevices();
     fetchStatus();
+
+    // Auto-poll ADB devices every 4 seconds for live detection (e.g. LDPlayer emulator-5554)
+    const interval = setInterval(() => {
+      fetchDevices();
+      fetchStatus();
+    }, 4000);
+
+    return () => clearInterval(interval);
   }, [fetchDevices, fetchStatus]);
 
   const handleValidate = async () => {

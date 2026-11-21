@@ -12,6 +12,7 @@ import {
   Search,
 } from 'lucide-react';
 import { useWorkflowStore } from '../../stores/workflowStore';
+import { useDeviceStore } from '../../stores/deviceStore';
 
 export const ExecutionDock: React.FC = () => {
   const {
@@ -24,6 +25,7 @@ export const ExecutionDock: React.FC = () => {
     runEvents,
     isRunning,
   } = useWorkflowStore();
+  const selectedDeviceId = useDeviceStore((state) => state.selectedDeviceId);
 
   const [logFilter, setLogFilter] = useState('ALL');
   const [logSearch, setLogSearch] = useState('');
@@ -351,7 +353,7 @@ export const ExecutionDock: React.FC = () => {
               </div>
               <div className="p-2.5 bg-[#16202F] border border-[#2A3647] rounded-md">
                 <span className="text-[#74869D] text-[10px] block">Thiết bị gán hiện tại</span>
-                <span className="font-mono text-[#3BC38D] font-semibold">emulator-5554</span>
+                <span className="font-mono text-[#3BC38D] font-semibold">{selectedDeviceId || 'emulator-5554'}</span>
               </div>
             </div>
           )}
