@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "workflowId": "wf-jx2-01-login",
+  "name": "01. Khởi động và Đăng nhập (Chơi Ngay)",
+  "status": "published",
+  "disclaimer": "Live LDPlayer Võ Hiệp Truyền Kỳ 2 Mobile automation workflow",
+  "graph": {
+    "nodes": [
+      {
+        "id": "n-start",
+        "type": "flow.start",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "config": {}
+      },
+      {
+        "id": "n-launch",
+        "type": "app.launch",
+        "position": {
+          "x": 300,
+          "y": 50
+        },
+        "config": {
+          "packageId": "com.blackhole.jx2mobile"
+        }
+      },
+      {
+        "id": "n-wait-load",
+        "type": "control.wait",
+        "position": {
+          "x": 550,
+          "y": 50
+        },
+        "config": {
+          "durationMs": 3000
+        }
+      },
+      {
+        "id": "n-capture",
+        "type": "vision.capture",
+        "position": {
+          "x": 800,
+          "y": 50
+        },
+        "config": {}
+      },
+      {
+        "id": "n-find-login",
+        "type": "vision.find_image",
+        "position": {
+          "x": 1050,
+          "y": 50
+        },
+        "config": {
+          "templateRef": "games/jx2mobile/templates/btn_dang_nhap.png",
+          "minConfidence": 0.85
+        }
+      },
+      {
+        "id": "n-tap-login",
+        "type": "action.random_safe_tap",
+        "position": {
+          "x": 1050,
+          "y": 250
+        },
+        "config": {
+          "marginRatio": 0.15
+        }
+      },
+      {
+        "id": "n-wait-modal",
+        "type": "control.wait",
+        "position": {
+          "x": 800,
+          "y": 250
+        },
+        "config": {
+          "durationMs": 1500
+        }
+      },
+      {
+        "id": "n-find-choi-ngay",
+        "type": "vision.find_image",
+        "position": {
+          "x": 550,
+          "y": 250
+        },
+        "config": {
+          "templateRef": "games/jx2mobile/templates/btn_choi_ngay.png",
+          "minConfidence": 0.85
+        }
+      },
+      {
+        "id": "n-tap-choi-ngay",
+        "type": "action.random_safe_tap",
+        "position": {
+          "x": 300,
+          "y": 250
+        },
+        "config": {
+          "marginRatio": 0.15
+        }
+      },
+      {
+        "id": "n-cp-login",
+        "type": "state.checkpoint",
+        "position": {
+          "x": 50,
+          "y": 250
+        },
+        "config": {
+          "name": "logged_in_guest"
+        }
+      },
+      {
+        "id": "n-end",
+        "type": "flow.end",
+        "position": {
+          "x": 50,
+          "y": 450
+        },
+        "config": {}
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "n-start",
+        "sourcePort": "flow",
+        "target": "n-launch",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e2",
+        "source": "n-launch",
+        "sourcePort": "flow",
+        "target": "n-wait-load",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e3",
+        "source": "n-wait-load",
+        "sourcePort": "flow",
+        "target": "n-capture",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e4",
+        "source": "n-capture",
+        "sourcePort": "flow",
+        "target": "n-find-login",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e5",
+        "source": "n-find-login",
+        "sourcePort": "flow",
+        "target": "n-tap-login",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e6",
+        "source": "n-tap-login",
+        "sourcePort": "flow",
+        "target": "n-wait-modal",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e7",
+        "source": "n-wait-modal",
+        "sourcePort": "flow",
+        "target": "n-find-choi-ngay",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e8",
+        "source": "n-find-choi-ngay",
+        "sourcePort": "flow",
+        "target": "n-tap-choi-ngay",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e9",
+        "source": "n-tap-choi-ngay",
+        "sourcePort": "flow",
+        "target": "n-cp-login",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e10",
+        "source": "n-cp-login",
+        "sourcePort": "flow",
+        "target": "n-end",
+        "targetPort": "flow"
+      }
+    ]
+  },
+  "runtimePolicy": {
+    "oneActiveInputWorkflowPerDevice": true,
+    "retry": {
+      "maxAttempts": 3,
+      "backoffMs": 1200
+    },
+    "onUnknownInputResult": "pause",
+    "onFailure": "fail",
+    "endPolicy": "continue"
+  }
+}

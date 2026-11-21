@@ -1,3 +1,4 @@
+use anyhow::Context;
 use clap::{Parser, Subcommand};
 use fp_adb::AdbRunner;
 use fp_domain::DeviceDriver;
@@ -25,13 +26,19 @@ enum Commands {
     /// Validate a workflow JSON file against FarmerPro schema
     Validate {
         #[arg(short, long)]
-        file: PathBuf,
+        file: Option<PathBuf>,
+
+        #[arg(value_name = "FILE")]
+        path: Option<PathBuf>,
     },
 
     /// Run a sample workflow headlessly against a mock or real device
     Run {
         #[arg(short, long)]
-        workflow: PathBuf,
+        workflow: Option<PathBuf>,
+
+        #[arg(value_name = "WORKFLOW")]
+        path: Option<PathBuf>,
 
         #[arg(long, default_value_t = false)]
         mock: bool,
@@ -70,9 +77,12 @@ async fn main() -> anyhow::Result<()> {
             }
         }
 
-        Commands::Validate { file } => {
-            println!("Validating workflow file: {}", file.display());
-            let content = fs::read_to_string(&file)?;
+        Commands::Validate { file, path } => {
+            let target_file = file
+                .or(path)
+                .context("Must provide a workflow JSON file via --file or positional argument")?;
+            println!("Validating workflow file: {}", target_file.display());
+            let content = fs::read_to_string(&target_file)?;
             match WorkflowValidator::parse_and_validate(&content) {
                 Ok(doc) => {
                     println!(
@@ -92,11 +102,15 @@ async fn main() -> anyhow::Result<()> {
 
         Commands::Run {
             workflow,
+            path,
             mock,
             serial,
         } => {
-            println!("Loading workflow: {}", workflow.display());
-            let content = fs::read_to_string(&workflow)?;
+            let target_wf = workflow
+                .or(path)
+                .context("Must provide a workflow JSON file via --workflow or positional argument")?;
+            println!("Loading workflow: {}", target_wf.display());
+            let content = fs::read_to_string(&target_wf)?;
             let doc = WorkflowValidator::parse_and_validate(&content)?;
 
             let driver: Arc<dyn DeviceDriver> = match (mock, serial) {

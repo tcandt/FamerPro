@@ -295,7 +295,8 @@ impl DeviceDriver for AdbDeviceDriver {
 
     async fn launch_app(&self, package: &str) -> Result<ActionReceipt> {
         let start = std::time::Instant::now();
-        self.runner
+        let monkey_res = self
+            .runner
             .run_args(&[
                 "-s",
                 &self.serial,
@@ -307,7 +308,56 @@ impl DeviceDriver for AdbDeviceDriver {
                 "android.intent.category.LAUNCHER",
                 "1",
             ])
-            .await?;
+            .await;
+
+        if monkey_res.is_err() {
+            // Android 14+ / emulator fallback: resolve launcher activity and use am start
+            let resolve_out = self
+                .runner
+                .run_args(&[
+                    "-s",
+                    &self.serial,
+                    "shell",
+                    "cmd",
+                    "package",
+                    "resolve-activity",
+                    "--brief",
+                    package,
+                ])
+                .await
+                .unwrap_or_default();
+
+            let mut component = None;
+            for line in resolve_out.lines() {
+                let trimmed = line.trim();
+                if trimmed.contains('/') && !trimmed.starts_with("priority=") {
+                    component = Some(trimmed.to_string());
+                    break;
+                }
+            }
+
+            if let Some(cmp) = component {
+                self.runner
+                    .run_args(&["-s", &self.serial, "shell", "am", "start", "-n", &cmp])
+                    .await?;
+            } else {
+                self.runner
+                    .run_args(&[
+                        "-s",
+                        &self.serial,
+                        "shell",
+                        "am",
+                        "start",
+                        "-a",
+                        "android.intent.action.MAIN",
+                        "-c",
+                        "android.intent.category.LAUNCHER",
+                        "-p",
+                        package,
+                    ])
+                    .await?;
+            }
+        }
 
         Ok(ActionReceipt {
             success: true,

@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "workflowId": "wf-jx2-07-combat",
+  "name": "07. Kích hoạt Tính năng Auto Chiến đấu",
+  "status": "published",
+  "disclaimer": "Live LDPlayer Võ Hiệp Truyền Kỳ 2 Mobile automation workflow",
+  "graph": {
+    "nodes": [
+      {
+        "id": "n-start",
+        "type": "flow.start",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "config": {}
+      },
+      {
+        "id": "n-capture",
+        "type": "vision.capture",
+        "position": {
+          "x": 300,
+          "y": 50
+        },
+        "config": {}
+      },
+      {
+        "id": "n-find-auto",
+        "type": "vision.find_image",
+        "position": {
+          "x": 550,
+          "y": 50
+        },
+        "config": {
+          "templateRef": "games/jx2mobile/templates/btn_auto.png",
+          "minConfidence": 0.8
+        }
+      },
+      {
+        "id": "n-tap-auto",
+        "type": "action.random_safe_tap",
+        "position": {
+          "x": 800,
+          "y": 50
+        },
+        "config": {
+          "marginRatio": 0.15
+        }
+      },
+      {
+        "id": "n-cp-combat",
+        "type": "state.checkpoint",
+        "position": {
+          "x": 800,
+          "y": 250
+        },
+        "config": {
+          "name": "auto_combat_enabled"
+        }
+      },
+      {
+        "id": "n-end",
+        "type": "flow.end",
+        "position": {
+          "x": 550,
+          "y": 250
+        },
+        "config": {}
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "n-start",
+        "sourcePort": "flow",
+        "target": "n-capture",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e2",
+        "source": "n-capture",
+        "sourcePort": "flow",
+        "target": "n-find-auto",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e3",
+        "source": "n-find-auto",
+        "sourcePort": "flow",
+        "target": "n-tap-auto",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e4",
+        "source": "n-tap-auto",
+        "sourcePort": "flow",
+        "target": "n-cp-combat",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e5",
+        "source": "n-cp-combat",
+        "sourcePort": "flow",
+        "target": "n-end",
+        "targetPort": "flow"
+      }
+    ]
+  },
+  "runtimePolicy": {
+    "oneActiveInputWorkflowPerDevice": true,
+    "retry": {
+      "maxAttempts": 3,
+      "backoffMs": 1200
+    },
+    "onUnknownInputResult": "pause",
+    "onFailure": "fail",
+    "endPolicy": "continue"
+  }
+}

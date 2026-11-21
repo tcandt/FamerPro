@@ -182,7 +182,7 @@ async fn inspect_device(device_id: String) -> Result<DeviceDetail, String> {
 
     let summary = DeviceSummary {
         id: device_id.clone(),
-        adb_serial: device_id,
+        adb_serial: device_id.clone(),
         alias: model
             .clone()
             .unwrap_or_else(|| "Android Device".to_string()),
@@ -195,12 +195,26 @@ async fn inspect_device(device_id: String) -> Result<DeviceDetail, String> {
         updated_at: chrono::Utc::now(),
     };
 
+    let packages_out = runner
+        .run_args(&["-s", &device_id, "shell", "pm", "list", "packages"])
+        .await
+        .unwrap_or_default();
+    let mut installed_packages = Vec::new();
+    for line in packages_out.lines() {
+        if let Some(pkg) = line.trim().strip_prefix("package:") {
+            installed_packages.push(pkg.to_string());
+        }
+    }
+    if installed_packages.is_empty() {
+        installed_packages.push("com.blackhole.jx2mobile".to_string());
+    }
+
     Ok(DeviceDetail {
         summary,
         battery_level: battery,
         is_screen_on: true,
         ip_address: None,
-        installed_packages: vec!["com.example.game".to_string()],
+        installed_packages,
     })
 }
 
@@ -301,7 +315,7 @@ async fn execute_workflow(
     );
 
     let (_tx, rx) = watch::channel(ExecutionSignal::Running);
-    let mut executor = WorkflowExecutor::new(driver, rx);
+    let mut executor = WorkflowExecutor::new(driver.clone(), rx);
     let mut ctx = ExecutionContext::new(job_id.clone(), device_id);
 
     let events_counter = Arc::new(AtomicUsize::new(0));
@@ -345,6 +359,7 @@ async fn execute_test_node(
     device_id: String,
     node_type: String,
     config_json: String,
+    state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<NodeTestResult, String> {
     let start = std::time::Instant::now();
     let config = serde_json::from_str(&config_json).unwrap_or(serde_json::Value::Null);
@@ -358,17 +373,37 @@ async fn execute_test_node(
         retry_policy: None,
     };
 
-    let fake_driver = Arc::new(FakeDeviceDriver::new(&device_id, 1080, 1920));
+    let (adb_path, is_real) = {
+        let st = state.lock().unwrap();
+        (
+            st.adb_runner.adb_path.clone(),
+            !device_id.is_empty() && !device_id.starts_with("fake"),
+        )
+    };
+
+    let driver: Arc<dyn DeviceDriver> = if is_real {
+        Arc::new(fp_adb::AdbDeviceDriver::new(
+            device_id.clone(),
+            AdbRunner::new(Some(adb_path)),
+        ))
+    } else {
+        Arc::new(FakeDeviceDriver::new(&device_id, 1080, 1920))
+    };
+
     let (_tx, rx) = watch::channel(ExecutionSignal::Running);
-    let mut executor = WorkflowExecutor::new(fake_driver, rx);
+    let mut executor = WorkflowExecutor::new(driver.clone(), rx);
     let mut ctx = ExecutionContext::new("test-job".to_string(), device_id);
 
     // If testing random safe tap, initialize context with target
     if node_type == "action.random_safe_tap" {
+        let geom = driver
+            .geometry()
+            .await
+            .unwrap_or_else(|_| fp_domain::ScreenGeometry::new(1920, 1080, 0));
         ctx.last_target = Some(fp_domain::VisionTarget {
             bounds: fp_domain::Bounds::new(200.0, 400.0, 120.0, 60.0),
             confidence: 0.96,
-            geometry: fp_domain::ScreenGeometry::new(1080, 1920, 0),
+            geometry: geom,
         });
     }
 

@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "workflowId": "wf-jx2-05-accept",
+  "name": "05. Nhận Nhiệm vụ Tân thủ",
+  "status": "published",
+  "disclaimer": "Live LDPlayer Võ Hiệp Truyền Kỳ 2 Mobile automation workflow",
+  "graph": {
+    "nodes": [
+      {
+        "id": "n-start",
+        "type": "flow.start",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "config": {}
+      },
+      {
+        "id": "n-capture",
+        "type": "vision.capture",
+        "position": {
+          "x": 300,
+          "y": 50
+        },
+        "config": {}
+      },
+      {
+        "id": "n-find-tracker",
+        "type": "vision.find_image",
+        "position": {
+          "x": 550,
+          "y": 50
+        },
+        "config": {
+          "templateRef": "games/jx2mobile/templates/quest_tracker_tan_thu.png",
+          "minConfidence": 0.8
+        }
+      },
+      {
+        "id": "n-tap-tracker",
+        "type": "action.random_safe_tap",
+        "position": {
+          "x": 800,
+          "y": 50
+        },
+        "config": {
+          "marginRatio": 0.15
+        }
+      },
+      {
+        "id": "n-cp-accept",
+        "type": "state.checkpoint",
+        "position": {
+          "x": 800,
+          "y": 250
+        },
+        "config": {
+          "name": "quest_accepted"
+        }
+      },
+      {
+        "id": "n-end",
+        "type": "flow.end",
+        "position": {
+          "x": 550,
+          "y": 250
+        },
+        "config": {}
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "n-start",
+        "sourcePort": "flow",
+        "target": "n-capture",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e2",
+        "source": "n-capture",
+        "sourcePort": "flow",
+        "target": "n-find-tracker",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e3",
+        "source": "n-find-tracker",
+        "sourcePort": "flow",
+        "target": "n-tap-tracker",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e4",
+        "source": "n-tap-tracker",
+        "sourcePort": "flow",
+        "target": "n-cp-accept",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e5",
+        "source": "n-cp-accept",
+        "sourcePort": "flow",
+        "target": "n-end",
+        "targetPort": "flow"
+      }
+    ]
+  },
+  "runtimePolicy": {
+    "oneActiveInputWorkflowPerDevice": true,
+    "retry": {
+      "maxAttempts": 3,
+      "backoffMs": 1200
+    },
+    "onUnknownInputResult": "pause",
+    "onFailure": "fail",
+    "endPolicy": "continue"
+  }
+}

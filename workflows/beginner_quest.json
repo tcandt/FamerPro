@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "workflowId": "wf-beginner-quest-01",
+  "name": "Nhiệm vụ tân thủ — AutoFarm",
+  "status": "published",
+  "graph": {
+    "nodes": [
+      {
+        "id": "n-start",
+        "type": "flow.start",
+        "position": { "x": 50.0, "y": 60.0 },
+        "config": {}
+      },
+      {
+        "id": "n-launch",
+        "type": "app.launch",
+        "position": { "x": 370.0, "y": 60.0 },
+        "config": {
+          "packageId": "com.example.game"
+        }
+      },
+      {
+        "id": "n-capture",
+        "type": "vision.capture",
+        "position": { "x": 690.0, "y": 60.0 },
+        "config": {
+          "freshnessMs": 500
+        }
+      },
+      {
+        "id": "n-find",
+        "type": "vision.find_image",
+        "position": { "x": 1010.0, "y": 60.0 },
+        "config": {
+          "templateRef": "assets/templates/quest_marker.png",
+          "minConfidence": 0.92
+        }
+      },
+      {
+        "id": "n-tap",
+        "type": "action.random_safe_tap",
+        "position": { "x": 1010.0, "y": 280.0 },
+        "config": {
+          "marginRatio": 0.18,
+          "avoidRecentPoints": 5
+        }
+      },
+      {
+        "id": "n-verify",
+        "type": "verify.wait_for_image",
+        "position": { "x": 690.0, "y": 280.0 },
+        "config": {
+          "templateRef": "assets/templates/dialog_confirm.png",
+          "minConfidence": 0.90
+        }
+      },
+      {
+        "id": "n-checkpoint",
+        "type": "state.checkpoint",
+        "position": { "x": 370.0, "y": 280.0 },
+        "config": {
+          "name": "quest_active"
+        }
+      },
+      {
+        "id": "n-end",
+        "type": "flow.end",
+        "position": { "x": 50.0, "y": 280.0 },
+        "config": {}
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "n-start",
+        "sourcePort": "flow",
+        "target": "n-launch",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e2",
+        "source": "n-launch",
+        "sourcePort": "flow",
+        "target": "n-capture",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e3",
+        "source": "n-capture",
+        "sourcePort": "flow",
+        "target": "n-find",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e4",
+        "source": "n-find",
+        "sourcePort": "flow",
+        "target": "n-tap",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e5",
+        "source": "n-tap",
+        "sourcePort": "flow",
+        "target": "n-verify",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e6",
+        "source": "n-verify",
+        "sourcePort": "flow",
+        "target": "n-checkpoint",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e7",
+        "source": "n-checkpoint",
+        "sourcePort": "flow",
+        "target": "n-end",
+        "targetPort": "flow"
+      }
+    ]
+  },
+  "runtimePolicy": {
+    "oneActiveInputWorkflowPerDevice": true,
+    "retry": {
+      "maxAttempts": 3,
+      "backoffMs": 1200
+    },
+    "onUnknownInputResult": "pause",
+    "onFailure": "fail",
+    "endPolicy": "continue"
+  }
+}

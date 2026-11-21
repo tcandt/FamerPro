@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "workflowId": "wf-jx2-02-char",
+  "name": "02. Tạo nhân vật và Vào Game",
+  "status": "published",
+  "disclaimer": "Live LDPlayer Võ Hiệp Truyền Kỳ 2 Mobile automation workflow",
+  "graph": {
+    "nodes": [
+      {
+        "id": "n-start",
+        "type": "flow.start",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "config": {}
+      },
+      {
+        "id": "n-wait-char",
+        "type": "control.wait",
+        "position": {
+          "x": 300,
+          "y": 50
+        },
+        "config": {
+          "durationMs": 2500
+        }
+      },
+      {
+        "id": "n-capture",
+        "type": "vision.capture",
+        "position": {
+          "x": 550,
+          "y": 50
+        },
+        "config": {}
+      },
+      {
+        "id": "n-find-vao-game",
+        "type": "vision.find_image",
+        "position": {
+          "x": 800,
+          "y": 50
+        },
+        "config": {
+          "templateRef": "games/jx2mobile/templates/btn_vao_game.png",
+          "minConfidence": 0.85
+        }
+      },
+      {
+        "id": "n-tap-vao-game",
+        "type": "action.random_safe_tap",
+        "position": {
+          "x": 800,
+          "y": 250
+        },
+        "config": {
+          "marginRatio": 0.15
+        }
+      },
+      {
+        "id": "n-cp-char",
+        "type": "state.checkpoint",
+        "position": {
+          "x": 550,
+          "y": 250
+        },
+        "config": {
+          "name": "character_created"
+        }
+      },
+      {
+        "id": "n-end",
+        "type": "flow.end",
+        "position": {
+          "x": 300,
+          "y": 250
+        },
+        "config": {}
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "n-start",
+        "sourcePort": "flow",
+        "target": "n-wait-char",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e2",
+        "source": "n-wait-char",
+        "sourcePort": "flow",
+        "target": "n-capture",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e3",
+        "source": "n-capture",
+        "sourcePort": "flow",
+        "target": "n-find-vao-game",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e4",
+        "source": "n-find-vao-game",
+        "sourcePort": "flow",
+        "target": "n-tap-vao-game",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e5",
+        "source": "n-tap-vao-game",
+        "sourcePort": "flow",
+        "target": "n-cp-char",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e6",
+        "source": "n-cp-char",
+        "sourcePort": "flow",
+        "target": "n-end",
+        "targetPort": "flow"
+      }
+    ]
+  },
+  "runtimePolicy": {
+    "oneActiveInputWorkflowPerDevice": true,
+    "retry": {
+      "maxAttempts": 3,
+      "backoffMs": 1200
+    },
+    "onUnknownInputResult": "pause",
+    "onFailure": "fail",
+    "endPolicy": "continue"
+  }
+}

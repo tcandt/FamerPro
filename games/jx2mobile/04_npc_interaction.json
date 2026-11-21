@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "workflowId": "wf-jx2-04-npc",
+  "name": "04. Tương tác NPC Dã Tẩu",
+  "status": "published",
+  "disclaimer": "Live LDPlayer Võ Hiệp Truyền Kỳ 2 Mobile automation workflow",
+  "graph": {
+    "nodes": [
+      {
+        "id": "n-start",
+        "type": "flow.start",
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "config": {}
+      },
+      {
+        "id": "n-capture",
+        "type": "vision.capture",
+        "position": {
+          "x": 300,
+          "y": 50
+        },
+        "config": {}
+      },
+      {
+        "id": "n-find-quest-btn",
+        "type": "vision.find_image",
+        "position": {
+          "x": 550,
+          "y": 50
+        },
+        "config": {
+          "templateRef": "games/jx2mobile/templates/btn_quest_tan_thu.png",
+          "minConfidence": 0.8
+        }
+      },
+      {
+        "id": "n-tap-quest",
+        "type": "action.random_safe_tap",
+        "position": {
+          "x": 800,
+          "y": 50
+        },
+        "config": {
+          "marginRatio": 0.15
+        }
+      },
+      {
+        "id": "n-wait-move",
+        "type": "control.wait",
+        "position": {
+          "x": 800,
+          "y": 250
+        },
+        "config": {
+          "durationMs": 4000
+        }
+      },
+      {
+        "id": "n-cp-da-tau",
+        "type": "state.checkpoint",
+        "position": {
+          "x": 550,
+          "y": 250
+        },
+        "config": {
+          "name": "arrived_at_da_tau"
+        }
+      },
+      {
+        "id": "n-end",
+        "type": "flow.end",
+        "position": {
+          "x": 300,
+          "y": 250
+        },
+        "config": {}
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "n-start",
+        "sourcePort": "flow",
+        "target": "n-capture",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e2",
+        "source": "n-capture",
+        "sourcePort": "flow",
+        "target": "n-find-quest-btn",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e3",
+        "source": "n-find-quest-btn",
+        "sourcePort": "flow",
+        "target": "n-tap-quest",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e4",
+        "source": "n-tap-quest",
+        "sourcePort": "flow",
+        "target": "n-wait-move",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e5",
+        "source": "n-wait-move",
+        "sourcePort": "flow",
+        "target": "n-cp-da-tau",
+        "targetPort": "flow"
+      },
+      {
+        "id": "e6",
+        "source": "n-cp-da-tau",
+        "sourcePort": "flow",
+        "target": "n-end",
+        "targetPort": "flow"
+      }
+    ]
+  },
+  "runtimePolicy": {
+    "oneActiveInputWorkflowPerDevice": true,
+    "retry": {
+      "maxAttempts": 3,
+      "backoffMs": 1200
+    },
+    "onUnknownInputResult": "pause",
+    "onFailure": "fail",
+    "endPolicy": "continue"
+  }
+}

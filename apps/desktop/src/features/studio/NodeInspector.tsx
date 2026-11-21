@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useWorkflowStore } from '../../stores/workflowStore';
+import { useDeviceStore } from '../../stores/deviceStore';
 import { api } from '../../lib/api';
 
 export const NodeInspector: React.FC = () => {
@@ -23,6 +24,7 @@ export const NodeInspector: React.FC = () => {
   } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
 
+  const { selectedDeviceId } = useDeviceStore();
   const {
     nodes,
     selectedNodeId,
@@ -51,7 +53,7 @@ export const NodeInspector: React.FC = () => {
     setTestResult(null);
     try {
       const res = await api.executeTestNode(
-        'emulator-5554',
+        selectedDeviceId || 'emulator-5554',
         selectedNode.data.nodeType,
         JSON.stringify(selectedNode.data.config || {})
       );
