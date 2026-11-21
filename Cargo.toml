@@ -11,8 +11,12 @@ members = [
     "crates/fp-storage",
     "crates/fp-security",
     "crates/fp-testkit",
+    "crates/fp-bundle-contract",
+    "crates/fp-bundle-verify",
+    "crates/fp-builder",
     "apps/cli",
     "apps/desktop/src-tauri",
+    "apps/mini-runtime",
 ]
 resolver = "2"
 

@@ -14,6 +14,7 @@ fp-workflow-runtime = { path = "../../crates/fp-workflow-runtime" }
 fp-storage = { path = "../../crates/fp-storage" }
 fp-security = { path = "../../crates/fp-security" }
 fp-testkit = { path = "../../crates/fp-testkit" }
+fp-builder = { path = "../../crates/fp-builder" }
 clap.workspace = true
 tokio.workspace = true
 anyhow.workspace = true

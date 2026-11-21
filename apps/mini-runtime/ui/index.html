@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FarmerPro Mini Auto-Tool Runtime</title>
+  <style>
+    :root {
+      --accent: #38bdf8;
+      --header-bg: #141c28;
+      --bg-main: #0f1622;
+      --bg-card: #16202f;
+      --bg-elevated: #1c293d;
+      --border: #2a3647;
+      --text-main: #edf3fc;
+      --text-muted: #8496ae;
+      --success: #3bc38d;
+      --warning: #f59e0b;
+      --danger: #f27883;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", system-ui, sans-serif; }
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      font-size: 12px;
+      user-select: none;
+    }
+    .topbar {
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 7px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .brand-left { display: flex; align-items: center; gap: 8px; }
+    .brand-icon {
+      width: 22px; height: 22px; border-radius: 5px;
+      border: 1px solid var(--accent);
+      background: #1e293b;
+      object-fit: cover;
+    }
+    .badge {
+      padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
+      background: rgba(56, 189, 248, 0.14); color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .sig-pill {
+      padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600;
+      background: rgba(59, 195, 141, 0.14); color: var(--success);
+      border: 1px solid rgba(59, 195, 141, 0.4);
+    }
+    .mode-pill-live {
+      padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
+      background: #133528; color: #3bc38d; border: 1px solid #3bc38d;
+    }
+    .mode-pill-offline {
+      padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
+      background: #381e24; color: #f27883; border: 1px solid #f27883;
+    }
+    .mode-pill-demo {
+      padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
+      background: #3b2d17; color: #f59e0b; border: 1px solid #f59e0b;
+    }
+    .device-section {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      max-height: 135px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+    th {
+      background: #121a26; color: var(--text-muted); font-weight: 700;
+      text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border);
+      font-size: 10.5px; text-transform: uppercase;
+    }
+    td { padding: 6px 10px; border-bottom: 1px solid rgba(42,54,71,0.5); }
+    tr.active-row { background: rgba(56, 189, 248, 0.08); }
+    .state-online { color: var(--success); font-weight: 700; }
+    .state-offline { color: var(--danger); font-weight: 700; }
+
+    .workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.35fr 0.65fr;
+      overflow: hidden;
+    }
+    .workspace.single-col { grid-template-columns: 1fr; }
+    .left-pane {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .right-pane {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #0c121c;
+    }
+    .tab-bar {
+      display: flex;
+      background: #131b27;
+      border-bottom: 1px solid var(--border);
+      padding: 0 8px;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .tab-btn {
+      background: transparent; border: none; color: var(--text-muted);
+      font-weight: 700; font-size: 11px; padding: 8px 10px;
+      cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .pane-body { flex: 1; overflow-y: auto; padding: 8px; }
+
+    .task-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 9px; margin-bottom: 5px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 6px; gap: 8px;
+    }
+    .task-row:hover { border-color: var(--accent); }
+    .task-left { display: flex; align-items: center; gap: 7px; min-width: 0; flex: 1; }
+    .cat-tag {
+      font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+    }
+    .task-title {
+      font-weight: 600; color: var(--text-main);
+      line-height: 1.3; word-break: break-word;
+    }
+    .task-right { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+    .status-pill {
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+      background: #202b3b; color: #94a3b8;
+    }
+    .status-pill.running { background: #173355; color: #38bdf8; }
+    .status-pill.done { background: #133528; color: #3bc38d; }
+    .icon-btn {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      color: var(--text-main); border-radius: 4px; padding: 3px 6px;
+      font-size: 11px; cursor: pointer;
+    }
+    .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .console-box {
+      flex: 1; background: #090e16; color: #d1fae5;
+      font-family: Consolas, monospace; font-size: 11px;
+      padding: 8px; overflow-y: auto; line-height: 1.45;
+    }
+    .log-line { margin-bottom: 3px; }
+    .log-ts { color: #64748b; margin-right: 5px; }
+
+    .setting-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px; margin-bottom: 8px;
+    }
+    .setting-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 8px; gap: 8px;
+    }
+    input[type="number"], select {
+      background: #0f1622; border: 1px solid var(--border);
+      color: #fff; padding: 4px 6px; border-radius: 4px; font-size: 11px;
+    }
+    .footer {
+      background: var(--header-bg); border-top: 1px solid var(--border);
+      padding: 7px 12px; display: flex; align-items: center;
+      justify-content: space-between; flex-shrink: 0;
+    }
+    .btn-primary {
+      background: var(--accent); color: #090d16; border: none;
+      font-weight: 800; padding: 6px 12px; border-radius: 5px;
+      cursor: pointer; font-size: 11.5px;
+    }
+    .btn-secondary {
+      background: var(--bg-elevated); color: var(--text-main);
+      border: 1px solid var(--border); font-weight: 600;
+      padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand-left">
+      <img id="brand-icon" class="brand-icon" src="" alt="icon" style="display:none;" />
+      <span id="version-badge" class="badge">v1.0</span>
+      <span id="adb-mode-pill" class="mode-pill-offline">ADB: 0 ONLINE</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span id="sig-status" class="sig-pill">✓ Ed25519 Signed</span>
+      <button class="btn-secondary" onclick="toggleLayout()">1/2 Cột ⇄</button>
+    </div>
+  </div>
+
+  <!-- Top Multi-Device & Character Table (Truthful Live State Only) -->
+  <div class="device-section">
+    <table>
+      <thead id="device-thead"></thead>
+      <tbody id="device-tbody"></tbody>
+    </table>
+  </div>
+
+  <div id="workspace" class="workspace">
+    <div class="left-pane">
+      <div class="tab-bar">
+        <button id="tab-ctrl" class="tab-btn active" onclick="switchLeftTab('ctrl')">ĐIỀU KHIỂN</button>
+        <button id="tab-util" class="tab-btn" onclick="switchLeftTab('util')">TIỆN ÍCH</button>
+        <button id="tab-info" class="tab-btn" onclick="switchLeftTab('info')">MODULES (5-STATE)</button>
+      </div>
+      <div id="left-body" class="pane-body"></div>
+    </div>
+
+    <div class="right-pane">
+      <div class="tab-bar">
+        <button id="tab-log" class="tab-btn active" onclick="switchRightTab('log')">NHẬT KÝ</button>
+        <button id="tab-cfg" class="tab-btn" onclick="switchRightTab('cfg')">CÀI ĐẶT (⚙)</button>
+      </div>
+      <div id="right-log" class="console-box"></div>
+      <div id="right-cfg" class="pane-body" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="btn-primary" onclick="runAllEnabledTasks()">▶ CHẠY NHIỆM VỤ (ADB THẬT)</button>
+      <button class="btn-secondary" onclick="refreshDevices()">🔄 Quét ADB</button>
+    </div>
+    <div id="footer-meta" style="color:var(--text-muted);font-size:11px;">
+      Isolated Mini Runtime
+    </div>
+  </div>
+
+  <script>
+    let STATE = {
+      bootstrap: null,
+      leftTab: 'ctrl',
+      rightTab: 'log',
+      selectedTaskForSettings: null,
+      taskStates: {},
+      logs: [],
+      singleCol: false,
+    };
+
+    async function invokeTauri(cmd, args = {}) {
+      if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {
+        return await window.__TAURI_INTERNALS__.invoke(cmd, args);
+      }
+      throw new Error("Tauri IPC not available");
+    }
+
+    function addLog(msg) {
+      const now = new Date().toTimeString().split(' ')[0];
+      STATE.logs.unshift({ ts: now, msg });
+      renderLogs();
+    }
+
+    function renderLogs() {
+      const box = document.getElementById('right-log');
+      box.innerHTML = STATE.logs.map(l =>
+        `<div class="log-line"><span class="log-ts">[${l.ts}]</span>${l.msg}</div>`
+      ).join('');
+    }
+
+    function toggleLayout() {
+      STATE.singleCol = !STATE.singleCol;
+      document.getElementById('workspace').classList.toggle('single-col', STATE.singleCol);
+    }
+
+    function switchLeftTab(tab) {
+      STATE.leftTab = tab;
+      ['ctrl', 'util', 'info'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+      });
+      renderLeftPane();
+    }
+
+    function switchRightTab(tab) {
+      STATE.rightTab = tab;
+      document.getElementById('tab-log').classList.toggle('active', tab === 'log');
+      document.getElementById('tab-cfg').classList.toggle('active', tab === 'cfg');
+      document.getElementById('right-log').style.display = tab === 'log' ? 'block' : 'none';
+      document.getElementById('right-cfg').style.display = tab === 'cfg' ? 'block' : 'none';
+      if (tab === 'cfg') renderSettingsPane();
+    }
+
+    function openTaskSettings(taskId) {
+      STATE.selectedTaskForSettings = taskId;
+      switchRightTab('cfg');
+    }
+
+    function renderDeviceTable() {
+      const b = STATE.bootstrap;
+      if (!b) return;
+      const cols = b.uiSchema.deviceColumns || [];
+      const vars = b.runtimeVars || {};
+
+      let headHtml = `<tr><th>[✓] Thiết bị ADB</th><th>Package Game</th><th>Trạng thái</th>`;
+      for (const c of cols) headHtml += `<th>${c.label}</th>`;
+      headHtml += `</tr>`;
+      document.getElementById('device-thead').innerHTML = headHtml;
+
+      const devices = b.devices || [];
+      const readyCount = devices.filter(d => d.connection_state === 'ready').length;
+      const pill = document.getElementById('adb-mode-pill');
+      if (readyCount > 0) {
+        pill.className = 'mode-pill-live';
+        pill.textContent = `LIVE ADB: ${readyCount} ONLINE`;
+      } else {
+        pill.className = 'mode-pill-offline';
+        pill.textContent = `ADB: 0 ONLINE (OFFLINE)`;
+      }
+
+      if (devices.length === 0) {
+        document.getElementById('device-tbody').innerHTML = `<tr>
+          <td class="state-offline">Chưa có thiết bị kết nối</td>
+          <td style="color:var(--text-muted);font-family:Consolas;">${b.manifest.project.gamePackageId}</td>
+          <td class="state-offline">OFFLINE</td>
+          ${cols.map(c => `<td style="color:var(--text-muted);">${c.fallbackDisplay}</td>`).join('')}
+        </tr>`;
+        return;
+      }
+
+      let bodyHtml = '';
+      for (const d of devices) {
+        const online = d.connection_state === 'ready';
+        bodyHtml += `<tr class="${online ? 'active-row' : ''}">
+          <td><input type="checkbox" ${online ? 'checked' : 'disabled'} /> <b>${d.alias || d.id} (${d.id})</b></td>
+          <td style="color:var(--text-muted);font-family:Consolas;">${b.manifest.project.gamePackageId}</td>
+          <td class="${online ? 'state-online' : 'state-offline'}">${online ? 'ONLINE (LIVE)' : d.connection_state.toUpperCase()}</td>`;
+        for (const c of cols) {
+          const hasVerifiedVal = vars[c.runtimeVarKey] !== undefined && vars[c.runtimeVarKey] !== null;
+          const val = hasVerifiedVal ? vars[c.runtimeVarKey] : c.fallbackDisplay;
+          const color = hasVerifiedVal ? (c.badgeColor || 'var(--text-main)') : 'var(--text-muted)';
+          bodyHtml += `<td style="color:${color};font-weight:${hasVerifiedVal ? '700' : '400'};">${val}</td>`;
+        }
+        bodyHtml += `</tr>`;
+      }
+      document.getElementById('device-tbody').innerHTML = bodyHtml;
+    }
+
+    function renderLeftPane() {
+      const b = STATE.bootstrap;
+      const container = document.getElementById('left-body');
+      if (!b) return;
+
+      if (STATE.leftTab === 'ctrl') {
+        const cats = {};
+        for (const c of b.uiSchema.taskCategories) cats[c.id] = c;
+
+        container.innerHTML = b.uiSchema.tasks.map(t => {
+          const cat = cats[t.categoryId] || { shortTag: '[TASK]', colorHex: '#38bdf8' };
+          const st = STATE.taskStates[t.id] || { enabled: t.defaultEnabled, status: 'Chưa làm', cls: '' };
+          const hasSettings = t.settingsSchema && t.settingsSchema.length > 0;
+          return `<div class="task-row">
+            <div class="task-left">
+              <input type="checkbox" ${st.enabled ? 'checked' : ''} onchange="toggleTask('${t.id}', this.checked)" />
+              <span class="cat-tag" style="background:${cat.colorHex}22;color:${cat.colorHex};border:1px solid ${cat.colorHex}66;">
+                ${cat.shortTag}
+              </span>
+              <span class="task-title">${t.title}</span>
+            </div>
+            <div class="task-right">
+              <span class="status-pill ${st.cls}">${st.status}</span>
+              <button class="icon-btn" title="Chạy trên ADB thật" onclick="runSingleTask('${t.id}')">▶</button>
+              ${hasSettings ? `<button class="icon-btn" title="Cài đặt tham số" onclick="openTaskSettings('${t.id}')">⚙</button>` : ''}
+            </div>
+          </div>`;
+        }).join('');
+      } else if (STATE.leftTab === 'util') {
+        const activeModules = new Set(
+          b.manifest.moduleStates.filter(m => m.packagedInRelease && m.activeAndInitialized).map(m => m.moduleId)
+        );
+        // Strictly hide or lock utilities whose required module was not packaged
+        container.innerHTML = b.uiSchema.utilities
+          .filter(u => !u.requiredModule || activeModules.has(u.requiredModule))
+          .map(u => `<div class="setting-card">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" ${u.defaultEnabled ? 'checked' : ''} />
+              <b>${u.label}</b>
+            </label>
+          </div>`).join('');
+      } else {
+        container.innerHTML = b.manifest.moduleStates.map(m => `
+          <div class="setting-card">
+            <div style="display:flex;justify-content:space-between;">
+              <b>${m.displayName} (${m.moduleId})</b>
+              <span class="badge" style="color:${m.packagedInRelease ? 'var(--success)' : 'var(--danger)'};border-color:${m.packagedInRelease ? 'var(--success)' : 'var(--danger)'}">
+                ${m.packagedInRelease ? 'PACKAGED & ACTIVE' : 'NOT PACKAGED'}
+              </span>
+            </div>
+            <div style="color:var(--text-muted);font-size:10.5px;margin-top:4px;">${m.technicalNote}</div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function renderSettingsPane() {
+      const b = STATE.bootstrap;
+      const box = document.getElementById('right-cfg');
+      if (!b) return;
+      const task = b.uiSchema.tasks.find(t => t.id === STATE.selectedTaskForSettings) || b.uiSchema.tasks[0];
+      if (!task) return;
+      let html = `<div class="setting-card">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:6px;">⚙ ${task.title}</div>`;
+      if (!task.settingsSchema || task.settingsSchema.length === 0) {
+        html += `<div>Nhiệm vụ sử dụng cấu hình mặc định chuẩn.</div>`;
+      } else {
+        for (const f of task.settingsSchema) {
+          html += `<div class="setting-row"><span>${f.label}</span>`;
+          if (f.fieldType === 'boolean') {
+            html += `<input type="checkbox" ${f.defaultValue ? 'checked' : ''} />`;
+          } else if (f.fieldType === 'select' && f.options) {
+            html += `<select>${f.options.map(o => `<option ${o === f.defaultValue ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+          } else {
+            html += `<input type="number" value="${f.defaultValue}" style="width:70px;" />`;
+          }
+          html += `</div>`;
+        }
+      }
+      html += `</div>`;
+      box.innerHTML = html;
+    }
+
+    function toggleTask(taskId, checked) {
+      if (!STATE.taskStates[taskId]) STATE.taskStates[taskId] = { enabled: checked, status: 'Chưa làm', cls: '' };
+      else STATE.taskStates[taskId].enabled = checked;
+    }
+
+    async function runSingleTask(taskId) {
+      STATE.taskStates[taskId] = { enabled: true, status: 'Đang làm', cls: 'running' };
+      renderLeftPane();
+      addLog(`Gửi lệnh chạy '${taskId}' (Chế độ: LIVE ADB)...`);
+      try {
+        const res = await invokeTauri('mini_run_task', { taskId, useDemoMock: false });
+        STATE.taskStates[taskId] = {
+          enabled: true,
+          status: res.state === 'Succeeded' ? 'Hoàn thành' : res.state,
+          cls: res.state === 'Succeeded' ? 'done' : ''
+        };
+        STATE.bootstrap.runtimeVars = res.updatedRuntimeVars || {};
+        renderDeviceTable();
+        renderLeftPane();
+        addLog(`✓ Hoàn tất '${taskId}' trên ${res.driverUsed}: ${res.eventsCount} bước (${res.state})`);
+      } catch (e) {
+        STATE.taskStates[taskId] = { enabled: true, status: 'Tạm dừng/Lỗi', cls: '' };
+        renderLeftPane();
+        addLog(`✗ Từ chối giả lập (Fail-Closed): ${e}`);
+      }
+    }
+
+    async function runAllEnabledTasks() {
+      if (!STATE.bootstrap) return;
+      for (const t of STATE.bootstrap.uiSchema.tasks) {
+        const st = STATE.taskStates[t.id];
+        if (!st || st.enabled) await runSingleTask(t.id);
+      }
+    }
+
+    async function refreshDevices() {
+      try {
+        const devs = await invokeTauri('mini_list_devices');
+        if (STATE.bootstrap) {
+          STATE.bootstrap.devices = devs;
+          renderDeviceTable();
+          addLog(`Quét ADB lúc ${new Date().toLocaleTimeString()}: ${devs.length} thiết bị.`);
+        }
+      } catch (e) {
+        addLog(`Lỗi quét ADB: ${e}`);
+      }
+    }
+
+    async function init() {
+      try {
+        const data = await invokeTauri('mini_get_bootstrap');
+        STATE.bootstrap = data;
+        document.documentElement.style.setProperty('--accent', data.uiSchema.themeAccentHex || '#38bdf8');
+        document.documentElement.style.setProperty('--header-bg', data.uiSchema.headerBgHex || '#141c28');
+        document.getElementById('version-badge').textContent = `${data.manifest.project.name} • ${data.uiSchema.versionBadge}`;
+        document.title = data.uiSchema.windowTitle;
+
+        if (data.iconBase64) {
+          const img = document.getElementById('brand-icon');
+          img.src = data.iconBase64;
+          img.style.display = 'block';
+        }
+        document.getElementById('footer-meta').textContent =
+          `KeyID: ${data.keyId} | Namespace: runtime_${data.manifest.project.slug}.db`;
+
+        for (const t of data.uiSchema.tasks) {
+          STATE.taskStates[t.id] = { enabled: t.defaultEnabled, status: 'Chưa làm', cls: '' };
+        }
+
+        renderDeviceTable();
+        renderLeftPane();
+        renderSettingsPane();
+        addLog(`Khởi động ${data.uiSchema.windowTitle}`);
+        addLog(`Chữ ký RFC 8032 (${data.signatureAlgorithm}): HỢP LỆ`);
+        addLog(`Trạng thái ADB thực tế: ${data.devices.length} máy kết nối.`);
+      } catch (e) {
+        addLog(`LỖI XÁC THỰC BUNDLE: ${e}`);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+[package]
+name = "fp-mini-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+tauri = { workspace = true, features = ["custom-protocol"] }
+fp-bundle-contract = { path = "../../crates/fp-bundle-contract" }
+fp-bundle-verify = { path = "../../crates/fp-bundle-verify" }
+fp-domain = { path = "../../crates/fp-domain" }
+fp-adb = { path = "../../crates/fp-adb" }
+fp-device = { path = "../../crates/fp-device" }
+fp-vision = { path = "../../crates/fp-vision" }
+fp-actions = { path = "../../crates/fp-actions" }
+fp-workflow-schema = { path = "../../crates/fp-workflow-schema" }
+fp-workflow-runtime = { path = "../../crates/fp-workflow-runtime" }
+fp-scheduler = { path = "../../crates/fp-scheduler" }
+fp-storage = { path = "../../crates/fp-storage" }
+fp-security = { path = "../../crates/fp-security" }
+fp-testkit = { path = "../../crates/fp-testkit" }
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

@@ -1,6 +1,9 @@
 use anyhow::Context;
 use clap::{Parser, Subcommand};
 use fp_adb::AdbRunner;
+use fp_builder::{
+    orchestrator::run_concurrent_two_device_verification, seed_two_poc_projects, MiniToolPackager,
+};
 use fp_domain::DeviceDriver;
 use fp_testkit::FakeDeviceDriver;
 use fp_workflow_runtime::{ExecutionContext, ExecutionSignal, WorkflowExecutor};
@@ -12,7 +15,7 @@ use tokio::sync::watch;
 
 #[derive(Parser)]
 #[command(name = "farmerpro-cli")]
-#[command(about = "FarmerPro Headless Automation Diagnostic CLI", long_about = None)]
+#[command(about = "FarmerPro Headless Automation Diagnostic & Builder CLI", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -46,6 +49,15 @@ enum Commands {
         #[arg(short, long)]
         serial: Option<String>,
     },
+
+    /// Export the two PoC Mini Auto-Tool packages using fp-builder and external Ed25519 producer keystore
+    ExportPoc {
+        #[arg(long)]
+        repo_root: Option<PathBuf>,
+    },
+
+    /// Run multi-device concurrent lease & generation fencing verification
+    VerifyMultiDevice,
 }
 
 #[tokio::main]
@@ -144,6 +156,45 @@ async fn main() -> anyhow::Result<()> {
                 .await?;
 
             println!("Workflow execution finished with state: {:?}", state);
+        }
+
+        Commands::ExportPoc { repo_root } => {
+            let root = repo_root.unwrap_or_else(|| std::env::current_dir().unwrap());
+            let runtime_exe = root.join("target").join("release").join("fp-mini-runtime.exe");
+            let bin_dir = root.join("bin");
+            let (jx2_proj, slg_proj) = seed_two_poc_projects(&root)?;
+
+            let jx2_out = root.join("releases").join("poc").join("Auto_JX2_Mobile");
+            let slg_out = root.join("releases").join("poc").join("Auto_Kingdom_SLG");
+
+            let rep1 = MiniToolPackager::build_and_export_release(
+                &jx2_proj,
+                &runtime_exe,
+                Some(&bin_dir),
+                &jx2_out,
+                None,
+            )?;
+            let rep2 = MiniToolPackager::build_and_export_release(
+                &slg_proj,
+                &runtime_exe,
+                Some(&bin_dir),
+                &slg_out,
+                None,
+            )?;
+
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "command": "export-poc",
+                    "status": "PASS",
+                    "releases": [rep1, rep2]
+                }))?
+            );
+        }
+
+        Commands::VerifyMultiDevice => {
+            let report = run_concurrent_two_device_verification().await?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
         }
     }
 
