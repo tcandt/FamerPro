@@ -53,7 +53,11 @@ pub struct AppState {
 async fn app_get_status(state: State<'_, Arc<Mutex<AppState>>>) -> Result<AppStatus, String> {
     let (adb_path, db_path, is_portable) = {
         let st = state.lock().unwrap();
-        (st.adb_runner.adb_path.clone(), st.db_path.clone(), st.is_portable)
+        (
+            st.adb_runner.adb_path.clone(),
+            st.db_path.clone(),
+            st.is_portable,
+        )
     };
 
     let adb_runner = AdbRunner::new(Some(adb_path.clone()));
@@ -109,7 +113,10 @@ async fn list_devices(
 
     for d in &mut devices {
         if d.connection_state == ConnectionState::Ready {
-            if let Ok(sdk_str) = runner.run_args(&["-s", &d.id, "shell", "getprop", "ro.build.version.sdk"]).await {
+            if let Ok(sdk_str) = runner
+                .run_args(&["-s", &d.id, "shell", "getprop", "ro.build.version.sdk"])
+                .await
+            {
                 if let Ok(sdk) = sdk_str.trim().parse::<u32>() {
                     d.android_api = Some(sdk);
                 }

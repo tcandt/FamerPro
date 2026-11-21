@@ -124,7 +124,8 @@ export const WorkflowStudioContent: React.FC = () => {
             onConnect={onConnect}
             onNodeClick={handleNodeClick}
             onPaneClick={handlePaneClick}
-            defaultViewport={{ x: 60, y: 50, zoom: 0.88 }}
+            fitView
+            fitViewOptions={{ padding: 0.18, minZoom: 0.45, maxZoom: 1.15 }}
             minZoom={0.35}
             maxZoom={2.0}
             className="w-full h-full"

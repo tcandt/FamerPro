@@ -247,7 +247,7 @@ impl StorageManager {
         conn.execute(
             "INSERT INTO workflows (id, name, draft_json, draft_updated_at)
              VALUES (?1, ?2, ?3, ?4)
-             ON CONFLICT(id) DO UPDATE SET draft_json = excluded.draft_json, draft_updated_at = excluded.draft_updated_at;",
+             ON CONFLICT(id) DO NOTHING;",
             params![workflow_id, workflow_name, graph_json, now],
         )?;
 
@@ -407,5 +407,84 @@ mod tests {
         assert_eq!(events[0].node_id, "n-start");
 
         storage.complete_job(job_id, "Succeeded").unwrap();
+    }
+
+    #[test]
+    fn test_sqlite_file_persistence_across_reopen_and_checkpoint_recovery() {
+        let temp_dir = std::env::temp_dir();
+        let db_file = temp_dir.join(format!(
+            "farmerpro_persist_test_{}.db",
+            uuid::Uuid::new_v4()
+        ));
+        let db_path_str = db_file.to_str().unwrap().to_string();
+
+        let job_id = "job-reopen-test-999";
+        let dev_id = "emulator-5554";
+        let wf_id = "wf-checkpoint-flow";
+
+        // Phase 1: Open DB, store workflow, job, and checkpoint event, then drop connection (close)
+        {
+            let storage = StorageManager::new(&db_file).unwrap();
+            storage
+                .save_workflow_draft(
+                    wf_id,
+                    "Reopen Test Workflow",
+                    "{\"nodes\":[{\"id\":\"n-start\"}]}",
+                )
+                .unwrap();
+
+            storage
+                .ensure_job_exists(
+                    job_id,
+                    dev_id,
+                    wf_id,
+                    "Reopen Test Workflow",
+                    "{\"nodes\":[]}",
+                )
+                .unwrap();
+
+            let checkpoint_evt = StepEvent {
+                id: "evt-chk-001".to_string(),
+                job_id: job_id.to_string(),
+                node_id: "n-checkpoint".to_string(),
+                event_type: fp_domain::StepEventType::CheckpointSaved,
+                attempt_no: 1,
+                at: Utc::now(),
+                payload_json: "{\"checkpoint_name\":\"quest_active\",\"state\":\"saved\"}"
+                    .to_string(),
+            };
+            storage.insert_step_event(&checkpoint_evt).unwrap();
+        } // storage drops here -> SQLite connection closed
+
+        // Phase 2: Reopen DB from the same file path (simulating app restart)
+        {
+            let reopened_storage = StorageManager::new(&db_file).unwrap();
+
+            // 1. Verify workflow draft survived
+            let (name, draft) = reopened_storage.get_workflow_draft(wf_id).unwrap().unwrap();
+            assert_eq!(name, "Reopen Test Workflow");
+            assert!(draft.contains("n-start"));
+
+            // 2. Verify checkpoint event survived and is recoverable
+            let events = reopened_storage.list_step_events(Some(job_id)).unwrap();
+            assert_eq!(events.len(), 1);
+            assert_eq!(events[0].id, "evt-chk-001");
+            assert_eq!(events[0].node_id, "n-checkpoint");
+            assert_eq!(
+                events[0].event_type,
+                fp_domain::StepEventType::CheckpointSaved
+            );
+            assert!(events[0].payload_json.contains("quest_active"));
+
+            // Complete job after recovery
+            reopened_storage
+                .complete_job(job_id, "ResumedAndCompleted")
+                .unwrap();
+        }
+
+        // Cleanup
+        let _ = std::fs::remove_file(&db_file);
+        let _ = std::fs::remove_file(format!("{}-wal", db_path_str));
+        let _ = std::fs::remove_file(format!("{}-shm", db_path_str));
     }
 }

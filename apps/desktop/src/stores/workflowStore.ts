@@ -44,61 +44,124 @@ const initialNodes: Node<WorkflowNodeData>[] = [
   {
     id: 'n-start',
     type: 'custom',
-    position: { x: 60, y: 60 },
+    position: { x: 50, y: 50 },
     data: { label: 'Bắt đầu luồng', nodeType: 'flow.start', category: 'flow', config: {} },
   },
   {
     id: 'n-launch',
     type: 'custom',
-    position: { x: 400, y: 60 },
+    position: { x: 380, y: 50 },
     data: { label: 'Mở ứng dụng game', nodeType: 'app.launch', category: 'app', config: { packageId: 'com.example.game' } },
   },
   {
     id: 'n-capture',
     type: 'custom',
-    position: { x: 740, y: 60 },
+    position: { x: 710, y: 50 },
     data: { label: 'Chụp khung hình', nodeType: 'vision.capture', category: 'vision', config: { freshnessMs: 500 } },
   },
   {
     id: 'n-find',
     type: 'custom',
-    position: { x: 1080, y: 60 },
+    position: { x: 1040, y: 50 },
     data: { label: 'Tìm ảnh nút nhiệm vụ', nodeType: 'vision.find_image', category: 'vision', config: { templateRef: 'quest_marker.png', minConfidence: 0.92 } },
   },
   {
     id: 'n-tap',
     type: 'custom',
-    position: { x: 60, y: 300 },
+    position: { x: 1040, y: 280 },
     data: { label: 'Safe Random Tap', nodeType: 'action.random_safe_tap', category: 'action', config: { marginRatio: 0.18, avoidRecentPoints: 5 } },
   },
   {
     id: 'n-verify',
     type: 'custom',
-    position: { x: 400, y: 300 },
+    position: { x: 710, y: 280 },
     data: { label: 'Xác minh hội thoại', nodeType: 'verify.wait_for_image', category: 'verify', config: { templateRef: 'dialog_confirm.png', minConfidence: 0.90 } },
   },
   {
     id: 'n-checkpoint',
     type: 'custom',
-    position: { x: 740, y: 300 },
+    position: { x: 380, y: 280 },
     data: { label: 'Lưu Checkpoint', nodeType: 'state.checkpoint', category: 'state', config: { name: 'quest_active' } },
   },
   {
     id: 'n-end',
     type: 'custom',
-    position: { x: 1080, y: 300 },
+    position: { x: 50, y: 280 },
     data: { label: 'Kết thúc hoàn tất', nodeType: 'flow.end', category: 'flow', config: {} },
   },
 ];
 
 const initialEdges: Edge[] = [
-  { id: 'e1', source: 'n-start', target: 'n-launch', animated: false },
-  { id: 'e2', source: 'n-launch', target: 'n-capture', animated: false },
-  { id: 'e3', source: 'n-capture', target: 'n-find', animated: false },
-  { id: 'e4', source: 'n-find', target: 'n-tap', animated: false },
-  { id: 'e5', source: 'n-tap', target: 'n-verify', animated: false },
-  { id: 'e6', source: 'n-verify', target: 'n-checkpoint', animated: false },
-  { id: 'e7', source: 'n-checkpoint', target: 'n-end', animated: false },
+  {
+    id: 'e1',
+    source: 'n-start',
+    target: 'n-launch',
+    sourceHandle: 'out-right',
+    targetHandle: 'in-left',
+    type: 'smoothstep',
+    animated: false,
+    style: { stroke: '#38BDF8', strokeWidth: 2 },
+  },
+  {
+    id: 'e2',
+    source: 'n-launch',
+    target: 'n-capture',
+    sourceHandle: 'out-right',
+    targetHandle: 'in-left',
+    type: 'smoothstep',
+    animated: false,
+    style: { stroke: '#38BDF8', strokeWidth: 2 },
+  },
+  {
+    id: 'e3',
+    source: 'n-capture',
+    target: 'n-find',
+    sourceHandle: 'out-right',
+    targetHandle: 'in-left',
+    type: 'smoothstep',
+    animated: false,
+    style: { stroke: '#38BDF8', strokeWidth: 2 },
+  },
+  {
+    id: 'e4',
+    source: 'n-find',
+    target: 'n-tap',
+    sourceHandle: 'out-bottom',
+    targetHandle: 'in-top',
+    type: 'smoothstep',
+    animated: false,
+    style: { stroke: '#38BDF8', strokeWidth: 2 },
+  },
+  {
+    id: 'e5',
+    source: 'n-tap',
+    target: 'n-verify',
+    sourceHandle: 'out-left',
+    targetHandle: 'in-right',
+    type: 'smoothstep',
+    animated: false,
+    style: { stroke: '#38BDF8', strokeWidth: 2 },
+  },
+  {
+    id: 'e6',
+    source: 'n-verify',
+    target: 'n-checkpoint',
+    sourceHandle: 'out-left',
+    targetHandle: 'in-right',
+    type: 'smoothstep',
+    animated: false,
+    style: { stroke: '#38BDF8', strokeWidth: 2 },
+  },
+  {
+    id: 'e7',
+    source: 'n-checkpoint',
+    target: 'n-end',
+    sourceHandle: 'out-left',
+    targetHandle: 'in-right',
+    type: 'smoothstep',
+    animated: false,
+    style: { stroke: '#38BDF8', strokeWidth: 2 },
+  },
 ];
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
@@ -166,14 +229,15 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   autoLayout: () => {
     const nodes = get().nodes;
     const perRow = 4;
-    const nodeWidth = 340;
-    const nodeHeight = 240;
-    const startX = 60;
-    const startY = 60;
+    const nodeWidth = 330;
+    const nodeHeight = 230;
+    const startX = 50;
+    const startY = 50;
 
     const newNodes = nodes.map((node, index) => {
       const row = Math.floor(index / perRow);
-      const col = index % perRow;
+      // Snake order: even rows left-to-right, odd rows right-to-left
+      const col = row % 2 === 0 ? index % perRow : (perRow - 1) - (index % perRow);
 
       return {
         ...node,
@@ -184,7 +248,33 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       };
     });
 
-    set({ nodes: newNodes, isDirty: true });
+    // Re-route sequential edges for snake flow
+    const edges = get().edges.map((edge) => {
+      if (edge.id === 'e4' || (edge.source === 'n-find' && edge.target === 'n-tap')) {
+        return {
+          ...edge,
+          sourceHandle: 'out-bottom',
+          targetHandle: 'in-top',
+          type: 'smoothstep',
+        };
+      }
+      if (['e5', 'e6', 'e7'].includes(edge.id)) {
+        return {
+          ...edge,
+          sourceHandle: 'out-left',
+          targetHandle: 'in-right',
+          type: 'smoothstep',
+        };
+      }
+      return {
+        ...edge,
+        sourceHandle: 'out-right',
+        targetHandle: 'in-left',
+        type: 'smoothstep',
+      };
+    });
+
+    set({ nodes: newNodes, edges, isDirty: true });
   },
 
   setWorkflowName: (name) => set({ workflowName: name, isDirty: true }),
