@@ -2,9 +2,13 @@
 
 > **Dự án:** FarmerPro — Android Workflow Automation Studio  
 > **Phiên bản:** v0.1.0-portable (Windows x64 Native Tauri v2)  
-> **Gói cài đặt:** `FarmerPro-v0.1.0-win-x64-portable.zip` (8.46 MB)  
+> **Gói cài đặt:** [`FarmerPro-v0.1.0-win-x64-portable.zip`](FarmerPro-v0.1.0-win-x64-portable.zip) (8.46 MB)  
+> **Tài liệu PDF xuất sẵn:** [📄 **Tải / Mở FARMERPRO_UI_GALLERY_REPORT.pdf**](FARMERPRO_UI_GALLERY_REPORT.pdf) (2.3 MB)  
+> **Bản xem HTML tương tác:** [🌐 **Mở FARMERPRO_UI_GALLERY_REPORT.html**](FARMERPRO_UI_GALLERY_REPORT.html)  
 > **Thời gian xuất báo cáo:** 21/11/2026  
-> **Trạng thái:** Đã hoàn thành Redesign UI/UX V2 & Đóng gói Portable ZIP đạt tiêu chuẩn nghiệm thu ≥ 9/10.
+> **Trạng thái:** Đã hoàn thành Redesign UI/UX V2 & Đóng gói Portable ZIP đạt tiêu chuẩn nghiệm thu &ge; 9/10.
+
+*Mẹo: Nhấp trực tiếp vào bất kỳ ảnh nào bên dưới để mở tệp ảnh gốc độ phân giải cao.*
 
 ---
 
@@ -58,7 +62,7 @@ Dựa trên bản đánh giá kiểm tra giao diện ban đầu (5.5/10), phiên
 ### Tab 1: Tổng quan (Overview Dashboard)
 Theo dõi trạng thái thiết bị thực, các phiên tự động hóa đang chạy, chỉ số kiểm thử Testkit thực tế và hàng đợi cần xử lý (Attention Queue).
 
-![Tab 1: Tổng quan](screenshots/v2_tab_01_overview.png)
+[![Tab 1: Tổng quan (Nhấp để phóng to)](screenshots/v2_tab_01_overview.png)](screenshots/v2_tab_01_overview.png)
 
 * **Điểm cải tiến nổi bật:**
   * Loại bỏ số liệu giả lập, phân định rõ ràng giữa **ADB Trực tiếp: 0** và **Dữ liệu mẫu: 3**.
@@ -71,7 +75,7 @@ Theo dõi trạng thái thiết bị thực, các phiên tự động hóa đang
 ### Tab 2: Quản lý Thiết bị (Devices Management)
 Bảng thiết bị ADB USB/TCP, mức pin, trạng thái, góc xoay màn hình và khung xem ảnh chụp theo yêu cầu.
 
-![Tab 2: Quản lý Thiết bị](screenshots/v2_tab_02_devices.png)
+[![Tab 2: Quản lý Thiết bị (Nhấp để phóng to)](screenshots/v2_tab_02_devices.png)](screenshots/v2_tab_02_devices.png)
 
 * **Điểm cải tiến nổi bật:**
   * Hiển thị chính xác tên phiên bản thương mại kèm mã API: `Android 13 (API 33)`, `Android 12 (API 31)`, `Android 10 (API 29)`.
@@ -83,7 +87,7 @@ Bảng thiết bị ADB USB/TCP, mức pin, trạng thái, góc xoay màn hình 
 ### Tab 3: Workflow Studio (Hero Canvas)
 Trung tâm xây dựng quy trình tự động hóa với Canvas React Flow kéo-thả, thư viện Node phong phú, thanh điều khiển kiểm tra/chạy luồng, Inspector cấu hình node theo ngữ cảnh và Dock hiển thị tiến trình thực thi.
 
-![Tab 3: Workflow Studio](screenshots/v2_tab_03_studio.png)
+[![Tab 3: Workflow Studio (Nhấp để phóng to)](screenshots/v2_tab_03_studio.png)](screenshots/v2_tab_03_studio.png)
 
 * **Điểm cải tiến nổi bật:**
   * Node mở rộng kích thước lớn (~280px), typography tương phản cao, nhãn phân hệ chuẩn hóa (`FLOW`, `APP`, `CAPTURE`, `ACTION`, `VERIFY`, `STATE`).
@@ -97,7 +101,7 @@ Trung tâm xây dựng quy trình tự động hóa với Canvas React Flow kéo
 ### Tab 4: Bộ Nhiệm vụ (Task Planner)
 Quản lý tập nhiệm vụ (Selected Task Set), phân bổ thứ tự ưu tiên, kiểm tra điều kiện tiên quyết và kế hoạch điều phối đơn luồng trên từng thiết bị.
 
-![Tab 4: Bộ Nhiệm vụ](screenshots/v2_tab_04_tasks.png)
+[![Tab 4: Bộ Nhiệm vụ (Nhấp để phóng to)](screenshots/v2_tab_04_tasks.png)](screenshots/v2_tab_04_tasks.png)
 
 * **Điểm cải tiến nổi bật:**
   * Bố cục 2 cột chuyên nghiệp:
@@ -109,7 +113,7 @@ Quản lý tập nhiệm vụ (Selected Task Set), phân bổ thứ tự ưu ti�
 ### Tab 5: Nhật ký Phiên chạy (Runtime Monitor)
 Theo dõi dòng sự kiện thực thi chi tiết theo thời gian thực (Step Trace Table) với nút sao chép toàn bộ vết thực thi phục vụ phân tích lỗi.
 
-![Tab 5: Nhật ký Phiên chạy](screenshots/v2_tab_05_runs.png)
+[![Tab 5: Nhật ký Phiên chạy (Nhấp để phóng to)](screenshots/v2_tab_05_runs.png)](screenshots/v2_tab_05_runs.png)
 
 * **Điểm cải tiến nổi bật:**
   * Bảng Step Trace chi tiết: Hiển thị sự kiện theo thời gian thực (CommandSent, DeviceAck, VerificationPassed, CheckpointSaved) kèm mốc thời gian và số lần thử (attempt).
@@ -122,7 +126,7 @@ Theo dõi dòng sự kiện thực thi chi tiết theo thời gian thực (Step 
 ### Tab 6: Quản lý Tài khoản (Account Vault)
 Quản lý bí danh tài khoản, phân bổ thiết bị và lưu trữ tham chiếu an toàn qua Windows Credential Manager (`CRED_MGR://`), bảo vệ tuyệt đối thông tin nhạy cảm.
 
-![Tab 6: Quản lý Tài khoản](screenshots/v2_tab_06_accounts.png)
+[![Tab 6: Quản lý Tài khoản (Nhấp để phóng to)](screenshots/v2_tab_06_accounts.png)](screenshots/v2_tab_06_accounts.png)
 
 * **Điểm cải tiến nổi bật:**
   * Phân nhóm trạng thái tài khoản: *Tất cả*, *Đang chạy*, *Sẵn sàng*, *Chờ hồi phục (Cooldown)*, *Cần đăng nhập lại*.
@@ -134,7 +138,7 @@ Quản lý bí danh tài khoản, phân bổ thiết bị và lưu trữ tham ch
 ### Tab 7: Mạng & Proxy (Network Gateway)
 Quản lý hồ sơ kết nối mạng (Direct LAN, SOCKS5), kiểm tra độ trễ (ping), kèm theo cảnh báo rõ ràng về giới hạn Proxy trên Android.
 
-![Tab 7: Mạng Proxy](screenshots/v2_tab_07_network.png)
+[![Tab 7: Mạng Proxy (Nhấp để phóng to)](screenshots/v2_tab_07_network.png)](screenshots/v2_tab_07_network.png)
 
 * **Điểm cải tiến nổi bật:**
   * Hộp cảnh báo kỹ thuật bắt buộc về đặc thù Android System Proxy.
@@ -147,7 +151,7 @@ Quản lý hồ sơ kết nối mạng (Direct LAN, SOCKS5), kiểm tra độ tr
 ### Tab 8: Thư viện Thiết kế & Nghiệm thu (Tokens & Acceptance)
 Trang kiểm tra Design Tokens bảng màu chuẩn dark navy & electric blue, minh họa trạng thái component và bảng đối chiếu tiêu chuẩn nghiệm thu kỹ thuật.
 
-![Tab 8: Thư viện Thiết kế](screenshots/v2_tab_08_gallery.png)
+[![Tab 8: Thư viện Thiết kế (Nhấp để phóng to)](screenshots/v2_tab_08_gallery.png)](screenshots/v2_tab_08_gallery.png)
 
 * **Điểm cải tiến nổi bật:**
   * **Loại bỏ huy hiệu tự chấm 10/10:** Thay thế bằng bảng ma trận nghiệm thu kỹ thuật đối chiếu khách quan với Master Blueprint V1.0.
@@ -159,7 +163,7 @@ Trang kiểm tra Design Tokens bảng màu chuẩn dark navy & electric blue, mi
 ### Tab 9: Cài đặt & Chẩn đoán (Portable Settings)
 Cấu hình đường dẫn ADB tự động nhận diện từ môi trường, thông tin tệp cơ sở dữ liệu SQLite chế độ WAL cục bộ và thiết lập hàng rào bảo vệ thao tác nguy hiểm (Destructive Action Guard).
 
-![Tab 9: Cài đặt](screenshots/v2_tab_09_settings.png)
+[![Tab 9: Cài đặt (Nhấp để phóng to)](screenshots/v2_tab_09_settings.png)](screenshots/v2_tab_09_settings.png)
 
 * **Điểm cải tiến nổi bật:**
   * Cơ chế nhận diện ADB nội bộ: Nhận diện chính xác `bin\adb.exe` nằm cùng thư mục với `FarmerPro.exe` trong bản Portable, hiển thị phiên bản 1.0.41 sẵn sàng.
@@ -171,7 +175,7 @@ Cấu hình đường dẫn ADB tự động nhận diện từ môi trường, 
 
 ## 3. ĐỐI CHIẾU BẢNG SO SÁNH TRƯỚC & SAU REDESIGN
 
-| Tiêu chí đánh giá | Phiên bản V1 (Điểm: 5.5/10) | Phiên bản V2 Redesign (Mục tiêu: ≥ 9/10) | Trạng thái |
+| Tiêu chí đánh giá | Phiên bản V1 (Điểm: 5.5/10) | Phiên bản V2 Redesign (Mục tiêu: &ge; 9/10) | Trạng thái |
 | :--- | :--- | :--- | :---: |
 | **Thanh tiêu đề (Titlebar)** | Trùng lặp: Thanh trắng Windows + thanh tối của app, nút bấm đè nhau | Unified Frameless: 100% thanh tối đồng nhất, nút window native tích hợp, double-click maximize | **ĐÃ GIẢI QUYẾT** |
 | **Thanh điều hướng (Sidebar)** | Quá tối giản, chỉ có icon 64px, không có tên phân hệ | 2 chế độ: Mở rộng 220px (đầy đủ nhãn, phân nhóm, chip số lượng) và Thu gọn 64px | **ĐÃ GIẢI QUYẾT** |
