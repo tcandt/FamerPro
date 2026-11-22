@@ -1679,7 +1679,7 @@ mod tests {
         let doc = WorkflowValidator::parse_and_validate(&doc_json.to_string()).unwrap();
         let driver = Arc::new(FakeDeviceDriver::new("fake-vars", 1280, 720));
         let (_tx, rx) = watch::channel(ExecutionSignal::Running);
-        let exec = WorkflowExecutor::new(driver, rx);
+        let mut exec = WorkflowExecutor::new(driver, rx);
         let mut ctx = ExecutionContext::new("job-vars-unit".to_string(), "fake-vars".to_string());
         ctx.variables.insert("resource_count".to_string(), serde_json::json!(100));
         let state = exec.execute_workflow(&doc, &mut ctx, None).await.unwrap();
