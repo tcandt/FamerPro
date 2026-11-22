@@ -1,0 +1,450 @@
+﻿{
+  "backupAndRestoreV2": {
+    "onlineBackup": {
+      "backedUpAtUtc": "2026-11-22T02:08:53.157160900+00:00",
+      "backupPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\04_online_backup_v2.db",
+      "backupSha256": "9b7b5a2ab01cdffce0f746e522be709a31541db6b0c019eb67143b61f39c6c05",
+      "backupSizeBytes": 307200,
+      "integrity": {
+        "foreignKeyViolations": 0,
+        "integrityCheck": "ok",
+        "isHealthy": true,
+        "journalMode": "wal",
+        "schemaVersions": [
+          1,
+          2
+        ],
+        "tableCounts": {
+          "accounts": 0,
+          "checkpoints": 0,
+          "device_leases": 0,
+          "devices": 2,
+          "jobs": 2,
+          "mini_tool_schemas": 1,
+          "project_modules": 6,
+          "project_releases": 0,
+          "projects": 1,
+          "schema_migrations": 2,
+          "step_events": 31,
+          "task_definitions": 3,
+          "vision_templates": 8,
+          "workflow_versions": 12,
+          "workflows": 11
+        }
+      }
+    },
+    "restoredIntegrity": {
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "isHealthy": true,
+      "journalMode": "wal",
+      "schemaVersions": [
+        1,
+        2
+      ],
+      "tableCounts": {
+        "accounts": 0,
+        "checkpoints": 0,
+        "device_leases": 0,
+        "devices": 2,
+        "jobs": 2,
+        "mini_tool_schemas": 1,
+        "project_modules": 6,
+        "project_releases": 0,
+        "projects": 1,
+        "schema_migrations": 2,
+        "step_events": 31,
+        "task_definitions": 3,
+        "vision_templates": 8,
+        "workflow_versions": 12,
+        "workflows": 11
+      }
+    }
+  },
+  "command": "verify-p2",
+  "credentialVaultAndDpapi": {
+    "dpapiKeystore": {
+      "backupProtectionScheme": "WIN32_DPAPI_LOCAL_USER_BACKUP",
+      "backupSha256": "03ddb55d91328ff765c8e366229c0ad4bca98fdd1f18f80da5eb6e6e0f55c589",
+      "initialKeyId": "fp-ed25519-c74abcd18b05",
+      "noPlaintextSeedOnDisk": true,
+      "portableRecovery": {
+        "aeadAlgorithm": "AES-256-GCM",
+        "formatVersion": 3,
+        "importedKeyId": "fp-ed25519-c74abcd18b05",
+        "kdfParams": {
+          "algorithm": "argon2id",
+          "iterations": 3,
+          "memoryKib": 65536,
+          "outputLenBytes": 32,
+          "parallelism": 1,
+          "version": "0x13"
+        },
+        "noPlaintextSeedInBundle": true,
+        "protectionScheme": "ARGON2ID_AES_256_GCM_V3",
+        "seedMatchesAfterPortableImport": true,
+        "wrongPassphraseRejected": true
+      },
+      "protectionScheme": "WIN32_DPAPI_LOCAL_USER",
+      "restoredKeyId": "fp-ed25519-c74abcd18b05",
+      "rotatedKeyId": "fp-ed25519-033c2f6cbafe",
+      "seedMatchesAfterRestore": true
+    },
+    "isolatedValuesVerified": true,
+    "uriA": "CRED_MGR://FarmerPro/project/jx2-p2-eb4c5b08/api_secret",
+    "uriB": "CRED_MGR://FarmerPro/project/slg-p2-eb4c5b08/api_secret",
+    "uriTool": "CRED_MGR://FarmerPro/minitool/auto-slg-eb4c5b08/proxy_auth",
+    "vaultBackend": "WindowsCredentialManager"
+  },
+  "executedAtUtc": "2026-11-22T02:08:59.569714800+00:00",
+  "jx2Migration": {
+    "legacyWorkflowsPreserved": 2,
+    "modulesSeeded": 6,
+    "originalSourcePreserved": true,
+    "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\projects\\jx2-mobile",
+    "projectId": "proj-jx2-mobile-001",
+    "projectSlug": "jx2-mobile",
+    "tasksSeeded": 3,
+    "templatesImported": 8,
+    "workflowMigrations": [
+      {
+        "action": "UPDATE",
+        "contentComparison": "IDENTICAL_GRAPH_UPGRADED_TO_PUBLISHED_POLICY",
+        "destVersionId": "wf-jx2-01-login-v2",
+        "destWorkflowId": "wf-jx2-01-login",
+        "sourceFile": "01_start_and_login.json",
+        "sourceSha256": "afb2461bb8660d0270d7a61b741d3a831a1b257d087107fccdfb91f976ad4768",
+        "sourceWorkflowId": "wf-jx2-01-login",
+        "versionAfter": 2,
+        "versionBefore": 1
+      },
+      {
+        "action": "INSERT",
+        "contentComparison": "NEW_WORKFLOW_IMPORTED",
+        "destVersionId": "wf-jx2-02-char-v1",
+        "destWorkflowId": "wf-jx2-02-char",
+        "sourceFile": "02_character_creation.json",
+        "sourceSha256": "4752dddba21c9afc363b1b7d4bbeb7b1489f7822c113e4da04ebf9995589a73c",
+        "sourceWorkflowId": "wf-jx2-02-char",
+        "versionAfter": 1,
+        "versionBefore": null
+      },
+      {
+        "action": "INSERT",
+        "contentComparison": "NEW_WORKFLOW_IMPORTED",
+        "destVersionId": "wf-jx2-03-tutorial-v1",
+        "destWorkflowId": "wf-jx2-03-tutorial",
+        "sourceFile": "03_tutorial_guidance.json",
+        "sourceSha256": "54b750b7609bacba7709d5d9970828d8d3838517608e09b974966983906a0d9a",
+        "sourceWorkflowId": "wf-jx2-03-tutorial",
+        "versionAfter": 1,
+        "versionBefore": null
+      },
+      {
+        "action": "INSERT",
+        "contentComparison": "NEW_WORKFLOW_IMPORTED",
+        "destVersionId": "wf-jx2-04-npc-v1",
+        "destWorkflowId": "wf-jx2-04-npc",
+        "sourceFile": "04_npc_interaction.json",
+        "sourceSha256": "e596c8c082a40c643f12df723742bd9fafde8302f0a48919ba3e0655b192b1c7",
+        "sourceWorkflowId": "wf-jx2-04-npc",
+        "versionAfter": 1,
+        "versionBefore": null
+      },
+      {
+        "action": "INSERT",
+        "contentComparison": "NEW_WORKFLOW_IMPORTED",
+        "destVersionId": "wf-jx2-05-accept-v1",
+        "destWorkflowId": "wf-jx2-05-accept",
+        "sourceFile": "05_quest_acceptance.json",
+        "sourceSha256": "935a21b2cdaef8ac0903d197c98c2a6fbd3658a8d02e6f43e4308b2e28632ccd",
+        "sourceWorkflowId": "wf-jx2-05-accept",
+        "versionAfter": 1,
+        "versionBefore": null
+      },
+      {
+        "action": "INSERT",
+        "contentComparison": "NEW_WORKFLOW_IMPORTED",
+        "destVersionId": "wf-jx2-06-movement-v1",
+        "destWorkflowId": "wf-jx2-06-movement",
+        "sourceFile": "06_movement.json",
+        "sourceSha256": "491fbc845fb1bc144dfd346e9195c7c4a85b570af57bc261b5465e0a7d955bb5",
+        "sourceWorkflowId": "wf-jx2-06-movement",
+        "versionAfter": 1,
+        "versionBefore": null
+      },
+      {
+        "action": "INSERT",
+        "contentComparison": "NEW_WORKFLOW_IMPORTED",
+        "destVersionId": "wf-jx2-07-combat-v1",
+        "destWorkflowId": "wf-jx2-07-combat",
+        "sourceFile": "07_combat.json",
+        "sourceSha256": "7d0718c0851674205306d29d2290f1b7c7c08b2566327b20d5ef94055f8c3d50",
+        "sourceWorkflowId": "wf-jx2-07-combat",
+        "versionAfter": 1,
+        "versionBefore": null
+      },
+      {
+        "action": "INSERT",
+        "contentComparison": "NEW_WORKFLOW_IMPORTED",
+        "destVersionId": "wf-jx2-08-verify-v1",
+        "destWorkflowId": "wf-jx2-08-verify",
+        "sourceFile": "08_quest_verification.json",
+        "sourceSha256": "b55601366b1fb28f2bc9f266d6caf3177b86d6f4d6dc26f57a2bc0cea0da9a62",
+        "sourceWorkflowId": "wf-jx2-08-verify",
+        "versionAfter": 1,
+        "versionBefore": null
+      },
+      {
+        "action": "INSERT",
+        "contentComparison": "NEW_WORKFLOW_IMPORTED",
+        "destVersionId": "wf-jx2-09-complete-v1",
+        "destWorkflowId": "wf-jx2-09-complete",
+        "sourceFile": "09_tutorial_completion.json",
+        "sourceSha256": "ddb45a8bb1a59844355f7823440d4579507c28c175d5b833444b35c268fae997",
+        "sourceWorkflowId": "wf-jx2-09-complete",
+        "versionAfter": 1,
+        "versionBefore": null
+      },
+      {
+        "action": "INSERT",
+        "contentComparison": "NEW_WORKFLOW_IMPORTED",
+        "destVersionId": "wf-jx2-e2e-beginner-v1",
+        "destWorkflowId": "wf-jx2-e2e-beginner",
+        "sourceFile": "e2e_beginner_quest.json",
+        "sourceSha256": "8253955ddd8f646754ea992eeaa9bca5d9c5a09a229a39ffd86f0c409c88a528",
+        "sourceWorkflowId": "wf-jx2-e2e-beginner",
+        "versionAfter": 1,
+        "versionBefore": null
+      }
+    ],
+    "workflowsImported": 10
+  },
+  "migrationV1ToV2": {
+    "appliedVersions": [
+      1,
+      2
+    ],
+    "postMigrationIntegrity": {
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "isHealthy": true,
+      "journalMode": "wal",
+      "schemaVersions": [
+        1,
+        2
+      ],
+      "tableCounts": {
+        "accounts": 0,
+        "checkpoints": 0,
+        "device_leases": 0,
+        "devices": 2,
+        "jobs": 2,
+        "mini_tool_schemas": 0,
+        "project_modules": 0,
+        "project_releases": 0,
+        "projects": 1,
+        "schema_migrations": 2,
+        "step_events": 31,
+        "task_definitions": 0,
+        "vision_templates": 0,
+        "workflow_versions": 2,
+        "workflows": 2
+      }
+    },
+    "preRestoreIntegrity": {
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "isHealthy": true,
+      "journalMode": "wal",
+      "schemaVersions": [],
+      "tableCounts": {
+        "accounts": 0,
+        "checkpoints": 0,
+        "device_leases": 0,
+        "devices": 2,
+        "jobs": 2,
+        "schema_migrations": 0,
+        "step_events": 31,
+        "workflow_versions": 2,
+        "workflows": 2
+      }
+    },
+    "rollbackTest": {
+      "cleanAtomicRollback": true,
+      "faultyV3Rejected": true,
+      "postRollbackIntegrity": {
+        "foreignKeyViolations": 0,
+        "integrityCheck": "ok",
+        "isHealthy": true,
+        "journalMode": "wal",
+        "schemaVersions": [
+          1,
+          2
+        ],
+        "tableCounts": {
+          "accounts": 0,
+          "checkpoints": 0,
+          "device_leases": 0,
+          "devices": 2,
+          "jobs": 2,
+          "mini_tool_schemas": 0,
+          "project_modules": 0,
+          "project_releases": 0,
+          "projects": 1,
+          "schema_migrations": 2,
+          "step_events": 31,
+          "task_definitions": 0,
+          "vision_templates": 0,
+          "workflow_versions": 2,
+          "workflows": 2
+        }
+      },
+      "versionsAfterRollback": [
+        1,
+        2
+      ]
+    }
+  },
+  "preMigration": {
+    "integrityCheck": "ok",
+    "tableCounts": {
+      "accounts": 0,
+      "checkpoints": 0,
+      "device_leases": 0,
+      "devices": 2,
+      "jobs": 2,
+      "step_events": 31,
+      "workflow_versions": 2,
+      "workflows": 2
+    }
+  },
+  "productionDbUntouched": true,
+  "projectCrudAndIsolation": {
+    "clonedSlgSlug": "kingdom-slg-clone",
+    "crashConsistency": {
+      "cloneFaultRolledBackCleanly": true,
+      "createFaultRolledBackCleanly": true,
+      "deletePostCommitTrashReconciled": true,
+      "deletePreCommitRestoredFromTrash": true,
+      "reconciledOrphanEntries": 1,
+      "updateFaultRolledBackCleanly": true
+    },
+    "crossProjectOverwriteBlocked": true,
+    "directSqlIsolation": {
+      "allDirectSqlProbesBlocked": true,
+      "crossProjectJobAccountBlockedBySqlite": true,
+      "crossProjectTaskInsertBlockedBySqlite": true,
+      "crossProjectWorkflowMoveBlockedBySqlite": true,
+      "crossProjectWorkflowVersionMoveBlockedBySqlite": true,
+      "nullProjectAccountInsertBlockedBySqlite": true,
+      "nullProjectWorkflowInsertBlockedBySqlite": true
+    },
+    "projects": [
+      {
+        "accountsCount": 0,
+        "jobsCount": 2,
+        "latestReleaseExePath": null,
+        "latestReleaseVersion": null,
+        "modulesCount": 5,
+        "project": {
+          "bundleAdb": true,
+          "createdAt": "2026-11-22T02:08:53.081506800+00:00",
+          "exeName": "Auto_JX2_Mobile.exe",
+          "gamePackageId": "com.blackhole.jx2mobile",
+          "iconRelPath": "branding/icon.ico",
+          "id": "proj-jx2-mobile-001",
+          "name": "Võ Hiệp Truyền Kỳ 2 Mobile",
+          "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\projects\\jx2-mobile",
+          "slug": "jx2-mobile",
+          "targetHeightPx": 1080,
+          "targetWidthPx": 1920,
+          "updatedAt": "2026-11-22T02:08:53.133916100+00:00",
+          "version": "1.0.0",
+          "windowTitle": "Auto Võ Hiệp 2 Mobile v1.0.0"
+        },
+        "releasesCount": 0,
+        "tasksCount": 3,
+        "templatesCount": 8,
+        "workflowsCount": 11
+      },
+      {
+        "accountsCount": 1,
+        "jobsCount": 0,
+        "latestReleaseExePath": null,
+        "latestReleaseVersion": null,
+        "modulesCount": 3,
+        "project": {
+          "bundleAdb": true,
+          "createdAt": "2026-11-22T02:08:53.175571+00:00",
+          "exeName": "Auto_Kingdom_SLG.exe",
+          "gamePackageId": "com.kingdom.rise.slg",
+          "iconRelPath": "branding/icon.ico",
+          "id": "proj-kingdom-slg-p2-1b0f7ead",
+          "name": "Kingdom Rise: Tactics SLG (Verified)",
+          "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\projects\\kingdom-slg-p2",
+          "slug": "kingdom-slg-p2",
+          "targetHeightPx": 720,
+          "targetWidthPx": 1280,
+          "updatedAt": "2026-11-22T02:08:53.186014900+00:00",
+          "version": "1.2.1",
+          "windowTitle": "Auto Kingdom Rise: Tactics SLG v1.2.0"
+        },
+        "releasesCount": 0,
+        "tasksCount": 1,
+        "templatesCount": 1,
+        "workflowsCount": 1
+      }
+    ],
+    "projectsCount": 2,
+    "updatedSlgVersion": "1.2.1"
+  },
+  "sourceProductionDb": "backups\\p2_verified_backup\\dist_portable_pre_v2.db",
+  "walRollbackRunbookTest": {
+    "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\02_online_backup_v1.db",
+    "currentDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\06_rollback_runbook_target.db",
+    "postRollbackIntegrity": {
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "isHealthy": true,
+      "journalMode": "wal",
+      "schemaVersions": [],
+      "tableCounts": {
+        "accounts": 0,
+        "checkpoints": 0,
+        "device_leases": 0,
+        "devices": 2,
+        "jobs": 2,
+        "schema_migrations": 0,
+        "step_events": 31,
+        "workflow_versions": 2,
+        "workflows": 2
+      }
+    },
+    "postRollbackVersions": [],
+    "preRollbackTableCounts": {
+      "accounts": 1,
+      "checkpoints": 0,
+      "device_leases": 0,
+      "devices": 2,
+      "jobs": 2,
+      "mini_tool_schemas": 2,
+      "project_modules": 12,
+      "project_releases": 0,
+      "projects": 2,
+      "schema_migrations": 2,
+      "step_events": 31,
+      "task_definitions": 4,
+      "vision_templates": 9,
+      "workflow_versions": 13,
+      "workflows": 12
+    },
+    "preRollbackVersions": [
+      1,
+      2
+    ],
+    "reopenVerified": true,
+    "safetySnapshotPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\07_pre_rollback_safety_snapshot.db",
+    "walCheckpointBusy": 0
+  }
+}

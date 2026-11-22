@@ -1,0 +1,11 @@
+Cargo.lock                                       | 140 ++++++
+ apps/cli/src/main.rs                             | 395 ++++++++++++++++-
+ crates/fp-builder/src/lib.rs                     |  41 ++
+ crates/fp-security/Cargo.toml                    |   4 +
+ crates/fp-security/src/keystore.rs               | 438 +++++++++----------
+ crates/fp-security/src/lib.rs                    | 178 +++++++-
+ crates/fp-storage/src/fs_atomic.rs               | 472 +++++++++++++++++---
+ crates/fp-storage/src/lib.rs                     | 445 ++++++++++++++++++-
+ crates/fp-storage/src/models.rs                  |  16 +
+ crates/fp-storage/tests/forced_crash_recovery.rs | 535 +++++++++++++++++++++++
+ 10 files changed, 2338 insertions(+), 326 deletions(-)

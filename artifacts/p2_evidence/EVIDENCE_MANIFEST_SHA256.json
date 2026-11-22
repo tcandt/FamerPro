@@ -3,6 +3,10 @@
     "bytes": 483952,
     "sha256": "4a7dbf55996cf86ea930744718b11f2add54cae999f89e2b7c95faa5d041f309"
   },
+  "FARMERPRO_P2_2_HOTFIX_ACCEPTANCE_REPORT.pdf": {
+    "bytes": 288407,
+    "sha256": "316fb5ed7b269ac747dd0f7eeaf2c679004986ebbf972feb039f56e74a53b7b9"
+  },
   "FARMERPRO_P2_ACCEPTANCE_REPORT.pdf": {
     "bytes": 555074,
     "sha256": "520352143e9119f203e9f682ce8c7d423b5458a488b63520baae41da124e34c3"
@@ -11,9 +15,17 @@
     "bytes": 6295,
     "sha256": "b6f5952d7e56ec0b56a41056077bd88934a86aefd656522f7d5c6a75775c2cc2"
   },
+  "P2_2_HOTFIX_SECURITY_AND_CRASH_POLICY.md": {
+    "bytes": 7298,
+    "sha256": "6a3d2b51d022a3698b02314ba1fe479b96ee75193adaa1ded3988d6fac6c5903"
+  },
   "cargo_build_p2_1.log": {
     "bytes": 426,
     "sha256": "e6ed03ed3683ca6902c142b219171b6ec85a398886c3bd5f693106d0cbbc486c"
+  },
+  "cargo_build_p2_hotfix.log": {
+    "bytes": 1090,
+    "sha256": "5cbf68e8ab47fd1abdd7d5a97772e0f65d101d13c295b45c30a74ca434376c3b"
   },
   "cargo_test_workspace_p2_1_clean.log": {
     "bytes": 9258,
@@ -23,9 +35,17 @@
     "bytes": 13042,
     "sha256": "a7ac34a5f94ad69f2117f806f8adcc4f3e017c8b1aa0dc076bd67d3c93665e2e"
   },
+  "cargo_test_workspace_p2_hotfix_clean.log": {
+    "bytes": 15776,
+    "sha256": "f623ede0ebb1df65bc10c46915eae7dedcbd97bc7940966598a3e86e6d1fc157"
+  },
   "cargo_tree_workspace_p2.txt": {
     "bytes": 10732,
     "sha256": "6ae8cd681e1b955c931e2ecd0eeda1f99453ea38edc99e2dd5621c6e37f13559"
+  },
+  "git_diff_b3d3879_to_0218e2e.txt": {
+    "bytes": 741,
+    "sha256": "666b5fb11dd03df22fac5eada62b3a6029ee06c26b1283d4dd4e63847a3eeaf2"
   },
   "git_diff_summary_p2.txt": {
     "bytes": 2791,
@@ -35,6 +55,10 @@
     "bytes": 5183,
     "sha256": "e4411b036901f3985a5a6b8302aaa52f3f4889568521ed4c068fe42d7b64e774"
   },
+  "git_diff_summary_p2_2_hotfix.txt": {
+    "bytes": 2397,
+    "sha256": "0ef1e02ee76ab0eb02851dc125bd0a3863e6e5c5278756fc4d5a6407fa134c6c"
+  },
   "git_log_p2.txt": {
     "bytes": 514,
     "sha256": "7ec2f28aadf247c08c5583f8d0444df28673fbd14f71a40ec828f9f11b564167"
@@ -42,6 +66,10 @@
   "git_log_p2_1.txt": {
     "bytes": 1538,
     "sha256": "6d004398a8367b400e3d9c85dddcdd1c3343f7507893fdeb923e6b61bf002aad"
+  },
+  "git_log_p2_2_hotfix.txt": {
+    "bytes": 1111,
+    "sha256": "75d8fbe6caec7217b80f5f593169251450d7748b6129660e8170fc2c72aa3fb4"
   },
   "p2_1_pdf_qa_report.json": {
     "bytes": 340,
@@ -54,6 +82,18 @@
   "p2_1_verify_pre_v2_sandbox.json": {
     "bytes": 14754,
     "sha256": "b5e9afc12a70856f2db0e071faf7bc7de156a0b598805704d31965c437c5dbac"
+  },
+  "p2_2_hotfix_verification.json": {
+    "bytes": 8455,
+    "sha256": "5db79e7876178489ee3fbd13dc4c8c53c67d9e5416e8384f7a9a75da3f71249e"
+  },
+  "p2_2_pdf_qa_report.json": {
+    "bytes": 348,
+    "sha256": "2dd7e606646da8ab9f278f437f2e51f363de8e119bb79fd789ddc85521ca5cd4"
+  },
+  "p2_2_verify_pre_v2_sandbox.json": {
+    "bytes": 15132,
+    "sha256": "404710f187ab5195f8a9308da7b08b219df94f2246f97323116db6c231ab471a"
   },
   "p2_dist_portable_migration_report.json": {
     "bytes": 1450,
@@ -111,6 +151,14 @@
     "bytes": 4024,
     "sha256": "eaff311dea486fa9bc49ae803ba03ce3037c471ae8e65a671cf8521257976560"
   },
+  "diagrams/06_p2_2_argon2id_aes_gcm.svg": {
+    "bytes": 3384,
+    "sha256": "ff6d8f5d57c04f438e5cffa282bef78ff52f1e3b8586aa1446db4081b6662d68"
+  },
+  "diagrams/07_p2_2_crash_consistency_flow.svg": {
+    "bytes": 2490,
+    "sha256": "b2705385f45ce1e2bffefcdbd4703b266da6cc942acf13834ca284364c2b7b0f"
+  },
   "pdf_p2_1_rendered_pages/p2_1_page_01.png": {
     "bytes": 287887,
     "sha256": "b690388516be1f3aaa4fb16e527d63431efa2769d2f4b25b84df4fc7d65c6e52"
@@ -142,6 +190,22 @@
   "pdf_p2_1_rendered_pages/p2_1_page_08.png": {
     "bytes": 317521,
     "sha256": "3e57bafb1bcfb1a7f4822a4cd0c75eeba5dd030c0c4338065b4e7ca79275aeb0"
+  },
+  "pdf_p2_2_rendered_pages/p2_2_page_01.png": {
+    "bytes": 202380,
+    "sha256": "7807e26f78eddfb824ed7309a2fa214491fc15c6a0aeca94e8d978832585db91"
+  },
+  "pdf_p2_2_rendered_pages/p2_2_page_02.png": {
+    "bytes": 268931,
+    "sha256": "5db13403a54c2053a81aa1ca7b44c9c1da47cdb5345249e7432d68c12f06c55f"
+  },
+  "pdf_p2_2_rendered_pages/p2_2_page_03.png": {
+    "bytes": 272912,
+    "sha256": "9e876366f9d13c485ef15427d5d8481c21959511201753bcee2dc40e7118ee89"
+  },
+  "pdf_p2_2_rendered_pages/p2_2_page_04.png": {
+    "bytes": 280615,
+    "sha256": "cd6a5f1503e35dd5dc56618c3cb16c32e153c0194e63433e701bef3565ea11aa"
   },
   "pdf_rendered_pages/p2_page_01.png": {
     "bytes": 265481,

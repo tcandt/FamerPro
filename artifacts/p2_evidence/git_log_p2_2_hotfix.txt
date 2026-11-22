@@ -1,0 +1,8 @@
+﻿0218e2e fix(p2.2-hotfix): Argon2id + AES-256-GCM portable recovery and intent-journaled forced crash recovery
+b3d3879 docs(p2.1-acceptance): fix SVG trigger count interpolation and cell text wrapping in P2.1 PDF
+e5dfd7a docs(p2.1-acceptance): update P2.1 acceptance PDF, rollback runbook, and SHA-256 evidence pack (code commit bd09e31)
+bd09e31 fix(p2.1): close SQLite update triggers, fallback project resolution, trash-journal recovery, recursive clone, and runtime path guards
+aaca38f docs(p2.1-acceptance): publish 8-page P2.1 acceptance PDF, rollback runbook, DPAPI recovery policy, and verified SHA-256 evidence pack (code commit 7c856e7)
+7c856e7 feat(p2.1): harden SQLite isolation triggers, crash-safe atomic project ops, WAL rollback runbook, JX2 non-overwrite mapping, and portable key recovery
+72f78d6 docs(p2-acceptance): regenerate 12-page P2 acceptance PDF (29 IPC commands, 46/46 tests) and verified SHA-256 evidence manifest
+e77fe7c fix(p2): sync project.json on clone/update, scope runtime template lookup by project_dir, expand IPC handler tests, and fix P2 report/evidence metrics

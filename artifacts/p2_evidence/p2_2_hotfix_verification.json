@@ -1,0 +1,256 @@
+﻿{
+  "command": "verify-hotfix",
+  "executedAtUtc": "2026-11-22T02:08:52.508550300+00:00",
+  "forcedCrashRecoveryMatrix": [
+    {
+      "finalStateMatchesExpected": true,
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "killedPid": 17552,
+      "passed": true,
+      "reconcileReport": {
+        "actions": [
+          "create_aborted_in_staging:proj-cli-killed-proj-be53edce"
+        ],
+        "createsFinalized": 0,
+        "deletesFinalized": 0,
+        "deletesRestored": 0,
+        "mutationsFinalized": 0,
+        "mutationsRolledBack": 0,
+        "stagingPurged": 1,
+        "tmpFilesPurged": 0,
+        "totalResolved": 1,
+        "trashPurged": 0,
+        "uncommittedDirsReverted": 0
+      },
+      "scenario": "1_after_staging_before_rename",
+      "stage": "create:after_staging_before_rename",
+      "victimProjectIntact": true
+    },
+    {
+      "finalStateMatchesExpected": true,
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "killedPid": 15916,
+      "passed": true,
+      "reconcileReport": {
+        "actions": [
+          "create_reverted:proj-cli-killed-proj-d9769a24:removed_uncommitted_dir"
+        ],
+        "createsFinalized": 0,
+        "deletesFinalized": 0,
+        "deletesRestored": 0,
+        "mutationsFinalized": 0,
+        "mutationsRolledBack": 0,
+        "stagingPurged": 0,
+        "tmpFilesPurged": 0,
+        "totalResolved": 1,
+        "trashPurged": 0,
+        "uncommittedDirsReverted": 1
+      },
+      "scenario": "2_after_rename_before_db_commit",
+      "stage": "create:after_rename_before_db_commit",
+      "victimProjectIntact": true
+    },
+    {
+      "finalStateMatchesExpected": true,
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "killedPid": 28832,
+      "passed": true,
+      "reconcileReport": {
+        "actions": [
+          "create_finalized:proj-cli-killed-proj-3e4cae43:kept_committed_dir"
+        ],
+        "createsFinalized": 1,
+        "deletesFinalized": 0,
+        "deletesRestored": 0,
+        "mutationsFinalized": 0,
+        "mutationsRolledBack": 0,
+        "stagingPurged": 0,
+        "tmpFilesPurged": 0,
+        "totalResolved": 1,
+        "trashPurged": 0,
+        "uncommittedDirsReverted": 0
+      },
+      "scenario": "3_after_db_commit_before_cleanup",
+      "stage": "create:after_db_commit_before_cleanup",
+      "victimProjectIntact": true
+    },
+    {
+      "finalStateMatchesExpected": true,
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "killedPid": 10188,
+      "passed": true,
+      "reconcileReport": {
+        "actions": [
+          "mutation_rolled_back:f23b1251-e03c-4955-8161-530fe49cd265:restored_pre_image"
+        ],
+        "createsFinalized": 0,
+        "deletesFinalized": 0,
+        "deletesRestored": 0,
+        "mutationsFinalized": 0,
+        "mutationsRolledBack": 1,
+        "stagingPurged": 0,
+        "tmpFilesPurged": 0,
+        "totalResolved": 1,
+        "trashPurged": 0,
+        "uncommittedDirsReverted": 0
+      },
+      "scenario": "4a_workflow_after_write_before_manifest",
+      "stage": "workflow:after_wf_write_before_manifest",
+      "victimProjectIntact": true
+    },
+    {
+      "finalStateMatchesExpected": true,
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "killedPid": 18732,
+      "passed": true,
+      "reconcileReport": {
+        "actions": [
+          "mutation_rolled_back:d9b921c0-7151-42cb-9bf6-b7419d2cfb25:restored_pre_image"
+        ],
+        "createsFinalized": 0,
+        "deletesFinalized": 0,
+        "deletesRestored": 0,
+        "mutationsFinalized": 0,
+        "mutationsRolledBack": 1,
+        "stagingPurged": 0,
+        "tmpFilesPurged": 0,
+        "totalResolved": 1,
+        "trashPurged": 0,
+        "uncommittedDirsReverted": 0
+      },
+      "scenario": "4b_workflow_after_disk_before_commit",
+      "stage": "workflow:after_disk_writes_before_db_commit",
+      "victimProjectIntact": true
+    },
+    {
+      "finalStateMatchesExpected": true,
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "killedPid": 6204,
+      "passed": true,
+      "reconcileReport": {
+        "actions": [
+          "mutation_finalized:10cceba7-cda1-45a0-ab04-3739eeae99ba:kept_committed_files"
+        ],
+        "createsFinalized": 0,
+        "deletesFinalized": 0,
+        "deletesRestored": 0,
+        "mutationsFinalized": 1,
+        "mutationsRolledBack": 0,
+        "stagingPurged": 0,
+        "tmpFilesPurged": 0,
+        "totalResolved": 1,
+        "trashPurged": 0,
+        "uncommittedDirsReverted": 0
+      },
+      "scenario": "4c_workflow_after_commit_before_cleanup",
+      "stage": "workflow:after_db_commit_before_cleanup",
+      "victimProjectIntact": true
+    },
+    {
+      "finalStateMatchesExpected": true,
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "killedPid": 25456,
+      "passed": true,
+      "reconcileReport": {
+        "actions": [
+          "mutation_rolled_back:4492ba3e-c334-4ebd-8bc6-00c69214db8b:restored_pre_image"
+        ],
+        "createsFinalized": 0,
+        "deletesFinalized": 0,
+        "deletesRestored": 0,
+        "mutationsFinalized": 0,
+        "mutationsRolledBack": 1,
+        "stagingPurged": 0,
+        "tmpFilesPurged": 0,
+        "totalResolved": 1,
+        "trashPurged": 0,
+        "uncommittedDirsReverted": 0
+      },
+      "scenario": "4d_update_manifest_before_commit",
+      "stage": "update:after_disk_writes_before_db_commit",
+      "victimProjectIntact": true
+    },
+    {
+      "finalStateMatchesExpected": true,
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "killedPid": 20652,
+      "passed": true,
+      "reconcileReport": {
+        "actions": [
+          "delete_restored:proj-target-crash-proj-051ba1a8:moved_back_from_trash"
+        ],
+        "createsFinalized": 0,
+        "deletesFinalized": 0,
+        "deletesRestored": 1,
+        "mutationsFinalized": 0,
+        "mutationsRolledBack": 0,
+        "stagingPurged": 0,
+        "tmpFilesPurged": 0,
+        "totalResolved": 1,
+        "trashPurged": 0,
+        "uncommittedDirsReverted": 0
+      },
+      "scenario": "5_after_delete_to_trash_before_commit",
+      "stage": "delete:after_move_to_trash_before_commit",
+      "victimProjectIntact": true
+    },
+    {
+      "finalStateMatchesExpected": true,
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "killedPid": 12996,
+      "passed": true,
+      "reconcileReport": {
+        "actions": [
+          "delete_finalized:proj-target-crash-proj-aaec23a0:purged_committed_trash"
+        ],
+        "createsFinalized": 0,
+        "deletesFinalized": 1,
+        "deletesRestored": 0,
+        "mutationsFinalized": 0,
+        "mutationsRolledBack": 0,
+        "stagingPurged": 0,
+        "tmpFilesPurged": 0,
+        "totalResolved": 1,
+        "trashPurged": 0,
+        "uncommittedDirsReverted": 0
+      },
+      "scenario": "6_after_delete_commit_before_cleanup",
+      "stage": "delete:after_db_commit_before_cleanup",
+      "victimProjectIntact": true
+    }
+  ],
+  "productionDbUntouched": true,
+  "securityHotfix": {
+    "aeadAlgorithm": "AES-256-GCM",
+    "kdfExportDurationMs": 108,
+    "kdfImportDurationMs": 114,
+    "kdfParams": {
+      "algorithm": "argon2id",
+      "iterations": 3,
+      "memoryKib": 65536,
+      "outputLenBytes": 32,
+      "parallelism": 1,
+      "version": "0x13"
+    },
+    "noPlaintextSeedInBundle": true,
+    "nonceLengthBytes": 12,
+    "retiredV1RejectedErrorCode": "RECOVERY_RETIRED_EXPERIMENTAL_FORMAT: Experimental format 'PASSPHRASE_PBKDF2_SHA256_ETM_V1' (SHA-256-CTR) is retired and blocked in production; re-export using ARGON2ID_AES_256_GCM_V3",
+    "saltLengthBytes": 16,
+    "scheme": "ARGON2ID_AES_256_GCM_V3",
+    "seedMatchesAfterImport": true,
+    "tamperedMetadataAadErrorCode": "RECOVERY_AUTH_FAILED: Wrong passphrase, tampered ciphertext, or tampered metadata (AES-256-GCM auth failed)",
+    "uniqueCiphertextPerExport": true,
+    "uniqueNoncePerExport": true,
+    "uniqueSaltPerExport": true,
+    "wrongPassphraseErrorCode": "RECOVERY_AUTH_FAILED: Wrong passphrase, tampered ciphertext, or tampered metadata (AES-256-GCM auth failed)"
+  }
+}
