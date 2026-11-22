@@ -661,8 +661,15 @@ pub fn audit_portable_environment(
     let adb_dll1 = bin_dir.join("AdbWinApi.dll").exists();
     let adb_dll2 = bin_dir.join("AdbWinUsbApi.dll").exists();
 
+    let data_existed_before = release_dir.join("data").exists();
     let (db_path, exe_dir_writable, fallback_used, probe_err) =
         resolve_writable_runtime_db_path(release_dir, project_slug);
+    if !data_existed_before {
+        let probe_data_dir = release_dir.join("data");
+        if probe_data_dir.is_dir() {
+            let _ = std::fs::remove_dir(&probe_data_dir);
+        }
+    }
 
     let ps_available = std::env::var("SystemRoot")
         .map(|sr| {
