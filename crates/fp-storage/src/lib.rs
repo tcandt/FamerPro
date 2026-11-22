@@ -9,7 +9,10 @@ use fp_bundle_contract::{
     CompatibilityVersions, GameProjectManifest, MiniLayoutPreset, MiniTaskDef, MiniToolUiSchema,
     TaskCategoryDef,
 };
-use fp_domain::{ConnectionState, DeviceSummary, StepEvent};
+use fp_domain::{
+    infer_json_value_type, ConnectionState, DeviceSummary, RuntimeVarDeltaEvent,
+    RuntimeVariableEnvelope, StepEvent, VariableSource,
+};
 use fs_atomic::{
     atomic_write_bytes, copy_dir_files_safe, ensure_contained_project_dir, is_reparse_or_symlink,
     reconcile_project_storage_with_witness, validate_safe_rel_path, CommitWitness,
@@ -371,14 +374,28 @@ impl StorageManager {
         Ok(())
     }
 
+    pub fn partition_scope_for_source(base_scope: &str, source: VariableSource) -> String {
+        let clean_base = base_scope.trim_end_matches("::testkit");
+        if source == VariableSource::TestkitMock {
+            format!("{}::testkit", clean_base)
+        } else {
+            clean_base.to_string()
+        }
+    }
+
     pub fn save_runtime_variables(
         &self,
         scope_key: &str,
         variables: &HashMap<String, serde_json::Value>,
     ) -> Result<()> {
+        let mut scrubbed_vars = HashMap::new();
+        for (k, v) in variables {
+            let (clean, _) = fp_security::sanitize_runtime_variable(k, v);
+            scrubbed_vars.insert(k.clone(), clean);
+        }
         let conn = self.conn.lock().unwrap();
         Self::ensure_runtime_vars_table(&conn)?;
-        let json = serde_json::to_string(variables)?;
+        let json = serde_json::to_string(&scrubbed_vars)?;
         let now = Utc::now().to_rfc3339();
         conn.execute(
             "INSERT INTO runtime_variable_snapshots (scope_key, variables_json, updated_at)
@@ -391,7 +408,394 @@ impl StorageManager {
         Ok(())
     }
 
+    /// Atomically commits a batch of `RuntimeVariableEnvelope`s with strict:
+    /// 1) Secret redaction (string, numeric & structured JSON),
+    /// 2) Storage-layer Anti-Overwrite Guard (`TESTKIT_MOCK` cannot overwrite `LIVE_*` verified records),
+    /// 3) Monotonic `seq` assignment per `stream_id` in `runtime_var_streams`,
+    /// 4) Event persistence in `runtime_var_events` for missed/out-of-order recovery.
+    pub fn record_runtime_var_deltas(
+        &self,
+        base_scope_key: &str,
+        project_id: &str,
+        session_id: &str,
+        job_id: &str,
+        workflow_version: &str,
+        envelopes: Vec<RuntimeVariableEnvelope>,
+    ) -> Result<RuntimeVarDeltaEvent> {
+        let clean_base = base_scope_key.trim_end_matches("::testkit");
+        let is_testkit_batch = envelopes.iter().any(|e| e.source == VariableSource::TestkitMock);
+        let target_scope = if is_testkit_batch {
+            // Even when running in TestKit mode, ensure NO entry is mixed with Live scope
+            format!("{}::testkit", clean_base)
+        } else {
+            clean_base.to_string()
+        };
+        let stream_id = target_scope.clone();
+        let now = Utc::now().to_rfc3339();
+
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+
+        // Anti-Overwrite Invariant: a TESTKIT write may NEVER overwrite an existing verified LIVE variable
+        // in the primary scope, even if invoked with raw scope keys.
+        if !base_scope_key.ends_with("::testkit") && is_testkit_batch {
+            for env in &envelopes {
+                let existing_live: Option<(String, i64)> = {
+                    let mut st = tx.prepare(
+                        "SELECT source, verified FROM runtime_variable_envelopes WHERE scope_key = ?1 AND var_name = ?2;",
+                    )?;
+                    let mut rows = st.query(params![clean_base, env.name])?;
+                    rows.next()?
+                        .map(|r| Ok::<_, rusqlite::Error>((r.get(0)?, r.get(1)?)))
+                        .transpose()?
+                };
+                if let Some((src, ver)) = existing_live {
+                    if (src == "LIVE_ADB_OCR" || src == "LIVE_STATE") && ver == 1 {
+                        // Do NOT allow overwriting Live verified slot in `clean_base`; keep writing ONLY to `::testkit`.
+                    }
+                }
+            }
+        }
+
+        // Strict guard if someone directly writes a TESTKIT envelope alongside LIVE target
+        if target_scope == clean_base {
+            for env in &envelopes {
+                if env.source == VariableSource::TestkitMock {
+                    bail!(
+                        "PROVENANCE_ANTI_OVERWRITE_BLOCKED: TESTKIT_MOCK variable '{}' cannot be written to Live scope '{}'",
+                        env.name,
+                        clean_base
+                    );
+                }
+            }
+        }
+
+        let current_seq: i64 = {
+            let mut st =
+                tx.prepare("SELECT last_seq FROM runtime_var_streams WHERE stream_id = ?1;")?;
+            let mut rows = st.query(params![stream_id])?;
+            rows.next()?.map(|r| r.get(0)).transpose()?.unwrap_or(0)
+        };
+        let next_seq = (current_seq.max(0) as u64) + 1;
+
+        tx.execute(
+            "INSERT INTO runtime_var_streams (stream_id, project_id, last_seq, updated_at)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(stream_id) DO UPDATE SET
+               last_seq = excluded.last_seq,
+               updated_at = excluded.updated_at;",
+            params![stream_id, project_id, next_seq as i64, now],
+        )?;
+
+        let mut committed_deltas = Vec::with_capacity(envelopes.len());
+        for mut env in envelopes {
+            let (clean_val, redacted) =
+                fp_security::sanitize_runtime_variable(&env.name, &env.value);
+            env.project_id = project_id.to_string();
+            env.session_id = session_id.to_string();
+            env.job_id = job_id.to_string();
+            env.value = clean_val.clone();
+            env.value_type = infer_json_value_type(&clean_val);
+            env.workflow_version = workflow_version.to_string();
+            env.seq = next_seq;
+            env.redacted = env.redacted || redacted;
+            if env.updated_at_utc.is_empty() {
+                env.updated_at_utc = now.clone();
+            }
+
+            let val_json = serde_json::to_string(&env.value)?;
+            tx.execute(
+                "INSERT INTO runtime_variable_envelopes (
+                    scope_key, var_name, project_id, session_id, job_id,
+                    value_type, value_json, source, verified, confidence,
+                    updated_at_utc, workflow_version, seq, redacted
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+                 ON CONFLICT(scope_key, var_name) DO UPDATE SET
+                    project_id = excluded.project_id,
+                    session_id = excluded.session_id,
+                    job_id = excluded.job_id,
+                    value_type = excluded.value_type,
+                    value_json = excluded.value_json,
+                    source = excluded.source,
+                    verified = excluded.verified,
+                    confidence = excluded.confidence,
+                    updated_at_utc = excluded.updated_at_utc,
+                    workflow_version = excluded.workflow_version,
+                    seq = excluded.seq,
+                    redacted = excluded.redacted;",
+                params![
+                    target_scope,
+                    env.name,
+                    env.project_id,
+                    env.session_id,
+                    env.job_id,
+                    env.value_type,
+                    val_json,
+                    env.source.as_str(),
+                    if env.verified { 1 } else { 0 },
+                    env.confidence,
+                    env.updated_at_utc,
+                    env.workflow_version,
+                    next_seq as i64,
+                    if env.redacted { 1 } else { 0 }
+                ],
+            )?;
+            committed_deltas.push(env);
+        }
+
+        let deltas_json = serde_json::to_string(&committed_deltas)?;
+        tx.execute(
+            "INSERT INTO runtime_var_events (
+                stream_id, seq, project_id, session_id, job_id,
+                workflow_version, deltas_json, emitted_at_utc
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);",
+            params![
+                stream_id,
+                next_seq as i64,
+                project_id,
+                session_id,
+                job_id,
+                workflow_version,
+                deltas_json,
+                now
+            ],
+        )?;
+
+        // Sync flat snapshot map for legacy summary consumers within the same partitioned scope
+        let mut flat_map: HashMap<String, serde_json::Value> = HashMap::new();
+        {
+            let mut st = tx.prepare(
+                "SELECT var_name, value_json FROM runtime_variable_envelopes WHERE scope_key = ?1;",
+            )?;
+            let mut rows = st.query(params![target_scope])?;
+            while let Some(r) = rows.next()? {
+                let k: String = r.get(0)?;
+                let v_str: String = r.get(1)?;
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&v_str) {
+                    flat_map.insert(k, v);
+                }
+            }
+        }
+        tx.execute(
+            "INSERT INTO runtime_variable_snapshots (scope_key, variables_json, updated_at)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(scope_key) DO UPDATE SET
+               variables_json = excluded.variables_json,
+               updated_at = excluded.updated_at;",
+            params![target_scope, serde_json::to_string(&flat_map)?, now],
+        )?;
+
+        tx.commit()?;
+
+        Ok(RuntimeVarDeltaEvent {
+            stream_id,
+            scope_key: target_scope,
+            project_id: project_id.to_string(),
+            session_id: session_id.to_string(),
+            job_id: job_id.to_string(),
+            seq: next_seq,
+            workflow_version: workflow_version.to_string(),
+            emitted_at_utc: now,
+            deltas: committed_deltas,
+        })
+    }
+
+    /// Strict explicit guard rejecting attempts to write TESTKIT_MOCK directly onto LIVE verified state.
+    pub fn try_write_testkit_over_live_guard(
+        &self,
+        live_scope_key: &str,
+        var_name: &str,
+    ) -> Result<()> {
+        let clean_live = live_scope_key.trim_end_matches("::testkit");
+        let conn = self.conn.lock().unwrap();
+        let existing: Option<(String, i64)> = {
+            let mut st = conn.prepare(
+                "SELECT source, verified FROM runtime_variable_envelopes WHERE scope_key = ?1 AND var_name = ?2;",
+            )?;
+            let mut rows = st.query(params![clean_live, var_name])?;
+            rows.next()?
+                .map(|r| Ok::<_, rusqlite::Error>((r.get(0)?, r.get(1)?)))
+                .transpose()?
+        };
+        if let Some((src, ver)) = existing {
+            if (src == "LIVE_ADB_OCR" || src == "LIVE_STATE") && ver == 1 {
+                bail!(
+                    "PROVENANCE_ANTI_OVERWRITE_BLOCKED: Refusing to overwrite verified {} variable '{}' in scope '{}' with TESTKIT_MOCK",
+                    src,
+                    var_name,
+                    clean_live
+                );
+            }
+        }
+        Ok(())
+    }
+
+    fn query_envelopes_for_scope(
+        conn: &Connection,
+        scope_key: &str,
+    ) -> Result<BTreeMap<String, RuntimeVariableEnvelope>> {
+        let mut out = BTreeMap::new();
+        let mut st = conn.prepare(
+            "SELECT project_id, session_id, job_id, var_name, value_type, value_json,
+                    source, verified, confidence, updated_at_utc, workflow_version, seq, redacted
+             FROM runtime_variable_envelopes
+             WHERE scope_key = ?1
+             ORDER BY var_name ASC;",
+        )?;
+        let mut rows = st.query(params![scope_key])?;
+        while let Some(r) = rows.next()? {
+            let val_str: String = r.get(5)?;
+            let src_str: String = r.get(6)?;
+            let source = match src_str.as_str() {
+                "LIVE_ADB_OCR" => VariableSource::LiveAdbOcr,
+                "LIVE_STATE" => VariableSource::LiveState,
+                "TESTKIT_MOCK" => VariableSource::TestkitMock,
+                "LEGACY_UNVERIFIED" => VariableSource::LegacyUnverified,
+                _ => VariableSource::Unverified,
+            };
+            let var_name: String = r.get(3)?;
+            let value: serde_json::Value =
+                serde_json::from_str(&val_str).unwrap_or(serde_json::Value::Null);
+            let env = RuntimeVariableEnvelope {
+                project_id: r.get(0)?,
+                session_id: r.get(1)?,
+                job_id: r.get(2)?,
+                name: var_name.clone(),
+                value,
+                value_type: r.get(4)?,
+                source,
+                verified: r.get::<_, i64>(7)? != 0,
+                confidence: r.get::<_, Option<f64>>(8)?.map(|v| v as f32),
+                updated_at_utc: r.get(9)?,
+                workflow_version: r.get(10)?,
+                seq: r.get::<_, i64>(11)?.max(0) as u64,
+                redacted: r.get::<_, i64>(12)? != 0,
+            };
+            out.insert(var_name, env);
+        }
+        Ok(out)
+    }
+
+    pub fn load_runtime_snapshot_with_recovery(
+        &self,
+        base_scope_key: &str,
+        since_seq_by_stream: Option<&HashMap<String, u64>>,
+    ) -> Result<RuntimeProvenanceSnapshot> {
+        let clean_base = base_scope_key.trim_end_matches("::testkit");
+        let testkit_scope = format!("{}::testkit", clean_base);
+        let conn = self.conn.lock().unwrap();
+
+        let live_envelopes = Self::query_envelopes_for_scope(&conn, clean_base)?;
+        let testkit_envelopes = Self::query_envelopes_for_scope(&conn, &testkit_scope)?;
+
+        let mut stream_seqs = HashMap::new();
+        for sid in [clean_base, testkit_scope.as_str()] {
+            let seq: i64 = {
+                let mut st = conn
+                    .prepare("SELECT last_seq FROM runtime_var_streams WHERE stream_id = ?1;")?;
+                let mut rows = st.query(params![sid])?;
+                rows.next()?.map(|r| r.get(0)).transpose()?.unwrap_or(0)
+            };
+            if seq > 0 {
+                stream_seqs.insert(sid.to_string(), seq as u64);
+            }
+        }
+
+        let mut missed_events = Vec::new();
+        for sid in [clean_base, testkit_scope.as_str()] {
+            let after_seq = since_seq_by_stream
+                .and_then(|m| m.get(sid))
+                .copied()
+                .unwrap_or(0);
+            let mut st = conn.prepare(
+                "SELECT stream_id, seq, project_id, session_id, job_id, workflow_version, deltas_json, emitted_at_utc
+                 FROM runtime_var_events
+                 WHERE stream_id = ?1 AND seq > ?2
+                 ORDER BY seq ASC;",
+            )?;
+            let mut rows = st.query(params![sid, after_seq as i64])?;
+            while let Some(r) = rows.next()? {
+                let deltas_str: String = r.get(6)?;
+                let deltas: Vec<RuntimeVariableEnvelope> =
+                    serde_json::from_str(&deltas_str).unwrap_or_default();
+                missed_events.push(RuntimeVarDeltaEvent {
+                    stream_id: r.get(0)?,
+                    scope_key: r.get(0)?,
+                    project_id: r.get(2)?,
+                    session_id: r.get(3)?,
+                    job_id: r.get(4)?,
+                    seq: r.get::<_, i64>(1)?.max(0) as u64,
+                    workflow_version: r.get(5)?,
+                    emitted_at_utc: r.get(7)?,
+                    deltas,
+                });
+            }
+        }
+
+        Ok(RuntimeProvenanceSnapshot {
+            base_scope_key: clean_base.to_string(),
+            live_envelopes,
+            testkit_envelopes,
+            stream_seqs,
+            missed_events,
+            loaded_at_utc: Utc::now().to_rfc3339(),
+        })
+    }
+
+    /// Reads `PRAGMA data_version` to detect cross-process SQLite WAL commits cheaply,
+    /// returning both current `data_version` and any `RuntimeVarDeltaEvent`s newer than `after_seqs`.
+    pub fn poll_external_runtime_deltas(
+        &self,
+        base_scope_key: &str,
+        after_seqs: &HashMap<String, u64>,
+    ) -> Result<(i64, Vec<RuntimeVarDeltaEvent>)> {
+        let clean_base = base_scope_key.trim_end_matches("::testkit");
+        let testkit_scope = format!("{}::testkit", clean_base);
+        let conn = self.conn.lock().unwrap();
+        let data_version: i64 =
+            conn.query_row("PRAGMA data_version;", [], |r| r.get(0)).unwrap_or(0);
+
+        let mut events = Vec::new();
+        for sid in [clean_base, testkit_scope.as_str()] {
+            let min_seq = after_seqs.get(sid).copied().unwrap_or(0);
+            let mut st = conn.prepare(
+                "SELECT stream_id, seq, project_id, session_id, job_id, workflow_version, deltas_json, emitted_at_utc
+                 FROM runtime_var_events
+                 WHERE stream_id = ?1 AND seq > ?2
+                 ORDER BY seq ASC;",
+            )?;
+            let mut rows = st.query(params![sid, min_seq as i64])?;
+            while let Some(r) = rows.next()? {
+                let deltas_str: String = r.get(6)?;
+                let deltas: Vec<RuntimeVariableEnvelope> =
+                    serde_json::from_str(&deltas_str).unwrap_or_default();
+                events.push(RuntimeVarDeltaEvent {
+                    stream_id: r.get(0)?,
+                    scope_key: r.get(0)?,
+                    project_id: r.get(2)?,
+                    session_id: r.get(3)?,
+                    job_id: r.get(4)?,
+                    seq: r.get::<_, i64>(1)?.max(0) as u64,
+                    workflow_version: r.get(5)?,
+                    emitted_at_utc: r.get(7)?,
+                    deltas,
+                });
+            }
+        }
+        Ok((data_version, events))
+    }
+
     pub fn load_runtime_variables(&self, scope_key: &str) -> Result<RuntimeVariablesSnapshot> {
+        let prov = self.load_runtime_snapshot_with_recovery(scope_key, None)?;
+        let mut flat_vars = HashMap::new();
+        for (k, env) in &prov.testkit_envelopes {
+            flat_vars.insert(k.clone(), env.value.clone());
+        }
+        // LIVE/Legacy always takes precedence over TESTKIT in flat compatibility map!
+        for (k, env) in &prov.live_envelopes {
+            flat_vars.insert(k.clone(), env.value.clone());
+        }
+
         let conn = self.conn.lock().unwrap();
         Self::ensure_runtime_vars_table(&conn)?;
         let mut stmt = conn.prepare(
@@ -401,18 +805,27 @@ impl StorageManager {
         if let Some(row) = rows.next()? {
             let json: String = row.get(0)?;
             let updated_at: String = row.get(1)?;
-            let vars: HashMap<String, serde_json::Value> =
+            let legacy_map: HashMap<String, serde_json::Value> =
                 serde_json::from_str(&json).unwrap_or_default();
+            for (k, v) in legacy_map {
+                flat_vars.entry(k).or_insert(v);
+            }
             Ok(RuntimeVariablesSnapshot {
                 scope_key: scope_key.to_string(),
-                variables: vars,
+                variables: flat_vars,
                 updated_at: Some(updated_at),
+                envelopes: prov.live_envelopes,
+                testkit_envelopes: prov.testkit_envelopes,
+                stream_seqs: prov.stream_seqs,
             })
         } else {
             Ok(RuntimeVariablesSnapshot {
                 scope_key: scope_key.to_string(),
-                variables: HashMap::new(),
+                variables: flat_vars,
                 updated_at: None,
+                envelopes: prov.live_envelopes,
+                testkit_envelopes: prov.testkit_envelopes,
+                stream_seqs: prov.stream_seqs,
             })
         }
     }
@@ -851,6 +1264,27 @@ impl StorageManager {
     }
 
     pub fn insert_step_event(&self, event: &StepEvent) -> Result<()> {
+        let scrubbed_payload = if let Ok(mut pj) =
+            serde_json::from_str::<serde_json::Value>(&event.payload_json)
+        {
+            if let Some(var_key) = pj
+                .get("varKey")
+                .and_then(|v| v.as_str())
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+            {
+                if let Some(raw_v) = pj.get("value").cloned() {
+                    let (clean_v, _) = fp_security::sanitize_runtime_variable(&var_key, &raw_v);
+                    pj["value"] = clean_v;
+                }
+            }
+            let (clean_pj, _) = fp_security::sanitize_runtime_variable("step_event", &pj);
+            serde_json::to_string(&clean_pj).unwrap_or_else(|_| event.payload_json.clone())
+        } else {
+            fp_security::SecretRedactor::new().redact(&event.payload_json)
+        };
+
         let conn = self.conn.lock().unwrap();
         let type_str = serde_json::to_string(&event.event_type)?.replace('"', "");
         conn.execute(
@@ -863,7 +1297,7 @@ impl StorageManager {
                 type_str,
                 event.attempt_no,
                 event.at.to_rfc3339(),
-                event.payload_json
+                scrubbed_payload
             ],
         )?;
         Ok(())
@@ -3596,13 +4030,13 @@ mod tests {
             ).unwrap();
         }
 
-        // 2. Open with StorageManager -> runs v1 + v2 migrations atomically
+        // 2. Open with StorageManager -> runs v1 + v2 + v3 migrations atomically
         let storage = StorageManager::new(&db_file).unwrap();
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2]);
+        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3]);
 
-        // 3. Verify idempotency: running migrations again causes zero errors and keeps versions [1, 2]
+        // 3. Verify idempotency: running migrations again causes zero errors and keeps versions [1, 2, 3]
         storage.run_migrations().unwrap();
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2]);
+        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3]);
 
         // 4. Verify 100% data preservation + attachment to default GameProject
         let integrity = storage.check_integrity().unwrap();
@@ -3634,15 +4068,15 @@ mod tests {
             .save_workflow_draft("wf-keep", "Keep Me", "{}")
             .unwrap();
 
-        let bad_v3_sql = "
+        let bad_v4_sql = "
             CREATE TABLE should_not_exist (id TEXT PRIMARY KEY);
             INSERT INTO nonexistent_table_triggering_rollback VALUES (1);
         ";
-        let res = storage.apply_transactional_migration(3, bad_v3_sql);
+        let res = storage.apply_transactional_migration(4, bad_v4_sql);
         assert!(res.is_err());
 
-        // Version 3 must NOT be recorded and `should_not_exist` table must NOT exist
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2]);
+        // Version 4 must NOT be recorded and `should_not_exist` table must NOT exist
+        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3]);
         let integrity = storage.check_integrity().unwrap();
         assert!(integrity.is_healthy);
         assert!(!integrity.table_counts.contains_key("should_not_exist"));
@@ -4816,10 +5250,10 @@ mod tests {
                 .unwrap();
         }
 
-        // 2. Upgrade live DB to v2 and write v2 project data
+        // 2. Upgrade live DB to v3 and write project data
         {
             let storage = StorageManager::new(&live_db).unwrap();
-            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2]);
+            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3]);
             let _ = storage
                 .create_project(
                     CreateProjectRequest {
@@ -4844,7 +5278,7 @@ mod tests {
         let report =
             StorageManager::rollback_database_from_backup(&live_db, &pre_v2_backup, &safety_snap)
                 .unwrap();
-        assert_eq!(report.pre_rollback_versions, vec![1, 2]);
+        assert_eq!(report.pre_rollback_versions, vec![1, 2, 3]);
         assert!(report.post_rollback_versions.is_empty());
         assert!(report.post_rollback_integrity.is_healthy);
         assert_eq!(report.post_rollback_integrity.foreign_key_violations, 0);
@@ -5011,5 +5445,205 @@ mod tests {
             .default_enabled);
 
         let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p5_1_migration_v3_legacy_upgrade_and_wal_rollback() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_p5_1_v3_mig_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let db_file = temp_dir.join("runtime_legacy_p4.db");
+        let pre_v3_backup = temp_dir.join("runtime_pre_v3.bak.db");
+        let safety_snap = temp_dir.join("runtime_safety.db");
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let now = Utc::now().to_rfc3339();
+
+        // 1. Create a genuine v2 database with P4 `runtime_variable_snapshots`
+        {
+            let conn = Connection::open(&db_file).unwrap();
+            conn.execute_batch("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;")
+                .unwrap();
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);",
+                [],
+            ).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V1_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_TABLES_SQL).unwrap();
+            conn.execute_batch(
+                "ALTER TABLE workflows ADD COLUMN project_id TEXT REFERENCES projects(id);
+                 ALTER TABLE workflows ADD COLUMN category TEXT NOT NULL DEFAULT 'Chung';
+                 ALTER TABLE accounts ADD COLUMN project_id TEXT REFERENCES projects(id);
+                 ALTER TABLE jobs ADD COLUMN project_id TEXT REFERENCES projects(id);",
+            ).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_INDEXES_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_ISOLATION_TRIGGERS_SQL).unwrap();
+            conn.execute(
+                "INSERT INTO schema_migrations (version, applied_at) VALUES (1, ?1);",
+                params![now],
+            ).unwrap();
+            conn.execute(
+                "INSERT INTO schema_migrations (version, applied_at) VALUES (2, ?1);",
+                params![now],
+            ).unwrap();
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS runtime_variable_snapshots (
+                    scope_key TEXT PRIMARY KEY,
+                    variables_json TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );",
+                [],
+            ).unwrap();
+            conn.execute(
+                "INSERT INTO runtime_variable_snapshots (scope_key, variables_json, updated_at)
+                 VALUES ('mini:jx2-mobile', '{\"char_gold\":5000,\"api_token\":\"live-tok-99\"}', ?1);",
+                params![now],
+            ).unwrap();
+
+            let _ = conn.query_row("PRAGMA wal_checkpoint(TRUNCATE);", [], |r| r.get::<_, i64>(0));
+            let mut bk_conn = Connection::open(&pre_v3_backup).unwrap();
+            let bk = rusqlite::backup::Backup::new(&conn, &mut bk_conn).unwrap();
+            bk.run_to_completion(100, Duration::from_millis(5), None).unwrap();
+        }
+
+        // 2. Open with v3 StorageManager -> migrates legacy P4 snapshots to LEGACY_UNVERIFIED + scrubs secrets
+        {
+            let storage = StorageManager::new(&db_file).unwrap();
+            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3]);
+            let snap = storage
+                .load_runtime_snapshot_with_recovery("mini:jx2-mobile", None)
+                .unwrap();
+
+            let gold_env = snap.live_envelopes.get("char_gold").expect("char_gold preserved");
+            assert_eq!(gold_env.value, serde_json::json!(5000));
+            assert_eq!(gold_env.source, VariableSource::LegacyUnverified);
+            assert!(!gold_env.verified);
+
+            let tok_env = snap.live_envelopes.get("api_token").expect("api_token entry");
+            assert!(tok_env.redacted);
+            assert_eq!(tok_env.value, serde_json::json!(fp_security::REDACTED_PLACEHOLDER));
+        }
+
+        // 3. Verify rollback back to pre-v3 backup cleanly restores pre-v3 schema versions [1, 2]
+        let rb = StorageManager::rollback_database_from_backup(&db_file, &pre_v3_backup, &safety_snap)
+            .unwrap();
+        assert_eq!(rb.pre_rollback_versions, vec![1, 2, 3]);
+        assert_eq!(rb.post_rollback_versions, vec![1, 2]);
+        assert!(rb.post_rollback_integrity.is_healthy);
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p5_1_anti_overwrite_live_vs_testkit_and_stream_recovery() {
+        let storage = StorageManager::new_in_memory().unwrap();
+        let now = Utc::now().to_rfc3339();
+
+        // 1. Record verified LIVE variable in primary scope
+        let live_env = RuntimeVariableEnvelope {
+            project_id: "proj-alpha".to_string(),
+            session_id: "sess-live-1".to_string(),
+            job_id: "job-live-1".to_string(),
+            name: "char_gold".to_string(),
+            value: serde_json::json!(88800),
+            value_type: "number".to_string(),
+            source: VariableSource::LiveAdbOcr,
+            verified: true,
+            confidence: Some(0.96),
+            updated_at_utc: now.clone(),
+            workflow_version: "wf@v1".to_string(),
+            seq: 0,
+            redacted: false,
+        };
+        let ev1 = storage
+            .record_runtime_var_deltas(
+                "mini:alpha",
+                "proj-alpha",
+                "sess-live-1",
+                "job-live-1",
+                "wf@v1",
+                vec![live_env],
+            )
+            .unwrap();
+        assert_eq!(ev1.seq, 1);
+        assert_eq!(ev1.scope_key, "mini:alpha");
+
+        // 2. Direct attempt by TESTKIT to overwrite LIVE verified variable is rejected fail-closed
+        let guard_err = storage
+            .try_write_testkit_over_live_guard("mini:alpha", "char_gold")
+            .unwrap_err()
+            .to_string();
+        assert!(guard_err.contains("PROVENANCE_ANTI_OVERWRITE_BLOCKED"));
+
+        // 3. Normal TESTKIT writes automatically route to isolated `mini:alpha::testkit` scope & monotonic seq
+        let tk_env1 = RuntimeVariableEnvelope {
+            project_id: "proj-alpha".to_string(),
+            session_id: "sess-tk-1".to_string(),
+            job_id: "job-tk-1".to_string(),
+            name: "char_gold".to_string(),
+            value: serde_json::json!(111),
+            value_type: "number".to_string(),
+            source: VariableSource::TestkitMock,
+            verified: false,
+            confidence: None,
+            updated_at_utc: now.clone(),
+            workflow_version: "wf@v1".to_string(),
+            seq: 0,
+            redacted: false,
+        };
+        let tk_ev1 = storage
+            .record_runtime_var_deltas(
+                "mini:alpha",
+                "proj-alpha",
+                "sess-tk-1",
+                "job-tk-1",
+                "wf@v1",
+                vec![tk_env1],
+            )
+            .unwrap();
+        assert_eq!(tk_ev1.scope_key, "mini:alpha::testkit");
+        assert_eq!(tk_ev1.seq, 1);
+
+        let tk_env2 = RuntimeVariableEnvelope {
+            project_id: "proj-alpha".to_string(),
+            session_id: "sess-tk-2".to_string(),
+            job_id: "job-tk-2".to_string(),
+            name: "resource_count".to_string(),
+            value: serde_json::json!(250),
+            value_type: "number".to_string(),
+            source: VariableSource::TestkitMock,
+            verified: false,
+            confidence: None,
+            updated_at_utc: now,
+            workflow_version: "wf@v1".to_string(),
+            seq: 0,
+            redacted: false,
+        };
+        let tk_ev2 = storage
+            .record_runtime_var_deltas(
+                "mini:alpha",
+                "proj-alpha",
+                "sess-tk-2",
+                "job-tk-2",
+                "wf@v1",
+                vec![tk_env2],
+            )
+            .unwrap();
+        assert_eq!(tk_ev2.seq, 2);
+
+        // 4. Verify recovery with since_seq recovers ONLY missed events & LIVE stays 88800 untouched!
+        let mut since = HashMap::new();
+        since.insert("mini:alpha".to_string(), 1);
+        since.insert("mini:alpha::testkit".to_string(), 1);
+        let rec = storage
+            .load_runtime_snapshot_with_recovery("mini:alpha", Some(&since))
+            .unwrap();
+        assert_eq!(rec.live_envelopes.get("char_gold").unwrap().value, serde_json::json!(88800));
+        assert!(rec.live_envelopes.get("char_gold").unwrap().verified);
+        assert_eq!(rec.testkit_envelopes.get("char_gold").unwrap().value, serde_json::json!(111));
+        assert!(!rec.testkit_envelopes.get("char_gold").unwrap().verified);
+        assert_eq!(rec.missed_events.len(), 1);
+        assert_eq!(rec.missed_events[0].seq, 2);
+        assert_eq!(rec.missed_events[0].deltas[0].name, "resource_count");
     }
 }

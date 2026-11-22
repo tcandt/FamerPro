@@ -11,19 +11,22 @@ use fp_bundle_verify::{
     read_pe_embedded_pubkey_from_current_process, sha256_hex, SignedBundleEnvelope,
     PE_ED25519_PUBKEY_RESOURCE_ID,
 };
-use fp_domain::{ConnectionState, DeviceDriver, DeviceSummary, StepEvent};
-use fp_storage::StorageManager;
+use fp_domain::{
+    ConnectionState, DeviceDriver, DeviceSummary, RuntimeVarDeltaEvent, RuntimeVariableEnvelope,
+    StepEvent, VariableSource,
+};
+use fp_storage::{RuntimeProvenanceSnapshot, StorageManager};
 use fp_testkit::FakeDeviceDriver;
 use fp_workflow_runtime::{ExecutionContext, ExecutionSignal, WorkflowExecutor};
 use fp_workflow_schema::WorkflowDocument;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc, Mutex,
 };
-use tauri::{Manager, State};
+use tauri::{Emitter, Manager, State};
 use tokio::sync::watch;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,6 +35,12 @@ pub struct MiniBootstrapPayload {
     pub manifest: ReleaseBundleManifest,
     pub ui_schema: MiniToolUiSchema,
     pub runtime_vars: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub live_envelopes: BTreeMap<String, RuntimeVariableEnvelope>,
+    #[serde(default)]
+    pub testkit_envelopes: BTreeMap<String, RuntimeVariableEnvelope>,
+    #[serde(default)]
+    pub stream_seqs: HashMap<String, u64>,
     pub devices: Vec<DeviceSummary>,
     pub sqlite_db_path: String,
     pub signature_verified: bool,
@@ -48,6 +57,7 @@ pub struct MiniBootstrapPayload {
 pub struct MiniTaskRunReceipt {
     pub task_id: String,
     pub workflow_id: String,
+    pub session_id: String,
     pub job_id: String,
     pub device_id: String,
     pub driver_used: String,
@@ -57,6 +67,16 @@ pub struct MiniTaskRunReceipt {
     pub step_events: Vec<StepEvent>,
     pub point_tapped: Option<fp_domain::Point>,
     pub updated_runtime_vars: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub envelopes: Vec<RuntimeVariableEnvelope>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MiniTaskStartedAck {
+    pub task_id: String,
+    pub is_simulated_demo: bool,
+    pub started_at_utc: String,
 }
 
 pub struct MiniRuntimeState {
@@ -73,6 +93,9 @@ pub struct MiniRuntimeState {
     pub key_id: String,
     pub publisher_public_key_hex: String,
     pub runtime_vars: HashMap<String, serde_json::Value>,
+    pub live_envelopes: BTreeMap<String, RuntimeVariableEnvelope>,
+    pub testkit_envelopes: BTreeMap<String, RuntimeVariableEnvelope>,
+    pub stream_seqs: HashMap<String, u64>,
     pub icon_base64: Option<String>,
     pub is_demo_mode: bool,
 }
@@ -165,10 +188,23 @@ fn load_and_verify_bundle(bundle_dir: &Path, is_demo_mode: bool) -> Result<MiniR
     };
 
     let scope_key = format!("mini:{}", manifest.project.slug);
-    let runtime_vars = storage
-        .load_runtime_variables(&scope_key)
-        .map(|snap| snap.variables)
-        .unwrap_or_default();
+    let prov = storage
+        .load_runtime_snapshot_with_recovery(&scope_key, None)
+        .unwrap_or_else(|_| RuntimeProvenanceSnapshot {
+            base_scope_key: scope_key.clone(),
+            live_envelopes: BTreeMap::new(),
+            testkit_envelopes: BTreeMap::new(),
+            stream_seqs: HashMap::new(),
+            missed_events: Vec::new(),
+            loaded_at_utc: chrono::Utc::now().to_rfc3339(),
+        });
+    let mut runtime_vars = HashMap::new();
+    for (k, env) in &prov.testkit_envelopes {
+        runtime_vars.insert(k.clone(), env.value.clone());
+    }
+    for (k, env) in &prov.live_envelopes {
+        runtime_vars.insert(k.clone(), env.value.clone());
+    }
 
     Ok(MiniRuntimeState {
         exe_dir,
@@ -184,6 +220,9 @@ fn load_and_verify_bundle(bundle_dir: &Path, is_demo_mode: bool) -> Result<MiniR
         key_id: envelope.key_id,
         publisher_public_key_hex: envelope.publisher_public_key_hex,
         runtime_vars,
+        live_envelopes: prov.live_envelopes,
+        testkit_envelopes: prov.testkit_envelopes,
+        stream_seqs: prov.stream_seqs,
         icon_base64,
         is_demo_mode,
     })
@@ -212,14 +251,45 @@ fn base64_encode(bytes: &[u8]) -> String {
     result
 }
 
+fn apply_delta_event_to_state(st: &mut MiniRuntimeState, delta_ev: &RuntimeVarDeltaEvent) {
+    st.stream_seqs
+        .insert(delta_ev.stream_id.clone(), delta_ev.seq);
+    for env in &delta_ev.deltas {
+        if env.source == VariableSource::TestkitMock {
+            let should_insert = st
+                .testkit_envelopes
+                .get(&env.name)
+                .map(|cur| env.seq >= cur.seq)
+                .unwrap_or(true);
+            if should_insert {
+                st.testkit_envelopes.insert(env.name.clone(), env.clone());
+                if !st.live_envelopes.contains_key(&env.name) {
+                    st.runtime_vars.insert(env.name.clone(), env.value.clone());
+                }
+            }
+        } else {
+            let should_insert = st
+                .live_envelopes
+                .get(&env.name)
+                .map(|cur| env.seq >= cur.seq)
+                .unwrap_or(true);
+            if should_insert {
+                st.live_envelopes.insert(env.name.clone(), env.clone());
+                st.runtime_vars.insert(env.name.clone(), env.value.clone());
+            }
+        }
+    }
+}
+
 async fn execute_task_internal(
     st_arc: Arc<Mutex<MiniRuntimeState>>,
     task_id: &str,
     adb_serial_override: Option<String>,
     allow_demo_mock: bool,
     cancel_after_ms: Option<u64>,
+    app_handle: Option<tauri::AppHandle>,
 ) -> Result<MiniTaskRunReceipt> {
-    let (workflow_doc, adb_path, storage, slug, mut runtime_vars) = {
+    let (workflow_doc, adb_path, storage, slug, project_id, project_version, seeded_vars) = {
         let st = st_arc.lock().unwrap();
         st.module_registry
             .assert_capability_granted("mod.adb_core", &ModuleCapability::AdbExec)?;
@@ -247,12 +317,26 @@ async fn execute_task_internal(
             })?
             .clone();
 
+        // Partition seed cleanly: NEVER feed TESTKIT variables into LIVE execution!
+        let mut seed = HashMap::new();
+        if allow_demo_mock {
+            for (k, env) in &st.testkit_envelopes {
+                seed.insert(k.clone(), env.value.clone());
+            }
+        } else {
+            for (k, env) in &st.live_envelopes {
+                seed.insert(k.clone(), env.value.clone());
+            }
+        }
+
         (
             wf,
             st.adb_runner.adb_path.clone(),
             st.storage.clone(),
             st.manifest.project.slug.clone(),
-            st.runtime_vars.clone(),
+            st.manifest.project.project_id.clone(),
+            st.manifest.project.version.clone(),
+            seed,
         )
     };
 
@@ -326,23 +410,87 @@ async fn execute_task_internal(
         });
     }
 
+    let source_mode = if is_sim {
+        VariableSource::TestkitMock
+    } else {
+        VariableSource::LiveState
+    };
+    let workflow_version = format!("{}@v{}", workflow_doc.workflow_id, project_version);
     let mut executor = WorkflowExecutor::new(driver, rx);
-    let mut ctx = ExecutionContext::new(job_id.clone(), device_id.clone());
-    ctx.variables = runtime_vars.clone();
+    let mut ctx = ExecutionContext::new(job_id.clone(), device_id.clone())
+        .with_source_mode(source_mode);
+    ctx.project_id = Some(project_id.clone());
+    ctx.workflow_version = Some(workflow_version.clone());
+    ctx.task_id = Some(task_id.to_string());
+    ctx.variables = seeded_vars.clone();
+    let session_id = ctx.session_id.clone();
 
     let events_counter = Arc::new(AtomicUsize::new(0));
     let counter_clone = events_counter.clone();
     let captured_events = Arc::new(Mutex::new(Vec::new()));
     let cap_clone = captured_events.clone();
     let storage_clone = storage.clone();
+    let st_arc_cb = st_arc.clone();
+    let app_cb = app_handle.clone();
+    let base_scope_key = format!("mini:{}", slug);
+    let scope_cb = base_scope_key.clone();
+    let proj_cb = project_id.clone();
+    let sess_cb = session_id.clone();
+    let job_cb = job_id.clone();
+    let wf_ver_cb = workflow_version.clone();
+    let task_cb = task_id.to_string();
 
     let job_state = executor
         .execute_workflow(
             &workflow_doc,
             &mut ctx,
-            Some(Arc::new(move |evt| {
+            Some(Arc::new(move |mut evt| {
+                // Ensure StepEvent payload stored in SQLite is scrubbed before insert
+                if let Ok(mut pj) = serde_json::from_str::<serde_json::Value>(&evt.payload_json) {
+                    if let Some(vars_obj) = pj.get("variables").cloned() {
+                        let (clean_vars, _) =
+                            fp_security::sanitize_runtime_variable("variables", &vars_obj);
+                        pj["variables"] = clean_vars;
+                    }
+                    if let Some(deltas) = pj
+                        .get("deltaEnvelopes")
+                        .and_then(|d| serde_json::from_value::<Vec<RuntimeVariableEnvelope>>(d.clone()).ok())
+                    {
+                        if !deltas.is_empty() {
+                            if let Ok(delta_ev) = storage_clone.record_runtime_var_deltas(
+                                &scope_cb,
+                                &proj_cb,
+                                &sess_cb,
+                                &job_cb,
+                                &wf_ver_cb,
+                                deltas,
+                            ) {
+                                {
+                                    let mut st = st_arc_cb.lock().unwrap();
+                                    apply_delta_event_to_state(&mut st, &delta_ev);
+                                }
+                                if let Some(ref app) = app_cb {
+                                    let _ = app.emit("mini://runtime-var-delta", &delta_ev);
+                                }
+                            }
+                        }
+                    }
+                    evt.payload_json = serde_json::to_string(&pj).unwrap_or(evt.payload_json);
+                }
                 counter_clone.fetch_add(1, Ordering::SeqCst);
                 let _ = storage_clone.insert_step_event(&evt);
+                if let Some(ref app) = app_cb {
+                    let _ = app.emit(
+                        "mini://task-progress",
+                        serde_json::json!({
+                            "taskId": task_cb,
+                            "jobId": evt.job_id,
+                            "nodeId": evt.node_id,
+                            "eventType": evt.event_type,
+                            "atUtc": evt.at.to_rfc3339(),
+                        }),
+                    );
+                }
                 cap_clone.lock().unwrap().push(evt);
             })),
         )
@@ -351,54 +499,87 @@ async fn execute_task_internal(
     let _ = storage.complete_job(&job_id, &format!("{:?}", job_state));
     let point_tapped = ctx.last_receipt.as_ref().and_then(|r| r.point_tapped);
 
-    for (k, v) in ctx.variables.iter() {
-        runtime_vars.insert(k.clone(), v.clone());
-    }
+    let mut final_envelopes: Vec<RuntimeVariableEnvelope> = Vec::new();
+    let now_utc = chrono::Utc::now().to_rfc3339();
     if job_state == fp_domain::JobState::Succeeded {
-        if let Some(ocr_txt) = ctx.variables.get("ocr_text").and_then(|v| v.as_str()) {
-            runtime_vars.insert(
-                "last_ocr_text".to_string(),
-                serde_json::Value::String(ocr_txt.to_string()),
-            );
-        }
-        let prev_done = runtime_vars
+        let prev_done = seeded_vars
             .get("task_completed_count")
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
-        runtime_vars.insert(
-            "task_completed_count".to_string(),
-            serde_json::Value::from(prev_done + 1),
-        );
+        final_envelopes.push(RuntimeVariableEnvelope {
+            project_id: project_id.clone(),
+            session_id: session_id.clone(),
+            job_id: job_id.clone(),
+            name: "task_completed_count".to_string(),
+            value_type: "number".to_string(),
+            value: serde_json::Value::from(prev_done + 1),
+            source: source_mode,
+            verified: !is_sim,
+            confidence: None,
+            updated_at_utc: now_utc.clone(),
+            workflow_version: workflow_version.clone(),
+            seq: 0,
+            redacted: false,
+        });
     }
-    runtime_vars.insert(
-        "last_task_id".to_string(),
-        serde_json::Value::String(task_id.to_string()),
-    );
-    runtime_vars.insert(
-        "last_task_state".to_string(),
-        serde_json::Value::String(format!("{:?}", job_state)),
-    );
-    runtime_vars.insert(
-        "last_data_source".to_string(),
-        serde_json::Value::String(driver_label.clone()),
-    );
-    runtime_vars.insert(
-        "last_updated_utc".to_string(),
-        serde_json::Value::String(chrono::Utc::now().to_rfc3339()),
-    );
-    let scope_key = format!("mini:{}", slug);
-    let _ = storage.save_runtime_variables(&scope_key, &runtime_vars);
+    for (k, v) in [
+        ("last_task_id", serde_json::Value::String(task_id.to_string())),
+        ("last_task_state", serde_json::Value::String(format!("{:?}", job_state))),
+        ("last_data_source", serde_json::Value::String(driver_label.clone())),
+        ("last_updated_utc", serde_json::Value::String(now_utc.clone())),
+    ] {
+        final_envelopes.push(RuntimeVariableEnvelope {
+            project_id: project_id.clone(),
+            session_id: session_id.clone(),
+            job_id: job_id.clone(),
+            name: k.to_string(),
+            value_type: "string".to_string(),
+            value: v,
+            source: source_mode,
+            verified: !is_sim,
+            confidence: None,
+            updated_at_utc: now_utc.clone(),
+            workflow_version: workflow_version.clone(),
+            seq: 0,
+            redacted: false,
+        });
+    }
 
-    {
-        let mut st = st_arc.lock().unwrap();
-        st.runtime_vars = runtime_vars.clone();
+    if !final_envelopes.is_empty() {
+        if let Ok(final_delta_ev) = storage.record_runtime_var_deltas(
+            &base_scope_key,
+            &project_id,
+            &session_id,
+            &job_id,
+            &workflow_version,
+            final_envelopes,
+        ) {
+            {
+                let mut st = st_arc.lock().unwrap();
+                apply_delta_event_to_state(&mut st, &final_delta_ev);
+            }
+            if let Some(ref app) = app_handle {
+                let _ = app.emit("mini://runtime-var-delta", &final_delta_ev);
+            }
+        }
     }
+
+    let (updated_runtime_vars, collected_envelopes) = {
+        let st = st_arc.lock().unwrap();
+        let envs: Vec<RuntimeVariableEnvelope> = if is_sim {
+            st.testkit_envelopes.values().cloned().collect()
+        } else {
+            st.live_envelopes.values().cloned().collect()
+        };
+        (st.runtime_vars.clone(), envs)
+    };
 
     let step_events = captured_events.lock().unwrap().clone();
 
     Ok(MiniTaskRunReceipt {
         task_id: task_id.to_string(),
         workflow_id: workflow_doc.workflow_id,
+        session_id,
         job_id,
         device_id,
         driver_used: driver_label,
@@ -407,7 +588,8 @@ async fn execute_task_internal(
         events_count: events_counter.load(Ordering::SeqCst),
         step_events,
         point_tapped,
-        updated_runtime_vars: runtime_vars,
+        updated_runtime_vars,
+        envelopes: collected_envelopes,
     })
 }
 
@@ -422,7 +604,6 @@ async fn mini_get_bootstrap(
     let (
         manifest,
         ui_schema,
-        runtime_vars,
         sqlite_db_path,
         sig_alg,
         key_id,
@@ -430,12 +611,13 @@ async fn mini_get_bootstrap(
         icon_b64,
         adb_path,
         is_demo,
+        storage,
+        slug,
     ) = {
         let st = state.lock().unwrap();
         (
             st.manifest.clone(),
             st.ui_schema.clone(),
-            st.runtime_vars.clone(),
             st.sqlite_db_path.clone(),
             st.signature_algorithm.clone(),
             st.key_id.clone(),
@@ -443,8 +625,29 @@ async fn mini_get_bootstrap(
             st.icon_base64.clone(),
             st.adb_runner.adb_path.clone(),
             st.is_demo_mode,
+            st.storage.clone(),
+            st.manifest.project.slug.clone(),
         )
     };
+
+    let scope_key = format!("mini:{}", slug);
+    let prov = storage
+        .load_runtime_snapshot_with_recovery(&scope_key, None)
+        .map_err(|e| e.to_string())?;
+    let mut flat_vars = HashMap::new();
+    for (k, env) in &prov.testkit_envelopes {
+        flat_vars.insert(k.clone(), env.value.clone());
+    }
+    for (k, env) in &prov.live_envelopes {
+        flat_vars.insert(k.clone(), env.value.clone());
+    }
+    {
+        let mut st = state.lock().unwrap();
+        st.live_envelopes = prov.live_envelopes.clone();
+        st.testkit_envelopes = prov.testkit_envelopes.clone();
+        st.stream_seqs = prov.stream_seqs.clone();
+        st.runtime_vars = flat_vars.clone();
+    }
 
     let runner = AdbRunner::new(Some(adb_path));
     let devices = runner.list_devices().await.unwrap_or_default();
@@ -452,7 +655,10 @@ async fn mini_get_bootstrap(
     Ok(MiniBootstrapPayload {
         manifest,
         ui_schema,
-        runtime_vars,
+        runtime_vars: flat_vars,
+        live_envelopes: prov.live_envelopes,
+        testkit_envelopes: prov.testkit_envelopes,
+        stream_seqs: prov.stream_seqs,
         devices,
         sqlite_db_path,
         signature_verified: true,
@@ -463,6 +669,20 @@ async fn mini_get_bootstrap(
         checked_at_utc: chrono::Utc::now().to_rfc3339(),
         icon_base64: icon_b64,
     })
+}
+
+#[tauri::command]
+async fn mini_get_runtime_snapshot(
+    since_seq_by_stream: Option<HashMap<String, u64>>,
+    state: State<'_, Arc<Mutex<MiniRuntimeState>>>,
+) -> Result<RuntimeProvenanceSnapshot, String> {
+    let (storage, scope_key) = {
+        let st = state.lock().unwrap();
+        (st.storage.clone(), format!("mini:{}", st.manifest.project.slug))
+    };
+    storage
+        .load_runtime_snapshot_with_recovery(&scope_key, since_seq_by_stream.as_ref())
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -481,13 +701,61 @@ async fn mini_list_devices(
 async fn mini_run_task(
     task_id: String,
     use_demo_mock: Option<bool>,
+    app: tauri::AppHandle,
     state: State<'_, Arc<Mutex<MiniRuntimeState>>>,
 ) -> Result<MiniTaskRunReceipt, String> {
     let st_arc = state.inner().clone();
     let allow_demo = use_demo_mock.unwrap_or(false);
-    execute_task_internal(st_arc, &task_id, None, allow_demo, None)
+    execute_task_internal(st_arc, &task_id, None, allow_demo, None, Some(app))
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn mini_start_task(
+    task_id: String,
+    use_demo_mock: Option<bool>,
+    app: tauri::AppHandle,
+    state: State<'_, Arc<Mutex<MiniRuntimeState>>>,
+) -> Result<MiniTaskStartedAck, String> {
+    let allow_demo = use_demo_mock.unwrap_or(false);
+    if !allow_demo {
+        let adb_path = {
+            let st = state.lock().unwrap();
+            st.adb_runner.adb_path.clone()
+        };
+        let runner = AdbRunner::new(Some(adb_path));
+        let devices = runner.list_devices().await.unwrap_or_default();
+        if !devices.iter().any(|d| d.connection_state == ConnectionState::Ready) {
+            return Err("NO_LIVE_ADB_DEVICE_ONLINE: 0 ready Android devices found via ADB. Fail-closed: connect a device or explicitly use TestKit Simulation.".to_string());
+        }
+    }
+
+    let st_arc = state.inner().clone();
+    let task_clone = task_id.clone();
+    let app_clone = app.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Err(err) =
+            execute_task_internal(st_arc, &task_clone, None, allow_demo, None, Some(app_clone.clone()))
+                .await
+        {
+            let _ = app_clone.emit(
+                "mini://task-progress",
+                serde_json::json!({
+                    "taskId": task_clone,
+                    "state": "Failed",
+                    "error": err.to_string(),
+                    "atUtc": chrono::Utc::now().to_rfc3339(),
+                }),
+            );
+        }
+    });
+
+    Ok(MiniTaskStartedAck {
+        task_id,
+        is_simulated_demo: allow_demo,
+        started_at_utc: chrono::Utc::now().to_rfc3339(),
+    })
 }
 
 fn run_cli_mode(args: &[String]) -> Result<bool> {
@@ -546,6 +814,7 @@ fn run_cli_mode(args: &[String]) -> Result<bool> {
                 adb_serial,
                 allow_mock,
                 cancel_ms,
+                None,
             ))?;
             println!("{}", serde_json::to_string_pretty(&receipt)?);
             Ok(true)
@@ -755,7 +1024,11 @@ fn main() {
 
     let win_title = state.ui_schema.window_title.clone();
     let (win_w, win_h) = state.ui_schema.default_window_size;
+    let watch_storage = state.storage.clone();
+    let watch_scope = format!("mini:{}", state.manifest.project.slug);
+    let initial_watch_seqs = state.stream_seqs.clone();
     let shared_state = Arc::new(Mutex::new(state));
+    let shared_for_watcher = Arc::clone(&shared_state);
 
     tauri::Builder::default()
         .manage(shared_state)
@@ -767,12 +1040,53 @@ fn main() {
                     height: win_h as f64,
                 }));
             }
+
+            // Cross-process SQLite WAL delta watcher (Case 2: worker/CLI process commits while GUI is open)
+            let app_handle_bg = app.handle().clone();
+            std::thread::spawn(move || {
+                let mut seen_seqs = initial_watch_seqs;
+                let mut last_data_ver: i64 = -1;
+                loop {
+                    std::thread::sleep(std::time::Duration::from_millis(180));
+                    // Also sync in-memory dispatched seqs so we avoid needless re-emits
+                    {
+                        if let Ok(st) = shared_for_watcher.lock() {
+                            for (sid, s) in &st.stream_seqs {
+                                let cur = seen_seqs.entry(sid.clone()).or_insert(0);
+                                if *s > *cur {
+                                    *cur = *s;
+                                }
+                            }
+                        }
+                    }
+                    if let Ok((dv, events)) =
+                        watch_storage.poll_external_runtime_deltas(&watch_scope, &seen_seqs)
+                    {
+                        if dv != last_data_ver || !events.is_empty() {
+                            last_data_ver = dv;
+                            for ev in events {
+                                let cur = seen_seqs.entry(ev.stream_id.clone()).or_insert(0);
+                                if ev.seq > *cur {
+                                    *cur = ev.seq;
+                                    if let Ok(mut st) = shared_for_watcher.lock() {
+                                        apply_delta_event_to_state(&mut st, &ev);
+                                    }
+                                    let _ = app_handle_bg.emit("mini://runtime-var-delta", &ev);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             mini_get_bootstrap,
+            mini_get_runtime_snapshot,
             mini_list_devices,
-            mini_run_task
+            mini_run_task,
+            mini_start_task
         ])
         .run(tauri::generate_context!())
         .expect("error while running fp-mini-runtime application");

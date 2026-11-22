@@ -210,6 +210,105 @@ pub enum StepEventType {
     CheckpointSaved,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum VariableSource {
+    LiveAdbOcr,
+    LiveState,
+    TestkitMock,
+    LegacyUnverified,
+    Unverified,
+}
+
+impl Default for VariableSource {
+    fn default() -> Self {
+        Self::Unverified
+    }
+}
+
+impl VariableSource {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::LiveAdbOcr => "LIVE_ADB_OCR",
+            Self::LiveState => "LIVE_STATE",
+            Self::TestkitMock => "TESTKIT_MOCK",
+            Self::LegacyUnverified => "LEGACY_UNVERIFIED",
+            Self::Unverified => "UNVERIFIED",
+        }
+    }
+
+    pub fn is_live(&self) -> bool {
+        matches!(self, Self::LiveAdbOcr | Self::LiveState)
+    }
+
+    pub fn is_simulated(&self) -> bool {
+        matches!(self, Self::TestkitMock)
+    }
+
+    pub fn display_label(&self, verified: bool) -> &'static str {
+        match self {
+            Self::LiveAdbOcr | Self::LiveState => {
+                if verified {
+                    "LIVE — Đã xác minh"
+                } else {
+                    "LIVE — Chưa xác minh"
+                }
+            }
+            Self::TestkitMock => "TESTKIT — Mô phỏng",
+            Self::LegacyUnverified => "LEGACY — Chưa xác minh",
+            Self::Unverified => "Chưa xác minh",
+        }
+    }
+}
+
+pub fn infer_json_value_type(val: &serde_json::Value) -> String {
+    match val {
+        serde_json::Value::String(_) => "string".to_string(),
+        serde_json::Value::Number(_) => "number".to_string(),
+        serde_json::Value::Bool(_) => "boolean".to_string(),
+        serde_json::Value::Null => "null".to_string(),
+        serde_json::Value::Array(_) | serde_json::Value::Object(_) => "json".to_string(),
+    }
+}
+
+/// Canonical provenance-tracked Runtime Variable envelope (P5.1).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RuntimeVariableEnvelope {
+    pub project_id: String,
+    pub session_id: String,
+    pub job_id: String,
+    pub name: String,
+    pub value: serde_json::Value,
+    pub value_type: String,
+    pub source: VariableSource,
+    pub verified: bool,
+    #[serde(default)]
+    pub confidence: Option<f32>,
+    pub updated_at_utc: String,
+    pub workflow_version: String,
+    #[serde(default)]
+    pub seq: u64,
+    #[serde(default)]
+    pub redacted: bool,
+}
+
+/// Typed delta stream payload emitted over Tauri Event (`mini://runtime-var-delta`)
+/// and persisted in SQLite `runtime_var_events` for gap/reconnect recovery.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RuntimeVarDeltaEvent {
+    pub stream_id: String,
+    pub scope_key: String,
+    pub project_id: String,
+    pub session_id: String,
+    pub job_id: String,
+    pub seq: u64,
+    pub workflow_version: String,
+    pub emitted_at_utc: String,
+    pub deltas: Vec<RuntimeVariableEnvelope>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StepEvent {
     pub id: String,

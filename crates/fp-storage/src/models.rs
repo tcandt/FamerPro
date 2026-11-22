@@ -367,6 +367,23 @@ pub struct RuntimeVariablesSnapshot {
     pub scope_key: String,
     pub variables: std::collections::HashMap<String, serde_json::Value>,
     pub updated_at: Option<String>,
+    #[serde(default)]
+    pub envelopes: std::collections::BTreeMap<String, fp_domain::RuntimeVariableEnvelope>,
+    #[serde(default)]
+    pub testkit_envelopes: std::collections::BTreeMap<String, fp_domain::RuntimeVariableEnvelope>,
+    #[serde(default)]
+    pub stream_seqs: std::collections::HashMap<String, u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RuntimeProvenanceSnapshot {
+    pub base_scope_key: String,
+    pub live_envelopes: std::collections::BTreeMap<String, fp_domain::RuntimeVariableEnvelope>,
+    pub testkit_envelopes: std::collections::BTreeMap<String, fp_domain::RuntimeVariableEnvelope>,
+    pub stream_seqs: std::collections::HashMap<String, u64>,
+    pub missed_events: Vec<fp_domain::RuntimeVarDeltaEvent>,
+    pub loaded_at_utc: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -3,7 +3,9 @@ use anyhow::{bail, Context, Result};
 use chrono::{Duration as ChronoDuration, Utc};
 use fp_adb::{classify_device_adapter, AdbDeviceDriver, AdbRunner};
 use fp_device::{DeviceActorHandle, DeviceRegistry, FencedDeviceDriver};
-use fp_domain::{DeviceAdapterKind, DeviceDriver, JobState, StepEvent, StepEventType};
+use fp_domain::{
+    DeviceAdapterKind, DeviceDriver, JobState, StepEvent, StepEventType, VariableSource,
+};
 use fp_scheduler::{DeviceLease, MultiDeviceScheduler};
 use fp_storage::{
     CheckpointRecordInput, GameProjectRecord, ProjectJobInput, ProjectWorkflowRecord,
@@ -384,9 +386,14 @@ impl RuntimeCoordinator {
             self.prepare_fenced_driver(&req.device_id, device_lease.generation, custom_driver);
 
         let mut ctx = ExecutionContext::new(job_id.clone(), req.device_id.clone())
-            .with_project_dir(&project.project_dir_path);
+            .with_project_dir(&project.project_dir_path)
+            .with_source_mode(match adapter_kind {
+                DeviceAdapterKind::Synthetic => VariableSource::TestkitMock,
+                _ => VariableSource::LiveState,
+            });
         ctx.project_id = Some(req.project_id.clone());
         ctx.workflow_version_id = Some(workflow_version_id.clone());
+        ctx.workflow_version = Some(format!("{}@v{}", wf.id, wf.latest_version_no.unwrap_or(1)));
         ctx.workflow_sha256 = Some(workflow_sha256.clone());
         ctx.task_id = req.task_id.clone();
         ctx.account_id = req.account_id.clone();
@@ -783,9 +790,17 @@ impl RuntimeCoordinator {
         );
 
         let mut ctx = ExecutionContext::new(job_id.to_string(), resume_ctx.job.device_id.clone())
-            .with_project_dir(&project.project_dir_path);
+            .with_project_dir(&project.project_dir_path)
+            .with_source_mode(match adapter_kind {
+                DeviceAdapterKind::Synthetic => VariableSource::TestkitMock,
+                _ => VariableSource::LiveState,
+            });
         ctx.project_id = Some(project.id.clone());
         ctx.workflow_version_id = Some(resume_ctx.job.workflow_version_id.clone());
+        ctx.workflow_version = Some(format!(
+            "{}@v{}",
+            resume_ctx.workflow_id, resume_ctx.workflow_version_no
+        ));
         ctx.workflow_sha256 = Some(resume_ctx.workflow_sha256.clone());
         ctx.task_id = cp_state.task_id.clone();
         ctx.account_id = resume_ctx.job.account_id.clone();

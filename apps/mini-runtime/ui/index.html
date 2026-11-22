@@ -122,6 +122,51 @@
       white-space: nowrap;
     }
 
+    .prov-pill {
+      display: inline-block;
+      margin-left: 5px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .prov-live-ok {
+      background: rgba(59, 195, 141, 0.16);
+      color: #3bc38d;
+      border: 1px solid rgba(59, 195, 141, 0.5);
+    }
+    .prov-live-unverified {
+      background: rgba(56, 189, 248, 0.14);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.5);
+    }
+    .prov-testkit {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.55);
+    }
+    .prov-legacy {
+      background: rgba(148, 163, 184, 0.14);
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+    .btn-testkit {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.55);
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .btn-testkit:hover {
+      background: rgba(245, 158, 11, 0.28);
+    }
+
     .sec-hdr {
       display: flex;
       align-items: center;
@@ -527,8 +572,9 @@
   </div>
 
   <div id="footer-root" class="footer">
-    <div style="display:flex;gap:6px;align-items:center;">
-      <button class="btn-primary" onclick="runAllEnabledTasks()">▶ CHẠY NHIỆM VỤ (ADB THẬT)</button>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-primary" onclick="runAllEnabledTasks(false)">▶ CHẠY NHIỆM VỤ (ADB THẬT)</button>
+      <button id="btn-run-testkit" class="btn-testkit" onclick="runAllEnabledTasks(true)">🧪 CHẠY TESTKIT (MÔ PHỎNG)</button>
       <button class="btn-secondary" onclick="refreshDevices()">🔄 Quét ADB</button>
     </div>
     <div id="footer-meta" style="color:var(--text-muted);font-size:11px;">
@@ -546,6 +592,16 @@
       logs: [],
       singleCol: false,
       collapsed: {},
+      liveEnvelopes: {},
+      testkitEnvelopes: {},
+      streamSeqs: {},
+      seqStats: {
+        applied: 0,
+        duplicatesIgnored: 0,
+        staleIgnored: 0,
+        gapsRecovered: 0,
+        reconnectSyncs: 0
+      }
     };
 
     async function invokeTauri(cmd, args = {}) {
@@ -554,6 +610,152 @@
       }
       throw new Error("Tauri IPC not available");
     }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function formatVarDisplayValue(val) {
+      if (val === undefined || val === null) return '';
+      if (typeof val === 'object') return JSON.stringify(val);
+      return String(val);
+    }
+
+    function resolveCellEnvelope(varKey) {
+      const liveEnv = STATE.liveEnvelopes[varKey];
+      const tkEnv = STATE.testkitEnvelopes[varKey];
+      // Rule: verified LIVE data NEVER gets overridden or hidden by TESTKIT
+      if (liveEnv && (liveEnv.source === 'LIVE_ADB_OCR' || liveEnv.source === 'LIVE_STATE') && liveEnv.verified) {
+        return liveEnv;
+      }
+      if (tkEnv) return tkEnv;
+      if (liveEnv) return liveEnv;
+      const flat = STATE.bootstrap?.runtimeVars?.[varKey];
+      if (flat !== undefined && flat !== null) {
+        return {
+          name: varKey,
+          value: flat,
+          source: 'LEGACY_UNVERIFIED',
+          verified: false,
+          confidence: null,
+          seq: 0
+        };
+      }
+      return null;
+    }
+
+    function provenanceBadgeHtml(env) {
+      if (!env) return '';
+      if (env.source === 'LIVE_ADB_OCR' || env.source === 'LIVE_STATE') {
+        const confTxt = typeof env.confidence === 'number' ? ` ${Math.round(env.confidence * 100)}%` : '';
+        if (env.verified) {
+          return `<span class="prov-pill prov-live-ok">LIVE ✓${confTxt}</span>`;
+        }
+        return `<span class="prov-pill prov-live-unverified">LIVE · Chưa xác minh${confTxt}</span>`;
+      }
+      if (env.source === 'TESTKIT_MOCK') {
+        return `<span class="prov-pill prov-testkit">TESTKIT · Mô phỏng</span>`;
+      }
+      if (env.source === 'LEGACY_UNVERIFIED') {
+        return `<span class="prov-pill prov-legacy">LEGACY · Chưa xác minh</span>`;
+      }
+      return `<span class="prov-pill prov-legacy">Chưa xác minh</span>`;
+    }
+
+    function applyEnvelopeToLocalMap(env) {
+      if (!env || !env.name) return false;
+      const isTk = env.source === 'TESTKIT_MOCK';
+      const targetMap = isTk ? STATE.testkitEnvelopes : STATE.liveEnvelopes;
+      const existing = targetMap[env.name];
+      if (existing && (env.seq || 0) < (existing.seq || 0)) {
+        STATE.seqStats.staleIgnored += 1;
+        return false;
+      }
+      targetMap[env.name] = env;
+      if (!STATE.bootstrap) return true;
+      if (!STATE.bootstrap.runtimeVars) STATE.bootstrap.runtimeVars = {};
+      if (!isTk || !STATE.liveEnvelopes[env.name]?.verified) {
+        STATE.bootstrap.runtimeVars[env.name] = env.value;
+      }
+      return true;
+    }
+
+    async function syncRuntimeSnapshotFromSqlite(reason = 'manual') {
+      if (!STATE.bootstrap) return null;
+      try {
+        const snap = await invokeTauri('mini_get_runtime_snapshot', {
+          sinceSeqByStream: STATE.streamSeqs
+        });
+        STATE.seqStats.reconnectSyncs += 1;
+        if (Array.isArray(snap.missedEvents)) {
+          for (const ev of snap.missedEvents) {
+            for (const env of (ev.deltas || [])) {
+              applyEnvelopeToLocalMap(env);
+            }
+          }
+        }
+        for (const [k, env] of Object.entries(snap.liveEnvelopes || {})) {
+          STATE.liveEnvelopes[k] = env;
+        }
+        for (const [k, env] of Object.entries(snap.testkitEnvelopes || {})) {
+          STATE.testkitEnvelopes[k] = env;
+        }
+        for (const [sid, s] of Object.entries(snap.streamSeqs || {})) {
+          STATE.streamSeqs[sid] = Math.max(STATE.streamSeqs[sid] || 0, Number(s) || 0);
+        }
+        renderDeviceTable();
+        addLog(`[SnapshotSync:${reason}] Đồng bộ seq=${JSON.stringify(STATE.streamSeqs)} (${snap.missedEvents?.length || 0} missed events).`);
+        return snap;
+      } catch (e) {
+        addLog(`[SnapshotSync:${reason}] Lỗi: ${e}`);
+        return null;
+      }
+    }
+
+    async function applyIncomingDeltaPayload(payload) {
+      if (!payload || !payload.streamId || typeof payload.seq !== 'number') return;
+      const sid = payload.streamId;
+      const curSeq = STATE.streamSeqs[sid] || 0;
+
+      if (payload.seq <= curSeq) {
+        STATE.seqStats.duplicatesIgnored += 1;
+        addLog(`[SeqGuard] Bỏ qua sự kiện trùng/cũ: ${sid} seq=${payload.seq} <= ${curSeq}`);
+        return;
+      }
+      if (payload.seq > curSeq + 1) {
+        STATE.seqStats.gapsRecovered += 1;
+        addLog(`[SeqGuard] Phát hiện thiếu seq ${curSeq + 1}..${payload.seq - 1} trên ${sid}, tải lại snapshot SQLite...`);
+        await syncRuntimeSnapshotFromSqlite('gap_detected');
+        return;
+      }
+
+      let anyApplied = false;
+      for (const env of (payload.deltas || [])) {
+        if (applyEnvelopeToLocalMap(env)) anyApplied = true;
+      }
+      STATE.streamSeqs[sid] = payload.seq;
+      STATE.seqStats.applied += 1;
+      if (anyApplied) {
+        renderDeviceTable();
+        const names = (payload.deltas || []).map(d => `${d.name}=${formatVarDisplayValue(d.value)} [${d.source}]`).join(', ');
+        addLog(`[Realtime seq=${payload.seq}] ${names}`);
+      }
+    }
+
+    window.__fpRuntimeTestApi = {
+      syncSnapshot: syncRuntimeSnapshotFromSqlite,
+      handleIncomingDelta: applyIncomingDeltaPayload,
+      getStateSummary: () => ({
+        streamSeqs: { ...STATE.streamSeqs },
+        seqStats: { ...STATE.seqStats },
+        liveEnvelopes: STATE.liveEnvelopes,
+        testkitEnvelopes: STATE.testkitEnvelopes
+      })
+    };
 
     function isHidden(secId) {
       const hidden = STATE.bootstrap?.uiSchema?.hiddenComponents || [];
@@ -693,15 +895,19 @@
       if (devices.length === 0) {
         document.getElementById('device-tbody').innerHTML = `<tr>
           <td class="state-offline">Chưa có thiết bị kết nối</td>
-          <td style="color:var(--text-muted);font-family:Consolas;">${b.manifest.project.gamePackageId}</td>
+          <td style="color:var(--text-muted);font-family:Consolas;">${escapeHtml(b.manifest.project.gamePackageId)}</td>
           <td class="state-offline">OFFLINE</td>
           ${cols.map(c => {
-            const hasVerifiedVal = vars[c.runtimeVarKey] !== undefined && vars[c.runtimeVarKey] !== null;
-            const displayVal = hasVerifiedVal ? String(vars[c.runtimeVarKey]) : 'Chưa xác minh';
-            const style = hasVerifiedVal
-              ? `color:${c.badgeColor || 'var(--accent)'};font-weight:700;`
-              : `color:var(--text-muted);font-style:italic;`;
-            return `<td style="${style}" title="Biến: ${c.runtimeVarKey} (${hasVerifiedVal ? 'SQLite Snapshot' : 'Chưa có dữ liệu'})">${displayVal}</td>`;
+            const env = resolveCellEnvelope(c.runtimeVarKey);
+            if (!env || env.value === undefined || env.value === null) {
+              return `<td style="color:var(--text-muted);font-style:italic;" title="Biến: ${escapeHtml(c.runtimeVarKey)} (Chưa có dữ liệu)">Chưa xác minh</td>`;
+            }
+            const disp = escapeHtml(formatVarDisplayValue(env.value));
+            const valColor = env.source === 'TESTKIT_MOCK'
+              ? '#fbbf24'
+              : (env.verified ? (c.badgeColor || '#3bc38d') : 'var(--accent)');
+            const metaTitle = `Biến: ${c.runtimeVarKey} | Nguồn: ${env.source} | Verified: ${env.verified} | Seq: ${env.seq || 0} | Job: ${env.jobId || '-'} | Lúc: ${env.updatedAtUtc || '-'}`;
+            return `<td data-var-key="${escapeHtml(c.runtimeVarKey)}" data-var-source="${escapeHtml(env.source)}" style="color:${valColor};font-weight:700;" title="${escapeHtml(metaTitle)}"><span>${disp}</span>${provenanceBadgeHtml(env)}</td>`;
           }).join('')}
         </tr>`;
         return;
@@ -711,15 +917,21 @@
       for (const d of devices) {
         const online = d.connection_state === 'ready';
         bodyHtml += `<tr class="${online ? 'active-row' : ''}">
-          <td><input type="checkbox" ${online ? 'checked' : 'disabled'} /> <b>${d.alias || d.id} (${d.id})</b></td>
-          <td style="color:var(--text-muted);font-family:Consolas;">${b.manifest.project.gamePackageId}</td>
-          <td class="${online ? 'state-online' : 'state-offline'}">${online ? 'ONLINE (LIVE)' : d.connection_state.toUpperCase()}</td>`;
+          <td><input type="checkbox" ${online ? 'checked' : 'disabled'} /> <b>${escapeHtml(d.alias || d.id)} (${escapeHtml(d.id)})</b></td>
+          <td style="color:var(--text-muted);font-family:Consolas;">${escapeHtml(b.manifest.project.gamePackageId)}</td>
+          <td class="${online ? 'state-online' : 'state-offline'}">${online ? 'ONLINE (LIVE)' : escapeHtml(d.connection_state.toUpperCase())}</td>`;
         for (const c of cols) {
-          const hasVerifiedVal = vars[c.runtimeVarKey] !== undefined && vars[c.runtimeVarKey] !== null;
-          const val = hasVerifiedVal ? String(vars[c.runtimeVarKey]) : 'Chưa xác minh';
-          const color = hasVerifiedVal ? (c.badgeColor || 'var(--text-main)') : 'var(--text-muted)';
-          const style = hasVerifiedVal ? `color:${color};font-weight:700;` : `color:${color};font-style:italic;`;
-          bodyHtml += `<td style="${style}" title="Key: ${c.runtimeVarKey}">${val}</td>`;
+          const env = resolveCellEnvelope(c.runtimeVarKey);
+          if (!env || env.value === undefined || env.value === null) {
+            bodyHtml += `<td style="color:var(--text-muted);font-style:italic;" title="Key: ${escapeHtml(c.runtimeVarKey)} (Chưa xác minh)">Chưa xác minh</td>`;
+          } else {
+            const disp = escapeHtml(formatVarDisplayValue(env.value));
+            const valColor = env.source === 'TESTKIT_MOCK'
+              ? '#fbbf24'
+              : (env.verified ? (c.badgeColor || '#3bc38d') : 'var(--accent)');
+            const metaTitle = `Key: ${c.runtimeVarKey} | Nguồn: ${env.source} | Verified: ${env.verified} | Seq: ${env.seq || 0}`;
+            bodyHtml += `<td data-var-key="${escapeHtml(c.runtimeVarKey)}" data-var-source="${escapeHtml(env.source)}" style="color:${valColor};font-weight:700;" title="${escapeHtml(metaTitle)}"><span>${disp}</span>${provenanceBadgeHtml(env)}</td>`;
+          }
         }
         bodyHtml += `</tr>`;
       }
@@ -750,7 +962,8 @@
             </div>
             <div class="task-right">
               <span class="status-pill ${st.cls}">${st.status}</span>
-              <button class="icon-btn" title="Chạy trên ADB thật" onclick="runSingleTask('${t.id}')">▶</button>
+              <button class="icon-btn" title="Chạy trên ADB thật" onclick="runSingleTask('${t.id}', false)">▶</button>
+              <button class="icon-btn" title="Chạy TestKit (Mô phỏng)" onclick="startTaskBackground('${t.id}', true)">🧪</button>
               ${hasSettings ? `<button class="icon-btn" title="Cài đặt tham số" onclick="openTaskSettings('${t.id}')">⚙</button>` : ''}
             </div>
           </div>`;
@@ -814,23 +1027,36 @@
       else STATE.taskStates[taskId].enabled = checked;
     }
 
-    async function runSingleTask(taskId) {
+    async function startTaskBackground(taskId, useDemoMock = false) {
       STATE.taskStates[taskId] = { enabled: true, status: 'Đang làm', cls: 'running' };
       renderLeftPane();
-      addLog(`Gửi lệnh chạy '${taskId}' (Chế độ: LIVE ADB)...`);
+      addLog(`Khởi chạy bất đồng bộ '${taskId}' (${useDemoMock ? 'TESTKIT_MOCK' : 'LIVE ADB'})...`);
       try {
-        const res = await invokeTauri('mini_run_task', { taskId, useDemoMock: false });
+        const ack = await invokeTauri('mini_start_task', { taskId, useDemoMock });
+        addLog(`[StartAck] Task=${ack.taskId} | Mode=${ack.isSimulatedDemo ? 'TESTKIT_MOCK' : 'LIVE'} | Lúc=${ack.startedAtUtc}`);
+        return ack;
+      } catch (e) {
+        STATE.taskStates[taskId] = { enabled: true, status: 'Lỗi / Offline', cls: 'err' };
+        renderLeftPane();
+        addLog(`✗ Từ chối giả lập (Fail-Closed): ${e}`);
+        throw e;
+      }
+    }
+
+    async function runSingleTask(taskId, useDemoMock = false) {
+      STATE.taskStates[taskId] = { enabled: true, status: 'Đang làm', cls: 'running' };
+      renderLeftPane();
+      addLog(`Gửi lệnh chạy '${taskId}' (Chế độ: ${useDemoMock ? 'TESTKIT_MOCK' : 'LIVE ADB'})...`);
+      try {
+        const res = await invokeTauri('mini_run_task', { taskId, useDemoMock });
         STATE.taskStates[taskId] = {
           enabled: true,
           status: res.state === 'Succeeded' ? 'Hoàn thành' : res.state,
           cls: res.state === 'Succeeded' ? 'done' : ''
         };
-        STATE.bootstrap.runtimeVars = res.updatedRuntimeVars || {};
-        renderDeviceTable();
+        await syncRuntimeSnapshotFromSqlite('task_complete');
         renderLeftPane();
-        const varKeys = Object.keys(STATE.bootstrap.runtimeVars);
         addLog(`✓ Hoàn tất '${taskId}' trên ${res.driverUsed}: ${res.eventsCount} bước (${res.state})`);
-        addLog(`[RuntimeVar] Nguồn=${res.driverUsed} | Cập nhật lúc ${res.updatedRuntimeVars?.last_updated_utc || new Date().toISOString()} | Biến: ${varKeys.join(', ')}`);
       } catch (e) {
         STATE.taskStates[taskId] = { enabled: true, status: 'Lỗi / Offline', cls: 'err' };
         renderLeftPane();
@@ -838,11 +1064,17 @@
       }
     }
 
-    async function runAllEnabledTasks() {
+    async function runAllEnabledTasks(useDemoMock = false) {
       if (!STATE.bootstrap) return;
       for (const t of STATE.bootstrap.uiSchema.tasks) {
         const st = STATE.taskStates[t.id];
-        if (!st || st.enabled) await runSingleTask(t.id);
+        if (!st || st.enabled) {
+          if (useDemoMock) {
+            await startTaskBackground(t.id, true);
+          } else {
+            await runSingleTask(t.id, false);
+          }
+        }
       }
     }
 
@@ -859,10 +1091,38 @@
       }
     }
 
+    async function registerTauriEventListeners() {
+      const tauriEvt = window.__TAURI__?.event;
+      if (tauriEvt && typeof tauriEvt.listen === 'function') {
+        await tauriEvt.listen('mini://runtime-var-delta', (event) => {
+          applyIncomingDeltaPayload(event.payload);
+        });
+        await tauriEvt.listen('mini://task-progress', (event) => {
+          const p = event.payload || {};
+          if (p.taskId && p.state === 'Failed') {
+            STATE.taskStates[p.taskId] = { enabled: true, status: 'Lỗi', cls: 'err' };
+            renderLeftPane();
+            addLog(`✗ Lỗi tác vụ '${p.taskId}': ${p.error || 'Unknown'}`);
+          } else if (p.taskId && p.nodeId) {
+            const st = STATE.taskStates[p.taskId] || { enabled: true };
+            STATE.taskStates[p.taskId] = { ...st, status: 'Đang làm', cls: 'running' };
+            renderLeftPane();
+          }
+        });
+        addLog('[EventStream] Đã kết nối mini://runtime-var-delta & mini://task-progress');
+      } else {
+        addLog('[EventStream] Cảnh báo: không tìm thấy window.__TAURI__.event.listen');
+      }
+    }
+
     async function init() {
       try {
         const data = await invokeTauri('mini_get_bootstrap');
         STATE.bootstrap = data;
+        STATE.liveEnvelopes = { ...(data.liveEnvelopes || {}) };
+        STATE.testkitEnvelopes = { ...(data.testkitEnvelopes || {}) };
+        STATE.streamSeqs = { ...(data.streamSeqs || {}) };
+
         document.documentElement.style.setProperty('--accent', data.uiSchema.themeAccentHex || '#38bdf8');
         document.documentElement.style.setProperty('--header-bg', data.uiSchema.headerBgHex || '#141c28');
         document.getElementById('version-badge').textContent = `${data.manifest.project.name} • ${data.uiSchema.versionBadge}`;
@@ -895,17 +1155,27 @@
           if (prev) toggleCollapse(sec);
         }
 
+        await registerTauriEventListeners();
         renderDeviceTable();
         renderLeftPane();
         renderSettingsPane();
         addLog(`Khởi động ${data.uiSchema.windowTitle} (${data.uiSchema.layoutPreset})`);
         addLog(`Chữ ký RFC 8032 (${data.signatureAlgorithm}): HỢP LỆ`);
         addLog(`Trạng thái ADB thực tế: ${data.devices.length} máy kết nối.`);
+        addLog(`[Snapshot] Live=${Object.keys(STATE.liveEnvelopes).length}, TestKit=${Object.keys(STATE.testkitEnvelopes).length}, Seqs=${JSON.stringify(STATE.streamSeqs)}`);
       } catch (e) {
         addLog(`LỖI XÁC THỰC BUNDLE: ${e}`);
       }
     }
 
+    window.addEventListener('focus', () => {
+      syncRuntimeSnapshotFromSqlite('window_focus');
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        syncRuntimeSnapshotFromSqlite('visibility_visible');
+      }
+    });
     window.addEventListener('resize', () => { if (STATE.bootstrap) renderDeviceTable(); });
     window.addEventListener('DOMContentLoaded', init);
   </script>

@@ -4,8 +4,8 @@ use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use fp_actions::{SafeRegionSampler, SafeTapPolicy};
 use fp_domain::{
-    ActionReceipt, Bounds, DeviceDriver, Frame, JobState, StepEvent, StepEventType, SwipePath,
-    VisionTarget,
+    infer_json_value_type, ActionReceipt, Bounds, DeviceDriver, Frame, JobState,
+    RuntimeVariableEnvelope, StepEvent, StepEventType, SwipePath, VariableSource, VisionTarget,
 };
 use fp_vision::VisionEngine;
 use fp_workflow_schema::{WorkflowDocument, WorkflowNode};
@@ -75,14 +75,19 @@ pub fn is_unsafe_side_effect_node(node_type: &str) -> bool {
 pub struct ExecutionContext {
     pub job_id: String,
     pub device_id: String,
+    pub session_id: String,
+    pub runtime_source_mode: VariableSource,
     pub project_id: Option<String>,
     pub project_dir: Option<PathBuf>,
     pub workflow_version_id: Option<String>,
+    pub workflow_version: Option<String>,
     pub workflow_sha256: Option<String>,
     pub task_id: Option<String>,
     pub account_id: Option<String>,
     pub fencing_generation: u64,
     pub variables: HashMap<String, serde_json::Value>,
+    pub variable_envelopes: HashMap<String, RuntimeVariableEnvelope>,
+    pub pending_var_deltas: Vec<RuntimeVariableEnvelope>,
     pub last_frame: Option<Frame>,
     pub last_target: Option<VisionTarget>,
     pub last_receipt: Option<ActionReceipt>,
@@ -93,14 +98,19 @@ impl ExecutionContext {
         Self {
             job_id,
             device_id,
+            session_id: format!("sess-{}", Uuid::new_v4()),
+            runtime_source_mode: VariableSource::TestkitMock,
             project_id: None,
             project_dir: None,
             workflow_version_id: None,
+            workflow_version: None,
             workflow_sha256: None,
             task_id: None,
             account_id: None,
             fencing_generation: 1,
             variables: HashMap::new(),
+            variable_envelopes: HashMap::new(),
+            pending_var_deltas: Vec::new(),
             last_frame: None,
             last_target: None,
             last_receipt: None,
@@ -110,6 +120,52 @@ impl ExecutionContext {
     pub fn with_project_dir(mut self, project_dir: impl Into<PathBuf>) -> Self {
         self.project_dir = Some(project_dir.into());
         self
+    }
+
+    pub fn with_source_mode(mut self, source_mode: VariableSource) -> Self {
+        self.runtime_source_mode = source_mode;
+        self
+    }
+
+    pub fn record_variable(
+        &mut self,
+        workflow_version: &str,
+        var_name: &str,
+        raw_value: serde_json::Value,
+        source_override: Option<VariableSource>,
+        verified: bool,
+        confidence: Option<f32>,
+    ) -> RuntimeVariableEnvelope {
+        let (clean_val, redacted) = fp_security::sanitize_runtime_variable(var_name, &raw_value);
+        self.variables.insert(var_name.to_string(), clean_val.clone());
+        let src = source_override.unwrap_or(self.runtime_source_mode);
+        let effective_verified = if src.is_simulated() || redacted {
+            false
+        } else {
+            verified
+        };
+        let env = RuntimeVariableEnvelope {
+            project_id: self
+                .project_id
+                .clone()
+                .unwrap_or_else(|| "default".to_string()),
+            session_id: self.session_id.clone(),
+            job_id: self.job_id.clone(),
+            name: var_name.to_string(),
+            value_type: infer_json_value_type(&clean_val),
+            value: clean_val,
+            source: src,
+            verified: effective_verified,
+            confidence,
+            updated_at_utc: Utc::now().to_rfc3339(),
+            workflow_version: workflow_version.to_string(),
+            seq: 0,
+            redacted,
+        };
+        self.variable_envelopes
+            .insert(var_name.to_string(), env.clone());
+        self.pending_var_deltas.push(env.clone());
+        env
     }
 }
 
@@ -299,6 +355,22 @@ impl WorkflowExecutor {
                     }
                 }
 
+                let mut sanitized_cfg = node.config.clone();
+                if let Some(var_key) = sanitized_cfg
+                    .get("varKey")
+                    .and_then(|v| v.as_str())
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.to_string())
+                {
+                    if let Some(raw_v) = sanitized_cfg.get("value").cloned() {
+                        let (clean_v, _) = fp_security::sanitize_runtime_variable(&var_key, &raw_v);
+                        sanitized_cfg["value"] = clean_v;
+                    }
+                }
+                let (sanitized_cfg, _) =
+                    fp_security::sanitize_runtime_variable(&node.id, &sanitized_cfg);
+
                 let sent_event = StepEvent {
                     id: Uuid::new_v4().to_string(),
                     job_id: ctx.job_id.clone(),
@@ -306,7 +378,7 @@ impl WorkflowExecutor {
                     event_type: StepEventType::CommandSent,
                     attempt_no: attempt,
                     at: Utc::now(),
-                    payload_json: serde_json::to_string(&node.config).unwrap_or_default(),
+                    payload_json: serde_json::to_string(&sanitized_cfg).unwrap_or_default(),
                 };
                 if let Some(cb) = &event_callback {
                     cb(sent_event);
@@ -378,6 +450,8 @@ impl WorkflowExecutor {
                                 | "vision.ocr_text"
                                 | "flow.end"
                         ) {
+                            let deltas: Vec<RuntimeVariableEnvelope> =
+                                ctx.pending_var_deltas.drain(..).collect();
                             let var_event = StepEvent {
                                 id: Uuid::new_v4().to_string(),
                                 job_id: ctx.job_id.clone(),
@@ -388,6 +462,27 @@ impl WorkflowExecutor {
                                 payload_json: serde_json::to_string(&serde_json::json!({
                                     "nodeType": node.node_type,
                                     "variables": ctx.variables,
+                                    "deltaEnvelopes": deltas,
+                                }))
+                                .unwrap_or_default(),
+                            };
+                            if let Some(cb) = &event_callback {
+                                cb(var_event);
+                            }
+                        } else if !ctx.pending_var_deltas.is_empty() {
+                            let deltas: Vec<RuntimeVariableEnvelope> =
+                                ctx.pending_var_deltas.drain(..).collect();
+                            let var_event = StepEvent {
+                                id: Uuid::new_v4().to_string(),
+                                job_id: ctx.job_id.clone(),
+                                node_id: node.id.clone(),
+                                event_type: StepEventType::VerificationPassed,
+                                attempt_no: attempt,
+                                at: Utc::now(),
+                                payload_json: serde_json::to_string(&serde_json::json!({
+                                    "nodeType": node.node_type,
+                                    "variables": ctx.variables,
+                                    "deltaEnvelopes": deltas,
                                 }))
                                 .unwrap_or_default(),
                             };
@@ -656,26 +751,88 @@ impl WorkflowExecutor {
                     .get("expectedText")
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
-                let frame = match &ctx.last_frame {
-                    Some(f) => f,
+                let min_conf = node
+                    .config
+                    .get("minConfidence")
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.75) as f32;
+                let expect_type = node
+                    .config
+                    .get("valueType")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("string");
+                let wf_ver = ctx
+                    .workflow_version
+                    .clone()
+                    .unwrap_or_else(|| "wf@v1".to_string());
+
+                let (frame_bytes, frame_geometry) = match &ctx.last_frame {
+                    Some(f) => (f.bytes.clone(), f.geometry.clone()),
                     None => {
                         let f = self.driver.snapshot().await?;
+                        let res = (f.bytes.clone(), f.geometry.clone());
                         ctx.last_frame = Some(f);
-                        ctx.last_frame.as_ref().unwrap()
+                        res
                     }
                 };
 
-                let ocr_res = Self::perform_ocr(&frame.bytes).await;
+                let ocr_res = Self::perform_ocr(&frame_bytes).await;
                 match ocr_res {
                     Ok((full_text, words)) => {
+                        let trimmed = full_text.trim();
                         let matched = if expected.is_empty() {
-                            true
+                            !trimmed.is_empty()
                         } else {
-                            full_text.to_lowercase().contains(&expected.to_lowercase())
+                            trimmed.to_lowercase().contains(&expected.to_lowercase())
                         };
-                        ctx.variables.insert(
-                            "ocr_matched".to_string(),
+                        let ocr_conf: f32 = node
+                            .config
+                            .get("simulatedConfidence")
+                            .and_then(|v| v.as_f64())
+                            .map(|c| c as f32)
+                            .unwrap_or_else(|| {
+                                if words.is_empty() || trimmed.is_empty() {
+                                    0.40
+                                } else if matched && !expected.is_empty() {
+                                    0.94
+                                } else {
+                                    0.72
+                                }
+                            });
+
+                        let (parsed_val, type_valid) = if expect_type == "number" {
+                            if let Ok(n) = trimmed.replace(',', "").parse::<i64>() {
+                                (serde_json::Value::from(n), true)
+                            } else if let Ok(f) = trimmed.replace(',', "").parse::<f64>() {
+                                (serde_json::Value::from(f), f.is_finite())
+                            } else {
+                                (serde_json::Value::String(full_text.clone()), false)
+                            }
+                        } else {
+                            (serde_json::Value::String(full_text.clone()), !trimmed.is_empty())
+                        };
+
+                        let ocr_src = if ctx.runtime_source_mode.is_live() {
+                            VariableSource::LiveAdbOcr
+                        } else {
+                            VariableSource::TestkitMock
+                        };
+
+                        // OCR confidence alone (e.g. 0.94) NEVER guarantees verified=true:
+                        // requires live driver, non-empty output, matched workflow expectation,
+                        // confidence >= min_confidence, and valid typed parsing!
+                        let verified_ok = ctx.runtime_source_mode.is_live()
+                            && matched
+                            && type_valid
+                            && ocr_conf >= min_conf;
+
+                        ctx.record_variable(
+                            &wf_ver,
+                            "ocr_matched",
                             serde_json::Value::Bool(matched),
+                            Some(ocr_src),
+                            verified_ok,
+                            Some(ocr_conf),
                         );
                         if let Some(out_var) = node
                             .config
@@ -684,13 +841,23 @@ impl WorkflowExecutor {
                             .map(str::trim)
                             .filter(|s| !s.is_empty())
                         {
-                            ctx.variables.insert(
-                                out_var.to_string(),
-                                serde_json::Value::String(full_text.clone()),
+                            ctx.record_variable(
+                                &wf_ver,
+                                out_var,
+                                parsed_val,
+                                Some(ocr_src),
+                                verified_ok,
+                                Some(ocr_conf),
                             );
                         }
-                        ctx.variables
-                            .insert("ocr_text".to_string(), serde_json::Value::String(full_text));
+                        ctx.record_variable(
+                            &wf_ver,
+                            "ocr_text",
+                            serde_json::Value::String(full_text),
+                            Some(ocr_src),
+                            verified_ok,
+                            Some(ocr_conf),
+                        );
 
                         if matched && !expected.is_empty() {
                             let exp_lower = expected.to_lowercase();
@@ -700,16 +867,22 @@ impl WorkflowExecutor {
                             }) {
                                 ctx.last_target = Some(VisionTarget {
                                     bounds: *bounds,
-                                    confidence: 1.0,
-                                    geometry: frame.geometry.clone(),
+                                    confidence: ocr_conf,
+                                    geometry: frame_geometry.clone(),
                                 });
                             }
                         }
                     }
                     Err(err) => {
                         // Never fabricate a positive OCR match on engine failure
-                        ctx.variables
-                            .insert("ocr_matched".to_string(), serde_json::Value::Bool(false));
+                        ctx.record_variable(
+                            &wf_ver,
+                            "ocr_matched",
+                            serde_json::Value::Bool(false),
+                            Some(ctx.runtime_source_mode),
+                            false,
+                            Some(0.0),
+                        );
                         ctx.variables.insert(
                             "ocr_error".to_string(),
                             serde_json::Value::String(err.to_string()),
@@ -895,12 +1068,33 @@ impl WorkflowExecutor {
                             serde_json::Value::Bool(false)
                         }
                     }
+                    "json" | "object" => raw_val,
                     _ => match raw_val {
                         serde_json::Value::String(s) => serde_json::Value::String(s),
+                        serde_json::Value::Object(_) | serde_json::Value::Array(_) => raw_val,
                         other => serde_json::Value::String(other.to_string()),
                     },
                 };
-                ctx.variables.insert(var_key.to_string(), typed_val);
+                let wf_ver = ctx
+                    .workflow_version
+                    .clone()
+                    .unwrap_or_else(|| "wf@v1".to_string());
+                let explicit_verified = node
+                    .config
+                    .get("verified")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+                let is_verified = ctx.runtime_source_mode.is_live()
+                    && explicit_verified
+                    && !matches!(typed_val, serde_json::Value::Null);
+                ctx.record_variable(
+                    &wf_ver,
+                    var_key,
+                    typed_val,
+                    Some(ctx.runtime_source_mode),
+                    is_verified,
+                    None,
+                );
                 Ok(NodeOutcome::Continue(None))
             }
 
@@ -922,8 +1116,20 @@ impl WorkflowExecutor {
                     .get(var_key)
                     .and_then(|v| v.as_i64())
                     .unwrap_or(0);
-                ctx.variables
-                    .insert(var_key.to_string(), serde_json::Value::from(cur + delta));
+                let next_val = serde_json::Value::from(cur + delta);
+                let wf_ver = ctx
+                    .workflow_version
+                    .clone()
+                    .unwrap_or_else(|| "wf@v1".to_string());
+                let is_verified = ctx.runtime_source_mode.is_live();
+                ctx.record_variable(
+                    &wf_ver,
+                    var_key,
+                    next_val,
+                    Some(ctx.runtime_source_mode),
+                    is_verified,
+                    None,
+                );
                 Ok(NodeOutcome::Continue(None))
             }
 
@@ -1686,5 +1892,66 @@ mod tests {
         assert_eq!(state, JobState::Succeeded);
         assert_eq!(ctx.variables.get("zone").and_then(|v| v.as_str()), Some("A1"));
         assert_eq!(ctx.variables.get("resource_count").and_then(|v| v.as_i64()), Some(150));
+        let zone_env = ctx.variable_envelopes.get("zone").expect("envelope recorded");
+        assert_eq!(zone_env.source, VariableSource::TestkitMock);
+        assert!(!zone_env.verified);
+    }
+
+    #[tokio::test]
+    async fn test_p5_1_event_deltas_and_secret_scrubbing_during_execution() {
+        let doc_json = serde_json::json!({
+            "schemaVersion": 1,
+            "workflowId": "wf-p5-sec",
+            "name": "P5.1 Provenance & Secret Scrub",
+            "status": "published",
+            "graph": {
+                "nodes": [
+                    { "id": "n1", "type": "flow.start", "position": { "x": 0.0, "y": 0.0 }, "config": {} },
+                    { "id": "n2", "type": "state.set_var", "position": { "x": 150.0, "y": 0.0 }, "config": { "varKey": "account_pin", "valueType": "number", "value": 482910 } },
+                    { "id": "n3", "type": "state.set_var", "position": { "x": 300.0, "y": 0.0 }, "config": { "varKey": "session_payload", "valueType": "json", "value": { "token": "secret-tok-xyz", "tier": 3 } } },
+                    { "id": "n4", "type": "state.set_var", "position": { "x": 450.0, "y": 0.0 }, "config": { "varKey": "farm_zone", "valueType": "string", "value": "Sector-B7" } },
+                    { "id": "n5", "type": "flow.end", "position": { "x": 600.0, "y": 0.0 }, "config": {} }
+                ],
+                "edges": [
+                    { "id": "e1", "source": "n1", "sourcePort": "flow", "target": "n2", "targetPort": "flow" },
+                    { "id": "e2", "source": "n2", "sourcePort": "flow", "target": "n3", "targetPort": "flow" },
+                    { "id": "e3", "source": "n3", "sourcePort": "flow", "target": "n4", "targetPort": "flow" },
+                    { "id": "e4", "source": "n4", "sourcePort": "flow", "target": "n5", "targetPort": "flow" }
+                ]
+            }
+        });
+        let doc = WorkflowValidator::parse_and_validate(&doc_json.to_string()).unwrap();
+        let driver = Arc::new(FakeDeviceDriver::new("fake-sec", 1280, 720));
+        let (_tx, rx) = watch::channel(ExecutionSignal::Running);
+        let mut exec = WorkflowExecutor::new(driver, rx);
+        let mut ctx = ExecutionContext::new("job-p5-sec".to_string(), "fake-sec".to_string())
+            .with_source_mode(VariableSource::TestkitMock);
+
+        let captured = std::sync::Arc::new(std::sync::Mutex::new(Vec::<StepEvent>::new()));
+        let cap_clone = captured.clone();
+        let state = exec
+            .execute_workflow(
+                &doc,
+                &mut ctx,
+                Some(Arc::new(move |evt| {
+                    cap_clone.lock().unwrap().push(evt);
+                })),
+            )
+            .await
+            .unwrap();
+        assert_eq!(state, JobState::Succeeded);
+
+        let evts = captured.lock().unwrap();
+        let joined = evts
+            .iter()
+            .map(|e| e.payload_json.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(!joined.contains("482910"));
+        assert!(!joined.contains("secret-tok-xyz"));
+        assert!(joined.contains("Sector-B7"));
+        assert!(joined.contains("TESTKIT_MOCK"));
+        assert!(ctx.variable_envelopes.get("account_pin").unwrap().redacted);
+        assert!(ctx.variable_envelopes.get("session_payload").unwrap().redacted);
     }
 }

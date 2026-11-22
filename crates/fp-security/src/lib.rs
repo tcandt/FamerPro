@@ -44,6 +44,145 @@ impl SecretRedactor {
     }
 }
 
+pub const REDACTED_PLACEHOLDER: &str = "***REDACTED***";
+
+/// Returns `true` when a runtime variable or nested JSON key name represents credential/secret material.
+pub fn is_sensitive_var_key(key: &str) -> bool {
+    let lower = key.trim().to_ascii_lowercase();
+    if lower.is_empty() {
+        return false;
+    }
+    let tokens: Vec<&str> = lower
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|t| !t.is_empty())
+        .collect();
+    let sensitive_tokens = [
+        "password",
+        "passwd",
+        "pwd",
+        "secret",
+        "token",
+        "apikey",
+        "privatekey",
+        "secretkey",
+        "accesskey",
+        "sessionkey",
+        "cookie",
+        "credential",
+        "cred",
+        "bearer",
+        "auth",
+        "pin",
+        "otp",
+        "seed",
+        "mnemonic",
+        "passphrase",
+    ];
+    for t in &tokens {
+        if sensitive_tokens.contains(t) {
+            return true;
+        }
+    }
+    // Also catch compound camelCase/snake_case substrings where appropriate
+    let compact: String = lower.chars().filter(|c| c.is_ascii_alphanumeric()).collect();
+    [
+        "password",
+        "passwd",
+        "secret",
+        "token",
+        "apikey",
+        "privatekey",
+        "secretkey",
+        "accesskey",
+        "sessionkey",
+        "licensekey",
+        "credential",
+        "bearer",
+        "authheader",
+        "cookie",
+        "otpcode",
+        "pincode",
+        "passphrase",
+    ]
+    .iter()
+    .any(|needle| compact.contains(needle))
+}
+
+fn contains_inline_secret_value(s: &str) -> bool {
+    let lower = s.to_ascii_lowercase();
+    if lower.starts_with("bearer ")
+        || lower.starts_with("cred_mgr://")
+        || lower.starts_with("dpapi://")
+        || lower.starts_with("eyj") && s.matches('.').count() >= 2
+    {
+        return true;
+    }
+    false
+}
+
+/// Structurally sanitizes a runtime variable (string, number, boolean, array, nested object)
+/// so sensitive values are NEVER leaked in plaintext via events, SQLite snapshots, or logs.
+pub fn sanitize_runtime_variable(
+    var_name: &str,
+    value: &serde_json::Value,
+) -> (serde_json::Value, bool) {
+    if is_sensitive_var_key(var_name) {
+        if matches!(value, serde_json::Value::Null) {
+            return (serde_json::Value::Null, false);
+        }
+        return (
+            serde_json::Value::String(REDACTED_PLACEHOLDER.to_string()),
+            true,
+        );
+    }
+
+    sanitize_json_value_inner(value)
+}
+
+fn sanitize_json_value_inner(value: &serde_json::Value) -> (serde_json::Value, bool) {
+    let redactor = SecretRedactor::new();
+    match value {
+        serde_json::Value::String(s) => {
+            if contains_inline_secret_value(s) {
+                return (
+                    serde_json::Value::String(REDACTED_PLACEHOLDER.to_string()),
+                    true,
+                );
+            }
+            let r = redactor.redact(s);
+            let changed = r != *s;
+            (serde_json::Value::String(r), changed)
+        }
+        serde_json::Value::Array(items) => {
+            let mut changed = false;
+            let out = items
+                .iter()
+                .map(|item| {
+                    let (v, c) = sanitize_json_value_inner(item);
+                    if c {
+                        changed = true;
+                    }
+                    v
+                })
+                .collect();
+            (serde_json::Value::Array(out), changed)
+        }
+        serde_json::Value::Object(map) => {
+            let mut changed = false;
+            let mut out = serde_json::Map::new();
+            for (k, v) in map {
+                let (san_v, c) = sanitize_runtime_variable(k, v);
+                if c {
+                    changed = true;
+                }
+                out.insert(k.clone(), san_v);
+            }
+            (serde_json::Value::Object(out), changed)
+        }
+        other => (other.clone(), false),
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum VaultBackendKind {
     WindowsCredentialManager,
@@ -729,6 +868,43 @@ mod tests {
         assert!(err.contains("RECOVERY_RETIRED_EXPERIMENTAL_FORMAT"));
 
         let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_structured_and_numeric_secret_redaction() {
+        // 1. Sensitive numeric variable (e.g. PIN / OTP)
+        let (v_num, r_num) = sanitize_runtime_variable("account_otp_pin", &serde_json::json!(482910));
+        assert!(r_num);
+        assert_eq!(v_num, serde_json::json!(REDACTED_PLACEHOLDER));
+
+        // 2. Sensitive string variable without inline key prefix
+        let (v_str, r_str) =
+            sanitize_runtime_variable("session_token", &serde_json::json!("raw_live_tok_9988"));
+        assert!(r_str);
+        assert_eq!(v_str, serde_json::json!(REDACTED_PLACEHOLDER));
+
+        // 3. Structured object mixing benign gameplay fields with nested secrets
+        let payload = serde_json::json!({
+            "charName": "HeroA",
+            "charLevel": 65,
+            "apiKey": "sk-live-secret-111",
+            "nested": {
+                "authCookie": "sid=abcxyz",
+                "gold": 1500
+            }
+        });
+        let (v_obj, r_obj) = sanitize_runtime_variable("player_state", &payload);
+        assert!(r_obj);
+        let s = serde_json::to_string(&v_obj).unwrap();
+        assert!(!s.contains("sk-live-secret-111"));
+        assert!(!s.contains("sid=abcxyz"));
+        assert!(s.contains("HeroA"));
+        assert!(s.contains("1500"));
+
+        // 4. Benign gameplay variables stay intact
+        let (v_ok, r_ok) = sanitize_runtime_variable("resource_count", &serde_json::json!(250));
+        assert!(!r_ok);
+        assert_eq!(v_ok, serde_json::json!(250));
     }
 
     struct CleanupGuard<'a> {

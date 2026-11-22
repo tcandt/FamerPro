@@ -388,19 +388,62 @@ pub async fn studio_run_project_workflow(
         .await
         .map_err(|e| e.to_string())?;
     let mut vars = summary.variables.clone();
-    vars.insert(
-        "last_task_state".to_string(),
-        serde_json::Value::String(summary.state.clone()),
+    let now_utc = chrono::Utc::now().to_rfc3339();
+    let is_synth = summary.adapter_kind == fp_domain::DeviceAdapterKind::Synthetic;
+    let src = if is_synth {
+        fp_domain::VariableSource::TestkitMock
+    } else {
+        fp_domain::VariableSource::LiveState
+    };
+    let mut envelopes: Vec<fp_domain::RuntimeVariableEnvelope> = summary
+        .variables
+        .iter()
+        .map(|(k, v)| fp_domain::RuntimeVariableEnvelope {
+            project_id: summary.project_id.clone(),
+            session_id: format!("studio-{}", summary.job_id),
+            job_id: summary.job_id.clone(),
+            name: k.clone(),
+            value_type: fp_domain::infer_json_value_type(v),
+            value: v.clone(),
+            source: src,
+            verified: !is_synth && !v.is_null(),
+            confidence: None,
+            updated_at_utc: now_utc.clone(),
+            workflow_version: format!("{}@latest", summary.workflow_id),
+            seq: 0,
+            redacted: false,
+        })
+        .collect();
+    for (k, v) in [
+        ("last_task_state", serde_json::Value::String(summary.state.clone())),
+        ("last_data_source", serde_json::Value::String(format!("{:?}", summary.adapter_kind))),
+        ("last_updated_utc", serde_json::Value::String(now_utc.clone())),
+    ] {
+        vars.insert(k.to_string(), v.clone());
+        envelopes.push(fp_domain::RuntimeVariableEnvelope {
+            project_id: summary.project_id.clone(),
+            session_id: format!("studio-{}", summary.job_id),
+            job_id: summary.job_id.clone(),
+            name: k.to_string(),
+            value_type: fp_domain::infer_json_value_type(&v),
+            value: v,
+            source: src,
+            verified: !is_synth,
+            confidence: None,
+            updated_at_utc: now_utc.clone(),
+            workflow_version: format!("{}@latest", summary.workflow_id),
+            seq: 0,
+            redacted: false,
+        });
+    }
+    let _ = storage.record_runtime_var_deltas(
+        &summary.project_id,
+        &summary.project_id,
+        &format!("studio-{}", summary.job_id),
+        &summary.job_id,
+        &format!("{}@latest", summary.workflow_id),
+        envelopes,
     );
-    vars.insert(
-        "last_data_source".to_string(),
-        serde_json::Value::String(format!("{:?}", summary.adapter_kind)),
-    );
-    vars.insert(
-        "last_updated_utc".to_string(),
-        serde_json::Value::String(chrono::Utc::now().to_rfc3339()),
-    );
-    let _ = storage.save_runtime_variables(&summary.project_id, &vars);
     Ok(RunWorkflowExecutionSummary {
         variables: vars,
         ..summary

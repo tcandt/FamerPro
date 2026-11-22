@@ -415,6 +415,54 @@ fn table_has_column(conn: &Connection, table: &str, col_name: &str) -> Result<bo
     Ok(false)
 }
 
+pub const MIGRATION_V3_RUNTIME_PROVENANCE_SQL: &str = r#"
+CREATE TABLE IF NOT EXISTS runtime_variable_snapshots (
+    scope_key TEXT PRIMARY KEY,
+    variables_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS runtime_variable_envelopes (
+    scope_key TEXT NOT NULL,
+    var_name TEXT NOT NULL,
+    project_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    job_id TEXT NOT NULL,
+    value_type TEXT NOT NULL,
+    value_json TEXT NOT NULL,
+    source TEXT NOT NULL,
+    verified INTEGER NOT NULL DEFAULT 0,
+    confidence REAL,
+    updated_at_utc TEXT NOT NULL,
+    workflow_version TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    redacted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (scope_key, var_name)
+);
+
+CREATE TABLE IF NOT EXISTS runtime_var_streams (
+    stream_id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    last_seq INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS runtime_var_events (
+    stream_id TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    project_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    job_id TEXT NOT NULL,
+    workflow_version TEXT NOT NULL,
+    deltas_json TEXT NOT NULL,
+    emitted_at_utc TEXT NOT NULL,
+    PRIMARY KEY (stream_id, seq)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rt_env_project ON runtime_variable_envelopes(project_id, scope_key);
+CREATE INDEX IF NOT EXISTS idx_rt_events_stream_seq ON runtime_var_events(stream_id, seq);
+"#;
+
 pub fn list_applied_versions(conn: &Connection) -> Result<Vec<i64>> {
     let table_exists: i64 = conn.query_row(
         "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='schema_migrations'",
@@ -570,6 +618,80 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
             .context("Failed ensuring v2 isolation indexes")?;
         tx.execute_batch(MIGRATION_V2_ISOLATION_TRIGGERS_SQL)
             .context("Failed ensuring v2 SQLite project isolation triggers")?;
+        tx.commit()?;
+    }
+
+    // Migration v3: P5.1 Runtime Variable Provenance, Anti-Overwrite Partitioning & Delta Streams
+    if !applied.contains(&3) {
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        tx.execute_batch(MIGRATION_V3_RUNTIME_PROVENANCE_SQL)
+            .context("Failed applying SQLite migration v3")?;
+
+        // Upgrade pre-P5.1 legacy P4 `runtime_variable_snapshots` into `runtime_variable_envelopes`
+        // strictly marked as LEGACY_UNVERIFIED (`verified = 0`) and scrubbed for secrets.
+        let mut legacy_rows: Vec<(String, String, String)> = Vec::new();
+        {
+            let mut st = tx.prepare(
+                "SELECT scope_key, variables_json, updated_at FROM runtime_variable_snapshots;",
+            )?;
+            let mut rows = st.query([])?;
+            while let Some(r) = rows.next()? {
+                legacy_rows.push((r.get(0)?, r.get(1)?, r.get(2)?));
+            }
+        }
+        for (scope_key, vars_json, updated_at) in legacy_rows {
+            if let Ok(map) =
+                serde_json::from_str::<std::collections::HashMap<String, serde_json::Value>>(
+                    &vars_json,
+                )
+            {
+                let mut scrubbed_map = std::collections::HashMap::new();
+                let mut has_vars = false;
+                for (var_name, raw_val) in map {
+                    let (clean_val, redacted) =
+                        fp_security::sanitize_runtime_variable(&var_name, &raw_val);
+                    scrubbed_map.insert(var_name.clone(), clean_val.clone());
+                    let val_type = fp_domain::infer_json_value_type(&clean_val);
+                    let clean_json = serde_json::to_string(&clean_val)?;
+                    let proj_id = scope_key.strip_prefix("mini:").unwrap_or(&scope_key);
+                    tx.execute(
+                        "INSERT OR IGNORE INTO runtime_variable_envelopes (
+                            scope_key, var_name, project_id, session_id, job_id,
+                            value_type, value_json, source, verified, confidence,
+                            updated_at_utc, workflow_version, seq, redacted
+                         ) VALUES (?1, ?2, ?3, 'legacy-p4-migration', 'legacy-p4-migration', ?4, ?5, 'LEGACY_UNVERIFIED', 0, NULL, ?6, 'legacy', 1, ?7);",
+                        params![
+                            scope_key,
+                            var_name,
+                            proj_id,
+                            val_type,
+                            clean_json,
+                            updated_at,
+                            if redacted { 1 } else { 0 }
+                        ],
+                    )?;
+                    has_vars = true;
+                }
+                if has_vars {
+                    let scrubbed_json = serde_json::to_string(&scrubbed_map)?;
+                    tx.execute(
+                        "UPDATE runtime_variable_snapshots SET variables_json = ?1 WHERE scope_key = ?2;",
+                        params![scrubbed_json, scope_key],
+                    )?;
+                    let proj_id = scope_key.strip_prefix("mini:").unwrap_or(&scope_key);
+                    tx.execute(
+                        "INSERT OR IGNORE INTO runtime_var_streams (stream_id, project_id, last_seq, updated_at)
+                         VALUES (?1, ?2, 1, ?3);",
+                        params![scope_key, proj_id, updated_at],
+                    )?;
+                }
+            }
+        }
+
+        tx.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (3, ?1);",
+            params![now],
+        )?;
         tx.commit()?;
     }
 

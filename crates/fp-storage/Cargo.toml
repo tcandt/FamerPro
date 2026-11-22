@@ -8,6 +8,7 @@ license.workspace = true
 fp-domain = { path = "../fp-domain" }
 fp-workflow-schema = { path = "../fp-workflow-schema" }
 fp-bundle-contract = { path = "../fp-bundle-contract" }
+fp-security = { path = "../fp-security" }
 rusqlite.workspace = true
 chrono.workspace = true
 serde.workspace = true
