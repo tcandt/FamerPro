@@ -1146,6 +1146,7 @@ fn main() {
             studio_p2::studio_import_portable_producer_key,
             studio_p2::studio_backup_database,
             studio_p2::studio_check_db_integrity,
+            studio_p2::studio_optimize_db,
             studio_p2::studio_migrate_legacy_jx2,
             studio_p3::studio_run_project_workflow,
             studio_p3::studio_start_project_workflow,
@@ -1172,6 +1173,7 @@ fn main() {
             studio_p3::studio_builder_preflight,
             studio_p3::studio_builder_export_release,
             studio_p3::studio_ensure_project_icon,
+            studio_p3::studio_get_project_runtime_vars,
             studio_p3::studio_list_project_releases
         ])
         .run(tauri::generate_context!())

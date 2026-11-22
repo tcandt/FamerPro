@@ -12,6 +12,7 @@ import type {
   CloneProjectRequest,
   CreateProjectRequest,
   CredentialMetadata,
+  DbOptimizeReport,
   DeviceDetail,
   DeviceHealthReport,
   DevicePortMapping,
@@ -38,6 +39,7 @@ import type {
   RoiRect,
   RunProjectWorkflowRequest,
   RunWorkflowExecutionSummary,
+  RuntimeVariablesSnapshot,
   ScanRangeResult,
   StepEvent,
   TaskCategoryDef,
@@ -485,6 +487,11 @@ export const api = {
     return await invoke<IntegrityReport>('studio_check_db_integrity');
   },
 
+  async studioOptimizeDb(): Promise<DbOptimizeReport> {
+    requireTauri('studio_optimize_db');
+    return await invoke<DbOptimizeReport>('studio_optimize_db');
+  },
+
   async studioMigrateLegacyJx2(legacyJx2Dir: string): Promise<Jx2MigrationSummary> {
     requireTauri('studio_migrate_legacy_jx2');
     return await invoke<Jx2MigrationSummary>('studio_migrate_legacy_jx2', { legacyJx2Dir });
@@ -691,6 +698,11 @@ export const api = {
   }): Promise<string> {
     requireTauri('studio_ensure_project_icon');
     return await invoke<string>('studio_ensure_project_icon', params);
+  },
+
+  async studioGetProjectRuntimeVars(projectId: string): Promise<RuntimeVariablesSnapshot | null> {
+    if (!isTauri()) return null;
+    return await invoke<RuntimeVariablesSnapshot>('studio_get_project_runtime_vars', { projectId });
   },
 
   async studioListProjectReleases(projectId: string): Promise<ProjectReleaseRecord[]> {

@@ -5,10 +5,10 @@ use fp_security::{
     ProducerKeyMetadata, ProducerKeystore, SecretNamespace,
 };
 use fp_storage::{
-    BackupReport, CloneProjectRequest, CreateProjectRequest, GameProjectDetail, GameProjectRecord,
-    GameProjectSummary, IntegrityReport, Jx2MigrationSummary, ProjectAccountInput,
-    ProjectAccountRecord, ProjectModuleRecord, ProjectTaskRecord, ProjectWorkflowRecord,
-    UpdateProjectRequest, VisionTemplateRecord,
+    BackupReport, CloneProjectRequest, CreateProjectRequest, DbOptimizeReport, GameProjectDetail,
+    GameProjectRecord, GameProjectSummary, IntegrityReport, Jx2MigrationSummary,
+    ProjectAccountInput, ProjectAccountRecord, ProjectModuleRecord, ProjectTaskRecord,
+    ProjectWorkflowRecord, UpdateProjectRequest, VisionTemplateRecord,
 };
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -479,6 +479,14 @@ pub fn studio_check_db_integrity(
 ) -> Result<IntegrityReport, String> {
     let st = state.lock().unwrap();
     st.storage.check_integrity().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn studio_optimize_db(
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<DbOptimizeReport, String> {
+    let st = state.lock().unwrap();
+    st.storage.optimize_wal_and_vacuum().map_err(|e| e.to_string())
 }
 
 #[tauri::command]

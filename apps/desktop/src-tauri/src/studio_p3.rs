@@ -11,8 +11,8 @@ use fp_domain::{
 use fp_proxy::{probe_proxy, ProxyConfig, ProxyProbeReport};
 use fp_scheduler::DeviceLease;
 use fp_storage::{
-    JobResumeContext, ProjectJobRecord, ProjectReleaseRecord, StorageManager, VisionTemplateInput,
-    VisionTemplateRecord,
+    JobResumeContext, ProjectJobRecord, ProjectReleaseRecord, RuntimeVariablesSnapshot,
+    StorageManager, VisionTemplateInput, VisionTemplateRecord,
 };
 use fp_vision::{
     annotate_match_and_tap_png, crop_roi_png, scale_bounds_for_geometry, RoiRect, VisionEngine,
@@ -379,14 +379,32 @@ pub async fn studio_run_project_workflow(
     req: RunProjectWorkflowRequest,
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<RunWorkflowExecutionSummary, String> {
-    let coord = {
+    let (coord, storage) = {
         let st = state.lock().unwrap();
-        st.coordinator.clone()
+        (st.coordinator.clone(), Arc::clone(&st.storage))
     };
-    coord
+    let summary = coord
         .run_project_workflow(req, None)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    let mut vars = summary.variables.clone();
+    vars.insert(
+        "last_task_state".to_string(),
+        serde_json::Value::String(summary.state.clone()),
+    );
+    vars.insert(
+        "last_data_source".to_string(),
+        serde_json::Value::String(format!("{:?}", summary.adapter_kind)),
+    );
+    vars.insert(
+        "last_updated_utc".to_string(),
+        serde_json::Value::String(chrono::Utc::now().to_rfc3339()),
+    );
+    let _ = storage.save_runtime_variables(&summary.project_id, &vars);
+    Ok(RunWorkflowExecutionSummary {
+        variables: vars,
+        ..summary
+    })
 }
 
 #[tauri::command]
@@ -454,13 +472,26 @@ pub async fn studio_resume_job_from_checkpoint(
     workflow_timeout_ms: Option<u64>,
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<RunWorkflowExecutionSummary, String> {
-    let coord = {
+    let (coord, storage) = {
         let st = state.lock().unwrap();
-        st.coordinator.clone()
+        (st.coordinator.clone(), Arc::clone(&st.storage))
     };
-    coord
+    let summary = coord
         .resume_from_checkpoint(&job_id, lease_ttl_secs.unwrap_or(30), workflow_timeout_ms, None)
         .await
+        .map_err(|e| e.to_string())?;
+    let _ = storage.save_runtime_variables(&summary.project_id, &summary.variables);
+    Ok(summary)
+}
+
+#[tauri::command]
+pub fn studio_get_project_runtime_vars(
+    project_id: String,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<RuntimeVariablesSnapshot, String> {
+    let st = state.lock().unwrap();
+    st.storage
+        .load_runtime_variables(&project_id)
         .map_err(|e| e.to_string())
 }
 

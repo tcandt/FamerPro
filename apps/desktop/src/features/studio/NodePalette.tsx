@@ -181,6 +181,20 @@ export const NodePalette: React.FC = () => {
           desc: 'Lưu điểm an toàn để resume',
           icon: Bookmark,
         },
+        {
+          type: 'state.set_var',
+          label: 'Gán biến Runtime',
+          category: 'state' as const,
+          desc: 'Xuất giá trị ra Mini Tool UI',
+          icon: Bookmark,
+        },
+        {
+          type: 'state.increment_var',
+          label: 'Tăng bộ đếm Runtime',
+          category: 'state' as const,
+          desc: 'Cộng dồn biến đếm (số lượt/vàng)',
+          icon: Bookmark,
+        },
       ],
     },
   ];

@@ -370,6 +370,30 @@ impl WorkflowExecutor {
                             if let Some(cb) = &event_callback {
                                 cb(cp_event);
                             }
+                        } else if matches!(
+                            node.node_type.as_str(),
+                            "state.set_var"
+                                | "state.increment_var"
+                                | "vision.ocr"
+                                | "vision.ocr_text"
+                                | "flow.end"
+                        ) {
+                            let var_event = StepEvent {
+                                id: Uuid::new_v4().to_string(),
+                                job_id: ctx.job_id.clone(),
+                                node_id: node.id.clone(),
+                                event_type: StepEventType::VerificationPassed,
+                                attempt_no: attempt,
+                                at: Utc::now(),
+                                payload_json: serde_json::to_string(&serde_json::json!({
+                                    "nodeType": node.node_type,
+                                    "variables": ctx.variables,
+                                }))
+                                .unwrap_or_default(),
+                            };
+                            if let Some(cb) = &event_callback {
+                                cb(var_event);
+                            }
                         }
 
                         node_outcome = Some(outcome);
@@ -653,6 +677,18 @@ impl WorkflowExecutor {
                             "ocr_matched".to_string(),
                             serde_json::Value::Bool(matched),
                         );
+                        if let Some(out_var) = node
+                            .config
+                            .get("outputVar")
+                            .and_then(|v| v.as_str())
+                            .map(str::trim)
+                            .filter(|s| !s.is_empty())
+                        {
+                            ctx.variables.insert(
+                                out_var.to_string(),
+                                serde_json::Value::String(full_text.clone()),
+                            );
+                        }
                         ctx.variables
                             .insert("ocr_text".to_string(), serde_json::Value::String(full_text));
 
@@ -817,6 +853,77 @@ impl WorkflowExecutor {
                     format!("checkpoint_{}", name),
                     serde_json::Value::String(Utc::now().to_rfc3339()),
                 );
+                Ok(NodeOutcome::Continue(None))
+            }
+
+            "state.set_var" => {
+                let var_key = node
+                    .config
+                    .get("varKey")
+                    .and_then(|v| v.as_str())
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .context("state.set_var requires non-empty config.varKey")?;
+                let value_type = node
+                    .config
+                    .get("valueType")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("string");
+                let raw_val = node.config.get("value").cloned().unwrap_or(serde_json::Value::Null);
+                let typed_val = match value_type {
+                    "number" => {
+                        if let Some(n) = raw_val.as_i64() {
+                            serde_json::Value::from(n)
+                        } else if let Some(f) = raw_val.as_f64() {
+                            serde_json::Value::from(f)
+                        } else if let Some(s) = raw_val.as_str() {
+                            if let Ok(i) = s.trim().parse::<i64>() {
+                                serde_json::Value::from(i)
+                            } else {
+                                serde_json::Value::from(s.trim().parse::<f64>().unwrap_or(0.0))
+                            }
+                        } else {
+                            serde_json::Value::from(0)
+                        }
+                    }
+                    "boolean" => {
+                        if let Some(b) = raw_val.as_bool() {
+                            serde_json::Value::Bool(b)
+                        } else if let Some(s) = raw_val.as_str() {
+                            serde_json::Value::Bool(s.trim().eq_ignore_ascii_case("true"))
+                        } else {
+                            serde_json::Value::Bool(false)
+                        }
+                    }
+                    _ => match raw_val {
+                        serde_json::Value::String(s) => serde_json::Value::String(s),
+                        other => serde_json::Value::String(other.to_string()),
+                    },
+                };
+                ctx.variables.insert(var_key.to_string(), typed_val);
+                Ok(NodeOutcome::Continue(None))
+            }
+
+            "state.increment_var" => {
+                let var_key = node
+                    .config
+                    .get("varKey")
+                    .and_then(|v| v.as_str())
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .context("state.increment_var requires non-empty config.varKey")?;
+                let delta = node
+                    .config
+                    .get("delta")
+                    .and_then(|v| v.as_i64().or_else(|| v.as_str().and_then(|s| s.trim().parse::<i64>().ok())))
+                    .unwrap_or(1);
+                let cur = ctx
+                    .variables
+                    .get(var_key)
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0);
+                ctx.variables
+                    .insert(var_key.to_string(), serde_json::Value::from(cur + delta));
                 Ok(NodeOutcome::Continue(None))
             }
 
@@ -1546,5 +1653,38 @@ mod tests {
         }
 
         let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[tokio::test]
+    async fn test_runtime_variables_set_and_increment_nodes() {
+        let doc_json = serde_json::json!({
+            "schemaVersion": 1,
+            "workflowId": "wf-vars-unit",
+            "name": "Vars Unit Flow",
+            "status": "published",
+            "graph": {
+                "nodes": [
+                    { "id": "n1", "type": "flow.start", "position": { "x": 0.0, "y": 0.0 }, "config": {} },
+                    { "id": "n2", "type": "state.set_var", "position": { "x": 150.0, "y": 0.0 }, "config": { "varKey": "zone", "valueType": "string", "value": "A1" } },
+                    { "id": "n3", "type": "state.increment_var", "position": { "x": 300.0, "y": 0.0 }, "config": { "varKey": "resource_count", "delta": 50 } },
+                    { "id": "n4", "type": "flow.end", "position": { "x": 450.0, "y": 0.0 }, "config": {} }
+                ],
+                "edges": [
+                    { "id": "e1", "source": "n1", "sourcePort": "flow", "target": "n2", "targetPort": "flow" },
+                    { "id": "e2", "source": "n2", "sourcePort": "flow", "target": "n3", "targetPort": "flow" },
+                    { "id": "e3", "source": "n3", "sourcePort": "flow", "target": "n4", "targetPort": "flow" }
+                ]
+            }
+        });
+        let doc = WorkflowValidator::parse_and_validate(&doc_json.to_string()).unwrap();
+        let driver = Arc::new(FakeDeviceDriver::new("fake-vars", 1280, 720));
+        let (_tx, rx) = watch::channel(ExecutionSignal::Running);
+        let exec = WorkflowExecutor::new(driver, rx);
+        let mut ctx = ExecutionContext::new("job-vars-unit".to_string(), "fake-vars".to_string());
+        ctx.variables.insert("resource_count".to_string(), serde_json::json!(100));
+        let state = exec.execute_workflow(&doc, &mut ctx, None).await.unwrap();
+        assert_eq!(state, JobState::Succeeded);
+        assert_eq!(ctx.variables.get("zone").and_then(|v| v.as_str()), Some("A1"));
+        assert_eq!(ctx.variables.get("resource_count").and_then(|v| v.as_i64()), Some(150));
     }
 }

@@ -380,6 +380,116 @@ export const NodeInspector: React.FC = () => {
               </div>
             )}
 
+            {(data.nodeType === 'vision.ocr' || data.nodeType === 'vision.ocr_text') && (
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                    Chuỗi cần đối chiếu OCR (Expected Text)
+                  </label>
+                  <input
+                    type="text"
+                    value={config.expectedText || ''}
+                    onChange={(e) =>
+                      updateNodeConfig(selectedNode.id, { expectedText: e.target.value })
+                    }
+                    placeholder="Ví dụ: Hoàn thành"
+                    className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] outline-none text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                    Xuất kết quả vào Biến Runtime (outputVar)
+                  </label>
+                  <input
+                    type="text"
+                    value={config.outputVar || ''}
+                    onChange={(e) =>
+                      updateNodeConfig(selectedNode.id, { outputVar: e.target.value })
+                    }
+                    placeholder="ocr_gold_text"
+                    className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#38BDF8] outline-none font-mono text-xs"
+                  />
+                </div>
+              </div>
+            )}
+
+            {data.nodeType === 'state.set_var' && (
+              <div className="space-y-2 p-2.5 rounded bg-[#101722] border border-[#2A3647]">
+                <div>
+                  <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                    Tên Biến Runtime (varKey)
+                  </label>
+                  <input
+                    type="text"
+                    value={config.varKey || ''}
+                    onChange={(e) => updateNodeConfig(selectedNode.id, { varKey: e.target.value })}
+                    placeholder="resource_count"
+                    className="w-full bg-[#17202E] border border-[#2A3647] rounded px-2.5 py-1 text-[#38BDF8] font-mono text-xs"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                      Kiểu dữ liệu
+                    </label>
+                    <select
+                      value={config.valueType || 'string'}
+                      onChange={(e) =>
+                        updateNodeConfig(selectedNode.id, { valueType: e.target.value })
+                      }
+                      className="w-full bg-[#17202E] border border-[#2A3647] rounded px-2 py-1 text-[#EDF3FC] text-xs"
+                    >
+                      <option value="number">number</option>
+                      <option value="string">string</option>
+                      <option value="boolean">boolean</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                      Giá trị xuất
+                    </label>
+                    <input
+                      type="text"
+                      value={config.value ?? ''}
+                      onChange={(e) => updateNodeConfig(selectedNode.id, { value: e.target.value })}
+                      placeholder="1250"
+                      className="w-full bg-[#17202E] border border-[#2A3647] rounded px-2 py-1 text-[#EDF3FC] font-mono text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {data.nodeType === 'state.increment_var' && (
+              <div className="space-y-2 p-2.5 rounded bg-[#101722] border border-[#2A3647]">
+                <div>
+                  <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                    Biến đếm (varKey)
+                  </label>
+                  <input
+                    type="text"
+                    value={config.varKey || ''}
+                    onChange={(e) => updateNodeConfig(selectedNode.id, { varKey: e.target.value })}
+                    placeholder="resource_count"
+                    className="w-full bg-[#17202E] border border-[#2A3647] rounded px-2.5 py-1 text-[#38BDF8] font-mono text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
+                    Bước cộng dồn (delta)
+                  </label>
+                  <input
+                    type="number"
+                    value={config.delta ?? 1}
+                    onChange={(e) =>
+                      updateNodeConfig(selectedNode.id, { delta: Number(e.target.value) || 1 })
+                    }
+                    className="w-full bg-[#17202E] border border-[#2A3647] rounded px-2 py-1 text-[#EDF3FC] font-mono text-xs"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Test Node Button */}
             <div className="pt-2 border-t border-[#2A3647]">
               <button

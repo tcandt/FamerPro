@@ -351,6 +351,26 @@ pub struct ReconcileReport {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct DbOptimizeReport {
+    pub wal_checkpointed: bool,
+    pub integrity_check: String,
+    pub foreign_key_violations: usize,
+    pub is_healthy: bool,
+    pub total_projects: usize,
+    pub total_jobs: usize,
+    pub optimized_at_utc: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RuntimeVariablesSnapshot {
+    pub scope_key: String,
+    pub variables: std::collections::HashMap<String, serde_json::Value>,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RollbackVerificationReport {
     pub current_db_path: String,
     pub backup_db_path: String,

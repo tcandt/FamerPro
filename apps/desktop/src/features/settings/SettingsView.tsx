@@ -9,19 +9,29 @@ import {
   RotateCw,
 } from 'lucide-react';
 import { useDeviceStore } from '../../stores/deviceStore';
+import { api } from '../../lib/api';
+import type { DbOptimizeReport } from '../../types';
 
 export const SettingsView: React.FC = () => {
   const { appStatus } = useDeviceStore();
 
   const [marginRatio, setMarginRatio] = useState(0.18);
   const [avoidPoints, setAvoidPoints] = useState(5);
-  const [dbOptimized, setDbOptimized] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizeReport, setOptimizeReport] = useState<DbOptimizeReport | null>(null);
+  const [optimizeError, setOptimizeError] = useState<string | null>(null);
 
-  const handleOptimizeDb = () => {
-    setDbOptimized(true);
-    setTimeout(() => {
-      setDbOptimized(false);
-    }, 2500);
+  const handleOptimizeDb = async () => {
+    setOptimizing(true);
+    setOptimizeError(null);
+    try {
+      const report = await api.studioOptimizeDb();
+      setOptimizeReport(report);
+    } catch (e: any) {
+      setOptimizeError(e?.message || String(e));
+    } finally {
+      setOptimizing(false);
+    }
   };
 
   const adbPathDisplay =
@@ -115,20 +125,36 @@ export const SettingsView: React.FC = () => {
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
+              <div className="space-y-2 pt-1">
                 <button
                   onClick={handleOptimizeDb}
-                  className="px-3 py-1.5 bg-[#192434] hover:bg-[#202E42] text-[#38BDF8] border border-[#2A3647] rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  disabled={optimizing}
+                  className="px-3 py-1.5 bg-[#192434] hover:bg-[#202E42] disabled:opacity-50 text-[#38BDF8] border border-[#2A3647] rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <RotateCw size={12} className={dbOptimized ? 'animate-spin' : ''} />
-                  <span>Tối ưu hóa (VACUUM WAL)</span>
+                  <RotateCw size={12} className={optimizing ? 'animate-spin' : ''} />
+                  <span>{optimizing ? 'Đang chạy PRAGMA VACUUM...' : 'Tối ưu hóa (VACUUM WAL)'}</span>
                 </button>
 
-                {dbOptimized && (
-                  <span className="text-[#3BC38D] text-[11px] flex items-center gap-1">
-                    <CheckCircle2 size={12} />
-                    <span>Đã nén và làm sạch WAL!</span>
-                  </span>
+                {optimizeError && (
+                  <div className="p-2 rounded bg-[#381E24] border border-[#F27883]/40 text-[#F27883] text-[11px]">
+                    Lỗi SQLite VACUUM: {optimizeError}
+                  </div>
+                )}
+
+                {optimizeReport && (
+                  <div className="p-2.5 rounded bg-[#133528] border border-[#3BC38D]/40 text-[#3BC38D] text-[11px] space-y-0.5">
+                    <div className="font-semibold flex items-center gap-1.5">
+                      <CheckCircle2 size={12} />
+                      <span>
+                        PRAGMA wal_checkpoint(TRUNCATE) + VACUUM xong · integrity=
+                        {optimizeReport.integrityCheck} (FK={optimizeReport.foreignKeyViolations})
+                      </span>
+                    </div>
+                    <div className="font-mono text-[10px] text-[#A7F3D0]">
+                      Projects={optimizeReport.totalProjects} · Jobs={optimizeReport.totalJobs} ·{' '}
+                      {new Date(optimizeReport.optimizedAtUtc).toLocaleTimeString()}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

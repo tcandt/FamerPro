@@ -86,12 +86,12 @@ export interface StepEvent {
   job_id: string;
   node_id: string;
   event_type:
-    | 'command_sent'
-    | 'device_ack'
-    | 'verification_passed'
-    | 'verification_failed'
-    | 'checkpoint_saved'
-    | 'unknown';
+  | 'command_sent'
+  | 'device_ack'
+  | 'verification_passed'
+  | 'verification_failed'
+  | 'checkpoint_saved'
+  | 'unknown';
   attempt_no: number;
   at: string;
   payload_json: string;
@@ -621,4 +621,20 @@ export interface BuildReport {
 export interface BuilderReleaseExportResult {
   release: ProjectReleaseRecord;
   buildReport: BuildReport;
+}
+
+export interface DbOptimizeReport {
+  walCheckpointed: boolean;
+  integrityCheck: string;
+  foreignKeyViolations: number;
+  isHealthy: boolean;
+  totalProjects: number;
+  totalJobs: number;
+  optimizedAtUtc: string;
+}
+
+export interface RuntimeVariablesSnapshot {
+  scopeKey: string;
+  variables: Record<string, any>;
+  updatedAt?: string | null;
 }

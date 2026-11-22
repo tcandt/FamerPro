@@ -164,8 +164,11 @@ fn load_and_verify_bundle(bundle_dir: &Path, is_demo_mode: bool) -> Result<MiniR
         None
     };
 
-    // Unverified runtime vars start strictly empty in Live Mode
-    let runtime_vars = HashMap::new();
+    let scope_key = format!("mini:{}", manifest.project.slug);
+    let runtime_vars = storage
+        .load_runtime_variables(&scope_key)
+        .map(|snap| snap.variables)
+        .unwrap_or_default();
 
     Ok(MiniRuntimeState {
         exe_dir,
@@ -325,6 +328,7 @@ async fn execute_task_internal(
 
     let mut executor = WorkflowExecutor::new(driver, rx);
     let mut ctx = ExecutionContext::new(job_id.clone(), device_id.clone());
+    ctx.variables = runtime_vars.clone();
 
     let events_counter = Arc::new(AtomicUsize::new(0));
     let counter_clone = events_counter.clone();
@@ -347,6 +351,9 @@ async fn execute_task_internal(
     let _ = storage.complete_job(&job_id, &format!("{:?}", job_state));
     let point_tapped = ctx.last_receipt.as_ref().and_then(|r| r.point_tapped);
 
+    for (k, v) in ctx.variables.iter() {
+        runtime_vars.insert(k.clone(), v.clone());
+    }
     if job_state == fp_domain::JobState::Succeeded {
         if let Some(ocr_txt) = ctx.variables.get("ocr_text").and_then(|v| v.as_str()) {
             runtime_vars.insert(
@@ -354,39 +361,33 @@ async fn execute_task_internal(
                 serde_json::Value::String(ocr_txt.to_string()),
             );
         }
-        let mode_tag = if is_sim { " [DEMO]" } else { " [VERIFIED]" };
-        if slug == "jx2-mobile" {
-            runtime_vars.insert(
-                "char_level".to_string(),
-                serde_json::json!(format!("Lv.43{}", mode_tag)),
-            );
-            runtime_vars.insert(
-                "char_gold".to_string(),
-                serde_json::json!(format!("152,400{}", mode_tag)),
-            );
-            runtime_vars.insert(
-                "char_silver".to_string(),
-                serde_json::json!(format!("89,500{}", mode_tag)),
-            );
-        } else if slug == "kingdom-slg" {
-            runtime_vars.insert(
-                "castle_tier".to_string(),
-                serde_json::json!(format!("Cấp 25{}", mode_tag)),
-            );
-            runtime_vars.insert(
-                "food_stock".to_string(),
-                serde_json::json!(format!("14.9M{}", mode_tag)),
-            );
-            runtime_vars.insert(
-                "wood_stock".to_string(),
-                serde_json::json!(format!("9.8M{}", mode_tag)),
-            );
-            runtime_vars.insert(
-                "troop_power".to_string(),
-                serde_json::json!(format!("4,920,000{}", mode_tag)),
-            );
-        }
+        let prev_done = runtime_vars
+            .get("task_completed_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        runtime_vars.insert(
+            "task_completed_count".to_string(),
+            serde_json::Value::from(prev_done + 1),
+        );
     }
+    runtime_vars.insert(
+        "last_task_id".to_string(),
+        serde_json::Value::String(task_id.to_string()),
+    );
+    runtime_vars.insert(
+        "last_task_state".to_string(),
+        serde_json::Value::String(format!("{:?}", job_state)),
+    );
+    runtime_vars.insert(
+        "last_data_source".to_string(),
+        serde_json::Value::String(driver_label.clone()),
+    );
+    runtime_vars.insert(
+        "last_updated_utc".to_string(),
+        serde_json::Value::String(chrono::Utc::now().to_rfc3339()),
+    );
+    let scope_key = format!("mini:{}", slug);
+    let _ = storage.save_runtime_variables(&scope_key, &runtime_vars);
 
     {
         let mut st = st_arc.lock().unwrap();

@@ -211,6 +211,50 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
     [activeProjectDetail?.tasks]
   );
 
+  const availableRuntimeVars = useMemo(() => {
+    const vars = new Map<
+      string,
+      { key: string; valueType: 'number' | 'string' | 'boolean'; source: string }
+    >();
+    const addVar = (key: string, valueType: 'number' | 'string' | 'boolean', source: string) => {
+      if (key && !vars.has(key)) vars.set(key, { key, valueType, source });
+    };
+
+    // Standard Workflow Engine outputs (Project/Session scoped)
+    addVar('task_completed_count', 'number', 'Runtime Counter (Succeeded runs)');
+    addVar('last_task_id', 'string', 'Runtime Engine');
+    addVar('last_task_state', 'string', 'Runtime Engine');
+    addVar('last_ocr_text', 'string', 'Vision OCR Output');
+    addVar('ocr_matched', 'boolean', 'Vision OCR Match');
+    addVar('target_found', 'boolean', 'Vision Template Match');
+    addVar('last_data_source', 'string', 'Driver Source');
+    addVar('last_updated_utc', 'string', 'SQLite Snapshot Timestamp');
+
+    for (const wf of activeProjectDetail?.workflows || []) {
+      try {
+        const parsed = JSON.parse(wf.draftJson || '{}');
+        const nodesList = parsed?.graph?.nodes || [];
+        for (const n of nodesList) {
+          const t = String(n?.type || '');
+          const cfg = n?.config || {};
+          if ((t === 'state.set_var' || t === 'state.increment_var') && cfg.varKey) {
+            const vType =
+              t === 'state.increment_var'
+                ? 'number'
+                : ((cfg.valueType as 'number' | 'string' | 'boolean') || 'string');
+            addVar(String(cfg.varKey).trim(), vType, `${wf.name} (${t})`);
+          } else if ((t === 'vision.ocr' || t === 'vision.ocr_text') && cfg.outputVar) {
+            addVar(String(cfg.outputVar).trim(), 'string', `${wf.name} (OCR outputVar)`);
+          } else if (t === 'state.checkpoint' && cfg.name) {
+            addVar(`checkpoint_${String(cfg.name).trim()}`, 'string', `${wf.name} (Checkpoint)`);
+          }
+        }
+      } catch (_) {}
+    }
+
+    return Array.from(vars.values());
+  }, [activeProjectDetail?.workflows]);
+
   const [schema, setSchema] = useState<MiniToolUiSchema | null>(null);
   const [exeName, setExeName] = useState('');
   const [version, setVersion] = useState('');
@@ -1019,17 +1063,30 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
                         }}
                         className="flex-1 bg-[#16202F] border border-[#2A3647] rounded px-2 py-1 text-[#EDF3FC]"
                       />
-                      <input
-                        type="text"
-                        value={col.runtimeVarKey}
-                        placeholder="runtime_var"
+                      <select
+                        value={
+                          availableRuntimeVars.some((v) => v.key === col.runtimeVarKey)
+                            ? col.runtimeVarKey
+                            : '__custom__'
+                        }
                         onChange={(e) => {
-                          const next = [...syncedSchema.deviceColumns];
-                          next[idx] = { ...col, runtimeVarKey: e.target.value };
-                          setSchema({ ...syncedSchema, deviceColumns: next });
+                          if (e.target.value !== '__custom__') {
+                            const next = [...syncedSchema.deviceColumns];
+                            next[idx] = { ...col, runtimeVarKey: e.target.value };
+                            setSchema({ ...syncedSchema, deviceColumns: next });
+                          }
                         }}
-                        className="w-28 bg-[#16202F] border border-[#2A3647] rounded px-2 py-1 text-[#38BDF8] font-mono"
-                      />
+                        className="w-36 bg-[#16202F] border border-[#2A3647] rounded px-1.5 py-1 text-[#38BDF8] font-mono text-[11px]"
+                      >
+                        {availableRuntimeVars.map((v) => (
+                          <option key={v.key} value={v.key}>
+                            {v.key} ({v.valueType})
+                          </option>
+                        ))}
+                        {!availableRuntimeVars.some((v) => v.key === col.runtimeVarKey) && (
+                          <option value="__custom__">{col.runtimeVarKey || 'Tùy chỉnh...'}</option>
+                        )}
+                      </select>
                       <button
                         type="button"
                         onClick={() =>
@@ -1338,22 +1395,31 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
                                 ? '0 devices'
                                 : 'ldplayer-5554'}
                             </td>
-                            {syncedSchema.deviceColumns.map((c) => (
-                              <td
-                                key={c.id}
-                                className="p-1.5 font-mono"
-                                style={{
-                                  color:
-                                    previewState === 'RUNNING'
-                                      ? c.badgeColor || '#38BDF8'
-                                      : '#94A3B8',
-                                }}
-                              >
-                                {previewState === 'RUNNING'
-                                  ? `${c.runtimeVarKey}=active`
-                                  : c.fallbackDisplay}
-                              </td>
-                            ))}
+                            {syncedSchema.deviceColumns.map((c) => {
+                              const varMeta = availableRuntimeVars.find((v) => v.key === c.runtimeVarKey);
+                              const runningSample =
+                                varMeta?.valueType === 'number'
+                                  ? '42'
+                                  : varMeta?.valueType === 'boolean'
+                                  ? 'true'
+                                  : `active (${c.runtimeVarKey})`;
+                              return (
+                                <td
+                                  key={c.id}
+                                  className={`p-1.5 font-mono ${
+                                    previewState === 'RUNNING' ? '' : 'italic opacity-75'
+                                  }`}
+                                  style={{
+                                    color:
+                                      previewState === 'RUNNING'
+                                        ? c.badgeColor || '#38BDF8'
+                                        : '#94A3B8',
+                                  }}
+                                >
+                                  {previewState === 'RUNNING' ? runningSample : 'Chưa xác minh'}
+                                </td>
+                              );
+                            })}
                           </tr>
                         </tbody>
                       </table>

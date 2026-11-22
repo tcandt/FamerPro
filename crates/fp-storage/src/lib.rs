@@ -342,6 +342,81 @@ impl StorageManager {
         check_integrity_on_conn(&conn)
     }
 
+    pub fn optimize_wal_and_vacuum(&self) -> Result<DbOptimizeReport> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE); VACUUM;")
+            .context("Failed to checkpoint WAL / VACUUM SQLite database")?;
+        let integrity = check_integrity_on_conn(&conn)?;
+        let total_projects = integrity.table_counts.get("projects").copied().unwrap_or(0) as usize;
+        let total_jobs = integrity.table_counts.get("jobs").copied().unwrap_or(0) as usize;
+        Ok(DbOptimizeReport {
+            wal_checkpointed: true,
+            integrity_check: integrity.integrity_check,
+            foreign_key_violations: integrity.foreign_key_violations,
+            is_healthy: integrity.is_healthy,
+            total_projects,
+            total_jobs,
+            optimized_at_utc: Utc::now().to_rfc3339(),
+        })
+    }
+
+    fn ensure_runtime_vars_table(conn: &Connection) -> Result<()> {
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS runtime_variable_snapshots (
+                scope_key TEXT PRIMARY KEY,
+                variables_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );",
+        )?;
+        Ok(())
+    }
+
+    pub fn save_runtime_variables(
+        &self,
+        scope_key: &str,
+        variables: &HashMap<String, serde_json::Value>,
+    ) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        Self::ensure_runtime_vars_table(&conn)?;
+        let json = serde_json::to_string(variables)?;
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO runtime_variable_snapshots (scope_key, variables_json, updated_at)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(scope_key) DO UPDATE SET
+               variables_json = excluded.variables_json,
+               updated_at = excluded.updated_at;",
+            params![scope_key, json, now],
+        )?;
+        Ok(())
+    }
+
+    pub fn load_runtime_variables(&self, scope_key: &str) -> Result<RuntimeVariablesSnapshot> {
+        let conn = self.conn.lock().unwrap();
+        Self::ensure_runtime_vars_table(&conn)?;
+        let mut stmt = conn.prepare(
+            "SELECT variables_json, updated_at FROM runtime_variable_snapshots WHERE scope_key = ?1;",
+        )?;
+        let mut rows = stmt.query(params![scope_key])?;
+        if let Some(row) = rows.next()? {
+            let json: String = row.get(0)?;
+            let updated_at: String = row.get(1)?;
+            let vars: HashMap<String, serde_json::Value> =
+                serde_json::from_str(&json).unwrap_or_default();
+            Ok(RuntimeVariablesSnapshot {
+                scope_key: scope_key.to_string(),
+                variables: vars,
+                updated_at: Some(updated_at),
+            })
+        } else {
+            Ok(RuntimeVariablesSnapshot {
+                scope_key: scope_key.to_string(),
+                variables: HashMap::new(),
+                updated_at: None,
+            })
+        }
+    }
+
     /// Creates a consistent SQLite Online Backup via `rusqlite::backup::Backup`,
     /// then verifies `PRAGMA integrity_check` and `PRAGMA foreign_key_check` on the backup.
     pub fn online_backup_to<P: AsRef<Path>>(&self, dest_path: P) -> Result<BackupReport> {
