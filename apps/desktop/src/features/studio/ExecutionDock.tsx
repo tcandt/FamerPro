@@ -10,12 +10,15 @@ import {
   Copy,
   GripHorizontal,
   Search,
+  RotateCcw,
 } from 'lucide-react';
 import { useWorkflowStore } from '../../stores/workflowStore';
 import { useDeviceStore } from '../../stores/deviceStore';
+import { api } from '../../lib/api';
 
 export const ExecutionDock: React.FC = () => {
   const {
+    workflowId,
     activeDockTab,
     setActiveDockTab,
     isDockCollapsed,
@@ -24,6 +27,12 @@ export const ExecutionDock: React.FC = () => {
     setDockHeight,
     runEvents,
     isRunning,
+    activeJobId,
+    activeJobDetail,
+    executionSummary,
+    lastExecutionNotice,
+    setActiveJobState,
+    setRunEvents,
   } = useWorkflowStore();
   const selectedDeviceId = useDeviceStore((state) => state.selectedDeviceId);
 
@@ -54,113 +63,95 @@ export const ExecutionDock: React.FC = () => {
     window.addEventListener('mouseup', onMouseUp);
   };
 
-  const logs = [
-    { level: 'INFO', time: '10:14:02.100', text: 'Core device lease acquired (fencing generation: 1, serial: emulator-5554)' },
-    { level: 'TRACE', time: '10:14:02.250', text: 'Snapshot PNG captured (1080x2400@0deg, latency 32ms)' },
-    { level: 'VISION', time: '10:14:02.410', text: 'Normalized SSD match: score=0.965 at bounds (200, 400, 150, 60)' },
-    { level: 'ACTION', time: '10:14:02.580', text: 'Safe point sampled (x=242.0, y=428.0), avoiding recent 5 click history' },
-    { level: 'TRACE', time: '10:14:02.720', text: 'ADB input tap dispatched: exit code 0' },
-    { level: 'VERIFY', time: '10:14:03.110', text: 'Post-condition dialog_confirm confirmed on fresh capture frame (confidence 94%)' },
-    { level: 'INFO', time: '10:14:03.200', text: 'Checkpoint quest_active saved to SQLite WAL storage' },
-  ];
-
-  const filteredLogs = logs.filter((l) => {
-    const matchesLevel = logFilter === 'ALL' || l.level === logFilter;
+  const filteredEvents = runEvents.filter((ev) => {
+    const matchesLevel =
+      logFilter === 'ALL' || ev.event_type.toUpperCase() === logFilter.toUpperCase();
     const matchesSearch =
-      logSearch === '' || l.text.toLowerCase().includes(logSearch.toLowerCase());
+      logSearch === '' ||
+      ev.node_id.toLowerCase().includes(logSearch.toLowerCase()) ||
+      ev.payload_json.toLowerCase().includes(logSearch.toLowerCase());
     return matchesLevel && matchesSearch;
   });
+
+  const handleResumeCheckpoint = async () => {
+    if (!activeJobId) return;
+    try {
+      const sum = await api.studioResumeJobFromCheckpoint(activeJobId, 20, 25000);
+      const detail = await api.studioGetJobResumeDetail(activeJobId);
+      setActiveJobState(
+        activeJobId,
+        detail,
+        sum,
+        `Resume checkpoint -> ${sum.state} (gen=${sum.fencingGeneration})`
+      );
+      if (detail) setRunEvents(detail.stepEvents);
+    } catch (err: any) {
+      setActiveJobState(
+        activeJobId,
+        activeJobDetail,
+        executionSummary,
+        `Resume Checkpoint lỗi: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const latestCp = activeJobDetail?.resumeContext.latestCheckpoint;
+  const varsObj = executionSummary?.variables || {};
 
   return (
     <div
       style={{ height: isDockCollapsed ? 36 : dockHeight }}
       className="border-t border-[#2A3647] bg-[#141C28] flex flex-col z-20 transition-all select-none relative shrink-0 shadow-2xl"
     >
-      {/* Drag handle on top border to resize */}
       {!isDockCollapsed && (
         <div
           onMouseDown={handleMouseDown}
           className="h-1.5 w-full bg-[#16202F] hover:bg-[#38BDF8] cursor-row-resize flex items-center justify-center transition-colors group"
-          title="Kéo chuột để thay đổi chiều cao thanh Debugger"
+          title="Kéo để thay đổi chiều cao Execution Dock"
         >
           <GripHorizontal size={14} className="text-[#5A6D85] group-hover:text-white" />
         </div>
       )}
 
-      {/* Dock Header & Tab Navigation */}
-      <div className="h-9 px-3 bg-[#16202F] border-b border-[#2A3647] flex items-center justify-between">
+      {/* Dock Header */}
+      <div className="h-9 px-3 bg-[#16202F] border-b border-[#2A3647] flex items-center justify-between gap-2">
         <div className="flex items-center space-x-1">
-          <button
-            onClick={() => setActiveDockTab('results')}
-            className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeDockTab === 'results' && !isDockCollapsed
-                ? 'bg-[#1878F5] text-white shadow-sm'
-                : 'text-[#A9B8CC] hover:text-white hover:bg-[#202B3B]'
-            }`}
-          >
-            <CheckCircle2 size={13} />
-            <span>Kết quả</span>
-          </button>
-
-          <button
-            onClick={() => setActiveDockTab('timeline')}
-            className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeDockTab === 'timeline' && !isDockCollapsed
-                ? 'bg-[#1878F5] text-white shadow-sm'
-                : 'text-[#A9B8CC] hover:text-white hover:bg-[#202B3B]'
-            }`}
-          >
-            <Clock size={13} />
-            <span>Tiến trình ({runEvents.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveDockTab('logs')}
-            className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeDockTab === 'logs' && !isDockCollapsed
-                ? 'bg-[#1878F5] text-white shadow-sm'
-                : 'text-[#A9B8CC] hover:text-white hover:bg-[#202B3B]'
-            }`}
-          >
-            <Terminal size={13} />
-            <span>Nhật ký Debug</span>
-          </button>
-
-          <button
-            onClick={() => setActiveDockTab('verification')}
-            className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeDockTab === 'verification' && !isDockCollapsed
-                ? 'bg-[#1878F5] text-white shadow-sm'
-                : 'text-[#A9B8CC] hover:text-white hover:bg-[#202B3B]'
-            }`}
-          >
-            <ImageIcon size={13} />
-            <span>Ảnh xác minh</span>
-          </button>
-
-          <button
-            onClick={() => setActiveDockTab('variables')}
-            className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeDockTab === 'variables' && !isDockCollapsed
-                ? 'bg-[#1878F5] text-white shadow-sm'
-                : 'text-[#A9B8CC] hover:text-white hover:bg-[#202B3B]'
-            }`}
-          >
-            <Variable size={13} />
-            <span>Biến</span>
-          </button>
+          {[
+            { id: 'results', label: 'Kết quả', icon: CheckCircle2 },
+            { id: 'timeline', label: `Tiến trình (${runEvents.length})`, icon: Clock },
+            { id: 'logs', label: 'Nhật ký Debug', icon: Terminal },
+            { id: 'verification', label: 'Checkpoint & Evidence', icon: ImageIcon },
+            { id: 'variables', label: 'Biến Runtime', icon: Variable },
+          ].map((t) => {
+            const Icon = t.icon;
+            const active = activeDockTab === t.id && !isDockCollapsed;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveDockTab(t.id as any)}
+                className={`px-2.5 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  active
+                    ? 'bg-[#1878F5] text-white shadow-sm'
+                    : 'text-[#A9B8CC] hover:text-white hover:bg-[#202B3B]'
+                }`}
+              >
+                <Icon size={13} />
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="flex items-center gap-2">
-          {!isDockCollapsed && (
-            <span className="text-[10px] text-[#5A6D85] font-mono">
-              Chiều cao: {dockHeight}px
+        <div className="flex items-center gap-2 min-w-0">
+          {lastExecutionNotice && (
+            <span className="text-[11px] text-[#E7B15B] truncate max-w-[300px]">
+              {lastExecutionNotice}
             </span>
           )}
           <button
             onClick={toggleDock}
-            className="p-1 text-[#74869D] hover:text-[#EDF3FC] hover:bg-[#202B3B] rounded transition-colors"
-            title={isDockCollapsed ? 'Mở rộng Debugger' : 'Thu gọn Debugger'}
+            className="p-1 text-[#74869D] hover:text-[#EDF3FC] hover:bg-[#202B3B] rounded transition-colors cursor-pointer"
+            title={isDockCollapsed ? 'Mở Debugger' : 'Thu gọn Debugger'}
           >
             {isDockCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
@@ -170,51 +161,66 @@ export const ExecutionDock: React.FC = () => {
       {/* Dock Content Body */}
       {!isDockCollapsed && (
         <div className="flex-1 overflow-y-auto p-3 text-xs bg-[#101722]">
-          {/* Results Tab */}
           {activeDockTab === 'results' && (
-            <div className="grid grid-cols-4 gap-3 text-xs">
-              <div className="p-3 bg-[#16202F] border border-[#2A3647] rounded-lg">
-                <span className="text-[#74869D] text-[11px]">Trạng thái thực thi:</span>
-                <div className="font-bold text-[#3BC38D] text-sm mt-0.5">
-                  {isRunning ? 'Đang gửi lệnh ADB...' : 'Hoàn tất & Đã xác minh (Verified)'}
+            <>
+              {!executionSummary && !activeJobDetail ? (
+                <div className="text-[#74869D] py-6 text-center">
+                  Chưa có kết quả thực thi thật cho workflow <code>{workflowId}</code>. Nhấn{' '}
+                  <strong>Coordinator</strong> hoặc <strong>Chạy luồng</strong> để thực thi.
                 </div>
-                <div className="mt-1 text-[11px] text-[#A9B8CC]">
-                  Tổng thời gian: 1.18s · 8/8 nodes hoàn tất
-                </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="p-3 bg-[#16202F] border border-[#2A3647] rounded-lg">
+                    <span className="text-[#74869D] text-[11px]">Trạng thái Job:</span>
+                    <div className="font-bold text-[#EDF3FC] text-sm mt-0.5 uppercase">
+                      {isRunning
+                        ? 'RUNNING'
+                        : executionSummary?.state || activeJobDetail?.resumeContext.job.state || 'N/A'}
+                    </div>
+                    <div className="mt-1 text-[11px] font-mono text-[#A9B8CC] truncate">
+                      {activeJobId || executionSummary?.jobId}
+                    </div>
+                  </div>
 
-              <div className="p-3 bg-[#16202F] border border-[#2A3647] rounded-lg">
-                <span className="text-[#74869D] text-[11px]">Mức độ an toàn tọa độ:</span>
-                <div className="font-bold text-[#38BDF8] text-sm mt-0.5">100% Tuân thủ Policy</div>
-                <div className="mt-1 text-[11px] text-[#A9B8CC]">
-                  Biên 18% co vào trong, tránh 5 điểm cũ
-                </div>
-              </div>
+                  <div className="p-3 bg-[#16202F] border border-[#2A3647] rounded-lg">
+                    <span className="text-[#74869D] text-[11px]">Lease Fencing Gen:</span>
+                    <div className="font-bold text-[#38BDF8] text-sm mt-0.5 font-mono">
+                      gen=
+                      {executionSummary?.fencingGeneration ??
+                        activeJobDetail?.resumeContext.job.fencingGeneration ??
+                        0}
+                    </div>
+                    <div className="mt-1 text-[11px] text-[#A9B8CC]">
+                      Adapter: {executionSummary?.adapterKind || 'adb'}
+                    </div>
+                  </div>
 
-              <div className="p-3 bg-[#16202F] border border-[#2A3647] rounded-lg">
-                <span className="text-[#74869D] text-[11px]">Độ tin cậy nhận diện:</span>
-                <div className="font-bold text-[#EDF3FC] text-sm mt-0.5">96.5% (Ngưỡng: 92%)</div>
-                <div className="mt-1 text-[11px] text-[#3BC38D]">
-                  Vượt ngưỡng tối thiểu +4.5%
-                </div>
-              </div>
+                  <div className="p-3 bg-[#16202F] border border-[#2A3647] rounded-lg">
+                    <span className="text-[#74869D] text-[11px]">Step Events (SQLite):</span>
+                    <div className="font-bold text-[#3BC38D] text-sm mt-0.5">
+                      {runEvents.length} events
+                    </div>
+                    <div className="mt-1 text-[11px] text-[#A9B8CC] truncate">
+                      Node: {executionSummary?.currentNodeId || activeJobDetail?.resumeContext.job.currentNodeId || '-'}
+                    </div>
+                  </div>
 
-              <div className="p-3 bg-[#16202F] border border-[#2A3647] rounded-lg">
-                <span className="text-[#74869D] text-[11px]">Checkpoint lưu trữ:</span>
-                <div className="font-bold text-[#FDE047] text-sm mt-0.5 font-mono">quest_active</div>
-                <div className="mt-1 text-[11px] text-[#A9B8CC]">
-                  Lưu vào SQLite WAL an toàn
+                  <div className="p-3 bg-[#16202F] border border-[#2A3647] rounded-lg">
+                    <span className="text-[#74869D] text-[11px]">Lý do Blocked / Guard:</span>
+                    <div className="font-semibold text-[#E7B15B] text-[11px] mt-0.5 break-words">
+                      {executionSummary?.blockReason || 'Không bị chặn'}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              )}
+            </>
           )}
 
-          {/* Timeline Tab */}
           {activeDockTab === 'timeline' && (
             <div className="space-y-1.5 font-mono text-[11px]">
               {runEvents.length === 0 ? (
-                <div className="text-[#74869D] italic py-4 text-center">
-                  Chưa có sự kiện thực thi nào trong phiên này. Nhấn "Chạy luồng" ở thanh tiêu đề để bắt đầu.
+                <div className="text-[#74869D] italic py-5 text-center">
+                  Chưa có StepEvent nào được ghi nhận từ backend Rust.
                 </div>
               ) : (
                 runEvents.map((ev) => (
@@ -227,11 +233,10 @@ export const ExecutionDock: React.FC = () => {
                         {ev.node_id}
                       </span>
                       <span className="text-[#EDF3FC] font-semibold">{ev.event_type}</span>
+                      <span className="text-[#74869D]">#{ev.attempt_no}</span>
                     </div>
                     <div className="flex items-center gap-3 text-[#74869D]">
-                      <span className="truncate max-w-[240px] text-[#A9B8CC]">
-                        {ev.payload_json}
-                      </span>
+                      <span className="truncate max-w-[300px] text-[#A9B8CC]">{ev.payload_json}</span>
                       <span>{new Date(ev.at).toLocaleTimeString()}</span>
                     </div>
                   </div>
@@ -240,25 +245,25 @@ export const ExecutionDock: React.FC = () => {
             </div>
           )}
 
-          {/* Logs Tab */}
           {activeDockTab === 'logs' && (
             <div className="space-y-2 font-mono text-[11px]">
               <div className="flex items-center justify-between pb-2 border-b border-[#2A3647]">
-                <div className="flex items-center gap-2">
-                  <span className="text-[#74869D] text-xs">Lọc cấp độ:</span>
-                  {['ALL', 'INFO', 'VISION', 'ACTION', 'VERIFY'].map((lvl) => (
-                    <button
-                      key={lvl}
-                      onClick={() => setLogFilter(lvl)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
-                        logFilter === lvl
-                          ? 'bg-[#1878F5] text-white'
-                          : 'bg-[#16202F] text-[#74869D] hover:text-white'
-                      }`}
-                    >
-                      {lvl}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {['ALL', 'COMMAND_SENT', 'DEVICE_ACK', 'VERIFICATION_FAILED', 'CHECKPOINT_SAVED'].map(
+                    (lvl) => (
+                      <button
+                        key={lvl}
+                        onClick={() => setLogFilter(lvl)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold cursor-pointer ${
+                          logFilter === lvl
+                            ? 'bg-[#1878F5] text-white'
+                            : 'bg-[#16202F] text-[#74869D] hover:text-white'
+                        }`}
+                      >
+                        {lvl}
+                      </button>
+                    )
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -266,94 +271,85 @@ export const ExecutionDock: React.FC = () => {
                     <Search size={11} />
                     <input
                       type="text"
-                      placeholder="Tìm nhật ký..."
+                      placeholder="Lọc node/payload..."
                       value={logSearch}
                       onChange={(e) => setLogSearch(e.target.value)}
-                      className="bg-transparent text-[#EDF3FC] outline-none text-[11px] w-28"
+                      className="bg-transparent text-[#EDF3FC] outline-none text-[11px] w-32"
                     />
                   </div>
                   <button
-                    onClick={() =>
-                      navigator.clipboard?.writeText(JSON.stringify(logs, null, 2))
-                    }
-                    className="flex items-center gap-1 px-2 py-1 bg-[#16202F] hover:bg-[#202B3B] text-[#EDF3FC] rounded text-xs border border-[#2A3647]"
+                    onClick={() => navigator.clipboard?.writeText(JSON.stringify(filteredEvents, null, 2))}
+                    className="flex items-center gap-1 px-2 py-1 bg-[#16202F] hover:bg-[#202B3B] text-[#EDF3FC] rounded text-xs border border-[#2A3647] cursor-pointer"
                   >
                     <Copy size={11} /> Copy
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                {filteredLogs.map((l, idx) => (
-                  <div key={idx} className="flex items-center gap-2 leading-relaxed">
-                    <span className="text-[#5A6D85]">{l.time}</span>
-                    <span
-                      className={`px-1 rounded text-[9px] font-bold ${
-                        l.level === 'INFO'
-                          ? 'bg-[#133528] text-[#3BC38D]'
-                          : l.level === 'VISION'
-                          ? 'bg-[#251C3B] text-[#B291F7]'
-                          : l.level === 'ACTION'
-                          ? 'bg-[#0F2C3F] text-[#38BDF8]'
-                          : l.level === 'VERIFY'
-                          ? 'bg-[#1A4D39] text-[#6EE7B7]'
-                          : 'bg-[#202B3B] text-[#74869D]'
-                      }`}
-                    >
-                      {l.level}
-                    </span>
-                    <span className="text-[#EDF3FC]">{l.text}</span>
-                  </div>
-                ))}
-              </div>
+              {filteredEvents.length === 0 ? (
+                <div className="text-[#74869D] py-4 text-center">Không có bản ghi log nào.</div>
+              ) : (
+                <div className="space-y-1">
+                  {filteredEvents.map((ev) => (
+                    <div key={ev.id} className="flex items-center gap-2 leading-relaxed">
+                      <span className="text-[#5A6D85]">{new Date(ev.at).toLocaleTimeString()}</span>
+                      <span className="px-1.5 rounded text-[9.5px] bg-[#173355] text-[#4B9CFF] font-bold">
+                        {ev.event_type}
+                      </span>
+                      <span className="text-[#3BC38D]">[{ev.node_id}]</span>
+                      <span className="text-[#EDF3FC] truncate">{ev.payload_json}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Verification Tab */}
           {activeDockTab === 'verification' && (
-            <div className="flex items-center gap-4">
-              <div className="p-2.5 bg-[#16202F] border border-[#2A3647] rounded-lg text-center">
-                <div className="w-36 h-36 bg-[#101722] border border-[#2A3647] rounded-md flex flex-col items-center justify-center text-[#74869D] text-[10px] mb-2 relative overflow-hidden">
-                  <div className="absolute inset-x-4 top-10 h-10 border-2 border-[#1878F5] bg-[#1878F5]/20 flex items-center justify-center text-white text-[10px] font-bold rounded">
-                    quest_marker.png
-                  </div>
-                  <div className="absolute bottom-2 left-2 text-[9px] text-[#5A6D85] font-mono">
-                    Frame 01 (1080×2400)
-                  </div>
+            <div className="space-y-2.5">
+              {!latestCp ? (
+                <div className="text-[#74869D] py-5 text-center">
+                  Chưa có checkpoint nào trong SQLite cho job hiện hành.
                 </div>
-                <div className="font-semibold text-[#3BC38D] text-xs">Khớp mẫu (96.5%)</div>
-                <div className="text-[10px] text-[#74869D] font-mono">Tọa độ: (200, 400, 150, 60)</div>
-              </div>
-
-              <div className="p-2.5 bg-[#16202F] border border-[#2A3647] rounded-lg text-center">
-                <div className="w-36 h-36 bg-[#101722] border border-[#2A3647] rounded-md flex flex-col items-center justify-center text-[#74869D] text-[10px] mb-2 relative overflow-hidden">
-                  <div className="absolute inset-x-3 top-8 bottom-8 border-2 border-[#3BC38D] bg-[#3BC38D]/20 flex items-center justify-center text-white text-[10px] font-bold rounded">
-                    dialog_confirm.png
+              ) : (
+                <div className="p-3 rounded-lg bg-[#16202F] border border-[#2A3647] flex items-center justify-between gap-3">
+                  <div className="space-y-1 min-w-0">
+                    <div className="font-semibold text-[#EDF3FC]">
+                      Checkpoint <code>{latestCp.id}</code> (node <code>{latestCp.nodeId}</code>)
+                    </div>
+                    <div className="font-mono text-[11px] text-[#A9B8CC] truncate">
+                      {latestCp.stateJson}
+                    </div>
                   </div>
-                  <div className="absolute bottom-2 left-2 text-[9px] text-[#5A6D85] font-mono">
-                    Frame 02 (1080×2400)
-                  </div>
+                  <button
+                    onClick={handleResumeCheckpoint}
+                    className="px-3 py-1.5 rounded bg-[#1878F5] hover:bg-[#2F8CFF] text-white text-xs font-semibold flex items-center gap-1 cursor-pointer shrink-0"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Resume Từ Checkpoint</span>
+                  </button>
                 </div>
-                <div className="font-semibold text-[#3BC38D] text-xs">Xác nhận mở hộp thoại</div>
-                <div className="text-[10px] text-[#74869D] font-mono">Độ trễ phản hồi: 320ms</div>
-              </div>
+              )}
             </div>
           )}
 
-          {/* Variables Tab */}
           {activeDockTab === 'variables' && (
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div className="p-2.5 bg-[#16202F] border border-[#2A3647] rounded-md">
-                <span className="text-[#74869D] text-[10px] block">Tên gói ứng dụng</span>
-                <span className="font-mono text-[#6BB0FF] font-semibold">com.example.game</span>
+                <span className="text-[#74869D] text-[10px] block">Workflow ID</span>
+                <span className="font-mono text-[#6BB0FF] font-semibold">{workflowId}</span>
               </div>
               <div className="p-2.5 bg-[#16202F] border border-[#2A3647] rounded-md">
-                <span className="text-[#74869D] text-[10px] block">Trạng thái mốc an toàn</span>
-                <span className="font-mono text-[#FDE047] font-semibold">quest_active = true</span>
+                <span className="text-[#74869D] text-[10px] block">Active Device Context</span>
+                <span className="font-mono text-[#3BC38D] font-semibold">
+                  {selectedDeviceId || 'Chưa chọn thiết bị'}
+                </span>
               </div>
               <div className="p-2.5 bg-[#16202F] border border-[#2A3647] rounded-md">
-                <span className="text-[#74869D] text-[10px] block">Thiết bị gán hiện tại</span>
-                <span className="font-mono text-[#3BC38D] font-semibold">{selectedDeviceId || 'emulator-5554'}</span>
+                <span className="text-[#74869D] text-[10px] block">Biến thực thi thu được</span>
+                <span className="font-mono text-[#A9B8CC] text-[11px] break-all">
+                  {Object.keys(varsObj).length > 0 ? JSON.stringify(varsObj) : 'Chưa có biến runtime'}
+                </span>
               </div>
             </div>
           )}

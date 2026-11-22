@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useWorkflowStore } from '../../stores/workflowStore';
 import { useDeviceStore } from '../../stores/deviceStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { api } from '../../lib/api';
 
 export const NodeInspector: React.FC = () => {
@@ -25,10 +26,15 @@ export const NodeInspector: React.FC = () => {
   const [isTesting, setIsTesting] = useState(false);
 
   const { selectedDeviceId } = useDeviceStore();
+  const activeProjectTemplates = useProjectStore(
+    (state) => state.activeProjectDetail?.templates || []
+  );
   const {
     nodes,
     selectedNodeId,
+    breakpointNodeIds,
     updateNodeConfig,
+    toggleBreakpoint,
     setNodes,
     selectNode,
     isInspectorCollapsed,
@@ -164,11 +170,23 @@ export const NodeInspector: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-3.5 space-y-4 text-xs">
         {activeTab === 'config' && (
           <div className="space-y-3.5">
-            {/* Label rename */}
-            <div>
-              <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
-                Tên hiển thị Node
-              </label>
+            {/* Label rename & Breakpoint toggle */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-[#A9B8CC] font-semibold text-[11px]">
+                  Tên hiển thị Node
+                </label>
+                <button
+                  onClick={() => toggleBreakpoint(selectedNode.id)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-semibold cursor-pointer ${
+                    breakpointNodeIds.includes(selectedNode.id)
+                      ? 'fp-badge-error'
+                      : 'bg-[#202B3B] text-[#74869D] hover:text-white'
+                  }`}
+                >
+                  {breakpointNodeIds.includes(selectedNode.id) ? '● Breakpoint ON' : '○ Breakpoint'}
+                </button>
+              </div>
               <input
                 type="text"
                 value={data.label}
@@ -208,17 +226,37 @@ export const NodeInspector: React.FC = () => {
             {(data.nodeType === 'vision.find_image' ||
               data.nodeType === 'verify.wait_for_image') && (
               <div className="space-y-3 p-3 rounded-lg bg-[#101722] border border-[#2A3647]">
-                <div>
-                  <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
-                    Tệp ảnh mẫu (Template Path)
+                <div className="space-y-1.5">
+                  <label className="block text-[#A9B8CC] font-semibold text-[11px]">
+                    Chọn Template thuộc Active Project
                   </label>
+                  {activeProjectTemplates.length > 0 && (
+                    <select
+                      value={
+                        activeProjectTemplates.some((t) => t.relPath === config.templateRef)
+                          ? config.templateRef
+                          : ''
+                      }
+                      onChange={(e) =>
+                        updateNodeConfig(selectedNode.id, { templateRef: e.target.value })
+                      }
+                      className="w-full bg-[#17202E] border border-[#2A3647] rounded px-2 py-1.5 text-[#EDF3FC] text-xs"
+                    >
+                      <option value="">-- Chọn từ Project ROI --</option>
+                      {activeProjectTemplates.map((tpl) => (
+                        <option key={tpl.id} value={tpl.relPath}>
+                          {tpl.name} ({tpl.relPath} · {tpl.widthPx}×{tpl.heightPx})
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <input
                     type="text"
                     value={config.templateRef || ''}
                     onChange={(e) =>
                       updateNodeConfig(selectedNode.id, { templateRef: e.target.value })
                     }
-                    placeholder="assets/templates/marker.png"
+                    placeholder="templates/marker.png"
                     className="w-full bg-[#17202E] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] focus:border-[#38BDF8] outline-none font-mono text-xs"
                   />
                 </div>

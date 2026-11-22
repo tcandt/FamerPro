@@ -1,6 +1,21 @@
 import { create } from 'zustand';
-import { Node, Edge, applyNodeChanges, applyEdgeChanges, NodeChange, EdgeChange, Connection, addEdge } from '@xyflow/react';
-import { WorkflowNodeData, StepEvent, ValidationReport } from '../types';
+import {
+  Node,
+  Edge,
+  applyNodeChanges,
+  applyEdgeChanges,
+  NodeChange,
+  EdgeChange,
+  Connection,
+  addEdge,
+} from '@xyflow/react';
+import {
+  JobResumeDetail,
+  RunWorkflowExecutionSummary,
+  StepEvent,
+  ValidationReport,
+  WorkflowNodeData,
+} from '../types';
 
 interface WorkflowState {
   workflowId: string;
@@ -9,7 +24,12 @@ interface WorkflowState {
   nodes: Node<WorkflowNodeData>[];
   edges: Edge[];
   selectedNodeId: string | null;
+  breakpointNodeIds: string[];
   isRunning: boolean;
+  activeJobId: string | null;
+  activeJobDetail: JobResumeDetail | null;
+  executionSummary: RunWorkflowExecutionSummary | null;
+  lastExecutionNotice: string | null;
   runEvents: StepEvent[];
   activeDockTab: 'results' | 'timeline' | 'logs' | 'verification' | 'variables';
   isDockCollapsed: boolean;
@@ -25,11 +45,20 @@ interface WorkflowState {
   onConnect: (connection: Connection) => void;
   selectNode: (id: string | null) => void;
   updateNodeConfig: (id: string, config: Record<string, any>) => void;
+  toggleBreakpoint: (nodeId: string) => void;
   addNode: (nodeType: string, category: WorkflowNodeData['category'], label: string) => void;
   autoLayout: () => void;
   setWorkflowName: (name: string) => void;
   setIsRunning: (running: boolean) => void;
+  setActiveJobState: (
+    jobId: string | null,
+    detail: JobResumeDetail | null,
+    summary: RunWorkflowExecutionSummary | null,
+    notice?: string | null
+  ) => void;
+  setLastExecutionNotice: (msg: string | null) => void;
   addRunEvent: (event: StepEvent) => void;
+  setRunEvents: (events: StepEvent[]) => void;
   clearRunEvents: () => void;
   setActiveDockTab: (tab: WorkflowState['activeDockTab']) => void;
   toggleDock: () => void;
@@ -37,6 +66,9 @@ interface WorkflowState {
   toggleInspector: () => void;
   toggleMiniMap: () => void;
   setValidationReport: (report: ValidationReport | null) => void;
+  newBlankWorkflow: (workflowId: string, name: string, packageId?: string) => void;
+  serializeWorkflowJson: (status?: 'draft' | 'published') => string;
+  markSaved: () => void;
   loadWorkflow: (data: any) => void;
 }
 
@@ -51,42 +83,61 @@ const initialNodes: Node<WorkflowNodeData>[] = [
     id: 'n-launch',
     type: 'custom',
     position: { x: 380, y: 50 },
-    data: { label: 'Mở ứng dụng game', nodeType: 'app.launch', category: 'app', config: { packageId: 'com.example.game' } },
+    data: {
+      label: 'Mở ứng dụng game',
+      nodeType: 'app.launch',
+      category: 'app',
+      config: { packageId: 'com.example.game' },
+    },
   },
   {
     id: 'n-capture',
     type: 'custom',
     position: { x: 710, y: 50 },
-    data: { label: 'Chụp khung hình', nodeType: 'vision.capture', category: 'vision', config: { freshnessMs: 500 } },
+    data: {
+      label: 'Chụp khung hình',
+      nodeType: 'vision.capture',
+      category: 'vision',
+      config: { freshnessMs: 500 },
+    },
   },
   {
     id: 'n-find',
     type: 'custom',
     position: { x: 1040, y: 50 },
-    data: { label: 'Tìm ảnh nút nhiệm vụ', nodeType: 'vision.find_image', category: 'vision', config: { templateRef: 'quest_marker.png', minConfidence: 0.92 } },
+    data: {
+      label: 'Tìm ảnh nút nhiệm vụ',
+      nodeType: 'vision.find_image',
+      category: 'vision',
+      config: { templateRef: 'templates/quest_btn.png', minConfidence: 0.88 },
+    },
   },
   {
     id: 'n-tap',
     type: 'custom',
     position: { x: 1040, y: 280 },
-    data: { label: 'Safe Random Tap', nodeType: 'action.random_safe_tap', category: 'action', config: { marginRatio: 0.18, avoidRecentPoints: 5 } },
-  },
-  {
-    id: 'n-verify',
-    type: 'custom',
-    position: { x: 710, y: 280 },
-    data: { label: 'Xác minh hội thoại', nodeType: 'verify.wait_for_image', category: 'verify', config: { templateRef: 'dialog_confirm.png', minConfidence: 0.90 } },
+    data: {
+      label: 'Safe Random Tap',
+      nodeType: 'action.random_safe_tap',
+      category: 'action',
+      config: { marginRatio: 0.18, avoidRecentPoints: 5 },
+    },
   },
   {
     id: 'n-checkpoint',
     type: 'custom',
-    position: { x: 380, y: 280 },
-    data: { label: 'Lưu Checkpoint', nodeType: 'state.checkpoint', category: 'state', config: { name: 'quest_active' } },
+    position: { x: 710, y: 280 },
+    data: {
+      label: 'Lưu Checkpoint',
+      nodeType: 'state.checkpoint',
+      category: 'state',
+      config: { name: 'quest_step_ok' },
+    },
   },
   {
     id: 'n-end',
     type: 'custom',
-    position: { x: 50, y: 280 },
+    position: { x: 380, y: 280 },
     data: { label: 'Kết thúc hoàn tất', nodeType: 'flow.end', category: 'flow', config: {} },
   },
 ];
@@ -99,7 +150,6 @@ const initialEdges: Edge[] = [
     sourceHandle: 'out-right',
     targetHandle: 'in-left',
     type: 'smoothstep',
-    animated: false,
     style: { stroke: '#38BDF8', strokeWidth: 2 },
   },
   {
@@ -109,7 +159,6 @@ const initialEdges: Edge[] = [
     sourceHandle: 'out-right',
     targetHandle: 'in-left',
     type: 'smoothstep',
-    animated: false,
     style: { stroke: '#38BDF8', strokeWidth: 2 },
   },
   {
@@ -119,7 +168,6 @@ const initialEdges: Edge[] = [
     sourceHandle: 'out-right',
     targetHandle: 'in-left',
     type: 'smoothstep',
-    animated: false,
     style: { stroke: '#38BDF8', strokeWidth: 2 },
   },
   {
@@ -129,37 +177,24 @@ const initialEdges: Edge[] = [
     sourceHandle: 'out-bottom',
     targetHandle: 'in-top',
     type: 'smoothstep',
-    animated: false,
     style: { stroke: '#38BDF8', strokeWidth: 2 },
   },
   {
     id: 'e5',
     source: 'n-tap',
-    target: 'n-verify',
-    sourceHandle: 'out-left',
-    targetHandle: 'in-right',
-    type: 'smoothstep',
-    animated: false,
-    style: { stroke: '#38BDF8', strokeWidth: 2 },
-  },
-  {
-    id: 'e6',
-    source: 'n-verify',
     target: 'n-checkpoint',
     sourceHandle: 'out-left',
     targetHandle: 'in-right',
     type: 'smoothstep',
-    animated: false,
     style: { stroke: '#38BDF8', strokeWidth: 2 },
   },
   {
-    id: 'e7',
+    id: 'e6',
     source: 'n-checkpoint',
     target: 'n-end',
     sourceHandle: 'out-left',
     targetHandle: 'in-right',
     type: 'smoothstep',
-    animated: false,
     style: { stroke: '#38BDF8', strokeWidth: 2 },
   },
 ];
@@ -167,29 +202,46 @@ const initialEdges: Edge[] = [
 const getNodeFriendlyLabel = (type: string, config: any): string => {
   if (config?.label) return config.label;
   switch (type) {
-    case 'flow.start': return 'Bắt đầu luồng';
-    case 'flow.end': return 'Kết thúc hoàn tất';
-    case 'app.launch': return config?.packageId ? `Mở app: ${config.packageId}` : 'Mở ứng dụng game';
-    case 'control.wait': return `Chờ ${config?.durationMs || 1000}ms`;
-    case 'vision.capture': return 'Chụp màn hình (Vision)';
-    case 'vision.find_image': return config?.templateRef ? `Tìm ảnh: ${config.templateRef}` : 'Tìm ảnh khớp mẫu';
-    case 'action.random_safe_tap': return 'Chạm an toàn (Safe Tap)';
-    case 'action.tap_point': return `Chạm điểm (${config?.x || 0}, ${config?.y || 0})`;
-    case 'action.swipe': return 'Vuốt màn hình (Swipe)';
-    case 'verify.wait_for_image': return config?.templateRef ? `Xác minh ảnh: ${config.templateRef}` : 'Xác minh hình ảnh';
-    case 'state.checkpoint': return config?.name ? `Lưu Checkpoint: ${config.name}` : 'Lưu Checkpoint';
-    default: return type;
+    case 'flow.start':
+      return 'Bắt đầu luồng';
+    case 'flow.end':
+      return 'Kết thúc hoàn tất';
+    case 'app.launch':
+      return config?.packageId ? `Mở app: ${config.packageId}` : 'Mở ứng dụng game';
+    case 'control.wait':
+      return `Chờ ${config?.durationMs || 500}ms`;
+    case 'vision.capture':
+      return 'Chụp màn hình (Vision)';
+    case 'vision.find_image':
+      return config?.templateRef ? `Tìm ảnh: ${config.templateRef}` : 'Tìm ảnh khớp mẫu';
+    case 'action.random_safe_tap':
+      return 'Chạm an toàn (Safe Tap)';
+    case 'action.tap_point':
+      return `Chạm điểm (${config?.x || 0}, ${config?.y || 0})`;
+    case 'action.swipe':
+      return 'Vuốt màn hình (Swipe)';
+    case 'verify.wait_for_image':
+      return config?.templateRef ? `Xác minh ảnh: ${config.templateRef}` : 'Xác minh hình ảnh';
+    case 'state.checkpoint':
+      return config?.name ? `Lưu Checkpoint: ${config.name}` : 'Lưu Checkpoint';
+    default:
+      return type;
   }
 };
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
-  workflowId: 'wf-beginner-quest-01',
-  workflowName: 'Nhiệm vụ tân thủ — AutoFarm',
+  workflowId: 'wf-sample-studio-01',
+  workflowName: 'Mẫu Workflow Cơ bản',
   isDirty: false,
   nodes: initialNodes,
   edges: initialEdges,
   selectedNodeId: 'n-tap',
+  breakpointNodeIds: [],
   isRunning: false,
+  activeJobId: null,
+  activeJobDetail: null,
+  executionSummary: null,
+  lastExecutionNotice: null,
   runEvents: [],
   activeDockTab: 'timeline',
   isDockCollapsed: false,
@@ -224,10 +276,20 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   updateNodeConfig: (id, config) =>
     set({
       nodes: get().nodes.map((node) =>
-        node.id === id ? { ...node, data: { ...node.data, config: { ...node.data.config, ...config } } } : node
+        node.id === id
+          ? { ...node, data: { ...node.data, config: { ...node.data.config, ...config } } }
+          : node
       ),
       isDirty: true,
     }),
+
+  toggleBreakpoint: (nodeId) => {
+    const cur = get().breakpointNodeIds;
+    const exists = cur.includes(nodeId);
+    set({
+      breakpointNodeIds: exists ? cur.filter((x) => x !== nodeId) : [...cur, nodeId],
+    });
+  },
 
   addNode: (nodeType, category, label) => {
     const id = `n-${Date.now()}`;
@@ -254,9 +316,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
     const newNodes = nodes.map((node, index) => {
       const row = Math.floor(index / perRow);
-      // Snake order: even rows left-to-right, odd rows right-to-left
-      const col = row % 2 === 0 ? index % perRow : (perRow - 1) - (index % perRow);
-
+      const col = row % 2 === 0 ? index % perRow : perRow - 1 - (index % perRow);
       return {
         ...node,
         position: {
@@ -266,38 +326,24 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       };
     });
 
-    // Re-route sequential edges for snake flow
-    const edges = get().edges.map((edge) => {
-      if (edge.id === 'e4' || (edge.source === 'n-find' && edge.target === 'n-tap')) {
-        return {
-          ...edge,
-          sourceHandle: 'out-bottom',
-          targetHandle: 'in-top',
-          type: 'smoothstep',
-        };
-      }
-      if (['e5', 'e6', 'e7'].includes(edge.id)) {
-        return {
-          ...edge,
-          sourceHandle: 'out-left',
-          targetHandle: 'in-right',
-          type: 'smoothstep',
-        };
-      }
-      return {
-        ...edge,
-        sourceHandle: 'out-right',
-        targetHandle: 'in-left',
-        type: 'smoothstep',
-      };
-    });
-
-    set({ nodes: newNodes, edges, isDirty: true });
+    set({ nodes: newNodes, isDirty: true });
   },
 
   setWorkflowName: (name) => set({ workflowName: name, isDirty: true }),
   setIsRunning: (running) => set({ isRunning: running }),
+
+  setActiveJobState: (jobId, detail, summary, notice) =>
+    set({
+      activeJobId: jobId,
+      activeJobDetail: detail,
+      executionSummary: summary,
+      lastExecutionNotice: notice !== undefined ? notice : get().lastExecutionNotice,
+    }),
+
+  setLastExecutionNotice: (msg) => set({ lastExecutionNotice: msg }),
+
   addRunEvent: (event) => set({ runEvents: [...get().runEvents, event] }),
+  setRunEvents: (events) => set({ runEvents: events }),
   clearRunEvents: () => set({ runEvents: [] }),
   setActiveDockTab: (tab) => set({ activeDockTab: tab, isDockCollapsed: false }),
   toggleDock: () => set({ isDockCollapsed: !get().isDockCollapsed }),
@@ -306,8 +352,127 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   toggleMiniMap: () => set({ showMiniMap: !get().showMiniMap }),
   setValidationReport: (report) => set({ validationReport: report }),
 
+  newBlankWorkflow: (workflowId, name, packageId) => {
+    const startNodes: Node<WorkflowNodeData>[] = [
+      {
+        id: 'n-start',
+        type: 'custom',
+        position: { x: 80, y: 120 },
+        data: { label: 'Bắt đầu luồng', nodeType: 'flow.start', category: 'flow', config: {} },
+      },
+      {
+        id: 'n-wait',
+        type: 'custom',
+        position: { x: 400, y: 120 },
+        data: {
+          label: 'Chờ ổn định (300ms)',
+          nodeType: 'control.wait',
+          category: 'flow',
+          config: { durationMs: 300 },
+        },
+      },
+      {
+        id: 'n-cp',
+        type: 'custom',
+        position: { x: 720, y: 120 },
+        data: {
+          label: 'Checkpoint An toàn',
+          nodeType: 'state.checkpoint',
+          category: 'state',
+          config: { name: 'ready' },
+        },
+      },
+      {
+        id: 'n-end',
+        type: 'custom',
+        position: { x: 1040, y: 120 },
+        data: { label: 'Kết thúc hoàn tất', nodeType: 'flow.end', category: 'flow', config: {} },
+      },
+    ];
+    if (packageId) {
+      startNodes[1] = {
+        id: 'n-launch',
+        type: 'custom',
+        position: { x: 400, y: 120 },
+        data: {
+          label: `Mở app: ${packageId}`,
+          nodeType: 'app.launch',
+          category: 'app',
+          config: { packageId },
+        },
+      };
+    }
+    const secondId = startNodes[1].id;
+    const edges: Edge[] = [
+      {
+        id: 'e1',
+        source: 'n-start',
+        target: secondId,
+        sourceHandle: 'out-right',
+        targetHandle: 'in-left',
+        type: 'smoothstep',
+        style: { stroke: '#38BDF8', strokeWidth: 2 },
+      },
+      {
+        id: 'e2',
+        source: secondId,
+        target: 'n-cp',
+        sourceHandle: 'out-right',
+        targetHandle: 'in-left',
+        type: 'smoothstep',
+        style: { stroke: '#38BDF8', strokeWidth: 2 },
+      },
+      {
+        id: 'e3',
+        source: 'n-cp',
+        target: 'n-end',
+        sourceHandle: 'out-right',
+        targetHandle: 'in-left',
+        type: 'smoothstep',
+        style: { stroke: '#38BDF8', strokeWidth: 2 },
+      },
+    ];
+    set({
+      workflowId,
+      workflowName: name,
+      nodes: startNodes,
+      edges,
+      selectedNodeId: 'n-start',
+      isDirty: true,
+    });
+  },
+
+  serializeWorkflowJson: (status = 'published') => {
+    const state = get();
+    return JSON.stringify({
+      schemaVersion: 1,
+      workflowId: state.workflowId,
+      name: state.workflowName,
+      status,
+      graph: {
+        nodes: state.nodes.map((n) => ({
+          id: n.id,
+          type: n.data.nodeType,
+          position: n.position,
+          config: n.data.config || {},
+          ...(n.data.timeoutMs ? { timeoutMs: n.data.timeoutMs } : {}),
+        })),
+        edges: state.edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          sourcePort:
+            e.sourceHandle === 'true' || e.sourceHandle === 'false' ? e.sourceHandle : 'flow',
+          target: e.target,
+          targetPort: 'flow',
+        })),
+      },
+    });
+  },
+
+  markSaved: () => set({ isDirty: false }),
+
   loadWorkflow: (data) => {
-    if (data.graph && Array.isArray(data.graph.nodes)) {
+    if (data?.graph && Array.isArray(data.graph.nodes)) {
       const nodes: Node<WorkflowNodeData>[] = data.graph.nodes.map((n: any) => ({
         id: n.id,
         type: 'custom',
@@ -315,7 +480,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         data: {
           label: getNodeFriendlyLabel(n.type, n.config),
           nodeType: n.type,
-          category: (n.type.split('.')[0] || 'flow') as WorkflowNodeData['category'],
+          category: (String(n.type || 'flow').split('.')[0] || 'flow') as WorkflowNodeData['category'],
           config: n.config || {},
           timeoutMs: n.timeoutMs,
         },
@@ -324,17 +489,24 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         id: e.id || `e-loaded-${index}`,
         source: e.source,
         target: e.target,
-        sourceHandle: e.sourcePort || 'out-right',
-        targetHandle: e.targetPort || 'in-left',
+        sourceHandle:
+          e.sourcePort && !['flow', 'default'].includes(e.sourcePort)
+            ? e.sourcePort
+            : 'out-right',
+        targetHandle:
+          e.targetPort && !['flow', 'default'].includes(e.targetPort)
+            ? e.targetPort
+            : 'in-left',
         type: 'smoothstep',
         animated: false,
         style: { stroke: '#38BDF8', strokeWidth: 2 },
       }));
       set({
-        workflowId: data.workflowId || 'imported',
+        workflowId: data.workflowId || 'wf-imported',
         workflowName: data.name || 'Imported Workflow',
         nodes,
         edges,
+        selectedNodeId: nodes[0]?.id || null,
         isDirty: false,
       });
     }
