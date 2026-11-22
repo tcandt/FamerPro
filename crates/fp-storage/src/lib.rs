@@ -426,15 +426,25 @@ impl StorageManager {
             )?;
         }
 
-        // 3. Ensure workflow version exists
-        let version_id = format!("{}-v1", workflow_id);
-        let graph_sha = sha256_hex(graph_json.as_bytes());
-        conn.execute(
-            "INSERT INTO workflow_versions (id, workflow_id, version_no, graph_json, sha256, created_at)
-             VALUES (?1, ?2, 1, ?3, ?4, ?5)
-             ON CONFLICT(workflow_id, version_no) DO NOTHING;",
-            params![version_id, workflow_id, graph_json, graph_sha, now],
-        )?;
+        // 3. Ensure workflow version exists (reuse existing version ID if already created, e.g. legacy UUID)
+        let version_id: String = {
+            let mut st = conn.prepare(
+                "SELECT id FROM workflow_versions WHERE workflow_id = ?1 ORDER BY version_no DESC LIMIT 1;",
+            )?;
+            let mut rows = st.query(params![workflow_id])?;
+            if let Some(row) = rows.next()? {
+                row.get(0)?
+            } else {
+                let new_ver_id = format!("{}-v1", workflow_id);
+                let graph_sha = sha256_hex(graph_json.as_bytes());
+                conn.execute(
+                    "INSERT INTO workflow_versions (id, workflow_id, version_no, graph_json, sha256, created_at)
+                     VALUES (?1, ?2, 1, ?3, ?4, ?5);",
+                    params![new_ver_id, workflow_id, graph_json, graph_sha, now],
+                )?;
+                new_ver_id
+            }
+        };
 
         // 4. Ensure job exists
         conn.execute(
@@ -613,9 +623,6 @@ impl StorageManager {
         let now = Utc::now().to_rfc3339();
 
         let proj_dir = projects_base_dir.join(&slug);
-        std::fs::create_dir_all(proj_dir.join("workflows"))?;
-        std::fs::create_dir_all(proj_dir.join("templates"))?;
-        std::fs::create_dir_all(proj_dir.join("branding"))?;
         let proj_dir_str = proj_dir.to_string_lossy().to_string();
 
         let enabled_mods = req.enabled_modules.unwrap_or_else(|| {
@@ -661,9 +668,13 @@ impl StorageManager {
             "mod.adb_port_forward",
             "mod.emulator_optimizer",
         ];
+        let mut packaged_modules = Vec::new();
         for m in all_mods {
             let is_core = m == "mod.adb_core" || m == "mod.vision_ocr";
             let packaged = is_core || enabled_mods.iter().any(|e| e == m);
+            if packaged {
+                packaged_modules.push(m.to_string());
+            }
             tx.execute(
                 "INSERT INTO project_modules (project_id, module_id, packaged_in_release, enabled_by_default, config_json, updated_at)
                  VALUES (?1, ?2, ?3, ?4, '{}', ?5);",
@@ -705,7 +716,10 @@ impl StorageManager {
             params![project_id, ui_json, now],
         )?;
 
-        tx.commit()?;
+        // Create workspace directories & manifest files only after DB constraints pass
+        std::fs::create_dir_all(proj_dir.join("workflows"))?;
+        std::fs::create_dir_all(proj_dir.join("templates"))?;
+        std::fs::create_dir_all(proj_dir.join("branding"))?;
 
         let manifest = GameProjectManifest {
             compatibility: CompatibilityVersions::default(),
@@ -718,7 +732,7 @@ impl StorageManager {
             window_title: window_title.clone(),
             icon_rel_path: icon_rel_path.clone(),
             target_resolution: (target_w, target_h),
-            packaged_modules: enabled_mods,
+            packaged_modules,
             workflow_files: vec![],
             template_files: vec![],
             bundle_adb,
@@ -728,6 +742,8 @@ impl StorageManager {
             serde_json::to_vec_pretty(&manifest)?,
         )?;
         std::fs::write(proj_dir.join("ui-schema.json"), ui_json.as_bytes())?;
+
+        tx.commit()?;
 
         Ok(GameProjectRecord {
             id: project_id,
@@ -841,10 +857,26 @@ impl StorageManager {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .unwrap_or(existing.game_package_id);
-        let version = req.version.unwrap_or(existing.version);
-        let exe_name = req.exe_name.unwrap_or(existing.exe_name);
-        let window_title = req.window_title.unwrap_or(existing.window_title);
-        let icon_rel_path = req.icon_rel_path.unwrap_or(existing.icon_rel_path);
+        let version = req
+            .version
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or(existing.version);
+        let exe_name = req
+            .exe_name
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or(existing.exe_name);
+        let window_title = req
+            .window_title
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or(existing.window_title);
+        let icon_rel_path = req
+            .icon_rel_path
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or(existing.icon_rel_path);
         let target_w = req.target_width_px.unwrap_or(existing.target_width_px);
         let target_h = req.target_height_px.unwrap_or(existing.target_height_px);
         let bundle_adb = req.bundle_adb.unwrap_or(existing.bundle_adb);
@@ -870,6 +902,26 @@ impl StorageManager {
                 req.id
             ],
         )?;
+
+        // Sync project.json on disk if present
+        let manifest_path = Path::new(&existing.project_dir_path).join("project.json");
+        if manifest_path.exists() {
+            if let Ok(raw) = std::fs::read(&manifest_path) {
+                if let Ok(mut manifest) = serde_json::from_slice::<GameProjectManifest>(&raw) {
+                    manifest.name = name.clone();
+                    manifest.game_package_id = game_package_id.clone();
+                    manifest.version = version.clone();
+                    manifest.exe_name = exe_name.clone();
+                    manifest.window_title = window_title.clone();
+                    manifest.icon_rel_path = icon_rel_path.clone();
+                    manifest.target_resolution = (target_w, target_h);
+                    manifest.bundle_adb = bundle_adb;
+                    if let Ok(bytes) = serde_json::to_vec_pretty(&manifest) {
+                        let _ = std::fs::write(&manifest_path, bytes);
+                    }
+                }
+            }
+        }
 
         Ok(GameProjectRecord {
             id: existing.id,
@@ -915,19 +967,15 @@ impl StorageManager {
 
         let new_pkg = req
             .new_game_package_id
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
             .unwrap_or_else(|| src.game_package_id.clone());
         let new_exe = req
             .new_exe_name
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
             .unwrap_or_else(|| default_exe_name_from_slug(&new_slug));
         let new_window_title = format!("Auto {} v{}", new_name, src.version);
-
-        // Prepare disk folders & copy templates/workflows/branding
-        let src_dir = Path::new(&src.project_dir_path);
-        std::fs::create_dir_all(new_proj_dir.join("workflows"))?;
-        std::fs::create_dir_all(new_proj_dir.join("templates"))?;
-        std::fs::create_dir_all(new_proj_dir.join("branding"))?;
-        copy_dir_files(&src_dir.join("templates"), &new_proj_dir.join("templates"))?;
-        copy_dir_files(&src_dir.join("branding"), &new_proj_dir.join("branding"))?;
 
         let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
 
@@ -954,7 +1002,16 @@ impl StorageManager {
             ],
         )?;
 
+        // Prepare disk folders & copy templates/branding ONLY after DB uniqueness check passes
+        let src_dir = Path::new(&src.project_dir_path);
+        std::fs::create_dir_all(new_proj_dir.join("workflows"))?;
+        std::fs::create_dir_all(new_proj_dir.join("templates"))?;
+        std::fs::create_dir_all(new_proj_dir.join("branding"))?;
+        copy_dir_files(&src_dir.join("templates"), &new_proj_dir.join("templates"))?;
+        copy_dir_files(&src_dir.join("branding"), &new_proj_dir.join("branding"))?;
+
         // Clone project_modules
+        let mut packaged_modules: Vec<String> = Vec::new();
         {
             let mut m_stmt = tx.prepare(
                 "SELECT module_id, packaged_in_release, enabled_by_default, config_json FROM project_modules WHERE project_id = ?1;",
@@ -965,6 +1022,9 @@ impl StorageManager {
                 })?
                 .collect::<std::result::Result<Vec<_>, _>>()?;
             for (mod_id, pkg_flag, en_flag, cfg) in mods {
+                if pkg_flag != 0 {
+                    packaged_modules.push(mod_id.clone());
+                }
                 tx.execute(
                     "INSERT INTO project_modules (project_id, module_id, packaged_in_release, enabled_by_default, config_json, updated_at)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6);",
@@ -975,9 +1035,10 @@ impl StorageManager {
 
         // Clone workflows with new project-scoped workflow IDs and build remap table
         let mut wf_id_map: HashMap<String, String> = HashMap::new();
+        let mut workflow_files: Vec<String> = Vec::new();
         {
             let mut w_stmt = tx.prepare(
-                "SELECT id, name, category, draft_json FROM workflows WHERE project_id = ?1;",
+                "SELECT id, name, category, draft_json FROM workflows WHERE project_id = ?1 ORDER BY id ASC;",
             )?;
             let wfs: Vec<(String, String, String, String)> = w_stmt
                 .query_map(params![src.id], |r| {
@@ -1012,20 +1073,18 @@ impl StorageManager {
                      VALUES (?1, ?2, 1, ?3, ?4, ?5);",
                     params![format!("{}-v1", new_wf_id), new_wf_id, updated_json, sha, now],
                 )?;
-                std::fs::write(
-                    new_proj_dir
-                        .join("workflows")
-                        .join(format!("{}.json", new_wf_id)),
-                    updated_json.as_bytes(),
-                )?;
+                let rel_wf = format!("workflows/{}.json", new_wf_id);
+                std::fs::write(new_proj_dir.join(&rel_wf), updated_json.as_bytes())?;
+                workflow_files.push(rel_wf);
             }
         }
 
         // Clone vision_templates
+        let mut template_files: Vec<String> = Vec::new();
         {
             let mut t_stmt = tx.prepare(
                 "SELECT name, rel_path, width_px, height_px, source_crop_x, source_crop_y, default_confidence, sha256
-                 FROM vision_templates WHERE project_id = ?1;",
+                 FROM vision_templates WHERE project_id = ?1 ORDER BY rel_path ASC;",
             )?;
             let tpls: Vec<(String, String, i64, i64, Option<i32>, Option<i32>, f64, String)> = t_stmt
                 .query_map(params![src.id], |r| {
@@ -1050,6 +1109,7 @@ impl StorageManager {
                     ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);",
                     params![new_tpl_id, new_id, name, rel_path, w, h, cx, cy, conf, sha, now],
                 )?;
+                template_files.push(rel_path);
             }
         }
 
@@ -1139,6 +1199,28 @@ impl StorageManager {
             std::fs::write(new_proj_dir.join("ui-schema.json"), new_ui_json.as_bytes())?;
         }
 
+        // Write cloned project.json manifest on disk
+        let cloned_manifest = GameProjectManifest {
+            compatibility: CompatibilityVersions::default(),
+            project_id: new_id.clone(),
+            slug: new_slug.clone(),
+            name: new_name.clone(),
+            game_package_id: new_pkg.clone(),
+            version: src.version.clone(),
+            exe_name: new_exe.clone(),
+            window_title: new_window_title.clone(),
+            icon_rel_path: src.icon_rel_path.clone(),
+            target_resolution: (src.target_width_px, src.target_height_px),
+            packaged_modules,
+            workflow_files,
+            template_files,
+            bundle_adb: src.bundle_adb,
+        };
+        std::fs::write(
+            new_proj_dir.join("project.json"),
+            serde_json::to_vec_pretty(&cloned_manifest)?,
+        )?;
+
         tx.commit()?;
 
         Ok(GameProjectRecord {
@@ -1167,21 +1249,31 @@ impl StorageManager {
         };
 
         let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-        // Delete dependent records in FK order (jobs, step_events, checkpoints, device_leases, workflow_versions, workflows, accounts)
+        // Delete dependent records in FK order (including any jobs tied via workflow_versions)
         tx.execute(
-            "DELETE FROM step_events WHERE job_id IN (SELECT id FROM jobs WHERE project_id = ?1);",
+            "DELETE FROM step_events WHERE job_id IN (
+                SELECT id FROM jobs WHERE project_id = ?1
+                OR workflow_version_id IN (SELECT id FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1))
+             );",
             params![project_id],
         )?;
         tx.execute(
-            "DELETE FROM checkpoints WHERE job_id IN (SELECT id FROM jobs WHERE project_id = ?1);",
+            "DELETE FROM checkpoints WHERE job_id IN (
+                SELECT id FROM jobs WHERE project_id = ?1
+                OR workflow_version_id IN (SELECT id FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1))
+             );",
             params![project_id],
         )?;
         tx.execute(
-            "DELETE FROM device_leases WHERE job_id IN (SELECT id FROM jobs WHERE project_id = ?1);",
+            "DELETE FROM device_leases WHERE job_id IN (
+                SELECT id FROM jobs WHERE project_id = ?1
+                OR workflow_version_id IN (SELECT id FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1))
+             );",
             params![project_id],
         )?;
         tx.execute(
-            "DELETE FROM jobs WHERE project_id = ?1;",
+            "DELETE FROM jobs WHERE project_id = ?1
+             OR workflow_version_id IN (SELECT id FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1));",
             params![project_id],
         )?;
         tx.execute(
@@ -1198,6 +1290,22 @@ impl StorageManager {
         )?;
         tx.execute(
             "DELETE FROM accounts WHERE project_id = ?1;",
+            params![project_id],
+        )?;
+        tx.execute(
+            "DELETE FROM project_modules WHERE project_id = ?1;",
+            params![project_id],
+        )?;
+        tx.execute(
+            "DELETE FROM vision_templates WHERE project_id = ?1;",
+            params![project_id],
+        )?;
+        tx.execute(
+            "DELETE FROM mini_tool_schemas WHERE project_id = ?1;",
+            params![project_id],
+        )?;
+        tx.execute(
+            "DELETE FROM project_releases WHERE project_id = ?1;",
             params![project_id],
         )?;
         tx.execute("DELETE FROM projects WHERE id = ?1;", params![project_id])?;
@@ -1311,13 +1419,21 @@ impl StorageManager {
         category: &str,
         draft_json: &str,
     ) -> Result<ProjectWorkflowRecord> {
+        let wf_id_clean = workflow_id.trim();
+        let name_clean = name.trim();
+        if wf_id_clean.is_empty() {
+            bail!("Workflow ID cannot be empty");
+        }
+        if name_clean.is_empty() {
+            bail!("Workflow name cannot be empty");
+        }
         let mut conn = self.conn.lock().unwrap();
         let _ = Self::fetch_project_by_id_conn(&conn, project_id)?
             .with_context(|| format!("Project '{}' not found", project_id))?;
 
         let existing_owner: Option<Option<String>> = {
             let mut st = conn.prepare("SELECT project_id FROM workflows WHERE id = ?1;")?;
-            let mut rows = st.query(params![workflow_id])?;
+            let mut rows = st.query(params![wf_id_clean])?;
             rows.next()?.map(|r| r.get(0)).transpose()?
         };
 
@@ -2440,11 +2556,124 @@ mod tests {
         assert_eq!(storage.list_project_workflows(&proj_c.id).unwrap().len(), 1);
         assert_eq!(storage.list_vision_templates(&proj_c.id).unwrap().len(), 1);
         assert_eq!(storage.list_project_tasks(&proj_c.id).unwrap().len(), 1);
+        let cloned_manifest_path = Path::new(&proj_c.project_dir_path).join("project.json");
+        assert!(cloned_manifest_path.exists());
+        let cloned_manifest: GameProjectManifest =
+            serde_json::from_slice(&std::fs::read(&cloned_manifest_path).unwrap()).unwrap();
+        assert_eq!(cloned_manifest.slug, "alpha-rpg-clone");
+        assert_eq!(cloned_manifest.workflow_files.len(), 1);
+        assert_eq!(cloned_manifest.template_files.len(), 1);
 
         // Deleting Project C must NOT affect Project A
         assert!(storage.delete_project(&proj_c.id, true).unwrap());
         assert_eq!(storage.list_project_workflows(&proj_a.id).unwrap().len(), 1);
         assert_eq!(storage.list_project_tasks(&proj_a.id).unwrap().len(), 1);
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p2_disk_manifest_sync_duplicate_slug_and_legacy_version_job() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_p2_edge_test_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let projects_root = temp_dir.join("projects");
+        let storage = StorageManager::new_in_memory().unwrap();
+
+        let proj = storage
+            .create_project(
+                CreateProjectRequest {
+                    slug: "edge-game".to_string(),
+                    name: "Edge Game".to_string(),
+                    game_package_id: "com.edge.game".to_string(),
+                    version: Some("1.0.0".to_string()),
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: Some(1280),
+                    target_height_px: Some(720),
+                    bundle_adb: Some(true),
+                    enabled_modules: None,
+                },
+                &projects_root,
+            )
+            .unwrap();
+
+        // Duplicate slug on clone must fail without creating an orphan folder
+        let dup_clone = storage.clone_project(
+            CloneProjectRequest {
+                source_project_id: proj.id.clone(),
+                new_slug: "edge-game".to_string(),
+                new_name: "Dup".to_string(),
+                new_game_package_id: None,
+                new_exe_name: None,
+            },
+            &projects_root,
+        );
+        assert!(dup_clone.is_err());
+
+        // Update project syncs project.json and ignores empty strings
+        let updated = storage
+            .update_project(UpdateProjectRequest {
+                id: proj.id.clone(),
+                name: Some("Edge Game Pro".to_string()),
+                game_package_id: None,
+                version: Some("2.1.0".to_string()),
+                exe_name: Some("   ".to_string()),
+                window_title: Some("Edge Pro Window".to_string()),
+                icon_rel_path: None,
+                target_width_px: Some(1920),
+                target_height_px: Some(1080),
+                bundle_adb: Some(false),
+            })
+            .unwrap();
+        assert_eq!(updated.exe_name, "Auto_Edge_Game.exe");
+        assert_eq!(updated.version, "2.1.0");
+        assert!(!updated.bundle_adb);
+        let disk_manifest: GameProjectManifest = serde_json::from_slice(
+            &std::fs::read(Path::new(&proj.project_dir_path).join("project.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(disk_manifest.name, "Edge Game Pro");
+        assert_eq!(disk_manifest.version, "2.1.0");
+        assert_eq!(disk_manifest.target_resolution, (1920, 1080));
+        assert!(!disk_manifest.bundle_adb);
+
+        // Legacy workflow_versions row with non-standard UUID id should work with ensure_project_job_exists
+        {
+            let conn = storage.conn.lock().unwrap();
+            let now = Utc::now().to_rfc3339();
+            conn.execute(
+                "INSERT INTO workflows (id, project_id, name, category, draft_json, draft_updated_at)
+                 VALUES ('wf-legacy-uuid', ?1, 'Legacy UUID WF', 'Chung', '{}', ?2);",
+                params![proj.id, now],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO workflow_versions (id, workflow_id, version_no, graph_json, sha256, created_at)
+                 VALUES ('custom-uuid-ver-99', 'wf-legacy-uuid', 1, '{}', 'abc', ?1);",
+                params![now],
+            )
+            .unwrap();
+        }
+        storage
+            .ensure_project_job_exists(
+                &proj.id,
+                "job-legacy-ver-1",
+                "emulator-5554",
+                "wf-legacy-uuid",
+                "Legacy UUID WF",
+                "{}",
+            )
+            .unwrap();
+        let jobs = storage.list_project_jobs(&proj.id).unwrap();
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0].workflow_version_id, "custom-uuid-ver-99");
+
+        // Deleting project removes all dependent records cleanly
+        assert!(storage.delete_project(&proj.id, true).unwrap());
+        assert!(!Path::new(&proj.project_dir_path).exists());
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }

@@ -42,12 +42,109 @@ fn parse_namespace(scope: &str, slug: Option<&str>) -> Result<SecretNamespace, S
     }
 }
 
+pub(crate) fn handle_list_projects(st: &AppState) -> Result<Vec<GameProjectSummary>, String> {
+    st.storage.list_projects().map_err(|e| e.to_string())
+}
+
+pub(crate) fn handle_get_project_detail(
+    st: &AppState,
+    project_id: &str,
+) -> Result<Option<GameProjectDetail>, String> {
+    st.storage
+        .get_project_detail(project_id)
+        .map_err(|e| e.to_string())
+}
+
+pub(crate) fn handle_create_project(
+    st: &AppState,
+    req: CreateProjectRequest,
+) -> Result<GameProjectRecord, String> {
+    st.storage
+        .create_project(req, &st.projects_root)
+        .map_err(|e| e.to_string())
+}
+
+pub(crate) fn handle_update_project(
+    st: &AppState,
+    req: UpdateProjectRequest,
+) -> Result<GameProjectRecord, String> {
+    st.storage.update_project(req).map_err(|e| e.to_string())
+}
+
+pub(crate) fn handle_clone_project(
+    st: &AppState,
+    req: CloneProjectRequest,
+) -> Result<GameProjectRecord, String> {
+    st.storage
+        .clone_project(req, &st.projects_root)
+        .map_err(|e| e.to_string())
+}
+
+pub(crate) fn handle_delete_project(
+    st: &AppState,
+    project_id: &str,
+    remove_disk_dir: bool,
+) -> Result<bool, String> {
+    st.storage
+        .delete_project(project_id, remove_disk_dir)
+        .map_err(|e| e.to_string())
+}
+
+pub(crate) fn handle_vault_set_secret(
+    st: &AppState,
+    scope: &str,
+    slug: Option<&str>,
+    key: &str,
+    secret: &str,
+) -> Result<String, String> {
+    let ns = parse_namespace(scope, slug)?;
+    st.vault
+        .set_secret_namespaced(&ns, key, secret)
+        .map_err(|e| e.to_string())
+}
+
+pub(crate) fn handle_vault_has_secret(
+    st: &AppState,
+    scope: &str,
+    slug: Option<&str>,
+    key: &str,
+) -> Result<bool, String> {
+    let ns = parse_namespace(scope, slug)?;
+    st.vault
+        .get_secret_namespaced(&ns, key)
+        .map(|opt| opt.is_some())
+        .map_err(|e| e.to_string())
+}
+
+pub(crate) fn handle_vault_list_namespace(
+    st: &AppState,
+    scope: &str,
+    slug: Option<&str>,
+) -> Result<Vec<CredentialMetadata>, String> {
+    let ns = parse_namespace(scope, slug)?;
+    st.vault
+        .list_secrets_namespaced(&ns)
+        .map_err(|e| e.to_string())
+}
+
+pub(crate) fn handle_vault_delete_secret(
+    st: &AppState,
+    scope: &str,
+    slug: Option<&str>,
+    key: &str,
+) -> Result<bool, String> {
+    let ns = parse_namespace(scope, slug)?;
+    st.vault
+        .delete_secret_namespaced(&ns, key)
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn studio_list_projects(
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<Vec<GameProjectSummary>, String> {
     let st = state.lock().unwrap();
-    st.storage.list_projects().map_err(|e| e.to_string())
+    handle_list_projects(&st)
 }
 
 #[tauri::command]
@@ -56,9 +153,7 @@ pub fn studio_get_project_detail(
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<Option<GameProjectDetail>, String> {
     let st = state.lock().unwrap();
-    st.storage
-        .get_project_detail(&project_id)
-        .map_err(|e| e.to_string())
+    handle_get_project_detail(&st, &project_id)
 }
 
 #[tauri::command]
@@ -67,9 +162,7 @@ pub fn studio_create_project(
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<GameProjectRecord, String> {
     let st = state.lock().unwrap();
-    st.storage
-        .create_project(req, &st.projects_root)
-        .map_err(|e| e.to_string())
+    handle_create_project(&st, req)
 }
 
 #[tauri::command]
@@ -78,7 +171,7 @@ pub fn studio_update_project(
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<GameProjectRecord, String> {
     let st = state.lock().unwrap();
-    st.storage.update_project(req).map_err(|e| e.to_string())
+    handle_update_project(&st, req)
 }
 
 #[tauri::command]
@@ -87,9 +180,7 @@ pub fn studio_clone_project(
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<GameProjectRecord, String> {
     let st = state.lock().unwrap();
-    st.storage
-        .clone_project(req, &st.projects_root)
-        .map_err(|e| e.to_string())
+    handle_clone_project(&st, req)
 }
 
 #[tauri::command]
@@ -99,9 +190,7 @@ pub fn studio_delete_project(
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<bool, String> {
     let st = state.lock().unwrap();
-    st.storage
-        .delete_project(&project_id, remove_disk_dir.unwrap_or(false))
-        .map_err(|e| e.to_string())
+    handle_delete_project(&st, &project_id, remove_disk_dir.unwrap_or(false))
 }
 
 #[tauri::command]
@@ -268,11 +357,8 @@ pub fn studio_vault_set_secret(
     secret: String,
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<String, String> {
-    let ns = parse_namespace(&scope, slug.as_deref())?;
     let st = state.lock().unwrap();
-    st.vault
-        .set_secret_namespaced(&ns, &key, &secret)
-        .map_err(|e| e.to_string())
+    handle_vault_set_secret(&st, &scope, slug.as_deref(), &key, &secret)
 }
 
 #[tauri::command]
@@ -282,12 +368,8 @@ pub fn studio_vault_has_secret(
     key: String,
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<bool, String> {
-    let ns = parse_namespace(&scope, slug.as_deref())?;
     let st = state.lock().unwrap();
-    st.vault
-        .get_secret_namespaced(&ns, &key)
-        .map(|opt| opt.is_some())
-        .map_err(|e| e.to_string())
+    handle_vault_has_secret(&st, &scope, slug.as_deref(), &key)
 }
 
 #[tauri::command]
@@ -296,11 +378,8 @@ pub fn studio_vault_list_namespace(
     slug: Option<String>,
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<Vec<CredentialMetadata>, String> {
-    let ns = parse_namespace(&scope, slug.as_deref())?;
     let st = state.lock().unwrap();
-    st.vault
-        .list_secrets_namespaced(&ns)
-        .map_err(|e| e.to_string())
+    handle_vault_list_namespace(&st, &scope, slug.as_deref())
 }
 
 #[tauri::command]
@@ -310,11 +389,8 @@ pub fn studio_vault_delete_secret(
     key: String,
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<bool, String> {
-    let ns = parse_namespace(&scope, slug.as_deref())?;
     let st = state.lock().unwrap();
-    st.vault
-        .delete_secret_namespaced(&ns, &key)
-        .map_err(|e| e.to_string())
+    handle_vault_delete_secret(&st, &scope, slug.as_deref(), &key)
 }
 
 #[tauri::command]
@@ -406,79 +482,68 @@ mod tests {
             is_portable: false,
         };
 
-        let p1 = state
-            .storage
-            .create_project(
-                CreateProjectRequest {
-                    slug: "ipc-game-one".to_string(),
-                    name: "IPC Game One".to_string(),
-                    game_package_id: "com.ipc.one".to_string(),
-                    version: None,
-                    exe_name: None,
-                    window_title: None,
-                    icon_rel_path: None,
-                    target_width_px: None,
-                    target_height_px: None,
-                    bundle_adb: None,
-                    enabled_modules: None,
-                },
-                &state.projects_root,
-            )
-            .unwrap();
+        let req1: CreateProjectRequest = serde_json::from_value(serde_json::json!({
+            "slug": "ipc-game-one",
+            "name": "IPC Game One",
+            "gamePackageId": "com.ipc.one"
+        }))
+        .unwrap();
+        let p1 = handle_create_project(&state, req1).unwrap();
 
-        let p2 = state
-            .storage
-            .create_project(
-                CreateProjectRequest {
-                    slug: "ipc-game-two".to_string(),
-                    name: "IPC Game Two".to_string(),
-                    game_package_id: "com.ipc.two".to_string(),
-                    version: None,
-                    exe_name: None,
-                    window_title: None,
-                    icon_rel_path: None,
-                    target_width_px: None,
-                    target_height_px: None,
-                    bundle_adb: None,
-                    enabled_modules: None,
-                },
-                &state.projects_root,
-            )
-            .unwrap();
+        let req2: CreateProjectRequest = serde_json::from_value(serde_json::json!({
+            "slug": "ipc-game-two",
+            "name": "IPC Game Two",
+            "gamePackageId": "com.ipc.two"
+        }))
+        .unwrap();
+        let p2 = handle_create_project(&state, req2).unwrap();
+
+        let upd_req: UpdateProjectRequest = serde_json::from_value(serde_json::json!({
+            "id": p1.id,
+            "version": "1.1.0",
+            "name": "IPC Game One Updated"
+        }))
+        .unwrap();
+        let p1_upd = handle_update_project(&state, upd_req).unwrap();
+        assert_eq!(p1_upd.version, "1.1.0");
 
         state
             .storage
             .save_project_workflow(&p1.id, "wf-ipc-1", "IPC WF 1", "NV", "{}")
             .unwrap();
-        assert_eq!(state.storage.list_projects().unwrap().len(), 2);
+        let summaries = handle_list_projects(&state).unwrap();
+        assert_eq!(summaries.len(), 2);
+        let p1_detail = handle_get_project_detail(&state, &p1.id).unwrap().unwrap();
+        assert_eq!(p1_detail.workflows.len(), 1);
+        let p2_detail = handle_get_project_detail(&state, &p2.id).unwrap().unwrap();
+        assert_eq!(p2_detail.workflows.len(), 0);
+
+        let clone_req: CloneProjectRequest = serde_json::from_value(serde_json::json!({
+            "sourceProjectId": p1.id,
+            "newSlug": "ipc-game-one-clone",
+            "newName": "IPC Game One Clone"
+        }))
+        .unwrap();
+        let p1_clone = handle_clone_project(&state, clone_req).unwrap();
+        assert_eq!(handle_list_projects(&state).unwrap().len(), 3);
+        assert!(handle_delete_project(&state, &p1_clone.id, true).unwrap());
+        assert_eq!(handle_list_projects(&state).unwrap().len(), 2);
+
+        // Vault IPC handler tests (including error paths)
+        assert!(parse_namespace("invalid_scope", None).is_err());
+        assert!(parse_namespace("project", None).is_err());
+        let uri = handle_vault_set_secret(&state, "project", Some("ipc-game-one"), "test_key", "val1")
+            .unwrap();
+        assert!(uri.contains("FarmerPro/project/ipc-game-one/test_key"));
+        assert!(handle_vault_has_secret(&state, "project", Some("ipc-game-one"), "test_key").unwrap());
+        assert!(!handle_vault_has_secret(&state, "project", Some("ipc-game-two"), "test_key").unwrap());
         assert_eq!(
-            state.storage.list_project_workflows(&p1.id).unwrap().len(),
+            handle_vault_list_namespace(&state, "project", Some("ipc-game-one"))
+                .unwrap()
+                .len(),
             1
         );
-        assert_eq!(
-            state.storage.list_project_workflows(&p2.id).unwrap().len(),
-            0
-        );
-
-        let ns1 = parse_namespace("project", Some("ipc-game-one")).unwrap();
-        let ns2 = parse_namespace("project", Some("ipc-game-two")).unwrap();
-        state
-            .vault
-            .set_secret_namespaced(&ns1, "test_key", "val1")
-            .unwrap();
-        assert_eq!(
-            state
-                .vault
-                .get_secret_namespaced(&ns1, "test_key")
-                .unwrap()
-                .as_deref(),
-            Some("val1")
-        );
-        assert_eq!(
-            state.vault.get_secret_namespaced(&ns2, "test_key").unwrap(),
-            None
-        );
-        assert!(state.vault.delete_secret_namespaced(&ns1, "test_key").unwrap());
+        assert!(handle_vault_delete_secret(&state, "project", Some("ipc-game-one"), "test_key").unwrap());
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }

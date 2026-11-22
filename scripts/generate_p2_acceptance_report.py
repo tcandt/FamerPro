@@ -49,7 +49,7 @@ with open(sql_path, "w", encoding="utf-8") as f:
 sandbox_rep = json.loads(open(os.path.join(EV_DIR, "p2_verify_dist_portable_sandbox.json"), encoding="utf-8-sig").read())
 prod_mig_rep = json.loads(open(os.path.join(EV_DIR, "p2_dist_portable_migration_report.json"), encoding="utf-8-sig").read())
 test_log = open(os.path.join(EV_DIR, "cargo_test_workspace_p2_clean.log"), encoding="utf-8", errors="ignore").read()
-git_diff_stat = subprocess.check_output(["git", "diff", "--stat", "fab1a1a..9bd0e45"], cwd=ROOT).decode("utf-8")
+git_diff_stat = subprocess.check_output(["git", "diff", "--stat", "fab1a1a..HEAD"], cwd=ROOT).decode("utf-8")
 git_log_txt = subprocess.check_output(["git", "-c", "i18n.logOutputEncoding=utf-8", "log", "-n", "3", "--oneline"], cwd=ROOT).decode("utf-8")
 with open(os.path.join(EV_DIR, "git_log_p2.txt"), "w", encoding="utf-8") as f:
     f.write(git_log_txt)
@@ -64,7 +64,7 @@ DIAGRAMS["01_p2_rust_crates_map"] = {
     "title": "Sơ đồ P2.1: Bản đồ Rust Crates & Ranh giới Kiến trúc Giai đoạn P2",
     "mmd": """flowchart TB
     subgraph APPS["Application Layer (apps/*)"]
-        TAURI["apps/desktop/src-tauri (farmerpro)\\n26 Tauri IPC Commands (studio_p2.rs)\\nAppState = StorageManager + CredentialVault + projects_root"]
+        TAURI["apps/desktop/src-tauri (farmerpro)\\n29 Tauri IPC Commands (studio_p2.rs)\\nAppState = StorageManager + CredentialVault + projects_root"]
         CLI["apps/cli (fp-cli)\\nverify-p2 (Sandbox) + migrate-p2 (Guarded)"]
         UI["apps/desktop/src (React/TS UI)\\nGIỮ NGUYÊN 100% — Chưa refactor ở P2"]
     end
@@ -94,7 +94,7 @@ DIAGRAMS["01_p2_rust_crates_map"] = {
 
   <rect x="40" y="86" width="430" height="76" rx="8" fill="#0F2942" stroke="#3B82F6" stroke-width="1.8"/>
   <text x="255" y="109" text-anchor="middle" fill="#F8FAFC" font-size="14.5" font-weight="700">apps/desktop/src-tauri (studio_p2.rs)</text>
-  <text x="255" y="130" text-anchor="middle" fill="#CBD5E1" font-size="13">26 Tauri IPC: Project CRUD/Clone, Tasks, UI Schema</text>
+  <text x="255" y="130" text-anchor="middle" fill="#CBD5E1" font-size="13">29 Tauri IPC: Project CRUD/Clone, Tasks, UI Schema</text>
   <text x="255" y="149" text-anchor="middle" fill="#93C5FD" font-size="12.8">Vault Namespaces + DPAPI Keystore + DB Backup</text>
 
   <rect x="490" y="86" width="295" height="76" rx="8" fill="#132D24" stroke="#10B981" stroke-width="1.8"/>
@@ -121,7 +121,7 @@ DIAGRAMS["01_p2_rust_crates_map"] = {
   <text x="42" y="296" fill="#E2E8F0" font-size="13.2">• jx2_seed.rs: Non-destructive 10 workflows + 8 PNGs</text>
   <text x="42" y="317" fill="#E2E8F0" font-size="13.2">• Project CRUD, Clone &amp; PROJECT_ISOLATION_VIOLATION</text>
   <text x="42" y="338" fill="#93C5FD" font-size="12.8">• Deps: fp-domain, fp-workflow-schema, fp-bundle-contract</text>
-  <text x="42" y="357" fill="#6EE7B7" font-size="12.8">• Tests: 8/8 PASS (Idempotency, Rollback, Backup, Isolation)</text>
+  <text x="42" y="357" fill="#6EE7B7" font-size="12.8">• Tests: 9/9 PASS (Idempotency, Rollback, Backup, Isolation)</text>
 
   <rect x="570" y="206" width="526" height="162" rx="10" fill="#2E1065" stroke="#A855F7" stroke-width="2"/>
   <text x="588" y="230" fill="#E9D5FF" font-size="15" font-weight="700">crates/fp-security (Win32 Credential Manager + DPAPI)</text>
@@ -151,8 +151,8 @@ DIAGRAMS["01_p2_rust_crates_map"] = {
   <text x="926" y="421" text-anchor="middle" fill="#F8FAFC" font-size="14" font-weight="700">crates/fp-workflow-runtime</text>
   <text x="926" y="443" text-anchor="middle" fill="#6EE7B7" font-size="13">ZERO Hardcoded Game Names</text>
   <text x="926" y="463" text-anchor="middle" fill="#CBD5E1" font-size="12.8">Gỡ bỏ hardcode games/jx2mobile</text>
-  <text x="926" y="482" text-anchor="middle" fill="#94A3B8" font-size="12.8">Quét động bundle/ + projects/*/templates</text>
-  <text x="926" y="500" text-anchor="middle" fill="#6EE7B7" font-size="12.8">3/3 Unit Tests PASS (44/44 Total)</text>
+  <text x="926" y="482" text-anchor="middle" fill="#94A3B8" font-size="12.8">Scoped project_dir + bundle/templates</text>
+  <text x="926" y="500" text-anchor="middle" fill="#6EE7B7" font-size="12.8">4/4 Unit Tests PASS (46/46 Total)</text>
 
   <line x1="210" y1="368" x2="194" y2="396" stroke="#60A5FA" stroke-width="1.8" marker-end="url(#arr)"/>
   <line x1="720" y1="368" x2="560" y2="396" stroke="#C084FC" stroke-width="1.8" marker-end="url(#arr)"/>
@@ -469,12 +469,12 @@ pages.append(page_wrap(1, "BÁO CÁO NGHIỆM THU P2", "Trang Bìa & Tóm tắt 
   <div class="hero-box" style="padding:3mm 4.5mm;">
     <div class="pill-row">
       <span class="badge b-pass">STAGE-GATE P2: HOÀN THÀNH PHẠM VI KỸ THUẬT</span>
-      <span class="badge b-info">44/44 WORKSPACE UNIT TESTS PASS</span>
+      <span class="badge b-info">46/46 WORKSPACE UNIT TESTS PASS</span>
       <span class="badge b-warn">apps/desktop/src UI &amp; P3–P6: GIỮ NGUYÊN 100%</span>
     </div>
     <h1 style="margin:1.5mm 0 1mm 0; font-size:12.8pt;">FARMERPRO P2 — BÁO CÁO NGHIỆM THU MULTI-PROJECT STORAGE, MIGRATION, WINCRED &amp; DPAPI</h1>
     <p class="hero-sub" style="font-size:8.9pt;">
-      Triển khai hoàn chỉnh tầng dữ liệu đa dự án (<b>SQLite WAL v2</b>), cơ chế <b>Online Backup → Restore Probe → Migration v1→v2 → Atomic Rollback</b>, di chuyển bảo toàn <b>10 workflow Võ Hiệp 2 Mobile + 8 ảnh mẫu PNG</b>, thay thế mock Vault bằng <b>Windows Credential Manager</b> thực, mã hóa Producer Signing Key bằng <b>Windows DPAPI</b>, và <b>26 Tauri IPC Commands</b> cho Project CRUD &amp; Project Isolation.
+      Triển khai hoàn chỉnh tầng dữ liệu đa dự án (<b>SQLite WAL v2</b>), cơ chế <b>Online Backup → Restore Probe → Migration v1→v2 → Atomic Rollback</b>, di chuyển bảo toàn <b>10 workflow Võ Hiệp 2 Mobile + 8 ảnh mẫu PNG</b>, thay thế mock Vault bằng <b>Windows Credential Manager</b> thực, mã hóa Producer Signing Key bằng <b>Windows DPAPI</b>, và <b>29 Tauri IPC Commands</b> cho Project CRUD &amp; Project Isolation.
     </p>
   </div>
 
@@ -484,10 +484,10 @@ pages.append(page_wrap(1, "BÁO CÁO NGHIỆM THU P2", "Trang Bìa & Tóm tắt 
       <table class="tbl-tight">
         <tr><th style="width:36%;">Hạng mục</th><th style="width:64%;">Giá trị Thực tế Đã Xác minh</th></tr>
         <tr><td><b>Nhánh Git Triển khai</b></td><td><code>feat/p2-multi-project-storage</code> (tách từ <code>fab1a1a</code>)</td></tr>
-        <tr><td><b>Commit Code P2</b></td><td><code>9bd0e45</code> (20 files changed, +5598 / -230 lines)</td></tr>
+        <tr><td><b>Commit Code P2</b></td><td>Xem mục 2 Trang 11 (<code>git_log_p2.txt</code>)</td></tr>
         <tr><td><b>Giữ nguyên UI P4</b></td><td><span class="tag-pass">PASS</span> <code>git diff -- apps/desktop/src</code> = 0 dòng</td></tr>
         <tr><td><b>Hiệu chỉnh Blueprint II.1</b></td><td><span class="tag-pass">PASS</span> Cập nhật rõ <code>920×510</code> = ~50,9% diện tích (71,9% rộng)</td></tr>
-        <tr><td><b>Gỡ Hardcode Runtime</b></td><td><span class="tag-pass">PASS</span> Gỡ bỏ hardcode <code>games/jx2mobile/templates</code></td></tr>
+        <tr><td><b>Gỡ Hardcode Runtime</b></td><td><span class="tag-pass">PASS</span> Gỡ bỏ hardcode <code>games/jx2mobile/templates</code> + scope theo <code>project_dir</code></td></tr>
         <tr><td><b>Backup DB trước Migrate</b></td><td><code>backups/p2_verified_backup/dist_portable_pre_v2.db</code></td></tr>
       </table>
     </div>
@@ -495,7 +495,7 @@ pages.append(page_wrap(1, "BÁO CÁO NGHIỆM THU P2", "Trang Bìa & Tóm tắt 
       <div class="card-h" style="margin-bottom:1.4mm;">2. TỔNG HỢP KẾT QUẢ KIỂM ĐỊNH ĐỘC LẬP (PASS / FAIL)</div>
       <table class="tbl-tight">
         <tr><th style="width:46%;">Tiêu chí Nghiệm thu P2</th><th style="width:16%;">Kết quả</th><th style="width:38%;">Bằng chứng Thực thi</th></tr>
-        <tr><td>Workspace Unit Tests</td><td><span class="tag-pass">PASS</span></td><td><b>44/44 PASS</b> (34 cũ + 10 tests mới P2)</td></tr>
+        <tr><td>Workspace Unit Tests</td><td><span class="tag-pass">PASS</span></td><td><b>46/46 PASS</b> (34 cũ + 12 tests mới P2)</td></tr>
         <tr><td>SQLite Migration v1→v2</td><td><span class="tag-pass">PASS</span></td><td>Versions <code>[1, 2]</code>, WAL, 0 FK violations</td></tr>
         <tr><td>Atomic Rollback (Lỗi v3)</td><td><span class="tag-pass">PASS</span></td><td>Rollback 100%, 0 bảng rác</td></tr>
         <tr><td>Bảo toàn JX2 (10 WF + 8 PNG)</td><td><span class="tag-pass">PASS</span></td><td>Giữ 2 jobs, 31 step_events + 10 JX2</td></tr>
@@ -517,7 +517,7 @@ pages.append(page_wrap(1, "BÁO CÁO NGHIỆM THU P2", "Trang Bìa & Tóm tắt 
       <a href="#page-07"><b>07:</b> Project CRUD, Clone &amp; Isolation</a>
       <a href="#page-08"><b>08:</b> Kiến trúc WinCred &amp; DPAPI (Sơ đồ)</a>
       <a href="#page-09"><b>09:</b> Kết quả Test WinCred &amp; DPAPI</a>
-      <a href="#page-10"><b>10:</b> 26 Tauri IPC &amp; 44/44 Unit Tests</a>
+      <a href="#page-10"><b>10:</b> 29 Tauri IPC &amp; 46/46 Unit Tests</a>
       <a href="#page-11"><b>11:</b> PASS/FAIL, Git Diff &amp; Rollback</a>
       <a href="#page-12"><b>12:</b> Sẵn sàng cho P3 &amp; SHA-256</a>
       <a href="#page-01"><b>01:</b> Tóm tắt Điều hành &amp; Stage-Gate</a>
@@ -810,31 +810,31 @@ test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out</pre>
   </div>
 """))
 
-# PAGE 10: TAURI IPC COMMANDS & 44/44 WORKSPACE UNIT TESTS
-pages.append(page_wrap(10, "IPC & UNIT TESTS", "Danh mục 26 Tauri IPC Commands P2 & Kết quả 44/44 Workspace Tests", f"""
+# PAGE 10: TAURI IPC COMMANDS & 46/46 WORKSPACE UNIT TESTS
+pages.append(page_wrap(10, "IPC & UNIT TESTS", "Danh mục 29 Tauri IPC Commands P2 & Kết quả 46/46 Workspace Tests", f"""
   <div class="grid-2">
     <div class="card">
-      <div class="card-h">1. DANH MỤC 26 TAURI IPC COMMANDS MỚI (studio_p2.rs)</div>
+      <div class="card-h">1. DANH MỤC 29 TAURI IPC COMMANDS MỚI (studio_p2.rs)</div>
       <table>
         <tr><th style="width:32%;">Nhóm Chức năng</th><th style="width:68%;">Tauri Commands Đã Đăng ký</th></tr>
         <tr><td><b>Project Workspace (6)</b></td><td><code>studio_list_projects</code>, <code>studio_get_project_detail</code>, <code>studio_create_project</code>, <code>studio_update_project</code>, <code>studio_clone_project</code>, <code>studio_delete_project</code></td></tr>
         <tr><td><b>Workflows &amp; Templates (3)</b></td><td><code>studio_list_project_workflows</code>, <code>studio_save_project_workflow</code>, <code>studio_list_project_templates</code></td></tr>
         <tr><td><b>Tasks &amp; Modules (5)</b></td><td><code>studio_list_project_tasks</code>, <code>studio_upsert_project_task</code>, <code>studio_delete_project_task</code>, <code>studio_list_project_modules</code>, <code>studio_upsert_project_module</code></td></tr>
-        <tr><td><b>Mini Tool Schema &amp; Vault (6)</b></td><td><code>studio_get_ui_schema</code>, <code>studio_save_ui_schema</code>, <code>studio_list_project_accounts</code>, <code>studio_upsert_project_account</code>, <code>studio_vault_set_secret</code>, <code>studio_vault_has_secret</code>, <code>studio_vault_list_namespace</code>, <code>studio_vault_delete_secret</code></td></tr>
+        <tr><td><b>Mini Tool Schema &amp; Vault (8)</b></td><td><code>studio_get_ui_schema</code>, <code>studio_save_ui_schema</code>, <code>studio_list_project_accounts</code>, <code>studio_upsert_project_account</code>, <code>studio_vault_set_secret</code>, <code>studio_vault_has_secret</code>, <code>studio_vault_list_namespace</code>, <code>studio_vault_delete_secret</code></td></tr>
         <tr><td><b>Keystore &amp; DB Ops (7)</b></td><td><code>studio_get_producer_key_status</code>, <code>studio_rotate_producer_key</code>, <code>studio_backup_producer_key</code>, <code>studio_restore_producer_key</code>, <code>studio_backup_database</code>, <code>studio_check_db_integrity</code>, <code>studio_migrate_legacy_jx2</code></td></tr>
       </table>
     </div>
     <div class="card">
-      <div class="card-h">2. TỔNG HỢP 44/44 UNIT TESTS TOÀN WORKSPACE</div>
+      <div class="card-h">2. TỔNG HỢP 46/46 UNIT TESTS TOÀN WORKSPACE</div>
       <table>
         <tr><th>Crate / App</th><th>Số Tests</th><th>Kết quả</th><th>Nội dung Test P2 Mới Bổ sung</th></tr>
-        <tr><td><code>farmerpro</code> (Tauri)</td><td>1</td><td><span class="tag-pass">PASS</span></td><td><code>test_tauri_p2_project_crud_and_isolation_layer</code></td></tr>
-        <tr><td><code>fp-storage</code></td><td>8</td><td><span class="tag-pass">PASS</span></td><td>+5 tests: v1→v2, Rollback, Backup/Restore, JX2 10 wf, Isolation</td></tr>
+        <tr><td><code>farmerpro</code> (Tauri)</td><td>1</td><td><span class="tag-pass">PASS</span></td><td><code>test_tauri_p2_project_crud_and_isolation_layer</code> (IPC handlers + JSON)</td></tr>
+        <tr><td><code>fp-storage</code></td><td>9</td><td><span class="tag-pass">PASS</span></td><td>+6 tests: v1→v2, Rollback, Backup/Restore, JX2 10 wf, Isolation, Manifest Sync</td></tr>
         <tr><td><code>fp-security</code></td><td>6</td><td><span class="tag-pass">PASS</span></td><td>+4 tests: WinCred Namespaces, DPAPI, Legacy v1 Upgrade, Backup/Restore</td></tr>
         <tr><td><code>fp-builder</code></td><td>4</td><td><span class="tag-pass">PASS</span></td><td>PE RT_RCDATA #7777 + DPAPI ProducerKeyManager delegation</td></tr>
-        <tr><td><code>fp-workflow-runtime</code></td><td>3</td><td><span class="tag-pass">PASS</span></td><td>Chạy ổn định sau khi gỡ hardcode <code>jx2mobile</code></td></tr>
+        <tr><td><code>fp-workflow-runtime</code></td><td>4</td><td><span class="tag-pass">PASS</span></td><td>+1 test: Project-scoped template isolation &amp; traversal guard</td></tr>
         <tr><td>10 Crates khác</td><td>22</td><td><span class="tag-pass">PASS</span></td><td><code>fp-actions(4), fp-adb(2), fp-bundle*(3), fp-device(3), fp-domain(2), fp-scheduler(2), fp-testkit(1), fp-vision(3), fp-workflow-schema(2)</code></td></tr>
-        <tr><td><b>TỔNG WORKSPACE</b></td><td><b>44</b></td><td><span class="tag-pass">44/44 PASS</span></td><td>0 failed · 0 ignored (Log: <code>cargo_test_workspace_p2_clean.log</code>)</td></tr>
+        <tr><td><b>TỔNG WORKSPACE</b></td><td><b>46</b></td><td><span class="tag-pass">46/46 PASS</span></td><td>0 failed · 0 ignored (Log: <code>cargo_test_workspace_p2_clean.log</code>)</td></tr>
       </table>
     </div>
   </div>
@@ -850,7 +850,7 @@ pages.append(page_wrap(11, "GIT & ROLLBACK", "Báo cáo PASS/FAIL Trung thực, 
         <tr><td>Multi-Project SQLite v2 Schema &amp; CRUD</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Đã kiểm thử qua Rust unit tests + <code>fp-cli</code></td></tr>
         <tr><td>Online Backup, Migration, Rollback &amp; JX2</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Đã verify trên bản sao và nâng cấp an toàn <code>dist-portable</code></td></tr>
         <tr><td>Windows Credential Manager &amp; DPAPI</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Chạy API OS thật trên Windows 10/11</td></tr>
-        <tr><td>Tauri IPC Registration (26 commands)</td><td><span class="tag-pass">IMPLEMENTED</span></td><td>Biên dịch sạch + test tầng handler Rust; chưa gọi từ UI React (chờ P4)</td></tr>
+        <tr><td>Tauri IPC Registration (29 commands)</td><td><span class="tag-pass">IMPLEMENTED</span></td><td>Biên dịch sạch + test tầng handler Rust + JSON; chưa gọi từ UI React (chờ P4)</td></tr>
         <tr><td>Proxy Probe / ADB Forward / Checkpoint Resume</td><td><span class="tag-plan">PLANNED P3</span></td><td>Không triển khai ở P2 theo đúng kỷ luật Stage-Gate</td></tr>
         <tr><td>Giao diện Studio 6 khu vực &amp; WYSIWYG Builder</td><td><span class="tag-plan">PLANNED P4</span></td><td><code>apps/desktop/src</code> giữ nguyên 100%</td></tr>
       </table>
@@ -868,7 +868,7 @@ pages.append(page_wrap(11, "GIT & ROLLBACK", "Báo cáo PASS/FAIL Trung thực, 
     </div>
   </div>
   <div class="card" style="margin-top:2.5mm; padding:2.2mm 3mm;">
-    <div class="card-h" style="margin-bottom:1.2mm;">3. TÓM TẮT GIT DIFF CODE P2 (git diff --stat fab1a1a..9bd0e45)</div>
+    <div class="card-h" style="margin-bottom:1.2mm;">3. TÓM TẮT GIT DIFF CODE P2 (git diff --stat fab1a1a..HEAD)</div>
     <pre class="code-box" style="column-count:2; column-gap:5mm; font-size:7.6pt; line-height:1.22; padding:2mm 2.8mm;">{git_diff_stat.strip()}</pre>
   </div>
 """))
@@ -892,7 +892,7 @@ pages.append(page_wrap(12, "SẴN SÀNG CHO P3", "Danh sách Chức năng Sẵn 
       <div class="card-h">2. DANH MỤC TỆP BẰNG CHỨNG P2 (artifacts/p2_evidence/)</div>
       <table>
         <tr><th>Tệp Bằng chứng</th><th>Nội dung</th></tr>
-        <tr><td><code>cargo_test_workspace_p2_clean.log</code></td><td>Log chạy thật 44/44 workspace unit tests PASS</td></tr>
+        <tr><td><code>cargo_test_workspace_p2_clean.log</code></td><td>Log chạy thật 46/46 workspace unit tests PASS</td></tr>
         <tr><td><code>p2_verify_dist_portable_sandbox.json</code></td><td>JSON kết quả verify-p2 trên bản sao production DB</td></tr>
         <tr><td><code>p2_verify_root_db_sandbox.json</code></td><td>JSON kết quả verify-p2 trên bản sao root DB</td></tr>
         <tr><td><code>p2_dist_portable_migration_report.json</code></td><td>Báo cáo trước/sau migrate-p2 có bảo vệ backup &amp; restore probe</td></tr>
@@ -1194,7 +1194,7 @@ toc = [
     [1, "07. Chứng cứ Project CRUD, Clone & Project Isolation", 7],
     [1, "08. Kiến trúc Windows Credential Manager & DPAPI Keystore", 8],
     [1, "09. Kết quả Kiểm thử Thực tế WinCred & DPAPI", 9],
-    [1, "10. Danh mục 26 Tauri IPC Commands & 44/44 Unit Tests", 10],
+    [1, "10. Danh mục 29 Tauri IPC Commands & 46/46 Unit Tests", 10],
     [1, "11. Báo cáo PASS/FAIL, Git Diff & Phương án Rollback", 11],
     [1, "12. Danh sách Chức năng Sẵn sàng cho P3 & SHA-256 Manifest", 12],
 ]

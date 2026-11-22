@@ -10,6 +10,7 @@ use fp_workflow_schema::{WorkflowDocument, WorkflowNode};
 use image::{ImageFormat, Rgb, RgbImage};
 use std::collections::HashMap;
 use std::io::Cursor;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::watch;
@@ -33,6 +34,7 @@ pub enum NodeOutcome {
 pub struct ExecutionContext {
     pub job_id: String,
     pub device_id: String,
+    pub project_dir: Option<PathBuf>,
     pub variables: HashMap<String, serde_json::Value>,
     pub last_frame: Option<Frame>,
     pub last_target: Option<VisionTarget>,
@@ -44,11 +46,17 @@ impl ExecutionContext {
         Self {
             job_id,
             device_id,
+            project_dir: None,
             variables: HashMap::new(),
             last_frame: None,
             last_target: None,
             last_receipt: None,
         }
+    }
+
+    pub fn with_project_dir(mut self, project_dir: impl Into<PathBuf>) -> Self {
+        self.project_dir = Some(project_dir.into());
+        self
     }
 }
 
@@ -286,7 +294,10 @@ impl WorkflowExecutor {
                     }
                 };
 
-                let template_bytes = Self::resolve_template_bytes(node)?;
+                let template_bytes = Self::resolve_template_bytes_with_project(
+                    node,
+                    ctx.project_dir.as_deref(),
+                )?;
                 let target = self.vision.find_template_multiscale(
                     frame,
                     &template_bytes,
@@ -554,7 +565,10 @@ impl WorkflowExecutor {
                 ctx.last_frame = Some(fresh_frame);
                 let frame = ctx.last_frame.as_ref().unwrap();
 
-                let template_bytes = Self::resolve_template_bytes(node)?;
+                let template_bytes = Self::resolve_template_bytes_with_project(
+                    node,
+                    ctx.project_dir.as_deref(),
+                )?;
                 let target = self.vision.find_template_multiscale(
                     frame,
                     &template_bytes,
@@ -646,6 +660,15 @@ impl WorkflowExecutor {
 
     /// Resolves template image bytes from config (base64, disk path, or deterministic fallback)
     pub fn resolve_template_bytes(node: &WorkflowNode) -> Result<Vec<u8>> {
+        Self::resolve_template_bytes_with_project(node, None)
+    }
+
+    /// Resolves template image bytes strictly scoped to `project_dir` when provided,
+    /// preventing cross-project template filename collisions.
+    pub fn resolve_template_bytes_with_project(
+        node: &WorkflowNode,
+        project_dir: Option<&Path>,
+    ) -> Result<Vec<u8>> {
         // 1. Direct base64 inline image
         if let Some(b64) = node.config.get("templateBase64").and_then(|v| v.as_str()) {
             return decode_base64_payload(b64).context("Failed to decode templateBase64");
@@ -653,44 +676,82 @@ impl WorkflowExecutor {
 
         // 2. File path on disk
         if let Some(path_str) = node.config.get("templateRef").and_then(|v| v.as_str()) {
-            let path = std::path::Path::new(path_str);
-            if path.exists() {
+            let path = Path::new(path_str);
+
+            // 2a. Strict project-scoped lookup first (rejects traversal)
+            if let Some(proj_dir) = project_dir {
+                if path.is_relative() && !path_str.contains("..") {
+                    let scoped_rel = proj_dir.join(path);
+                    if scoped_rel.exists() {
+                        return std::fs::read(&scoped_rel).with_context(|| {
+                            format!(
+                                "Failed to read project template from {}",
+                                scoped_rel.display()
+                            )
+                        });
+                    }
+                    if let Some(file_name) = path.file_name() {
+                        let scoped_tpl = proj_dir.join("templates").join(file_name);
+                        if scoped_tpl.exists() {
+                            return std::fs::read(&scoped_tpl).with_context(|| {
+                                format!(
+                                    "Failed to read project template from {}",
+                                    scoped_tpl.display()
+                                )
+                            });
+                        }
+                    }
+                }
+            }
+
+            if path.is_absolute() && path.exists() {
                 return std::fs::read(path).context("Failed to read template image file from disk");
             }
 
-            // Check next to current exe
-            if let Ok(exe_path) = std::env::current_exe() {
-                if let Some(exe_dir) = exe_path.parent() {
-                    let exe_rel = exe_dir.join(path_str);
-                    if exe_rel.exists() {
-                        return std::fs::read(exe_rel)
-                            .context("Failed to read template image file next to exe");
-                    }
+            // When project_dir is NOT set (e.g., standalone mini-runtime bundle or legacy CLI),
+            // allow relative path & bundle/assets lookup. When project_dir IS set, do NOT scan
+            // sibling projects/* directories to avoid cross-project template leakage.
+            if project_dir.is_none() {
+                if path.exists() {
+                    return std::fs::read(path)
+                        .context("Failed to read template image file from disk");
                 }
-            }
 
-            // Check inside standard project/bundle template search paths (game-agnostic)
-            if let Some(file_name) = path.file_name() {
-                for base_dir in ["bundle/templates", "assets/templates"] {
-                    let candidate = std::path::Path::new(base_dir).join(file_name);
-                    if candidate.exists() {
-                        return std::fs::read(&candidate).with_context(|| {
-                            format!("Failed to read template image from {}", candidate.display())
-                        });
+                if let Ok(exe_path) = std::env::current_exe() {
+                    if let Some(exe_dir) = exe_path.parent() {
+                        let exe_rel = exe_dir.join(path_str);
+                        if exe_rel.exists() {
+                            return std::fs::read(exe_rel)
+                                .context("Failed to read template image file next to exe");
+                        }
                     }
                 }
-                for root_dir in ["projects", "games"] {
-                    let root_path = std::path::Path::new(root_dir);
-                    if let Ok(entries) = std::fs::read_dir(root_path) {
-                        for entry in entries.flatten() {
-                            let candidate = entry.path().join("templates").join(file_name);
-                            if candidate.exists() {
-                                return std::fs::read(&candidate).with_context(|| {
-                                    format!(
-                                        "Failed to read template image from {}",
-                                        candidate.display()
-                                    )
-                                });
+
+                if let Some(file_name) = path.file_name() {
+                    for base_dir in ["bundle/templates", "assets/templates"] {
+                        let candidate = Path::new(base_dir).join(file_name);
+                        if candidate.exists() {
+                            return std::fs::read(&candidate).with_context(|| {
+                                format!(
+                                    "Failed to read template image from {}",
+                                    candidate.display()
+                                )
+                            });
+                        }
+                    }
+                    for root_dir in ["projects", "games"] {
+                        let root_path = Path::new(root_dir);
+                        if let Ok(entries) = std::fs::read_dir(root_path) {
+                            for entry in entries.flatten() {
+                                let candidate = entry.path().join("templates").join(file_name);
+                                if candidate.exists() {
+                                    return std::fs::read(&candidate).with_context(|| {
+                                        format!(
+                                            "Failed to read template image from {}",
+                                            candidate.display()
+                                        )
+                                    });
+                                }
                             }
                         }
                     }
@@ -1059,5 +1120,78 @@ mod tests {
             ctx.variables.get("ocr_matched"),
             Some(&serde_json::Value::Bool(false))
         );
+    }
+
+    #[test]
+    fn test_project_scoped_template_resolution_isolation() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_runtime_tpl_isolation_{}",
+            Uuid::new_v4()
+        ));
+        let proj_a_tpl = temp_dir.join("projects").join("game-a").join("templates");
+        let proj_b_tpl = temp_dir.join("projects").join("game-b").join("templates");
+        std::fs::create_dir_all(&proj_a_tpl).unwrap();
+        std::fs::create_dir_all(&proj_b_tpl).unwrap();
+
+        let bytes_a = generate_colored_png(16, 16, [255, 0, 0]);
+        let bytes_b = generate_colored_png(16, 16, [0, 255, 0]);
+        std::fs::write(proj_a_tpl.join("btn_ok.png"), &bytes_a).unwrap();
+        std::fs::write(proj_b_tpl.join("btn_ok.png"), &bytes_b).unwrap();
+        std::fs::write(proj_a_tpl.join("only_in_a.png"), &bytes_a).unwrap();
+
+        let node_ok = WorkflowNode {
+            id: "n-find".to_string(),
+            node_type: "vision.find_image".to_string(),
+            position: fp_workflow_schema::NodePosition { x: 0.0, y: 0.0 },
+            config: serde_json::json!({ "templateRef": "templates/btn_ok.png" }),
+            timeout_ms: None,
+            retry_policy: None,
+        };
+
+        let resolved_a = WorkflowExecutor::resolve_template_bytes_with_project(
+            &node_ok,
+            Some(&temp_dir.join("projects").join("game-a")),
+        )
+        .unwrap();
+        let resolved_b = WorkflowExecutor::resolve_template_bytes_with_project(
+            &node_ok,
+            Some(&temp_dir.join("projects").join("game-b")),
+        )
+        .unwrap();
+        assert_eq!(resolved_a, bytes_a);
+        assert_eq!(resolved_b, bytes_b);
+        assert_ne!(resolved_a, resolved_b);
+
+        // Project B must NOT see templates that only exist in Project A
+        let node_only_a = WorkflowNode {
+            id: "n-find-a".to_string(),
+            node_type: "vision.find_image".to_string(),
+            position: fp_workflow_schema::NodePosition { x: 0.0, y: 0.0 },
+            config: serde_json::json!({ "templateRef": "templates/only_in_a.png" }),
+            timeout_ms: None,
+            retry_policy: None,
+        };
+        assert!(WorkflowExecutor::resolve_template_bytes_with_project(
+            &node_only_a,
+            Some(&temp_dir.join("projects").join("game-b")),
+        )
+        .is_err());
+
+        // Traversal attempt blocked
+        let node_escape = WorkflowNode {
+            id: "n-escape".to_string(),
+            node_type: "vision.find_image".to_string(),
+            position: fp_workflow_schema::NodePosition { x: 0.0, y: 0.0 },
+            config: serde_json::json!({ "templateRef": "../game-a/templates/only_in_a.png" }),
+            timeout_ms: None,
+            retry_policy: None,
+        };
+        assert!(WorkflowExecutor::resolve_template_bytes_with_project(
+            &node_escape,
+            Some(&temp_dir.join("projects").join("game-b")),
+        )
+        .is_err());
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }

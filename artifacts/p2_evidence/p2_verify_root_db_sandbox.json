@@ -1,9 +1,9 @@
 ﻿{
   "backupAndRestoreV2": {
     "onlineBackup": {
-      "backedUpAtUtc": "2026-11-22T00:38:20.117727900+00:00",
+      "backedUpAtUtc": "2026-11-22T00:55:07.805436500+00:00",
       "backupPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\04_online_backup_v2.db",
-      "backupSha256": "2ba1ac9aa71d80997565aaa7c67b239e69a9c88b00508c6f360a3f43e95bf73e",
+      "backupSha256": "f92df7c03b0eda712ddf1fb2ca0cb2c20bc8c1eadca51ac7c9fcf6175a89eaa8",
       "backupSizeBytes": 266240,
       "integrity": {
         "foreignKeyViolations": 0,
@@ -64,21 +64,21 @@
   "command": "verify-p2",
   "credentialVaultAndDpapi": {
     "dpapiKeystore": {
-      "backupSha256": "008086d8f170ce2c33cd9439aff913858d0fba13c3da44d91d8aee5f8f993714",
-      "initialKeyId": "fp-ed25519-b0435d4ecc2b",
+      "backupSha256": "4579fe247e25f1e29efb63940a2277cc85e51a197e011c02a3333a931dcd8fbb",
+      "initialKeyId": "fp-ed25519-85a6119c520a",
       "noPlaintextSeedOnDisk": true,
       "protectionScheme": "WIN32_DPAPI_LOCAL_USER",
-      "restoredKeyId": "fp-ed25519-b0435d4ecc2b",
-      "rotatedKeyId": "fp-ed25519-c869c692181c",
+      "restoredKeyId": "fp-ed25519-85a6119c520a",
+      "rotatedKeyId": "fp-ed25519-46da33c6dae6",
       "seedMatchesAfterRestore": true
     },
     "isolatedValuesVerified": true,
-    "uriA": "CRED_MGR://FarmerPro/project/jx2-p2-4f8a928a/api_secret",
-    "uriB": "CRED_MGR://FarmerPro/project/slg-p2-4f8a928a/api_secret",
-    "uriTool": "CRED_MGR://FarmerPro/minitool/auto-slg-4f8a928a/proxy_auth",
+    "uriA": "CRED_MGR://FarmerPro/project/jx2-p2-4ece3abf/api_secret",
+    "uriB": "CRED_MGR://FarmerPro/project/slg-p2-4ece3abf/api_secret",
+    "uriTool": "CRED_MGR://FarmerPro/minitool/auto-slg-4ece3abf/proxy_auth",
     "vaultBackend": "WindowsCredentialManager"
   },
-  "executedAtUtc": "2026-11-22T00:38:20.233585+00:00",
+  "executedAtUtc": "2026-11-22T00:55:07.904010100+00:00",
   "jx2Migration": {
     "legacyWorkflowsPreserved": 0,
     "modulesSeeded": 6,
@@ -202,7 +202,7 @@
         "modulesCount": 5,
         "project": {
           "bundleAdb": true,
-          "createdAt": "2026-11-22T00:38:20.098817400+00:00",
+          "createdAt": "2026-11-22T00:55:07.790371300+00:00",
           "exeName": "Auto_JX2_Mobile.exe",
           "gamePackageId": "com.blackhole.jx2mobile",
           "iconRelPath": "branding/icon.ico",
@@ -212,7 +212,7 @@
           "slug": "jx2-mobile",
           "targetHeightPx": 1080,
           "targetWidthPx": 1920,
-          "updatedAt": "2026-11-22T00:38:20.098817400+00:00",
+          "updatedAt": "2026-11-22T00:55:07.790371300+00:00",
           "version": "1.0.0",
           "windowTitle": "Auto Võ Hiệp 2 Mobile v1.0.0"
         },
@@ -229,17 +229,17 @@
         "modulesCount": 3,
         "project": {
           "bundleAdb": true,
-          "createdAt": "2026-11-22T00:38:20.130996400+00:00",
+          "createdAt": "2026-11-22T00:55:07.814333500+00:00",
           "exeName": "Auto_Kingdom_SLG.exe",
           "gamePackageId": "com.kingdom.rise.slg",
           "iconRelPath": "branding/icon.ico",
-          "id": "proj-kingdom-slg-p2-a62ec7cb",
+          "id": "proj-kingdom-slg-p2-036e0acc",
           "name": "Kingdom Rise: Tactics SLG (Verified)",
           "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\projects\\kingdom-slg-p2",
           "slug": "kingdom-slg-p2",
           "targetHeightPx": 720,
           "targetWidthPx": 1280,
-          "updatedAt": "2026-11-22T00:38:20.135367700+00:00",
+          "updatedAt": "2026-11-22T00:55:07.818078800+00:00",
           "version": "1.2.1",
           "windowTitle": "Auto Kingdom Rise: Tactics SLG v1.2.0"
         },
@@ -256,17 +256,17 @@
         "modulesCount": 3,
         "project": {
           "bundleAdb": true,
-          "createdAt": "2026-11-22T00:38:20.140320700+00:00",
+          "createdAt": "2026-11-22T00:55:07.826436500+00:00",
           "exeName": "Auto_Kingdom_Slg_Clone.exe",
           "gamePackageId": "com.kingdom.rise.slg",
           "iconRelPath": "branding/icon.ico",
-          "id": "proj-kingdom-slg-clone-f11838a8",
+          "id": "proj-kingdom-slg-clone-80849f5d",
           "name": "Kingdom Rise Clone",
           "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\projects\\kingdom-slg-clone",
           "slug": "kingdom-slg-clone",
           "targetHeightPx": 720,
           "targetWidthPx": 1280,
-          "updatedAt": "2026-11-22T00:38:20.140320700+00:00",
+          "updatedAt": "2026-11-22T00:55:07.826436500+00:00",
           "version": "1.2.1",
           "windowTitle": "Auto Kingdom Rise Clone v1.2.1"
         },
