@@ -138,7 +138,7 @@ export const CustomWorkflowNode = memo((props: NodeProps) => {
             <h4 className="font-bold text-[#EDF3FC] text-sm leading-tight truncate">
               {nodeData?.label || 'Node'}
             </h4>
-            <span className="text-xs font-mono text-[#8EA2BC] block truncate mt-0.5">
+            <span className="text-xs font-mono text-[#B8C7DC] block truncate mt-0.5">
               {nodeData?.nodeType || 'step'}
             </span>
           </div>

@@ -438,7 +438,8 @@ export const WorkflowStudioContent: React.FC = () => {
                   nodeStrokeColor="#38BDF8"
                   nodeColor="#192230"
                   maskColor="rgba(16, 23, 34, 0.75)"
-                  className="!bg-[#141C28] !border-[#2A3647] !rounded-lg !shadow-lg"
+                  style={{ width: 125, height: 80 }}
+                  className="!hidden 2xl:!block !bg-[#141C28] !border-[#2A3647] !rounded-lg !shadow-lg"
                 />
               )}
             </ReactFlow>

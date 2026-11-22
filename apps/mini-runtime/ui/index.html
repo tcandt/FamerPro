@@ -13,10 +13,20 @@
       --bg-elevated: #1c293d;
       --border: #2a3647;
       --text-main: #edf3fc;
-      --text-muted: #8496ae;
+      --text-muted: #94a3b8;
       --success: #3bc38d;
       --warning: #f59e0b;
       --danger: #f27883;
+      --row-pad-y: 7px;
+      --row-pad-x: 9px;
+      --pane-pad: 8px;
+      --card-gap: 6px;
+    }
+    body.density-compact {
+      --row-pad-y: 4px;
+      --row-pad-x: 7px;
+      --pane-pad: 6px;
+      --card-gap: 4px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", system-ui, sans-serif; }
     body {
@@ -32,77 +42,120 @@
     .topbar {
       background: var(--header-bg);
       border-bottom: 1px solid var(--border);
-      padding: 7px 12px;
+      padding: 6px 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-shrink: 0;
+      gap: 8px;
     }
-    .brand-left { display: flex; align-items: center; gap: 8px; }
+    .brand-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
     .brand-icon {
-      width: 22px; height: 22px; border-radius: 5px;
+      width: 20px; height: 20px; border-radius: 5px;
       border: 1px solid var(--accent);
       background: #1e293b;
       object-fit: cover;
+      shrink: 0;
     }
     .badge {
       padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
       background: rgba(56, 189, 248, 0.14); color: var(--accent);
       border: 1px solid var(--accent);
+      white-space: nowrap;
     }
     .sig-pill {
       padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600;
       background: rgba(59, 195, 141, 0.14); color: var(--success);
       border: 1px solid rgba(59, 195, 141, 0.4);
+      white-space: nowrap;
     }
     .mode-pill-live {
       padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
       background: #133528; color: #3bc38d; border: 1px solid #3bc38d;
+      white-space: nowrap;
     }
     .mode-pill-offline {
       padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
       background: #381e24; color: #f27883; border: 1px solid #f27883;
+      white-space: nowrap;
     }
-    .mode-pill-demo {
-      padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
-      background: #3b2d17; color: #f59e0b; border: 1px solid #f59e0b;
+
+    .sec-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 4px 10px;
+      background: #131b27;
+      border-bottom: 1px solid var(--border);
+      font-size: 10.5px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.03em;
+      cursor: pointer;
     }
+    .sec-hdr:hover { color: var(--text-main); }
+
     .device-section {
       background: var(--bg-card);
       border-bottom: 1px solid var(--border);
-      max-height: 135px;
-      overflow-y: auto;
       flex-shrink: 0;
     }
+    .device-table-wrap { max-height: 120px; overflow-y: auto; }
+    body.density-compact .device-table-wrap { max-height: 92px; }
     table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
     th {
       background: #121a26; color: var(--text-muted); font-weight: 700;
-      text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border);
-      font-size: 10.5px; text-transform: uppercase;
+      text-align: left; padding: 5px 9px; border-bottom: 1px solid var(--border);
+      font-size: 10px; text-transform: uppercase;
     }
-    td { padding: 6px 10px; border-bottom: 1px solid rgba(42,54,71,0.5); }
+    td { padding: var(--row-pad-y) var(--row-pad-x); border-bottom: 1px solid rgba(42,54,71,0.5); }
     tr.active-row { background: rgba(56, 189, 248, 0.08); }
     .state-online { color: var(--success); font-weight: 700; }
     .state-offline { color: var(--danger); font-weight: 700; }
 
+    .main-scroll {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
     .workspace {
       flex: 1;
       display: grid;
-      grid-template-columns: 1.35fr 0.65fr;
+      grid-template-columns: 1.3fr 0.7fr;
       overflow: hidden;
+      min-height: 0;
     }
-    .workspace.single-col { grid-template-columns: 1fr; }
+    .workspace.preset-expanded {
+      grid-template-columns: 1.45fr 0.85fr;
+    }
+    .workspace.single-col {
+      display: flex;
+      flex-direction: column;
+    }
+    .workspace.no-right {
+      grid-template-columns: 1fr;
+    }
     .left-pane {
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      min-height: 0;
+    }
+    .workspace.single-col .left-pane {
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      flex: 1 1 auto;
+      min-height: 110px;
+    }
+    .workspace.single-col .right-pane {
+      flex: 0 1 125px;
+      min-height: 82px;
     }
     .right-pane {
       display: flex;
       flex-direction: column;
       overflow: hidden;
       background: #0c121c;
+      min-height: 0;
     }
     .tab-bar {
       display: flex;
@@ -111,37 +164,44 @@
       padding: 0 8px;
       gap: 4px;
       flex-shrink: 0;
+      align-items: center;
+      justify-content: space-between;
     }
+    .tab-bar-tabs { display: flex; gap: 4px; }
     .tab-btn {
       background: transparent; border: none; color: var(--text-muted);
-      font-weight: 700; font-size: 11px; padding: 8px 10px;
+      font-weight: 700; font-size: 11px; padding: 7px 10px;
       cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase;
     }
     .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .pane-body { flex: 1; overflow-y: auto; padding: 8px; }
+    .pane-body { flex: 1; overflow-y: auto; padding: var(--pane-pad); }
 
     .task-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 7px 9px; margin-bottom: 5px;
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: var(--row-pad-y) var(--row-pad-x);
+      margin-bottom: var(--card-gap);
       background: var(--bg-card); border: 1px solid var(--border);
       border-radius: 6px; gap: 8px;
     }
     .task-row:hover { border-color: var(--accent); }
-    .task-left { display: flex; align-items: center; gap: 7px; min-width: 0; flex: 1; }
+    .task-left { display: flex; align-items: flex-start; gap: 7px; min-width: 0; flex: 1; }
+    .task-left input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; }
     .cat-tag {
-      font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+      font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 3px;
+      white-space: nowrap; flex-shrink: 0;
     }
     .task-title {
       font-weight: 600; color: var(--text-main);
-      line-height: 1.3; word-break: break-word;
+      line-height: 1.32; white-space: normal; word-break: break-word; overflow-wrap: anywhere;
     }
     .task-right { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
     .status-pill {
       font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;
-      background: #202b3b; color: #94a3b8;
+      background: #202b3b; color: #94a3b8; white-space: nowrap;
     }
     .status-pill.running { background: #173355; color: #38bdf8; }
     .status-pill.done { background: #133528; color: #3bc38d; }
+    .status-pill.err { background: #381e24; color: #f27883; }
     .icon-btn {
       background: var(--bg-elevated); border: 1px solid var(--border);
       color: var(--text-main); border-radius: 4px; padding: 3px 6px;
@@ -154,16 +214,16 @@
       font-family: Consolas, monospace; font-size: 11px;
       padding: 8px; overflow-y: auto; line-height: 1.45;
     }
-    .log-line { margin-bottom: 3px; }
+    .log-line { margin-bottom: 3px; word-break: break-word; }
     .log-ts { color: #64748b; margin-right: 5px; }
 
     .setting-card {
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 6px; padding: 10px; margin-bottom: 8px;
+      border-radius: 6px; padding: 8px 10px; margin-bottom: 6px;
     }
     .setting-row {
       display: flex; align-items: center; justify-content: space-between;
-      margin-top: 8px; gap: 8px;
+      margin-top: 6px; gap: 8px;
     }
     input[type="number"], select {
       background: #0f1622; border: 1px solid var(--border);
@@ -171,8 +231,8 @@
     }
     .footer {
       background: var(--header-bg); border-top: 1px solid var(--border);
-      padding: 7px 12px; display: flex; align-items: center;
-      justify-content: space-between; flex-shrink: 0;
+      padding: 6px 12px; display: flex; align-items: center;
+      justify-content: space-between; flex-shrink: 0; gap: 8px; flex-wrap: wrap;
     }
     .btn-primary {
       background: var(--accent); color: #090d16; border: none;
@@ -184,10 +244,11 @@
       border: 1px solid var(--border); font-weight: 600;
       padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px;
     }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <div class="topbar">
+  <div id="topbar-root" class="topbar">
     <div class="brand-left">
       <img id="brand-icon" class="brand-icon" src="" alt="icon" style="display:none;" />
       <span id="version-badge" class="badge">v1.0</span>
@@ -195,39 +256,53 @@
     </div>
     <div style="display:flex;align-items:center;gap:6px;">
       <span id="sig-status" class="sig-pill">✓ Ed25519 Signed</span>
-      <button class="btn-secondary" onclick="toggleLayout()">1/2 Cột ⇄</button>
+      <button id="preset-btn" class="btn-secondary" onclick="toggleLayout()">1/2 Cột ⇄</button>
     </div>
   </div>
 
-  <!-- Top Multi-Device & Character Table (Truthful Live State Only) -->
-  <div class="device-section">
-    <table>
-      <thead id="device-thead"></thead>
-      <tbody id="device-tbody"></tbody>
-    </table>
-  </div>
-
-  <div id="workspace" class="workspace">
-    <div class="left-pane">
-      <div class="tab-bar">
-        <button id="tab-ctrl" class="tab-btn active" onclick="switchLeftTab('ctrl')">ĐIỀU KHIỂN</button>
-        <button id="tab-util" class="tab-btn" onclick="switchLeftTab('util')">TIỆN ÍCH</button>
-        <button id="tab-info" class="tab-btn" onclick="switchLeftTab('info')">MODULES (5-STATE)</button>
+  <div class="main-scroll">
+    <!-- Top Multi-Device Table (Collapsible & Responsive Columns) -->
+    <div id="device-section-root" class="device-section">
+      <div class="sec-hdr" onclick="toggleCollapse('device_table')">
+        <span>Danh sách Thiết bị ADB &amp; Cột Runtime</span>
+        <span id="chevron-device_table">▾</span>
       </div>
-      <div id="left-body" class="pane-body"></div>
+      <div id="body-device_table" class="device-table-wrap">
+        <table>
+          <thead id="device-thead"></thead>
+          <tbody id="device-tbody"></tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="right-pane">
-      <div class="tab-bar">
-        <button id="tab-log" class="tab-btn active" onclick="switchRightTab('log')">NHẬT KÝ</button>
-        <button id="tab-cfg" class="tab-btn" onclick="switchRightTab('cfg')">CÀI ĐẶT (⚙)</button>
+    <div id="workspace" class="workspace">
+      <div id="left-pane-root" class="left-pane">
+        <div class="tab-bar">
+          <div class="tab-bar-tabs">
+            <button id="tab-ctrl" class="tab-btn active" onclick="switchLeftTab('ctrl')">ĐIỀU KHIỂN</button>
+            <button id="tab-util" class="tab-btn" onclick="switchLeftTab('util')">TIỆN ÍCH</button>
+            <button id="tab-info" class="tab-btn" onclick="switchLeftTab('info')">MODULES</button>
+          </div>
+          <span style="font-size:10px;color:var(--text-muted);cursor:pointer;" onclick="toggleCollapse('task_checklist')" id="chevron-task_checklist">▾</span>
+        </div>
+        <div id="left-body" class="pane-body"></div>
       </div>
-      <div id="right-log" class="console-box"></div>
-      <div id="right-cfg" class="pane-body" style="display:none;"></div>
+
+      <div id="right-pane-root" class="right-pane">
+        <div class="tab-bar">
+          <div class="tab-bar-tabs">
+            <button id="tab-log" class="tab-btn active" onclick="switchRightTab('log')">NHẬT KÝ</button>
+            <button id="tab-cfg" class="tab-btn" onclick="switchRightTab('cfg')">CÀI ĐẶT (⚙)</button>
+          </div>
+          <span style="font-size:10px;color:var(--text-muted);cursor:pointer;" onclick="toggleCollapse('quick_log')" id="chevron-quick_log">▾</span>
+        </div>
+        <div id="right-log" class="console-box"></div>
+        <div id="right-cfg" class="pane-body" style="display:none;"></div>
+      </div>
     </div>
   </div>
 
-  <div class="footer">
+  <div id="footer-root" class="footer">
     <div style="display:flex;gap:6px;align-items:center;">
       <button class="btn-primary" onclick="runAllEnabledTasks()">▶ CHẠY NHIỆM VỤ (ADB THẬT)</button>
       <button class="btn-secondary" onclick="refreshDevices()">🔄 Quét ADB</button>
@@ -246,6 +321,7 @@
       taskStates: {},
       logs: [],
       singleCol: false,
+      collapsed: {},
     };
 
     async function invokeTauri(cmd, args = {}) {
@@ -253,6 +329,73 @@
         return await window.__TAURI_INTERNALS__.invoke(cmd, args);
       }
       throw new Error("Tauri IPC not available");
+    }
+
+    function isHidden(secId) {
+      const hidden = STATE.bootstrap?.uiSchema?.hiddenComponents || [];
+      return hidden.includes(secId);
+    }
+
+    function applySchemaLayout() {
+      const b = STATE.bootstrap;
+      if (!b) return;
+      const schema = b.uiSchema;
+      const vars = schema.initialRuntimeVars || {};
+      const density = vars.__uiCompactDensity || (schema.layoutPreset === 'expanded' ? 'comfortable' : 'compact');
+      document.body.classList.toggle('density-compact', density === 'compact');
+
+      const hiddenHeader = isHidden('header_bar');
+      document.getElementById('topbar-root').classList.toggle('hidden', hiddenHeader);
+
+      const hiddenDevice = isHidden('device_table');
+      document.getElementById('device-section-root').classList.toggle('hidden', hiddenDevice);
+
+      const hiddenTasks = isHidden('task_checklist');
+      const hiddenUtils = isHidden('utilities_panel');
+      const hiddenLeft = hiddenTasks && hiddenUtils;
+      document.getElementById('left-pane-root').classList.toggle('hidden', hiddenLeft);
+      document.getElementById('tab-ctrl').classList.toggle('hidden', hiddenTasks);
+      document.getElementById('tab-util').classList.toggle('hidden', hiddenUtils);
+      if (hiddenTasks && !hiddenUtils && STATE.leftTab === 'ctrl') {
+        STATE.leftTab = 'util';
+      }
+
+      const hiddenLog = isHidden('quick_log');
+      document.getElementById('right-pane-root').classList.toggle('hidden', hiddenLog);
+
+      const hiddenFooter = isHidden('footer_controls') && isHidden('status_footer');
+      document.getElementById('footer-root').classList.toggle('hidden', hiddenFooter);
+
+      const ws = document.getElementById('workspace');
+      ws.classList.remove('single-col', 'preset-expanded', 'no-right');
+      if (hiddenLog) {
+        ws.classList.add('no-right');
+      } else if (STATE.singleCol || schema.layoutPreset === 'compact1_col') {
+        ws.classList.add('single-col');
+      } else if (schema.layoutPreset === 'expanded') {
+        ws.classList.add('preset-expanded');
+      }
+
+      const logMaxH = Number(vars.__uiLogMaxHeightPx || 0);
+      if (logMaxH > 0 && schema.layoutPreset !== 'expanded') {
+        document.getElementById('right-log').style.maxHeight = `${logMaxH}px`;
+      } else {
+        document.getElementById('right-log').style.maxHeight = '';
+      }
+    }
+
+    function toggleCollapse(secId) {
+      STATE.collapsed[secId] = !STATE.collapsed[secId];
+      const isCol = Boolean(STATE.collapsed[secId]);
+      if (secId === 'device_table') {
+        document.getElementById('body-device_table').classList.toggle('hidden', isCol);
+      } else if (secId === 'task_checklist') {
+        document.getElementById('left-body').classList.toggle('hidden', isCol);
+      } else if (secId === 'quick_log') {
+        document.getElementById('right-log').classList.toggle('hidden', isCol && STATE.rightTab === 'log');
+      }
+      const chev = document.getElementById('chevron-' + secId);
+      if (chev) chev.textContent = isCol ? '▸' : '▾';
     }
 
     function addLog(msg) {
@@ -270,7 +413,7 @@
 
     function toggleLayout() {
       STATE.singleCol = !STATE.singleCol;
-      document.getElementById('workspace').classList.toggle('single-col', STATE.singleCol);
+      applySchemaLayout();
     }
 
     function switchLeftTab(tab) {
@@ -295,10 +438,16 @@
       switchRightTab('cfg');
     }
 
+    function visibleDeviceColumns() {
+      const cols = STATE.bootstrap?.uiSchema?.deviceColumns || [];
+      const w = window.innerWidth || 960;
+      return cols.filter(c => !c.minWindowWidth || w >= c.minWindowWidth);
+    }
+
     function renderDeviceTable() {
       const b = STATE.bootstrap;
       if (!b) return;
-      const cols = b.uiSchema.deviceColumns || [];
+      const cols = visibleDeviceColumns();
       const vars = b.runtimeVars || {};
 
       let headHtml = `<tr><th>[✓] Thiết bị ADB</th><th>Package Game</th><th>Trạng thái</th>`;
@@ -353,8 +502,9 @@
       if (STATE.leftTab === 'ctrl') {
         const cats = {};
         for (const c of b.uiSchema.taskCategories) cats[c.id] = c;
+        const sortedTasks = [...b.uiSchema.tasks].sort((a, x) => a.priority - x.priority);
 
-        container.innerHTML = b.uiSchema.tasks.map(t => {
+        container.innerHTML = sortedTasks.map(t => {
           const cat = cats[t.categoryId] || { shortTag: '[TASK]', colorHex: '#38bdf8' };
           const st = STATE.taskStates[t.id] || { enabled: t.defaultEnabled, status: 'Chưa làm', cls: '' };
           const hasSettings = t.settingsSchema && t.settingsSchema.length > 0;
@@ -377,7 +527,6 @@
         const activeModules = new Set(
           b.manifest.moduleStates.filter(m => m.packagedInRelease && m.activeAndInitialized).map(m => m.moduleId)
         );
-        // Strictly hide or lock utilities whose required module was not packaged
         container.innerHTML = b.uiSchema.utilities
           .filter(u => !u.requiredModule || activeModules.has(u.requiredModule))
           .map(u => `<div class="setting-card">
@@ -449,7 +598,7 @@
         renderLeftPane();
         addLog(`✓ Hoàn tất '${taskId}' trên ${res.driverUsed}: ${res.eventsCount} bước (${res.state})`);
       } catch (e) {
-        STATE.taskStates[taskId] = { enabled: true, status: 'Tạm dừng/Lỗi', cls: '' };
+        STATE.taskStates[taskId] = { enabled: true, status: 'Lỗi / Offline', cls: 'err' };
         renderLeftPane();
         addLog(`✗ Từ chối giả lập (Fail-Closed): ${e}`);
       }
@@ -491,16 +640,31 @@
           img.style.display = 'block';
         }
         document.getElementById('footer-meta').textContent =
-          `KeyID: ${data.keyId} | Namespace: runtime_${data.manifest.project.slug}.db`;
+          `KeyID: ${data.keyId} | Preset: ${data.uiSchema.layoutPreset} | runtime_${data.manifest.project.slug}.db`;
+
+        const initCollapsed = data.uiSchema.initialRuntimeVars?.__uiCollapsedSections || [];
+        for (const sec of initCollapsed) {
+          STATE.collapsed[sec] = true;
+        }
+        if (data.uiSchema.layoutPreset === 'compact1_col') {
+          STATE.singleCol = true;
+        }
 
         for (const t of data.uiSchema.tasks) {
           STATE.taskStates[t.id] = { enabled: t.defaultEnabled, status: 'Chưa làm', cls: '' };
         }
 
+        applySchemaLayout();
+        for (const sec of initCollapsed) {
+          const prev = STATE.collapsed[sec];
+          STATE.collapsed[sec] = false;
+          if (prev) toggleCollapse(sec);
+        }
+
         renderDeviceTable();
         renderLeftPane();
         renderSettingsPane();
-        addLog(`Khởi động ${data.uiSchema.windowTitle}`);
+        addLog(`Khởi động ${data.uiSchema.windowTitle} (${data.uiSchema.layoutPreset})`);
         addLog(`Chữ ký RFC 8032 (${data.signatureAlgorithm}): HỢP LỆ`);
         addLog(`Trạng thái ADB thực tế: ${data.devices.length} máy kết nối.`);
       } catch (e) {
@@ -508,6 +672,7 @@
       }
     }
 
+    window.addEventListener('resize', () => { if (STATE.bootstrap) renderDeviceTable(); });
     window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>

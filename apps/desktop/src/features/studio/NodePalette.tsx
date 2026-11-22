@@ -198,7 +198,7 @@ export const NodePalette: React.FC = () => {
     .filter((grp) => grp.items.length > 0);
 
   return (
-    <div className="w-[250px] bg-[#141C28] border-r border-[#2A3647] flex flex-col h-full select-none shrink-0 z-20">
+    <div className="w-[210px] xl:w-[250px] bg-[#141C28] border-r border-[#2A3647] flex flex-col h-full select-none shrink-0 z-20">
       <div className="p-3 border-b border-[#2A3647]">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-bold text-[#EDF3FC] tracking-wide">THƯ VIỆN NODE</h3>

@@ -1,0 +1,134 @@
+{
+  "milestone": "P4.7",
+  "executedAtUtc": "2026-11-22T05:55:24.772Z",
+  "studioClosedBeforeStandaloneLaunch": true,
+  "studioConsoleErrors": [],
+  "regressionViews": [
+    {
+      "label": "Projects & Dashboard",
+      "rendered": true
+    },
+    {
+      "label": "Workflow Studio",
+      "rendered": true
+    },
+    {
+      "label": "Tasks & Modules",
+      "rendered": true
+    },
+    {
+      "label": "Device Lab",
+      "rendered": true
+    },
+    {
+      "label": "Test & Debug",
+      "rendered": true
+    },
+    {
+      "label": "Mini Tool Builder",
+      "rendered": true
+    },
+    {
+      "label": "Account Vault",
+      "rendered": true
+    },
+    {
+      "label": "Proxy & Port Map",
+      "rendered": true
+    },
+    {
+      "label": "System Settings",
+      "rendered": true
+    }
+  ],
+  "wysiwygReport": {
+    "paletteShowedUtilitiesChipOnRemove": true,
+    "hasErrorPreviewState": true,
+    "persistedAfterReload": {
+      "layoutPreset": "compact1_col",
+      "defaultWindowSize": [
+        640,
+        460
+      ],
+      "hiddenComponents": [
+        "utilities_panel"
+      ],
+      "deviceColumnsCount": 1
+    }
+  },
+  "omegaStandalone": {
+    "STANDALONE_LAUNCH_PASS": true,
+    "LIVE_WORKFLOW_EXECUTION_PASS": false,
+    "liveWorkflowBlockReason": "BLOCKED: 0 physical/emulator Android devices attached to ADB (LDPlayer requires UAC elevation)",
+    "runtimeCheck": {
+      "windowTitle": "Omega Compact Auto v1.2.0",
+      "projectSlug": "omega-compact",
+      "layoutPreset": "compact1_col",
+      "defaultWindowSize": [
+        640,
+        460
+      ],
+      "accentHex": "#1878F5",
+      "signatureVerified": true,
+      "isDemoMode": false,
+      "devicesCount": 0,
+      "isCompactDensityBody": true,
+      "isSingleColWorkspace": true,
+      "utilitiesTabHidden": true,
+      "taskTitles": [
+        "Nhiệm vụ Chính Tuyến Độ Dài Rất Lớn Để Kiểm Tra Wrap Trên Compact Window",
+        "Nhận quà Điểm danh Ngày"
+      ],
+      "firstTaskNoHorizontalClip": true,
+      "columnsRendered": [
+        "[✓] Thiết bị ADB",
+        "Package Game",
+        "Trạng thái",
+        "Runtime Col 1"
+      ]
+    },
+    "consoleErrors": [],
+    "shot": {
+      "filename": "p4_7_minitool_omega_compact.png",
+      "width": 640,
+      "height": 460
+    }
+  },
+  "titanStandalone": {
+    "STANDALONE_LAUNCH_PASS": true,
+    "LIVE_WORKFLOW_EXECUTION_PASS": false,
+    "liveWorkflowBlockReason": "BLOCKED: 0 physical/emulator Android devices attached to ADB (LDPlayer requires UAC elevation)",
+    "runtimeCheck": {
+      "windowTitle": "Titan Expanded Auto v3.0.0",
+      "projectSlug": "titan-expanded",
+      "layoutPreset": "expanded",
+      "defaultWindowSize": [
+        1020,
+        660
+      ],
+      "accentHex": "#8B5CF6",
+      "signatureVerified": true,
+      "isDemoMode": false,
+      "devicesCount": 0,
+      "isCompactDensityBody": false,
+      "isSingleColWorkspace": false,
+      "utilitiesTabHidden": false,
+      "taskTitles": [
+        "Chiến trường Liên Server Titan"
+      ],
+      "firstTaskNoHorizontalClip": true,
+      "columnsRendered": [
+        "[✓] Thiết bị ADB",
+        "Package Game",
+        "Trạng thái",
+        "Rank Titan"
+      ]
+    },
+    "consoleErrors": [],
+    "shot": {
+      "filename": "p4_7_minitool_titan_expanded.png",
+      "width": 1020,
+      "height": 660
+    }
+  }
+}

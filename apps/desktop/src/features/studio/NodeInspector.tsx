@@ -81,7 +81,7 @@ export const NodeInspector: React.FC = () => {
 
   if (!selectedNode) {
     return (
-      <div className="w-[320px] bg-[#141C28] border-l border-[#2A3647] flex flex-col items-center justify-center p-6 text-center select-none shrink-0 z-20">
+      <div className="w-[280px] xl:w-[320px] bg-[#141C28] border-l border-[#2A3647] flex flex-col items-center justify-center p-6 text-center select-none shrink-0 z-20">
         <div className="w-12 h-12 rounded-xl bg-[#192230] border border-[#2A3647] flex items-center justify-center text-[#74869D] mb-3 shadow-inner">
           <Info size={22} className="text-[#38BDF8]" />
         </div>
@@ -99,7 +99,7 @@ export const NodeInspector: React.FC = () => {
   const minConfidence = config.minConfidence ?? 0.9;
 
   return (
-    <div className="w-[320px] bg-[#141C28] border-l border-[#2A3647] flex flex-col h-full select-none shrink-0 z-20">
+    <div className="w-[280px] xl:w-[320px] bg-[#141C28] border-l border-[#2A3647] flex flex-col h-full select-none shrink-0 z-20">
       {/* Header */}
       <div className="p-3 border-b border-[#2A3647] flex items-center justify-between bg-[#16202F]">
         <div className="min-w-0">

@@ -1,0 +1,62 @@
+{
+  "FARMERPRO_P4_7_ACCEPTANCE_REPORT.html": {
+    "bytes": 661483,
+    "sha256": "db4bc74cb3227b1c37adb2f74415a081633928d186d413051969bf55dac3e2d8"
+  },
+  "FARMERPRO_P4_7_ACCEPTANCE_REPORT.pdf": {
+    "bytes": 524316,
+    "sha256": "7e09207bf433470d4045ff958bf101f9b108eb1d2b1980dd0f71fedb49ba042f"
+  },
+  "cargo_test_workspace_p4_7.log": {
+    "bytes": 9245,
+    "sha256": "a837ce13e4f36c8de1205769b2bd82e49830d124883da86e02f4c19654889bff"
+  },
+  "p4_7_builder_wysiwyg_1600x900.png": {
+    "bytes": 124611,
+    "sha256": "853c9cffcd8498746f6c490410a161af21ef65d32fc66c9b68ec4776d35fd485"
+  },
+  "p4_7_minitool_omega_compact.png": {
+    "bytes": 38770,
+    "sha256": "3fb9ea2fff2adc2255163e2439c3bba6ad3357212b9acf913b9df7468f19ef0c"
+  },
+  "p4_7_minitool_titan_expanded.png": {
+    "bytes": 36364,
+    "sha256": "96ff1666d34b62f4b2e1de85e11472fa9698e8cf2be96ffa982a6b5b923a1985"
+  },
+  "p4_7_pdf_qa_report.json": {
+    "bytes": 444,
+    "sha256": "7209d26726ff225187e84bc949ef0cae45b452d0f34def9fde027c86267d93d9"
+  },
+  "p4_7_studio_1280x720.png": {
+    "bytes": 126676,
+    "sha256": "b1427afc8d44b32de5034d4ed8d0ba9db57b5c46440f861c7c19962685b6a25f"
+  },
+  "p4_7_studio_1600x900.png": {
+    "bytes": 157429,
+    "sha256": "cc36c49defc54f037aaf5d9a9da7b644fad1c7594bfd03c63fdccccb4119ef04"
+  },
+  "p4_7_verification_report.json": {
+    "bytes": 3388,
+    "sha256": "a81be2a66e53e169ee9d2731ad07cdfb33a1b37dc5ec16127216624ec525619c"
+  },
+  "pdf_p4_7_rendered_pages/p4_7_page_01.png": {
+    "bytes": 184819,
+    "sha256": "a79cf053a5a75667f079c6b4f1a5ceb7be23f9f33c3d3357b61c53b12476e19c"
+  },
+  "pdf_p4_7_rendered_pages/p4_7_page_02.png": {
+    "bytes": 204631,
+    "sha256": "31a607cfd1b25d2d68980502bbfdf39e2b886f994f82697601c20dabf90e7b50"
+  },
+  "pdf_p4_7_rendered_pages/p4_7_page_03.png": {
+    "bytes": 242046,
+    "sha256": "de4a8dddb953e75d2c769e14e97edbeac2b9470e04099a163ae0dc439a77a92b"
+  },
+  "pdf_p4_7_rendered_pages/p4_7_page_04.png": {
+    "bytes": 204083,
+    "sha256": "9bac6cc57fef8005444fb5d002108154f0baf357aa23e24468e8984b0a6a6dff"
+  },
+  "pdf_p4_7_rendered_pages/p4_7_page_05.png": {
+    "bytes": 230852,
+    "sha256": "a4a7ce04ab7f0d3a3b67c49e828e5051503a6777541770a8725610fecee5838d"
+  }
+}
