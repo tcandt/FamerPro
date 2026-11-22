@@ -463,6 +463,21 @@ CREATE INDEX IF NOT EXISTS idx_rt_env_project ON runtime_variable_envelopes(proj
 CREATE INDEX IF NOT EXISTS idx_rt_events_stream_seq ON runtime_var_events(stream_id, seq);
 "#;
 
+pub const MIGRATION_V4_RELEASE_LIFECYCLE_SQL: &str = r#"
+CREATE TABLE IF NOT EXISTS project_release_transitions (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    release_id TEXT NOT NULL REFERENCES project_releases(id) ON DELETE CASCADE,
+    from_state TEXT NOT NULL,
+    to_state TEXT NOT NULL,
+    note TEXT NOT NULL,
+    transitioned_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_release_transitions_rel
+    ON project_release_transitions(release_id, transitioned_at DESC);
+"#;
+
 pub fn list_applied_versions(conn: &Connection) -> Result<Vec<i64>> {
     let table_exists: i64 = conn.query_row(
         "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='schema_migrations'",
@@ -690,6 +705,39 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
 
         tx.execute(
             "INSERT INTO schema_migrations (version, applied_at) VALUES (3, ?1);",
+            params![now],
+        )?;
+        tx.commit()?;
+    }
+
+    // Migration v4: P5.2 Release Lifecycle, Compatibility Metadata & Transition Audit Ledger
+    if !applied.contains(&4) {
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        tx.execute_batch(MIGRATION_V4_RELEASE_LIFECYCLE_SQL)
+            .context("Failed applying SQLite migration v4 tables")?;
+
+        let alters: &[(&str, &str)] = &[
+            ("lifecycle_state", "ALTER TABLE project_releases ADD COLUMN lifecycle_state TEXT NOT NULL DEFAULT 'Published';"),
+            ("release_channel", "ALTER TABLE project_releases ADD COLUMN release_channel TEXT NOT NULL DEFAULT 'internal';"),
+            ("changelog_md", "ALTER TABLE project_releases ADD COLUMN changelog_md TEXT NOT NULL DEFAULT '';"),
+            ("min_runtime_version", "ALTER TABLE project_releases ADD COLUMN min_runtime_version TEXT NOT NULL DEFAULT '0.1.0';"),
+            ("workflow_schema_version", "ALTER TABLE project_releases ADD COLUMN workflow_schema_version INTEGER NOT NULL DEFAULT 1;"),
+            ("ui_schema_version", "ALTER TABLE project_releases ADD COLUMN ui_schema_version INTEGER NOT NULL DEFAULT 1;"),
+            ("module_api_version", "ALTER TABLE project_releases ADD COLUMN module_api_version TEXT NOT NULL DEFAULT '1.0.0';"),
+            ("sqlite_schema_version", "ALTER TABLE project_releases ADD COLUMN sqlite_schema_version INTEGER NOT NULL DEFAULT 4;"),
+            ("git_commit", "ALTER TABLE project_releases ADD COLUMN git_commit TEXT NOT NULL DEFAULT '';"),
+            ("signature_status", "ALTER TABLE project_releases ADD COLUMN signature_status TEXT NOT NULL DEFAULT 'Ed25519-Verified';"),
+            ("promoted_at", "ALTER TABLE project_releases ADD COLUMN promoted_at TEXT;"),
+            ("rolled_back_from_id", "ALTER TABLE project_releases ADD COLUMN rolled_back_from_id TEXT;"),
+        ];
+        for (col, sql) in alters {
+            if !table_has_column(&tx, "project_releases", col)? {
+                tx.execute(sql, [])?;
+            }
+        }
+
+        tx.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (4, ?1);",
             params![now],
         )?;
         tx.commit()?;

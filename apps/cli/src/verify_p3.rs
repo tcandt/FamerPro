@@ -604,6 +604,7 @@ pub async fn run_p3_verification(repo_root: &Path, out_dir: &Path) -> Result<ser
         signature_ed25519_hex: build_report.signature_ed25519_hex.clone(),
         build_report_json: serde_json::to_string(&build_report)?,
         built_at: chrono::Utc::now().to_rfc3339(),
+        ..Default::default()
     })?;
 
     let integrity = storage.check_integrity()?;

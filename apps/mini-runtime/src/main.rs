@@ -4,18 +4,20 @@
 use anyhow::{bail, Context, Result};
 use fp_adb::AdbRunner;
 use fp_bundle_contract::{
-    audit_portable_environment, resolve_writable_runtime_db_path, MiniToolUiSchema,
-    ModuleCapability, ModuleRegistry, ReleaseBundleManifest,
+    audit_portable_environment, check_sqlite_downgrade_compatibility,
+    resolve_writable_runtime_db_path, MiniToolUiSchema, ModuleCapability, ModuleRegistry,
+    ReleaseBundleManifest, RuntimeCompatibilityProfile, CURRENT_RUNTIME_VERSION,
+    CURRENT_SQLITE_SCHEMA_VERSION,
 };
 use fp_bundle_verify::{
-    read_pe_embedded_pubkey_from_current_process, sha256_hex, SignedBundleEnvelope,
-    PE_ED25519_PUBKEY_RESOURCE_ID,
+    read_pe_embedded_pubkey_from_current_process, sha256_hex, verify_bundle_compatibility_gate,
+    SignedBundleEnvelope, PE_ED25519_PUBKEY_RESOURCE_ID,
 };
 use fp_domain::{
     ConnectionState, DeviceDriver, DeviceSummary, RuntimeVarDeltaEvent, RuntimeVariableEnvelope,
     StepEvent, VariableSource,
 };
-use fp_storage::{RuntimeProvenanceSnapshot, StorageManager};
+use fp_storage::{ExternalWalReader, RuntimeProvenanceSnapshot, StorageManager};
 use fp_testkit::FakeDeviceDriver;
 use fp_workflow_runtime::{ExecutionContext, ExecutionSignal, WorkflowExecutor};
 use fp_workflow_schema::WorkflowDocument;
@@ -23,10 +25,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{
-    atomic::{AtomicUsize, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
     Arc, Mutex,
 };
-use tauri::{Emitter, Manager, State};
+use tauri::{Emitter, Manager, State, WindowEvent};
 use tokio::sync::watch;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -100,6 +102,31 @@ pub struct MiniRuntimeState {
     pub is_demo_mode: bool,
 }
 
+fn resolve_runtime_db_path(exe_dir: &Path, slug: &str) -> PathBuf {
+    if let Ok(explicit_data) = std::env::var("FP_MINI_DATA_DIR") {
+        let dir = PathBuf::from(explicit_data);
+        if std::fs::create_dir_all(&dir).is_ok() {
+            return dir.join(format!("runtime_{}.db", slug));
+        }
+    }
+    if let Some(versions_dir) = exe_dir.parent() {
+        if versions_dir
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.eq_ignore_ascii_case("versions"))
+            .unwrap_or(false)
+        {
+            if let Some(install_root) = versions_dir.parent() {
+                let managed_data = install_root.join("data");
+                if std::fs::create_dir_all(&managed_data).is_ok() {
+                    return managed_data.join(format!("runtime_{}.db", slug));
+                }
+            }
+        }
+    }
+    resolve_writable_runtime_db_path(exe_dir, slug).0
+}
+
 fn resolve_bundle_dir() -> PathBuf {
     if let Ok(env_dir) = std::env::var("FP_MINI_BUNDLE_DIR") {
         let p = PathBuf::from(env_dir);
@@ -165,17 +192,27 @@ fn load_and_verify_bundle(bundle_dir: &Path, is_demo_mode: bool) -> Result<MiniR
     let workflows: Vec<WorkflowDocument> =
         serde_json::from_slice(&std::fs::read(bundle_dir.join("workflows.fpbundle.json"))?)?;
 
+    // 2b. Fail-closed 5-Dimension Compatibility Gate (Runtime, Workflow, UI, Module API, SQLite)
+    let wf_versions: Vec<u32> = workflows.iter().map(|w| w.schema_version).collect();
+    verify_bundle_compatibility_gate(
+        &manifest,
+        &ui_schema,
+        &wf_versions,
+        &RuntimeCompatibilityProfile::default(),
+    )?;
+
     // 3. Initialize 5-State Module Registry
     let module_registry = ModuleRegistry::resolve_for_release(
         &manifest.project.packaged_modules,
         &manifest.project.packaged_modules,
     );
 
-    // 4. Resolve Writable SQLite Database Path (probes real Windows filesystem ACLs!)
-    let (db_path, _writable, _fallback, _err) =
-        resolve_writable_runtime_db_path(&exe_dir, &manifest.project.slug);
+    // 4. Resolve Writable SQLite Database Path (supports versioned external data/ & ACL fallback)
+    let db_path = resolve_runtime_db_path(&exe_dir, &manifest.project.slug);
     let storage = StorageManager::new(&db_path)
         .unwrap_or_else(|_| StorageManager::new_in_memory().expect("In-memory DB fallback"));
+    let db_schema_ver = storage.highest_applied_migration_version().unwrap_or(0);
+    check_sqlite_downgrade_compatibility(db_schema_ver, CURRENT_SQLITE_SCHEMA_VERSION)?;
 
     // 5. Load optional branding PNG as base64 for window header
     let icon_png_path = bundle_dir.join("branding").join("icon.png");
@@ -797,6 +834,9 @@ fn run_cli_mode(args: &[String]) -> Result<bool> {
                 "command": "verify-bundle",
                 "status": "PASS",
                 "projectSlug": state.manifest.project.slug,
+                "version": state.manifest.project.version,
+                "runtimeVersion": CURRENT_RUNTIME_VERSION,
+                "sqliteSchemaVersion": state.storage.highest_applied_migration_version().unwrap_or(0),
                 "windowTitle": state.ui_schema.window_title,
                 "signatureAlgorithm": state.signature_algorithm,
                 "rootOfTrustSource": format!("PE_RT_RCDATA_{}", PE_ED25519_PUBKEY_RESOURCE_ID),
@@ -1046,14 +1086,32 @@ fn main() {
 
     let win_title = state.ui_schema.window_title.clone();
     let (win_w, win_h) = state.ui_schema.default_window_size;
-    let watch_storage = state.storage.clone();
+    let watch_db_path = PathBuf::from(&state.sqlite_db_path);
+    let pid_lock_path = watch_db_path
+        .parent()
+        .map(|d| d.join(format!(".runtime_{}.pid", state.manifest.project.slug)));
+    if let Some(ref lp) = pid_lock_path {
+        let _ = std::fs::write(lp, std::process::id().to_string());
+    }
+    let pid_lock_win = pid_lock_path.clone();
     let watch_scope = format!("mini:{}", state.manifest.project.slug);
     let initial_watch_seqs = state.stream_seqs.clone();
     let shared_state = Arc::new(Mutex::new(state));
     let shared_for_watcher = Arc::clone(&shared_state);
+    let watcher_stop = Arc::new(AtomicBool::new(false));
+    let watcher_stop_bg = Arc::clone(&watcher_stop);
+    let watcher_stop_win = Arc::clone(&watcher_stop);
 
     tauri::Builder::default()
         .manage(shared_state)
+        .on_window_event(move |_window, event| {
+            if matches!(event, WindowEvent::Destroyed) {
+                watcher_stop_win.store(true, Ordering::Relaxed);
+                if let Some(ref lp) = pid_lock_win {
+                    let _ = std::fs::remove_file(lp);
+                }
+            }
+        })
         .setup(move |app| {
             if let Some(win) = app.get_webview_window("main") {
                 let _ = win.set_title(&win_title);
@@ -1063,13 +1121,17 @@ fn main() {
                 }));
             }
 
-            // Cross-process SQLite WAL delta watcher (Case 2: worker/CLI process commits while GUI is open)
+            // Cross-process SQLite WAL delta watcher using ONE persistent ExternalWalReader connection
+            // so `PRAGMA data_version` tracks external writer commits cleanly with bounded retry on SQLITE_BUSY.
             let app_handle_bg = app.handle().clone();
             std::thread::spawn(move || {
                 let mut seen_seqs = initial_watch_seqs;
-                let mut last_data_ver: i64 = -1;
-                loop {
+                let mut wal_reader = ExternalWalReader::open(&watch_db_path).ok();
+                while !watcher_stop_bg.load(Ordering::Relaxed) {
                     std::thread::sleep(std::time::Duration::from_millis(180));
+                    if watcher_stop_bg.load(Ordering::Relaxed) {
+                        break;
+                    }
                     // Also sync in-memory dispatched seqs so we avoid needless re-emits
                     {
                         if let Ok(st) = shared_for_watcher.lock() {
@@ -1081,19 +1143,22 @@ fn main() {
                             }
                         }
                     }
-                    if let Ok((dv, events)) =
-                        watch_storage.poll_external_runtime_deltas(&watch_scope, &seen_seqs)
-                    {
-                        if dv != last_data_ver || !events.is_empty() {
-                            last_data_ver = dv;
-                            for ev in events {
-                                let cur = seen_seqs.entry(ev.stream_id.clone()).or_insert(0);
-                                if ev.seq > *cur {
-                                    *cur = ev.seq;
-                                    if let Ok(mut st) = shared_for_watcher.lock() {
-                                        apply_delta_event_to_state(&mut st, &ev);
+                    if wal_reader.is_none() {
+                        wal_reader = ExternalWalReader::open(&watch_db_path).ok();
+                    }
+                    if let Some(reader) = wal_reader.as_mut() {
+                        if let Ok((changed, events)) = reader.poll_deltas(&watch_scope, &seen_seqs)
+                        {
+                            if changed && !events.is_empty() {
+                                for ev in events {
+                                    let cur = seen_seqs.entry(ev.stream_id.clone()).or_insert(0);
+                                    if ev.seq > *cur {
+                                        *cur = ev.seq;
+                                        if let Ok(mut st) = shared_for_watcher.lock() {
+                                            apply_delta_event_to_state(&mut st, &ev);
+                                        }
+                                        let _ = app_handle_bg.emit("mini://runtime-var-delta", &ev);
                                     }
-                                    let _ = app_handle_bg.emit("mini://runtime-var-delta", &ev);
                                 }
                             }
                         }

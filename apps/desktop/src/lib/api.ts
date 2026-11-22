@@ -10,6 +10,7 @@ import type {
   BuilderReleaseExportResult,
   BuildPreflightReport,
   CloneProjectRequest,
+  CompatibilityReport,
   CreateProjectRequest,
   CredentialMetadata,
   DbOptimizeReport,
@@ -24,6 +25,7 @@ import type {
   JobResumeDetail,
   Jx2MigrationSummary,
   LdPlayerInstance,
+  ManagedInstallInspection,
   MiniTaskDef,
   MiniToolUiSchema,
   ProducerKeyMetadata,
@@ -36,6 +38,8 @@ import type {
   ProjectWorkflowRecord,
   ProxyConfig,
   ProxyProbeReport,
+  ReconcileOutcome,
+  ReleaseTransitionRecord,
   RoiRect,
   RunProjectWorkflowRequest,
   RunWorkflowExecutionSummary,
@@ -44,6 +48,7 @@ import type {
   StepEvent,
   TaskCategoryDef,
   TemplateMatchPreviewReport,
+  UpdateOutcome,
   UpdateProjectRequest,
   ValidationReport,
   VisionTemplateRecord,
@@ -708,5 +713,63 @@ export const api = {
   async studioListProjectReleases(projectId: string): Promise<ProjectReleaseRecord[]> {
     if (!isTauri()) return [];
     return await invoke<ProjectReleaseRecord[]>('studio_list_project_releases', { projectId });
+  },
+
+  async studioCheckReleaseCompatibility(projectId: string): Promise<CompatibilityReport> {
+    requireTauri('studio_check_release_compatibility');
+    return await invoke<CompatibilityReport>('studio_check_release_compatibility', { projectId });
+  },
+
+  async studioTransitionReleaseLifecycle(params: {
+    projectId: string;
+    releaseId: string;
+    targetState: string;
+    note?: string;
+  }): Promise<ProjectReleaseRecord> {
+    requireTauri('studio_transition_release_lifecycle');
+    return await invoke<ProjectReleaseRecord>('studio_transition_release_lifecycle', params);
+  },
+
+  async studioListProjectReleaseTransitions(
+    projectId: string
+  ): Promise<ReleaseTransitionRecord[]> {
+    if (!isTauri()) return [];
+    return await invoke<ReleaseTransitionRecord[]>('studio_list_project_release_transitions', {
+      projectId,
+    });
+  },
+
+  async studioDeployMinitoolRelease(
+    installRoot: string,
+    releaseDir: string
+  ): Promise<UpdateOutcome> {
+    requireTauri('studio_deploy_minitool_release');
+    return await invoke<UpdateOutcome>('studio_deploy_minitool_release', {
+      installRoot,
+      releaseDir,
+    });
+  },
+
+  async studioRollbackMinitoolInstall(
+    installRoot: string,
+    restoreBackup = true
+  ): Promise<UpdateOutcome> {
+    requireTauri('studio_rollback_minitool_install');
+    return await invoke<UpdateOutcome>('studio_rollback_minitool_install', {
+      installRoot,
+      restoreBackup,
+    });
+  },
+
+  async studioReconcileMinitoolInstall(installRoot: string): Promise<ReconcileOutcome> {
+    requireTauri('studio_reconcile_minitool_install');
+    return await invoke<ReconcileOutcome>('studio_reconcile_minitool_install', { installRoot });
+  },
+
+  async studioInspectMinitoolInstall(installRoot: string): Promise<ManagedInstallInspection> {
+    requireTauri('studio_inspect_minitool_install');
+    return await invoke<ManagedInstallInspection>('studio_inspect_minitool_install', {
+      installRoot,
+    });
   },
 };

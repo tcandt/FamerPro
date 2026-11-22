@@ -15,6 +15,7 @@ members = [
     "crates/fp-bundle-contract",
     "crates/fp-bundle-verify",
     "crates/fp-builder",
+    "crates/fp-updater",
     "apps/cli",
     "apps/desktop/src-tauri",
     "apps/mini-runtime",

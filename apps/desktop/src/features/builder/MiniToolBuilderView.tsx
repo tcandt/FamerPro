@@ -29,10 +29,13 @@ import { api } from '../../lib/api';
 import type {
   BuildPreflightReport,
   BuildReport,
+  CompatibilityReport,
+  ManagedInstallInspection,
   MiniLayoutPreset,
   MiniTaskDef,
   MiniToolUiSchema,
   ProjectTaskRecord,
+  ReleaseTransitionRecord,
   RuntimeColumnBinding,
   TaskCategoryDef,
   UtilityToggleDef,
@@ -265,6 +268,10 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
   const [previewState, setPreviewState] = useState<PreviewRuntimeState>('IDLE');
   const [previewCollapsed, setPreviewCollapsed] = useState<Record<string, boolean>>({});
   const [preflight, setPreflight] = useState<BuildPreflightReport | null>(null);
+  const [compatReport, setCompatReport] = useState<CompatibilityReport | null>(null);
+  const [transitions, setTransitions] = useState<ReleaseTransitionRecord[]>([]);
+  const [managedInstallRoot, setManagedInstallRoot] = useState('');
+  const [installInspection, setInstallInspection] = useState<ManagedInstallInspection | null>(null);
   const [lastBuildReport, setLastBuildReport] = useState<BuildReport | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
@@ -277,8 +284,14 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
     setExeName(project.exeName);
     setVersion(project.version);
     setBundleAdb(project.bundleAdb);
+    setManagedInstallRoot((prev) => prev || `installed/${project.slug}`);
     setPreflight(null);
+    setCompatReport(null);
     setLastBuildReport(null);
+    api
+      .studioListProjectReleaseTransitions(project.id)
+      .then(setTransitions)
+      .catch(() => setTransitions([]));
 
     if (activeProjectDetail?.uiSchema) {
       const loaded = activeProjectDetail.uiSchema;
@@ -530,6 +543,104 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
       });
     } catch (err: any) {
       setNotice({ kind: 'err', text: `Build EXE thất bại: ${err?.message || String(err)}` });
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleCheckCompatibility = async () => {
+    if (!activeProjectId) return;
+    setBusyAction('compat');
+    setNotice(null);
+    try {
+      await saveProjectAndSchema();
+      const rep = await api.studioCheckReleaseCompatibility(activeProjectId);
+      setCompatReport(rep);
+      setNotice({
+        kind: rep.compatible ? 'ok' : 'err',
+        text: rep.compatible
+          ? '5-Dimension Compatibility Gate: PASS (Runtime, Workflow, UI, Module API, SQLite)'
+          : `Compatibility Blocked: ${rep.blockingReasons.join(' · ')}`,
+      });
+    } catch (err: any) {
+      setNotice({ kind: 'err', text: `Compatibility check lỗi: ${err?.message || String(err)}` });
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleTransitionLifecycle = async (releaseId: string, targetState: string) => {
+    if (!activeProjectId) return;
+    setBusyAction(`tr-${releaseId}`);
+    setNotice(null);
+    try {
+      const updated = await api.studioTransitionReleaseLifecycle({
+        projectId: activeProjectId,
+        releaseId,
+        targetState,
+        note: `Studio UI -> ${targetState}`,
+      });
+      await refreshActiveProject();
+      const trs = await api.studioListProjectReleaseTransitions(activeProjectId);
+      setTransitions(trs);
+      setNotice({
+        kind: 'ok',
+        text: `Đã chuyển v${updated.version} sang trạng thái ${updated.lifecycleState}.`,
+      });
+    } catch (err: any) {
+      setNotice({ kind: 'err', text: `Chuyển trạng thái lỗi: ${err?.message || String(err)}` });
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleInspectManagedInstall = async (rootOverride?: string) => {
+    const targetRoot = (rootOverride ?? managedInstallRoot).trim();
+    if (!targetRoot) return;
+    try {
+      const info = await api.studioInspectMinitoolInstall(targetRoot);
+      setInstallInspection(info);
+    } catch (err: any) {
+      setNotice({ kind: 'err', text: `Inspect install lỗi: ${err?.message || String(err)}` });
+    }
+  };
+
+  const handleDeployRelease = async (releaseDir: string) => {
+    const targetRoot = managedInstallRoot.trim();
+    if (!targetRoot) {
+      setNotice({ kind: 'err', text: 'Vui lòng nhập Managed Install Root trước khi Deploy.' });
+      return;
+    }
+    setBusyAction('deploy');
+    setNotice(null);
+    try {
+      const outcome = await api.studioDeployMinitoolRelease(targetRoot, releaseDir);
+      await handleInspectManagedInstall(targetRoot);
+      setNotice({
+        kind: 'ok',
+        text: `${outcome.operation.toUpperCase()} -> v${outcome.activeVersion} (${outcome.status})`,
+      });
+    } catch (err: any) {
+      setNotice({ kind: 'err', text: `Deploy / Update bị chặn: ${err?.message || String(err)}` });
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleRollbackManagedInstall = async () => {
+    const targetRoot = managedInstallRoot.trim();
+    if (!targetRoot) return;
+    setBusyAction('rollback');
+    setNotice(null);
+    try {
+      const outcome = await api.studioRollbackMinitoolInstall(targetRoot, true);
+      await handleInspectManagedInstall(targetRoot);
+      setNotice({
+        kind: 'ok',
+        text: `Rollback thành công về v${outcome.activeVersion} (${outcome.status}).`,
+      });
+    } catch (err: any) {
+      setNotice({ kind: 'err', text: `Rollback bị chặn: ${err?.message || String(err)}` });
     } finally {
       setBusyAction(null);
     }
@@ -1619,8 +1730,84 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
           )}
 
           <div className="space-y-2 pt-2 border-t border-[#2A3647]">
+            <div className="flex items-center justify-between font-bold text-[#EDF3FC]">
+              <span>Compatibility Gate (5-Dim)</span>
+              <button
+                type="button"
+                onClick={handleCheckCompatibility}
+                disabled={busyAction !== null}
+                className="px-2 py-0.5 rounded bg-[#16202F] hover:bg-[#202B3B] border border-[#2A3647] text-[10px] text-[#38BDF8] cursor-pointer"
+              >
+                Check SemVer &amp; ABI
+              </button>
+            </div>
+            {compatReport && (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-[#A9B8CC]">Overall Compatibility</span>
+                  <span className={compatReport.compatible ? 'fp-badge-live' : 'fp-badge-error'}>
+                    {compatReport.compatible ? 'COMPATIBLE' : 'BLOCKED'}
+                  </span>
+                </div>
+                {compatReport.checks.map((ck) => (
+                  <div
+                    key={ck.dimension}
+                    className="px-2 py-1 rounded bg-[#101722] border border-[#2A3647] flex items-center justify-between text-[10px]"
+                  >
+                    <span className="text-[#EDF3FC] font-mono">{ck.dimension}</span>
+                    <span className={ck.compatible ? 'text-[#3BC38D] font-mono' : 'text-[#F27883] font-mono'}>
+                      {ck.requiredOrBundle} / {ck.runtimeSupported}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-[#2A3647]">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-[#EDF3FC]">Lịch sử Phát hành ({releases.length})</span>
+              <span className="font-bold text-[#EDF3FC]">Quản lý Cài đặt &amp; Rollback</span>
+              <button
+                type="button"
+                onClick={() => handleInspectManagedInstall()}
+                className="px-2 py-0.5 rounded bg-[#16202F] border border-[#2A3647] text-[10px] text-[#A9B8CC] cursor-pointer"
+              >
+                Inspect
+              </button>
+            </div>
+            <input
+              type="text"
+              value={managedInstallRoot}
+              onChange={(e) => setManagedInstallRoot(e.target.value)}
+              placeholder={`installed/${project.slug}`}
+              className="w-full bg-[#101722] border border-[#2A3647] rounded px-2 py-1 text-[#EDF3FC] font-mono text-[10px] outline-none"
+            />
+            {installInspection && (
+              <div className="p-2 rounded bg-[#101722] border border-[#2A3647] space-y-1 text-[10px] font-mono">
+                <div className="flex items-center justify-between text-[#EDF3FC]">
+                  <span>Active: v{installInspection.activePointer?.activeVersion || 'none'}</span>
+                  <span>Prev: {installInspection.activePointer?.previousVersion ? `v${installInspection.activePointer.previousVersion}` : '—'}</span>
+                </div>
+                <div className="text-[#74869D]">
+                  Journal: {installInspection.journal?.stage || 'idle'}
+                </div>
+                {installInspection.activePointer?.previousVersion && (
+                  <button
+                    type="button"
+                    onClick={handleRollbackManagedInstall}
+                    disabled={busyAction !== null}
+                    className="w-full mt-1 py-1 rounded bg-[#381E24] hover:bg-[#4B2630] border border-[#F27883]/50 text-[#F27883] font-bold cursor-pointer"
+                  >
+                    Rollback về v{installInspection.activePointer.previousVersion} (Restore WAL Backup)
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-[#2A3647]">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-[#EDF3FC]">Release Lifecycle ({releases.length})</span>
               <ShieldCheck size={14} className="text-[#3BC38D]" />
             </div>
             {releases.length === 0 ? (
@@ -1632,14 +1819,80 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
                 {releases.map((rel) => (
                   <div
                     key={rel.id}
-                    className="p-2 rounded bg-[#101722] border border-[#2A3647] space-y-0.5 text-[11px]"
+                    className="p-2 rounded bg-[#101722] border border-[#2A3647] space-y-1.5 text-[11px]"
                   >
-                    <div className="font-bold text-[#EDF3FC] truncate">
-                      v{rel.version} · {rel.exePath.split(/[\\/]/).pop()}
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-bold text-[#EDF3FC] truncate">
+                        v{rel.version} · {rel.exePath.split(/[\\/]/).pop()}
+                      </span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${
+                          rel.lifecycleState === 'Published'
+                            ? 'bg-[#133528] text-[#3BC38D]'
+                            : rel.lifecycleState === 'RC'
+                            ? 'bg-[#173355] text-[#38BDF8]'
+                            : rel.lifecycleState === 'RolledBack' || rel.lifecycleState === 'Deprecated'
+                            ? 'bg-[#381E24] text-[#F27883]'
+                            : 'bg-[#202B3B] text-[#A9B8CC]'
+                        }`}
+                      >
+                        {rel.lifecycleState}
+                      </span>
+                    </div>
+                    <div className="font-mono text-[10px] text-[#74869D]">
+                      WF v{rel.workflowSchemaVersion} · UI v{rel.uiSchemaVersion} · DB v{rel.sqliteSchemaVersion} · API {rel.moduleApiVersion}
                     </div>
                     <div className="font-mono text-[10px] text-[#3BC38D]">
                       Key {rel.keyId} · {rel.exeSizeBytes.toLocaleString()} bytes
                     </div>
+                    <div className="flex flex-wrap gap-1 pt-0.5">
+                      {rel.lifecycleState === 'Draft' && (
+                        <button
+                          type="button"
+                          onClick={() => handleTransitionLifecycle(rel.id, 'RC')}
+                          className="px-1.5 py-0.5 rounded bg-[#173355] hover:bg-[#1E426D] text-[#38BDF8] text-[10px] font-semibold cursor-pointer"
+                        >
+                          Promote RC
+                        </button>
+                      )}
+                      {(rel.lifecycleState === 'Draft' || rel.lifecycleState === 'RC') && (
+                        <button
+                          type="button"
+                          onClick={() => handleTransitionLifecycle(rel.id, 'Published')}
+                          className="px-1.5 py-0.5 rounded bg-[#133528] hover:bg-[#1A4A38] text-[#3BC38D] text-[10px] font-semibold cursor-pointer"
+                        >
+                          Publish
+                        </button>
+                      )}
+                      {rel.lifecycleState === 'Published' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleDeployRelease(rel.outputDirPath)}
+                            className="px-1.5 py-0.5 rounded bg-[#1878F5] hover:bg-[#2F8CFF] text-white text-[10px] font-semibold cursor-pointer"
+                          >
+                            Deploy / Upgrade
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleTransitionLifecycle(rel.id, 'Deprecated')}
+                            className="px-1.5 py-0.5 rounded bg-[#381E24] text-[#F27883] text-[10px] font-semibold cursor-pointer"
+                          >
+                            Deprecate
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {transitions.length > 0 && (
+              <div className="pt-1 border-t border-[#2A3647]/60 space-y-1">
+                <div className="text-[10px] font-bold text-[#74869D]">Audit Transitions ({transitions.length})</div>
+                {transitions.slice(0, 4).map((tr) => (
+                  <div key={tr.id} className="text-[9px] font-mono text-[#A9B8CC] truncate">
+                    {tr.fromState} → {tr.toState} · {tr.note}
                   </div>
                 ))}
               </div>

@@ -1,0 +1,28 @@
+[package]
+name = "fp-updater"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "fp-updater"
+path = "src/main.rs"
+
+[dependencies]
+fp-bundle-contract = { path = "../fp-bundle-contract" }
+fp-bundle-verify = { path = "../fp-bundle-verify" }
+fp-domain = { path = "../fp-domain" }
+fp-security = { path = "../fp-security" }
+fp-storage = { path = "../fp-storage" }
+fp-workflow-schema = { path = "../fp-workflow-schema" }
+anyhow.workspace = true
+chrono.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+clap.workspace = true
+
+[dev-dependencies]
+fp-builder = { path = "../fp-builder" }
+ed25519-dalek = { version = "2.1", features = ["rand_core"] }

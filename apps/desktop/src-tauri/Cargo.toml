@@ -23,6 +23,7 @@ fp-testkit = { path = "../../../crates/fp-testkit" }
 fp-bundle-contract = { path = "../../../crates/fp-bundle-contract" }
 fp-bundle-verify = { path = "../../../crates/fp-bundle-verify" }
 fp-builder = { path = "../../../crates/fp-builder" }
+fp-updater = { path = "../../../crates/fp-updater" }
 fp-proxy = { path = "../../../crates/fp-proxy" }
 base64 = "0.21"
 tokio.workspace = true

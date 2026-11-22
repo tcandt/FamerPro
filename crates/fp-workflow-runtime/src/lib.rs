@@ -496,6 +496,7 @@ impl WorkflowExecutor {
                     }
                     Err(err) => {
                         let is_final = attempt == max_attempts;
+                        let clean_err = fp_security::sanitize_error_message(&err.to_string());
                         let fail_event = StepEvent {
                             id: Uuid::new_v4().to_string(),
                             job_id: ctx.job_id.clone(),
@@ -504,7 +505,7 @@ impl WorkflowExecutor {
                             attempt_no: attempt,
                             at: Utc::now(),
                             payload_json: serde_json::json!({
-                                "error": err.to_string(),
+                                "error": clean_err,
                                 "retry_pending": !is_final
                             })
                             .to_string(),
@@ -1953,5 +1954,40 @@ mod tests {
         assert!(joined.contains("TESTKIT_MOCK"));
         assert!(ctx.variable_envelopes.get("account_pin").unwrap().redacted);
         assert!(ctx.variable_envelopes.get("session_payload").unwrap().redacted);
+    }
+
+    #[tokio::test]
+    async fn test_untrusted_workflow_config_cannot_spoof_live_provenance() {
+        // Even if a malicious workflow JSON passes `source: "LIVE_ADB_OCR"` and `verified: true`
+        // inside node config, the Executor strictly enforces `ctx.runtime_source_mode` (TestkitMock).
+        let doc_json = serde_json::json!({
+            "schemaVersion": 1,
+            "workflowId": "wf-spoof-guard",
+            "name": "Provenance Spoof Guard",
+            "status": "published",
+            "graph": {
+                "nodes": [
+                    { "id": "n1", "type": "flow.start", "position": { "x": 0.0, "y": 0.0 }, "config": {} },
+                    { "id": "n2", "type": "state.set_var", "position": { "x": 150.0, "y": 0.0 }, "config": { "varKey": "char_gold", "valueType": "number", "value": 999999, "source": "LIVE_ADB_OCR", "verified": true } },
+                    { "id": "n3", "type": "flow.end", "position": { "x": 300.0, "y": 0.0 }, "config": {} }
+                ],
+                "edges": [
+                    { "id": "e1", "source": "n1", "sourcePort": "flow", "target": "n2", "targetPort": "flow" },
+                    { "id": "e2", "source": "n2", "sourcePort": "flow", "target": "n3", "targetPort": "flow" }
+                ]
+            }
+        });
+        let doc = WorkflowValidator::parse_and_validate(&doc_json.to_string()).unwrap();
+        let driver = Arc::new(FakeDeviceDriver::new("fake-spoof", 1280, 720));
+        let (_tx, rx) = watch::channel(ExecutionSignal::Running);
+        let mut exec = WorkflowExecutor::new(driver, rx);
+        let mut ctx = ExecutionContext::new("job-spoof".to_string(), "fake-spoof".to_string())
+            .with_source_mode(VariableSource::TestkitMock);
+
+        let state = exec.execute_workflow(&doc, &mut ctx, None).await.unwrap();
+        assert_eq!(state, JobState::Succeeded);
+        let env = ctx.variable_envelopes.get("char_gold").unwrap();
+        assert_eq!(env.source, VariableSource::TestkitMock);
+        assert!(!env.verified);
     }
 }

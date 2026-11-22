@@ -1174,7 +1174,14 @@ fn main() {
             studio_p3::studio_builder_export_release,
             studio_p3::studio_ensure_project_icon,
             studio_p3::studio_get_project_runtime_vars,
-            studio_p3::studio_list_project_releases
+            studio_p3::studio_list_project_releases,
+            studio_p3::studio_check_release_compatibility,
+            studio_p3::studio_transition_release_lifecycle,
+            studio_p3::studio_list_project_release_transitions,
+            studio_p3::studio_deploy_minitool_release,
+            studio_p3::studio_rollback_minitool_install,
+            studio_p3::studio_reconcile_minitool_install,
+            studio_p3::studio_inspect_minitool_install
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

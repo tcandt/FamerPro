@@ -108,24 +108,60 @@ pub fn is_sensitive_var_key(key: &str) -> bool {
     .any(|needle| compact.contains(needle))
 }
 
+pub fn is_vault_reference_uri(s: &str) -> bool {
+    let lower = s.trim().to_ascii_lowercase();
+    lower.starts_with("cred_mgr://") || lower.starts_with("dpapi://")
+}
+
 fn contains_inline_secret_value(s: &str) -> bool {
-    let lower = s.to_ascii_lowercase();
+    let trimmed = s.trim();
+    if is_vault_reference_uri(trimmed) {
+        return false;
+    }
+    let lower = trimmed.to_ascii_lowercase();
     if lower.starts_with("bearer ")
-        || lower.starts_with("cred_mgr://")
-        || lower.starts_with("dpapi://")
-        || lower.starts_with("eyj") && s.matches('.').count() >= 2
+        || (lower.starts_with("eyj") && trimmed.matches('.').count() >= 2)
+        || trimmed.starts_with("sk-live-")
+        || trimmed.starts_with("sk_live_")
+        || trimmed.starts_with("ghp_")
+        || trimmed.starts_with("glpat-")
+        || trimmed.starts_with("AKIA")
+        || trimmed.starts_with("AIza")
+        || trimmed.contains("-----BEGIN ")
     {
         return true;
     }
     false
 }
 
+/// Sanitizes error strings emitted during workflow failure before writing logs/step_events.
+pub fn sanitize_error_message(msg: &str) -> String {
+    let redactor = SecretRedactor::new();
+    let step1 = redactor.redact(msg);
+    let mut out = Vec::new();
+    for tok in step1.split_whitespace() {
+        let clean = tok.trim_matches(|c: char| c == '\'' || c == '"' || c == ',' || c == ';');
+        if contains_inline_secret_value(clean) {
+            out.push(REDACTED_PLACEHOLDER);
+        } else {
+            out.push(tok);
+        }
+    }
+    out.join(" ")
+}
+
 /// Structurally sanitizes a runtime variable (string, number, boolean, array, nested object)
 /// so sensitive values are NEVER leaked in plaintext via events, SQLite snapshots, or logs.
+/// Preserves `CRED_MGR://` and `dpapi://` vault reference URIs so Credential Manager links stay intact.
 pub fn sanitize_runtime_variable(
     var_name: &str,
     value: &serde_json::Value,
 ) -> (serde_json::Value, bool) {
+    if let serde_json::Value::String(s) = value {
+        if is_vault_reference_uri(s) {
+            return (value.clone(), false);
+        }
+    }
     if is_sensitive_var_key(var_name) {
         if matches!(value, serde_json::Value::Null) {
             return (serde_json::Value::Null, false);
@@ -905,6 +941,30 @@ mod tests {
         let (v_ok, r_ok) = sanitize_runtime_variable("resource_count", &serde_json::json!(250));
         assert!(!r_ok);
         assert_eq!(v_ok, serde_json::json!(250));
+
+        // 5. Array nesting + unorthodox key name with inline token pattern + CRED_MGR URI preservation
+        let arr_payload = serde_json::json!([
+            { "custom_x1": "Bearer live-abc-999", "qty": 3 },
+            { "extra": ["eyJhbGciOiJIUzI1NiJ9.payload.sig", "ghp_MySecretGitHubToken123"] }
+        ]);
+        let (v_arr, r_arr) = sanitize_runtime_variable("loot_list", &arr_payload);
+        assert!(r_arr);
+        let arr_str = serde_json::to_string(&v_arr).unwrap();
+        assert!(!arr_str.contains("live-abc-999"));
+        assert!(!arr_str.contains("eyJhbGciOi"));
+        assert!(!arr_str.contains("ghp_MySecretGitHubToken123"));
+        assert!(arr_str.contains("3"));
+
+        // Windows Credential Manager URI MUST be preserved intact even under `secret_ref`!
+        let cred_uri = serde_json::json!("CRED_MGR://FarmerPro/jx2-mobile/acc1");
+        let (v_cred, r_cred) = sanitize_runtime_variable("secret_ref", &cred_uri);
+        assert!(!r_cred);
+        assert_eq!(v_cred, cred_uri);
+
+        // Error message redaction
+        let err_clean = sanitize_error_message("HTTP fail token=my_hidden_999 with sk-live-secret-42");
+        assert!(!err_clean.contains("my_hidden_999"));
+        assert!(!err_clean.contains("sk-live-secret-42"));
     }
 
     struct CleanupGuard<'a> {

@@ -3,6 +3,11 @@ use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use fp_actions::{SafeRegionSampler, SafeTapPolicy};
 use fp_adb::{validate_adb_token, AdbDeviceDriver};
 use fp_builder::{BuildPreflightReport, BuildReport, MiniToolPackager};
+use fp_bundle_contract::{
+    evaluate_bundle_compatibility, CompatibilityReport, CompatibilityVersions,
+    RuntimeCompatibilityProfile, SemVer, CURRENT_RUNTIME_VERSION, CURRENT_SQLITE_SCHEMA_VERSION,
+    SUPPORTED_MODULE_API_VERSION, SUPPORTED_UI_SCHEMA_VERSION, SUPPORTED_WORKFLOW_SCHEMA_VERSION,
+};
 use fp_bundle_verify::{sha256_hex, validate_safe_relative_path};
 use fp_domain::{
     Bounds, DeviceDriver, DeviceHealthReport, DevicePortMapping, Frame, Point, ScreenGeometry,
@@ -11,9 +16,14 @@ use fp_domain::{
 use fp_proxy::{probe_proxy, ProxyConfig, ProxyProbeReport};
 use fp_scheduler::DeviceLease;
 use fp_storage::{
-    JobResumeContext, ProjectJobRecord, ProjectReleaseRecord, RuntimeVariablesSnapshot,
-    StorageManager, VisionTemplateInput, VisionTemplateRecord,
+    JobResumeContext, ProjectJobRecord, ProjectReleaseRecord, ReleaseTransitionRecord,
+    RuntimeVariablesSnapshot, StorageManager, VisionTemplateInput, VisionTemplateRecord,
 };
+use fp_updater::{
+    ActiveVersionPointer, MiniToolUpdater, ReconcileOutcome, UpdateExecutionOptions, UpdateJournal,
+    UpdateOutcome,
+};
+use fp_workflow_schema::WorkflowDocument;
 use fp_vision::{
     annotate_match_and_tap_png, crop_roi_png, scale_bounds_for_geometry, RoiRect, VisionEngine,
 };
@@ -314,6 +324,15 @@ pub(crate) fn handle_builder_export_release(
     )
     .map_err(|e| e.to_string())?;
 
+    let git_commit = std::process::Command::new("git")
+        .args(["rev-parse", "--short", "HEAD"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_default();
+
+    let compat = CompatibilityVersions::default();
     let release = ProjectReleaseRecord {
         id: format!("rel-{}", Uuid::new_v4()),
         project_id: proj.id.clone(),
@@ -328,6 +347,18 @@ pub(crate) fn handle_builder_export_release(
         signature_ed25519_hex: report.signature_ed25519_hex.clone(),
         build_report_json: serde_json::to_string(&report).map_err(|e| e.to_string())?,
         built_at: chrono::Utc::now().to_rfc3339(),
+        lifecycle_state: "Draft".to_string(),
+        release_channel: "stable".to_string(),
+        changelog_md: String::new(),
+        min_runtime_version: compat.min_runtime_version,
+        workflow_schema_version: compat.workflow_schema_version,
+        ui_schema_version: compat.ui_schema_version,
+        module_api_version: compat.module_api_version,
+        sqlite_schema_version: compat.sqlite_schema_version,
+        git_commit,
+        signature_status: report.authenticode_status.clone(),
+        promoted_at: None,
+        rolled_back_from_id: None,
     };
 
     storage
@@ -952,6 +983,148 @@ pub fn studio_list_project_releases(
     st.storage
         .list_project_releases(&project_id)
         .map_err(|e| e.to_string())
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedInstallInspection {
+    pub install_root: String,
+    pub active_pointer: Option<ActiveVersionPointer>,
+    pub journal: Option<UpdateJournal>,
+}
+
+pub(crate) fn handle_check_release_compatibility(
+    storage: &StorageManager,
+    project_id: &str,
+) -> Result<CompatibilityReport, String> {
+    let detail = storage
+        .get_project_detail(project_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("Project '{}' not found", project_id))?;
+
+    SemVer::parse(&detail.project.version).map_err(|e| e.to_string())?;
+
+    let mut wf_versions = Vec::new();
+    for wf in &detail.workflows {
+        if let Ok(doc) = serde_json::from_str::<WorkflowDocument>(&wf.draft_json) {
+            wf_versions.push(doc.schema_version);
+        } else {
+            wf_versions.push(SUPPORTED_WORKFLOW_SCHEMA_VERSION);
+        }
+    }
+    let ui_schema_ver = detail
+        .ui_schema
+        .as_ref()
+        .map(|s| s.schema_version)
+        .unwrap_or(SUPPORTED_UI_SCHEMA_VERSION);
+
+    let compat = CompatibilityVersions {
+        project_schema_version: 1,
+        workflow_schema_version: SUPPORTED_WORKFLOW_SCHEMA_VERSION,
+        ui_schema_version: ui_schema_ver,
+        module_api_version: SUPPORTED_MODULE_API_VERSION.to_string(),
+        min_runtime_version: CURRENT_RUNTIME_VERSION.to_string(),
+        sqlite_schema_version: CURRENT_SQLITE_SCHEMA_VERSION,
+    };
+
+    Ok(evaluate_bundle_compatibility(
+        &compat,
+        ui_schema_ver,
+        &wf_versions,
+        &RuntimeCompatibilityProfile::default(),
+    ))
+}
+
+#[tauri::command]
+pub fn studio_check_release_compatibility(
+    project_id: String,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<CompatibilityReport, String> {
+    let st = state.lock().unwrap();
+    handle_check_release_compatibility(&st.storage, &project_id)
+}
+
+#[tauri::command]
+pub fn studio_transition_release_lifecycle(
+    project_id: String,
+    release_id: String,
+    target_state: String,
+    note: Option<String>,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<ProjectReleaseRecord, String> {
+    let st = state.lock().unwrap();
+    st.storage
+        .transition_project_release_lifecycle(
+            &project_id,
+            &release_id,
+            &target_state,
+            note.as_deref().unwrap_or("Studio lifecycle update"),
+        )
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn studio_list_project_release_transitions(
+    project_id: String,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<Vec<ReleaseTransitionRecord>, String> {
+    let st = state.lock().unwrap();
+    st.storage
+        .list_project_release_transitions(&project_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn studio_deploy_minitool_release(
+    install_root: String,
+    release_dir: String,
+) -> Result<UpdateOutcome, String> {
+    let updater = MiniToolUpdater::new(&install_root);
+    let opts = UpdateExecutionOptions::default();
+    if updater.active_pointer_path().exists() {
+        updater
+            .upgrade_from_release(Path::new(&release_dir), &opts)
+            .map_err(|e| e.to_string())
+    } else {
+        updater
+            .install_initial(Path::new(&release_dir), &opts)
+            .map_err(|e| e.to_string())
+    }
+}
+
+#[tauri::command]
+pub fn studio_rollback_minitool_install(
+    install_root: String,
+    restore_backup: Option<bool>,
+) -> Result<UpdateOutcome, String> {
+    let updater = MiniToolUpdater::new(&install_root);
+    updater
+        .rollback_to_previous(restore_backup.unwrap_or(true), false)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn studio_reconcile_minitool_install(
+    install_root: String,
+) -> Result<ReconcileOutcome, String> {
+    let updater = MiniToolUpdater::new(&install_root);
+    updater
+        .reconcile_incomplete_journal(false)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn studio_inspect_minitool_install(
+    install_root: String,
+) -> Result<ManagedInstallInspection, String> {
+    let updater = MiniToolUpdater::new(&install_root);
+    let active_pointer = updater.read_active_pointer().map_err(|e| e.to_string())?;
+    let journal = updater.read_journal().map_err(|e| e.to_string())?;
+    Ok(ManagedInstallInspection {
+        install_root,
+        active_pointer,
+        journal,
+    })
 }
 
 #[cfg(test)]

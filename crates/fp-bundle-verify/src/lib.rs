@@ -8,6 +8,10 @@
 
 use anyhow::{bail, Context, Result};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+use fp_bundle_contract::{
+    evaluate_bundle_compatibility, CompatibilityReport, MiniToolUiSchema, ReleaseBundleManifest,
+    RuntimeCompatibilityProfile,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -221,6 +225,35 @@ impl SignedBundleEnvelope {
     }
 }
 
+/// Verifies compatibility across all 5 dimensions: Runtime, Workflow Schema, UI Schema, Module API, SQLite Schema.
+pub fn verify_bundle_compatibility_gate(
+    manifest: &ReleaseBundleManifest,
+    ui_schema: &MiniToolUiSchema,
+    workflow_schema_versions: &[u32],
+    profile: &RuntimeCompatibilityProfile,
+) -> Result<CompatibilityReport> {
+    if ui_schema.project_slug != manifest.project.slug {
+        bail!(
+            "COMPATIBILITY_ERROR: UI schema slug '{}' != manifest project slug '{}'",
+            ui_schema.project_slug,
+            manifest.project.slug
+        );
+    }
+    let report = evaluate_bundle_compatibility(
+        &manifest.compatibility,
+        ui_schema.schema_version,
+        workflow_schema_versions,
+        profile,
+    );
+    if !report.compatible {
+        bail!(
+            "COMPATIBILITY_ERROR: {}",
+            report.blocking_reasons.join("; ")
+        );
+    }
+    Ok(report)
+}
+
 /// Resource ID for the PE-embedded Ed25519 Root of Trust Public Key (`RT_RCDATA = 10`, ID `7777`)
 pub const PE_ED25519_PUBKEY_RESOURCE_ID: usize = 7777;
 pub const PE_RT_RCDATA_TYPE_ID: usize = 10;
@@ -396,5 +429,99 @@ mod tests {
         assert!(validate_safe_relative_path(root, r"C:\Windows\System32\cmd.exe").is_err());
         assert!(validate_safe_relative_path(root, "/etc/passwd").is_err());
         assert!(validate_safe_relative_path(root, "   ").is_err());
+    }
+
+    #[test]
+    fn test_five_dimension_compatibility_and_downgrade_guards() {
+        use fp_bundle_contract::{
+            check_sqlite_downgrade_compatibility, CompatibilityVersions, GameProjectManifest,
+            MiniLayoutPreset, SemVer,
+        };
+        let manifest = ReleaseBundleManifest {
+            compatibility: CompatibilityVersions::default(),
+            project: GameProjectManifest {
+                compatibility: CompatibilityVersions::default(),
+                project_id: "p-compat".to_string(),
+                slug: "compat-game".to_string(),
+                name: "Compat Game".to_string(),
+                game_package_id: "com.compat.game".to_string(),
+                version: "1.0.0".to_string(),
+                exe_name: "Auto_Compat.exe".to_string(),
+                window_title: "Compat".to_string(),
+                icon_rel_path: "icon.ico".to_string(),
+                target_resolution: (1280, 720),
+                packaged_modules: vec![],
+                workflow_files: vec![],
+                template_files: vec![],
+                bundle_adb: false,
+            },
+            module_states: vec![],
+            workflows_count: 1,
+            templates_count: 0,
+            built_at_utc: "2026-11-22T00:00:00Z".to_string(),
+        };
+        let ui = MiniToolUiSchema {
+            schema_version: 1,
+            project_slug: "compat-game".to_string(),
+            window_title: "Compat".to_string(),
+            version_badge: "v1.0.0".to_string(),
+            theme_accent_hex: "#1878F5".to_string(),
+            header_bg_hex: "#121E2A".to_string(),
+            layout_preset: MiniLayoutPreset::Compact1Col,
+            default_window_size: (680, 480),
+            sections_order: vec![],
+            hidden_components: vec![],
+            device_columns: vec![],
+            task_categories: vec![],
+            tasks: vec![],
+            utilities: vec![],
+            initial_runtime_vars: Default::default(),
+        };
+        let profile = RuntimeCompatibilityProfile::default();
+        assert!(verify_bundle_compatibility_gate(&manifest, &ui, &[1], &profile).is_ok());
+
+        // 1) Breaking Runtime Version requirement
+        let mut bad_rt = manifest.clone();
+        bad_rt.compatibility.min_runtime_version = "9.9.0".to_string();
+        assert!(verify_bundle_compatibility_gate(&bad_rt, &ui, &[1], &profile)
+            .unwrap_err()
+            .to_string()
+            .contains("RUNTIME_VERSION_INCOMPATIBLE"));
+
+        // 2) Unsupported Workflow Schema Version
+        assert!(verify_bundle_compatibility_gate(&manifest, &ui, &[99], &profile)
+            .unwrap_err()
+            .to_string()
+            .contains("WORKFLOW_SCHEMA_INCOMPATIBLE"));
+
+        // 3) Unsupported UI Schema Version
+        let mut bad_ui = ui.clone();
+        bad_ui.schema_version = 7;
+        assert!(verify_bundle_compatibility_gate(&manifest, &bad_ui, &[1], &profile)
+            .unwrap_err()
+            .to_string()
+            .contains("UI_SCHEMA_INCOMPATIBLE"));
+
+        // 4) Unsupported Module API Major Version
+        let mut bad_mod = manifest.clone();
+        bad_mod.compatibility.module_api_version = "2.0.0".to_string();
+        assert!(verify_bundle_compatibility_gate(&bad_mod, &ui, &[1], &profile)
+            .unwrap_err()
+            .to_string()
+            .contains("MODULE_API_INCOMPATIBLE"));
+
+        // 5) Unsupported SQLite Schema Version & Downgrade Guard
+        let mut bad_sql = manifest.clone();
+        bad_sql.compatibility.sqlite_schema_version = 99;
+        assert!(verify_bundle_compatibility_gate(&bad_sql, &ui, &[1], &profile)
+            .unwrap_err()
+            .to_string()
+            .contains("SQLITE_SCHEMA_INCOMPATIBLE"));
+        assert!(check_sqlite_downgrade_compatibility(4, 3)
+            .unwrap_err()
+            .to_string()
+            .contains("SQLITE_DOWNGRADE_INCOMPATIBLE"));
+        assert!(check_sqlite_downgrade_compatibility(3, 4).is_ok());
+        assert!(SemVer::parse("1.1.0").unwrap() > SemVer::parse("1.0.0").unwrap());
     }
 }

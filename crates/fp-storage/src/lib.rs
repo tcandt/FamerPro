@@ -7,7 +7,7 @@ use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use fp_bundle_contract::{
     CompatibilityVersions, GameProjectManifest, MiniLayoutPreset, MiniTaskDef, MiniToolUiSchema,
-    TaskCategoryDef,
+    ReleaseLifecycleState, SemVer, TaskCategoryDef,
 };
 use fp_domain::{
     infer_json_value_type, ConnectionState, DeviceSummary, RuntimeVarDeltaEvent,
@@ -276,6 +276,7 @@ pub struct StorageManager {
 impl StorageManager {
     pub fn new_in_memory() -> Result<Self> {
         let conn = Connection::open_in_memory()?;
+        let _ = conn.busy_timeout(Duration::from_millis(300));
         let sm = Self {
             conn: Arc::new(Mutex::new(conn)),
             crash_hook: Arc::new(Mutex::new(None)),
@@ -291,6 +292,7 @@ impl StorageManager {
             }
         }
         let conn = Connection::open(db_path)?;
+        let _ = conn.busy_timeout(Duration::from_millis(300));
         let sm = Self {
             conn: Arc::new(Mutex::new(conn)),
             crash_hook: Arc::new(Mutex::new(None)),
@@ -434,7 +436,21 @@ impl StorageManager {
         let now = Utc::now().to_rfc3339();
 
         let mut conn = self.conn.lock().unwrap();
-        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let mut backoff_ms = 15u64;
+        let tx = {
+            let mut attempt = 0u32;
+            loop {
+                match conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate) {
+                    Ok(t) => break t,
+                    Err(e) if is_sqlite_busy_err(&e) && attempt < 5 => {
+                        attempt += 1;
+                        std::thread::sleep(Duration::from_millis(backoff_ms));
+                        backoff_ms = (backoff_ms * 2).min(120);
+                    }
+                    Err(e) => return Err(e.into()),
+                }
+            }
+        };
 
         // Anti-Overwrite Invariant: a TESTKIT write may NEVER overwrite an existing verified LIVE variable
         // in the primary scope, even if invoked with raw scope keys.
@@ -755,34 +771,35 @@ impl StorageManager {
         let data_version: i64 =
             conn.query_row("PRAGMA data_version;", [], |r| r.get(0)).unwrap_or(0);
 
-        let mut events = Vec::new();
-        for sid in [clean_base, testkit_scope.as_str()] {
-            let min_seq = after_seqs.get(sid).copied().unwrap_or(0);
-            let mut st = conn.prepare(
-                "SELECT stream_id, seq, project_id, session_id, job_id, workflow_version, deltas_json, emitted_at_utc
-                 FROM runtime_var_events
-                 WHERE stream_id = ?1 AND seq > ?2
-                 ORDER BY seq ASC;",
-            )?;
-            let mut rows = st.query(params![sid, min_seq as i64])?;
-            while let Some(r) = rows.next()? {
-                let deltas_str: String = r.get(6)?;
-                let deltas: Vec<RuntimeVariableEnvelope> =
-                    serde_json::from_str(&deltas_str).unwrap_or_default();
-                events.push(RuntimeVarDeltaEvent {
-                    stream_id: r.get(0)?,
-                    scope_key: r.get(0)?,
-                    project_id: r.get(2)?,
-                    session_id: r.get(3)?,
-                    job_id: r.get(4)?,
-                    seq: r.get::<_, i64>(1)?.max(0) as u64,
-                    workflow_version: r.get(5)?,
-                    emitted_at_utc: r.get(7)?,
-                    deltas,
-                });
-            }
-        }
+        let events = query_events_for_streams(&conn, &[clean_base, testkit_scope.as_str()], after_seqs)?;
         Ok((data_version, events))
+    }
+
+    /// Compacts `runtime_var_events` keeping only the latest `keep_last_n` sequenced rows per stream,
+    /// while leaving `runtime_var_streams.last_seq` and `runtime_variable_envelopes` completely intact.
+    pub fn compact_runtime_var_events(&self, stream_id: &str, keep_last_n: usize) -> Result<usize> {
+        let conn = self.conn.lock().unwrap();
+        let cutoff_seq: Option<i64> = {
+            let mut st = conn.prepare(
+                "SELECT seq FROM runtime_var_events WHERE stream_id = ?1 ORDER BY seq DESC LIMIT 1 OFFSET ?2;",
+            )?;
+            let mut rows = st.query(params![stream_id, keep_last_n as i64])?;
+            rows.next()?.map(|r| r.get(0)).transpose()?
+        };
+        if let Some(cut) = cutoff_seq {
+            let deleted = conn.execute(
+                "DELETE FROM runtime_var_events WHERE stream_id = ?1 AND seq <= ?2;",
+                params![stream_id, cut],
+            )?;
+            return Ok(deleted);
+        }
+        Ok(0)
+    }
+
+    /// Queries highest applied migration version directly on the DB (used for downgrade safety checks).
+    pub fn highest_applied_migration_version(&self) -> Result<u32> {
+        let vers = self.applied_migration_versions()?;
+        Ok(vers.into_iter().max().unwrap_or(0).max(0) as u32)
     }
 
     pub fn load_runtime_variables(&self, scope_key: &str) -> Result<RuntimeVariablesSnapshot> {
@@ -1565,7 +1582,21 @@ impl StorageManager {
 
         // 2. Execute SQLite transaction
         let mut conn = self.conn.lock().unwrap();
-        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let mut backoff_ms = 15u64;
+        let tx = {
+            let mut attempt = 0u32;
+            loop {
+                match conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate) {
+                    Ok(t) => break t,
+                    Err(e) if is_sqlite_busy_err(&e) && attempt < 5 => {
+                        attempt += 1;
+                        std::thread::sleep(Duration::from_millis(backoff_ms));
+                        backoff_ms = (backoff_ms * 2).min(120);
+                    }
+                    Err(e) => return Err(e.into()),
+                }
+            }
+        };
 
         tx.execute(
             "INSERT INTO projects (
@@ -3764,13 +3795,51 @@ impl StorageManager {
         if release.project_id.trim().is_empty() {
             bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
         }
-        let conn = self.conn.lock().unwrap();
-        conn.execute(
+        let _ = SemVer::parse(&release.version)?;
+        let _ = ReleaseLifecycleState::from_str_checked(&release.lifecycle_state)?;
+
+        let mut conn = self.conn.lock().unwrap();
+        let mut backoff_ms = 15u64;
+        let tx = {
+            let mut attempt = 0u32;
+            loop {
+                match conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate) {
+                    Ok(t) => break t,
+                    Err(e) if is_sqlite_busy_err(&e) && attempt < 5 => {
+                        attempt += 1;
+                        std::thread::sleep(Duration::from_millis(backoff_ms));
+                        backoff_ms = (backoff_ms * 2).min(120);
+                    }
+                    Err(e) => return Err(e.into()),
+                }
+            }
+        };
+
+        // If recording directly as Published, ensure an immutable Published version is not silently overwritten
+        if release.lifecycle_state == "Published" {
+            let dup: i64 = tx.query_row(
+                "SELECT COUNT(*) FROM project_releases WHERE project_id = ?1 AND version = ?2 AND lifecycle_state = 'Published';",
+                params![release.project_id, release.version],
+                |r| r.get(0),
+            )?;
+            if dup > 0 {
+                bail!(
+                    "RELEASE_VERSION_CONFLICT: Version '{}' is already Published for project '{}'. Bump SemVer or create an RC.",
+                    release.version,
+                    release.project_id
+                );
+            }
+        }
+
+        tx.execute(
             "INSERT INTO project_releases (
                 id, project_id, version, output_dir_path, exe_path, exe_size_bytes,
                 exe_sha256, key_id, publisher_public_key_hex, pe_rcdata_pubkey_id,
-                signature_ed25519_hex, build_report_json, built_at
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13);",
+                signature_ed25519_hex, build_report_json, built_at,
+                lifecycle_state, release_channel, changelog_md, min_runtime_version,
+                workflow_schema_version, ui_schema_version, module_api_version,
+                sqlite_schema_version, git_commit, signature_status, promoted_at, rolled_back_from_id
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25);",
             params![
                 release.id,
                 release.project_id,
@@ -3784,10 +3853,203 @@ impl StorageManager {
                 release.pe_rcdata_pubkey_id,
                 release.signature_ed25519_hex,
                 release.build_report_json,
+                release.built_at,
+                release.lifecycle_state,
+                release.release_channel,
+                release.changelog_md,
+                release.min_runtime_version,
+                release.workflow_schema_version as i64,
+                release.ui_schema_version as i64,
+                release.module_api_version,
+                release.sqlite_schema_version as i64,
+                release.git_commit,
+                release.signature_status,
+                release.promoted_at,
+                release.rolled_back_from_id
+            ],
+        )?;
+        tx.execute(
+            "INSERT INTO project_release_transitions (
+                id, project_id, release_id, from_state, to_state, note, transitioned_at
+             ) VALUES (?1, ?2, ?3, 'None', ?4, ?5, ?6);",
+            params![
+                format!("rtr-{}", uuid::Uuid::new_v4()),
+                release.project_id,
+                release.id,
+                release.lifecycle_state,
+                format!("Created release v{} [{}]", release.version, release.release_channel),
                 release.built_at
             ],
         )?;
+        tx.commit()?;
         Ok(())
+    }
+
+    pub fn get_project_release(&self, release_id: &str) -> Result<Option<ProjectReleaseRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, project_id, version, output_dir_path, exe_path, exe_size_bytes,
+                    exe_sha256, key_id, publisher_public_key_hex, pe_rcdata_pubkey_id,
+                    signature_ed25519_hex, build_report_json, built_at,
+                    lifecycle_state, release_channel, changelog_md, min_runtime_version,
+                    workflow_schema_version, ui_schema_version, module_api_version,
+                    sqlite_schema_version, git_commit, signature_status, promoted_at, rolled_back_from_id
+             FROM project_releases WHERE id = ?1 LIMIT 1;",
+        )?;
+        let mut rows = stmt.query(params![release_id])?;
+        if let Some(r) = rows.next()? {
+            Ok(Some(row_to_project_release(r)?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn transition_project_release_lifecycle(
+        &self,
+        project_id: &str,
+        release_id: &str,
+        target_state_str: &str,
+        note: &str,
+    ) -> Result<ProjectReleaseRecord> {
+        let target_state = ReleaseLifecycleState::from_str_checked(target_state_str)?;
+        let now = Utc::now().to_rfc3339();
+        let mut conn = self.conn.lock().unwrap();
+        let mut backoff_ms = 15u64;
+        let tx = {
+            let mut attempt = 0u32;
+            loop {
+                match conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate) {
+                    Ok(t) => break t,
+                    Err(e) if is_sqlite_busy_err(&e) && attempt < 5 => {
+                        attempt += 1;
+                        std::thread::sleep(Duration::from_millis(backoff_ms));
+                        backoff_ms = (backoff_ms * 2).min(120);
+                    }
+                    Err(e) => return Err(e.into()),
+                }
+            }
+        };
+
+        let current_state_str: String = tx
+            .query_row(
+                "SELECT lifecycle_state FROM project_releases WHERE id = ?1 AND project_id = ?2;",
+                params![release_id, project_id],
+                |r| r.get(0),
+            )
+            .context("PROJECT_RELEASE_NOT_FOUND")?;
+        let current_state = ReleaseLifecycleState::from_str_checked(&current_state_str)?;
+
+        if current_state != target_state && !current_state.can_transition_to(target_state) {
+            bail!(
+                "INVALID_RELEASE_TRANSITION: Cannot transition release '{}' from '{}' to '{}'",
+                release_id,
+                current_state.as_str(),
+                target_state.as_str()
+            );
+        }
+
+        // If promoting/reactivating a release to Published, mark any OTHER currently Published release
+        // for this project cleanly as Deprecated (or RolledBack when reactivating an older release).
+        let mut prev_published_id: Option<String> = None;
+        if target_state == ReleaseLifecycleState::Published {
+            let mut st = tx.prepare(
+                "SELECT id FROM project_releases WHERE project_id = ?1 AND lifecycle_state = 'Published' AND id != ?2;",
+            )?;
+            let others: Vec<String> = st
+                .query_map(params![project_id, release_id], |r| r.get(0))?
+                .collect::<std::result::Result<Vec<_>, _>>()?;
+            for other_id in others {
+                prev_published_id = Some(other_id.clone());
+                let displaced_to = if current_state == ReleaseLifecycleState::Deprecated
+                    || current_state == ReleaseLifecycleState::RolledBack
+                {
+                    "RolledBack"
+                } else {
+                    "Deprecated"
+                };
+                tx.execute(
+                    "UPDATE project_releases SET lifecycle_state = ?1 WHERE id = ?2;",
+                    params![displaced_to, other_id],
+                )?;
+                tx.execute(
+                    "INSERT INTO project_release_transitions (
+                        id, project_id, release_id, from_state, to_state, note, transitioned_at
+                     ) VALUES (?1, ?2, ?3, 'Published', ?4, ?5, ?6);",
+                    params![
+                        format!("rtr-{}", uuid::Uuid::new_v4()),
+                        project_id,
+                        other_id,
+                        displaced_to,
+                        format!("Superseded by release {} ({})", release_id, note),
+                        now
+                    ],
+                )?;
+            }
+        }
+
+        let promoted_at_opt = if target_state == ReleaseLifecycleState::Published {
+            Some(now.clone())
+        } else {
+            None
+        };
+        tx.execute(
+            "UPDATE project_releases
+             SET lifecycle_state = ?1,
+                 promoted_at = COALESCE(?2, promoted_at),
+                 rolled_back_from_id = COALESCE(?3, rolled_back_from_id)
+             WHERE id = ?4 AND project_id = ?5;",
+            params![
+                target_state.as_str(),
+                promoted_at_opt,
+                prev_published_id,
+                release_id,
+                project_id
+            ],
+        )?;
+        tx.execute(
+            "INSERT INTO project_release_transitions (
+                id, project_id, release_id, from_state, to_state, note, transitioned_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7);",
+            params![
+                format!("rtr-{}", uuid::Uuid::new_v4()),
+                project_id,
+                release_id,
+                current_state.as_str(),
+                target_state.as_str(),
+                note,
+                now
+            ],
+        )?;
+        tx.commit()?;
+
+        drop(conn);
+        self.get_project_release(release_id)?
+            .context("Failed to reload transitioned release")
+    }
+
+    pub fn list_project_release_transitions(
+        &self,
+        project_id: &str,
+    ) -> Result<Vec<ReleaseTransitionRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut st = conn.prepare(
+            "SELECT id, project_id, release_id, from_state, to_state, note, transitioned_at
+             FROM project_release_transitions
+             WHERE project_id = ?1
+             ORDER BY transitioned_at DESC LIMIT 50;",
+        )?;
+        let rows = st.query_map(params![project_id], |r| {
+            Ok(ReleaseTransitionRecord {
+                id: r.get(0)?,
+                project_id: r.get(1)?,
+                release_id: r.get(2)?,
+                from_state: r.get(3)?,
+                to_state: r.get(4)?,
+                note: r.get(5)?,
+                transitioned_at: r.get(6)?,
+            })
+        })?;
+        Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
     }
 
     pub fn list_project_releases(&self, project_id: &str) -> Result<Vec<ProjectReleaseRecord>> {
@@ -3798,26 +4060,13 @@ impl StorageManager {
         let mut stmt = conn.prepare(
             "SELECT id, project_id, version, output_dir_path, exe_path, exe_size_bytes,
                     exe_sha256, key_id, publisher_public_key_hex, pe_rcdata_pubkey_id,
-                    signature_ed25519_hex, build_report_json, built_at
+                    signature_ed25519_hex, build_report_json, built_at,
+                    lifecycle_state, release_channel, changelog_md, min_runtime_version,
+                    workflow_schema_version, ui_schema_version, module_api_version,
+                    sqlite_schema_version, git_commit, signature_status, promoted_at, rolled_back_from_id
              FROM project_releases WHERE project_id = ?1 AND project_id IS NOT NULL ORDER BY built_at DESC;",
         )?;
-        let rows = stmt.query_map(params![project_id], |r| {
-            Ok(ProjectReleaseRecord {
-                id: r.get(0)?,
-                project_id: r.get(1)?,
-                version: r.get(2)?,
-                output_dir_path: r.get(3)?,
-                exe_path: r.get(4)?,
-                exe_size_bytes: r.get::<_, i64>(5)? as u64,
-                exe_sha256: r.get(6)?,
-                key_id: r.get(7)?,
-                publisher_public_key_hex: r.get(8)?,
-                pe_rcdata_pubkey_id: r.get(9)?,
-                signature_ed25519_hex: r.get(10)?,
-                build_report_json: r.get(11)?,
-                built_at: r.get(12)?,
-            })
-        })?;
+        let rows = stmt.query_map(params![project_id], row_to_project_release)?;
         Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
     }
 
@@ -3843,6 +4092,163 @@ impl StorageManager {
             accounts,
             releases,
         }))
+    }
+}
+
+fn query_events_for_streams(
+    conn: &Connection,
+    streams: &[&str],
+    after_seqs: &HashMap<String, u64>,
+) -> Result<Vec<RuntimeVarDeltaEvent>> {
+    let mut events = Vec::new();
+    for sid in streams {
+        let min_seq = after_seqs.get(*sid).copied().unwrap_or(0);
+        let mut st = conn.prepare(
+            "SELECT stream_id, seq, project_id, session_id, job_id, workflow_version, deltas_json, emitted_at_utc
+             FROM runtime_var_events
+             WHERE stream_id = ?1 AND seq > ?2
+             ORDER BY seq ASC;",
+        )?;
+        let mut rows = st.query(params![sid, min_seq as i64])?;
+        while let Some(r) = rows.next()? {
+            let deltas_str: String = r.get(6)?;
+            let deltas: Vec<RuntimeVariableEnvelope> =
+                serde_json::from_str(&deltas_str).unwrap_or_default();
+            events.push(RuntimeVarDeltaEvent {
+                stream_id: r.get(0)?,
+                scope_key: r.get(0)?,
+                project_id: r.get(2)?,
+                session_id: r.get(3)?,
+                job_id: r.get(4)?,
+                seq: r.get::<_, i64>(1)?.max(0) as u64,
+                workflow_version: r.get(5)?,
+                emitted_at_utc: r.get(7)?,
+                deltas,
+            });
+        }
+    }
+    Ok(events)
+}
+
+fn row_to_project_release(r: &rusqlite::Row<'_>) -> rusqlite::Result<ProjectReleaseRecord> {
+    Ok(ProjectReleaseRecord {
+        id: r.get(0)?,
+        project_id: r.get(1)?,
+        version: r.get(2)?,
+        output_dir_path: r.get(3)?,
+        exe_path: r.get(4)?,
+        exe_size_bytes: r.get::<_, i64>(5)? as u64,
+        exe_sha256: r.get(6)?,
+        key_id: r.get(7)?,
+        publisher_public_key_hex: r.get(8)?,
+        pe_rcdata_pubkey_id: r.get(9)?,
+        signature_ed25519_hex: r.get(10)?,
+        build_report_json: r.get(11)?,
+        built_at: r.get(12)?,
+        lifecycle_state: r.get(13)?,
+        release_channel: r.get(14)?,
+        changelog_md: r.get(15)?,
+        min_runtime_version: r.get(16)?,
+        workflow_schema_version: r.get::<_, i64>(17)? as u32,
+        ui_schema_version: r.get::<_, i64>(18)? as u32,
+        module_api_version: r.get(19)?,
+        sqlite_schema_version: r.get::<_, i64>(20)? as u32,
+        git_commit: r.get(21)?,
+        signature_status: r.get(22)?,
+        promoted_at: r.get(23)?,
+        rolled_back_from_id: r.get(24)?,
+    })
+}
+
+fn is_sqlite_busy_err(e: &rusqlite::Error) -> bool {
+    matches!(
+        e,
+        rusqlite::Error::SqliteFailure(err, _)
+            if err.code == rusqlite::ErrorCode::DatabaseBusy
+                || err.code == rusqlite::ErrorCode::DatabaseLocked
+    )
+}
+
+/// Dedicated persistent-connection SQLite WAL watcher (P5.1 Regression Backlog #1).
+/// Strictly compares `PRAGMA data_version` ONLY on this single long-lived connection,
+/// with bounded exponential backoff on `SQLITE_BUSY`.
+pub struct ExternalWalReader {
+    conn: Connection,
+    last_data_version: Option<i64>,
+    pub busy_retry_count: u64,
+}
+
+impl ExternalWalReader {
+    pub fn open<P: AsRef<Path>>(db_path: P) -> Result<Self> {
+        let conn = Connection::open(db_path)?;
+        conn.busy_timeout(Duration::from_millis(250))?;
+        let _ = conn.execute_batch("PRAGMA journal_mode = WAL;");
+        Ok(Self {
+            conn,
+            last_data_version: None,
+            busy_retry_count: 0,
+        })
+    }
+
+    pub fn last_observed_data_version(&self) -> Option<i64> {
+        self.last_data_version
+    }
+
+    /// Returns `(data_version_changed, newly_committed_events)` comparing `PRAGMA data_version`
+    /// on the exact same persistent `Connection`.
+    pub fn poll_deltas(
+        &mut self,
+        base_scope_key: &str,
+        after_seqs: &HashMap<String, u64>,
+    ) -> Result<(bool, Vec<RuntimeVarDeltaEvent>)> {
+        let clean_base = base_scope_key.trim_end_matches("::testkit");
+        let testkit_scope = format!("{}::testkit", clean_base);
+
+        let mut dv: i64 = 0;
+        let mut backoff_ms = 15u64;
+        for attempt in 0..=5 {
+            match self
+                .conn
+                .query_row("PRAGMA data_version;", [], |r| r.get::<_, i64>(0))
+            {
+                Ok(v) => {
+                    dv = v;
+                    break;
+                }
+                Err(e) if is_sqlite_busy_err(&e) && attempt < 5 => {
+                    self.busy_retry_count += 1;
+                    std::thread::sleep(Duration::from_millis(backoff_ms));
+                    backoff_ms = (backoff_ms * 2).min(120);
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
+
+        let changed = self.last_data_version.map(|prev| prev != dv).unwrap_or(true);
+        self.last_data_version = Some(dv);
+        if !changed {
+            return Ok((false, Vec::new()));
+        }
+
+        let mut events = Vec::new();
+        backoff_ms = 15;
+        for attempt in 0..=5 {
+            match query_events_for_streams(&self.conn, &[clean_base, testkit_scope.as_str()], after_seqs)
+            {
+                Ok(ev) => {
+                    events = ev;
+                    break;
+                }
+                Err(e) if e.downcast_ref::<rusqlite::Error>().map(is_sqlite_busy_err).unwrap_or(false) && attempt < 5 => {
+                    self.busy_retry_count += 1;
+                    std::thread::sleep(Duration::from_millis(backoff_ms));
+                    backoff_ms = (backoff_ms * 2).min(120);
+                }
+                Err(e) => return Err(e),
+            }
+        }
+
+        Ok((true, events))
     }
 }
 
@@ -4030,13 +4436,13 @@ mod tests {
             ).unwrap();
         }
 
-        // 2. Open with StorageManager -> runs v1 + v2 + v3 migrations atomically
+        // 2. Open with StorageManager -> runs v1 + v2 + v3 + v4 migrations atomically
         let storage = StorageManager::new(&db_file).unwrap();
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3]);
+        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4]);
 
-        // 3. Verify idempotency: running migrations again causes zero errors and keeps versions [1, 2, 3]
+        // 3. Verify idempotency: running migrations again causes zero errors and keeps versions [1, 2, 3, 4]
         storage.run_migrations().unwrap();
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3]);
+        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4]);
 
         // 4. Verify 100% data preservation + attachment to default GameProject
         let integrity = storage.check_integrity().unwrap();
@@ -4068,15 +4474,15 @@ mod tests {
             .save_workflow_draft("wf-keep", "Keep Me", "{}")
             .unwrap();
 
-        let bad_v4_sql = "
+        let bad_v5_sql = "
             CREATE TABLE should_not_exist (id TEXT PRIMARY KEY);
             INSERT INTO nonexistent_table_triggering_rollback VALUES (1);
         ";
-        let res = storage.apply_transactional_migration(4, bad_v4_sql);
+        let res = storage.apply_transactional_migration(5, bad_v5_sql);
         assert!(res.is_err());
 
-        // Version 4 must NOT be recorded and `should_not_exist` table must NOT exist
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3]);
+        // Version 5 must NOT be recorded and `should_not_exist` table must NOT exist
+        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4]);
         let integrity = storage.check_integrity().unwrap();
         assert!(integrity.is_healthy);
         assert!(!integrity.table_counts.contains_key("should_not_exist"));
@@ -5250,10 +5656,10 @@ mod tests {
                 .unwrap();
         }
 
-        // 2. Upgrade live DB to v3 and write project data
+        // 2. Upgrade live DB to latest and write project data
         {
             let storage = StorageManager::new(&live_db).unwrap();
-            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3]);
+            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4]);
             let _ = storage
                 .create_project(
                     CreateProjectRequest {
@@ -5278,7 +5684,7 @@ mod tests {
         let report =
             StorageManager::rollback_database_from_backup(&live_db, &pre_v2_backup, &safety_snap)
                 .unwrap();
-        assert_eq!(report.pre_rollback_versions, vec![1, 2, 3]);
+        assert_eq!(report.pre_rollback_versions, vec![1, 2, 3, 4]);
         assert!(report.post_rollback_versions.is_empty());
         assert!(report.post_rollback_integrity.is_healthy);
         assert_eq!(report.post_rollback_integrity.foreign_key_violations, 0);
@@ -5506,10 +5912,10 @@ mod tests {
             bk.run_to_completion(100, Duration::from_millis(5), None).unwrap();
         }
 
-        // 2. Open with v3 StorageManager -> migrates legacy P4 snapshots to LEGACY_UNVERIFIED + scrubs secrets
+        // 2. Open with v4 StorageManager -> migrates legacy P4 snapshots to LEGACY_UNVERIFIED + scrubs secrets
         {
             let storage = StorageManager::new(&db_file).unwrap();
-            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3]);
+            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4]);
             let snap = storage
                 .load_runtime_snapshot_with_recovery("mini:jx2-mobile", None)
                 .unwrap();
@@ -5527,7 +5933,7 @@ mod tests {
         // 3. Verify rollback back to pre-v3 backup cleanly restores pre-v3 schema versions [1, 2]
         let rb = StorageManager::rollback_database_from_backup(&db_file, &pre_v3_backup, &safety_snap)
             .unwrap();
-        assert_eq!(rb.pre_rollback_versions, vec![1, 2, 3]);
+        assert_eq!(rb.pre_rollback_versions, vec![1, 2, 3, 4]);
         assert_eq!(rb.post_rollback_versions, vec![1, 2]);
         assert!(rb.post_rollback_integrity.is_healthy);
 
@@ -5645,5 +6051,223 @@ mod tests {
         assert_eq!(rec.missed_events.len(), 1);
         assert_eq!(rec.missed_events[0].seq, 2);
         assert_eq!(rec.missed_events[0].deltas[0].name, "resource_count");
+    }
+
+    #[test]
+    fn test_p5_1_backlog_persistent_wal_reader_concurrency_stress_and_compaction() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_p5_1_wal_stress_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let db_file = temp_dir.join("wal_stress.db");
+        let projects_dir = temp_dir.join("projects");
+        std::fs::create_dir_all(&projects_dir).unwrap();
+
+        let storage_w1 = StorageManager::new(&db_file).unwrap();
+        let storage_w2 = StorageManager::new(&db_file).unwrap();
+        let mut reader = ExternalWalReader::open(&db_file).unwrap();
+        let mut seen_seqs: HashMap<String, u64> = HashMap::new();
+
+        // Initial poll records initial data_version on this single persistent reader Connection
+        let (_chg0, ev0) = reader.poll_deltas("mini:stress", &seen_seqs).unwrap();
+        assert!(ev0.is_empty());
+        let dv0 = reader.last_observed_data_version();
+        assert!(dv0.is_some());
+
+        // Concurrent writers (w1 & w2) writing 120 events across two threads (60 each = 120 total)
+        // Measure commit latency distribution + test PRAGMA data_version change detection on persistent connection!
+        let latencies_us = std::sync::Arc::new(std::sync::Mutex::new(Vec::<u64>::with_capacity(120)));
+        let l1 = latencies_us.clone();
+        let l2 = latencies_us.clone();
+        let s1 = storage_w1.clone();
+        let s2 = storage_w2.clone();
+
+        let h1 = std::thread::spawn(move || {
+            for i in 0..60 {
+                let t0 = std::time::Instant::now();
+                let env = RuntimeVariableEnvelope {
+                    project_id: "stress".to_string(),
+                    session_id: "w1".to_string(),
+                    job_id: format!("j1-{}", i),
+                    name: "counter_a".to_string(),
+                    value: serde_json::json!(i),
+                    value_type: "number".to_string(),
+                    source: VariableSource::TestkitMock,
+                    verified: false,
+                    confidence: None,
+                    updated_at_utc: Utc::now().to_rfc3339(),
+                    workflow_version: "wf@v1".to_string(),
+                    seq: 0,
+                    redacted: false,
+                };
+                s1.record_runtime_var_deltas("mini:stress", "stress", "w1", "j1", "wf@v1", vec![env])
+                    .unwrap();
+                l1.lock().unwrap().push(t0.elapsed().as_micros() as u64);
+            }
+        });
+        let h2 = std::thread::spawn(move || {
+            for i in 0..60 {
+                let t0 = std::time::Instant::now();
+                let env = RuntimeVariableEnvelope {
+                    project_id: "stress".to_string(),
+                    session_id: "w2".to_string(),
+                    job_id: format!("j2-{}", i),
+                    name: "counter_b".to_string(),
+                    value: serde_json::json!(i),
+                    value_type: "number".to_string(),
+                    source: VariableSource::TestkitMock,
+                    verified: false,
+                    confidence: None,
+                    updated_at_utc: Utc::now().to_rfc3339(),
+                    workflow_version: "wf@v1".to_string(),
+                    seq: 0,
+                    redacted: false,
+                };
+                s2.record_runtime_var_deltas("mini:stress", "stress", "w2", "j2", "wf@v1", vec![env])
+                    .unwrap();
+                l2.lock().unwrap().push(t0.elapsed().as_micros() as u64);
+            }
+        });
+
+        h1.join().unwrap();
+        h2.join().unwrap();
+
+        // Persistent reader detects data_version change and recovers ALL 120 events without missing 1!
+        let (changed, events) = reader.poll_deltas("mini:stress", &seen_seqs).unwrap();
+        assert!(changed);
+        assert_eq!(events.len(), 120);
+        for (idx, ev) in events.iter().enumerate() {
+            assert_eq!(ev.seq, (idx as u64) + 1);
+            seen_seqs.insert(ev.stream_id.clone(), ev.seq);
+        }
+
+        // Subsequent poll with zero new commits reports changed == false on same persistent connection!
+        let (changed2, events2) = reader.poll_deltas("mini:stress", &seen_seqs).unwrap();
+        assert!(!changed2);
+        assert!(events2.is_empty());
+
+        let mut sorted_lat = latencies_us.lock().unwrap().clone();
+        sorted_lat.sort_unstable();
+        let p50_us = sorted_lat[sorted_lat.len() / 2];
+        let p95_us = sorted_lat[(sorted_lat.len() * 95) / 100];
+        let wal_bytes = std::fs::metadata(temp_dir.join("wal_stress.db-wal"))
+            .map(|m| m.len())
+            .unwrap_or(0);
+        eprintln!(
+            "[P5.1 WAL Benchmark] 120 concurrent writes: P50={}us, P95={}us, WAL={}B, busy_retries={}",
+            p50_us, p95_us, wal_bytes, reader.busy_retry_count
+        );
+
+        // Verify event log compaction keeps latest 25 events while preserving last_seq=120 and latest values!
+        let deleted = storage_w1
+            .compact_runtime_var_events("mini:stress::testkit", 25)
+            .unwrap();
+        assert_eq!(deleted, 95);
+        let snap = storage_w1
+            .load_runtime_snapshot_with_recovery("mini:stress", None)
+            .unwrap();
+        assert_eq!(snap.stream_seqs.get("mini:stress::testkit"), Some(&120));
+        assert_eq!(snap.missed_events.len(), 25);
+        assert!(snap.testkit_envelopes.contains_key("counter_a"));
+        assert!(snap.testkit_envelopes.contains_key("counter_b"));
+
+        drop(reader);
+        drop(storage_w1);
+        drop(storage_w2);
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p5_2_release_lifecycle_transitions_and_semver() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_p5_2_rel_lifecycle_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let projects_root = temp_dir.join("projects");
+        let db_file = temp_dir.join("studio.db");
+        let storage = StorageManager::new(&db_file).unwrap();
+        let proj = storage
+            .create_project(
+                CreateProjectRequest {
+                    slug: "lifecycle-game".to_string(),
+                    name: "Lifecycle Game".to_string(),
+                    game_package_id: "com.lifecycle.game".to_string(),
+                    version: Some("1.0.0".to_string()),
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                    enabled_modules: None,
+                },
+                &projects_root,
+            )
+            .unwrap();
+
+        // 1. Seed RC 1.0.0 -> Promote to Published
+        let r1 = ProjectReleaseRecord {
+            id: "rel-100".to_string(),
+            project_id: proj.id.clone(),
+            version: "1.0.0".to_string(),
+            output_dir_path: "rel/1.0.0".to_string(),
+            exe_path: "rel/1.0.0/Auto.exe".to_string(),
+            exe_size_bytes: 1000,
+            exe_sha256: "aaa".to_string(),
+            key_id: "k1".to_string(),
+            publisher_public_key_hex: "pub".to_string(),
+            pe_rcdata_pubkey_id: 7777,
+            signature_ed25519_hex: "sig".to_string(),
+            build_report_json: "{}".to_string(),
+            built_at: "2026-11-22T01:00:00Z".to_string(),
+            lifecycle_state: "RC".to_string(),
+            changelog_md: "Initial RC".to_string(),
+            ..Default::default()
+        };
+        storage.record_project_release(r1).unwrap();
+        let p1 = storage
+            .transition_project_release_lifecycle(&proj.id, "rel-100", "Published", "Promote 1.0.0")
+            .unwrap();
+        assert_eq!(p1.lifecycle_state, "Published");
+
+        // 2. Seed RC 1.1.0 -> Promote to Published -> automatically deprecates 1.0.0!
+        let r2 = ProjectReleaseRecord {
+            id: "rel-110".to_string(),
+            project_id: proj.id.clone(),
+            version: "1.1.0".to_string(),
+            output_dir_path: "rel/1.1.0".to_string(),
+            exe_path: "rel/1.1.0/Auto.exe".to_string(),
+            exe_size_bytes: 1200,
+            exe_sha256: "bbb".to_string(),
+            key_id: "k1".to_string(),
+            publisher_public_key_hex: "pub".to_string(),
+            pe_rcdata_pubkey_id: 7777,
+            signature_ed25519_hex: "sig2".to_string(),
+            build_report_json: "{}".to_string(),
+            built_at: "2026-11-22T02:00:00Z".to_string(),
+            lifecycle_state: "RC".to_string(),
+            changelog_md: "Add new raid task".to_string(),
+            ..Default::default()
+        };
+        storage.record_project_release(r2).unwrap();
+        let _ = storage
+            .transition_project_release_lifecycle(&proj.id, "rel-110", "Published", "Ship 1.1.0")
+            .unwrap();
+
+        let old_after = storage.get_project_release("rel-100").unwrap().unwrap();
+        assert_eq!(old_after.lifecycle_state, "Deprecated");
+
+        // 3. Rollback to rel-100 -> reactivates rel-100 as Published and marks rel-110 as RolledBack!
+        let rb = storage
+            .transition_project_release_lifecycle(&proj.id, "rel-100", "Published", "Rollback from 1.1.0")
+            .unwrap();
+        assert_eq!(rb.lifecycle_state, "Published");
+        let new_after = storage.get_project_release("rel-110").unwrap().unwrap();
+        assert_eq!(new_after.lifecycle_state, "RolledBack");
+
+        let history = storage.list_project_release_transitions(&proj.id).unwrap();
+        assert!(history.len() >= 5);
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }

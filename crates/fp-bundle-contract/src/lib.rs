@@ -1,9 +1,127 @@
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-/// Version compatibility matrix for Project, Workflow, UI Schema, Module API, and Runtime
+pub const CURRENT_RUNTIME_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const SUPPORTED_WORKFLOW_SCHEMA_VERSION: u32 = 1;
+pub const SUPPORTED_UI_SCHEMA_VERSION: u32 = 1;
+pub const SUPPORTED_MODULE_API_VERSION: &str = "1.0.0";
+pub const CURRENT_SQLITE_SCHEMA_VERSION: u32 = 4;
+
+fn default_sqlite_schema_version() -> u32 {
+    3
+}
+
+/// Parsed Semantic Version (`MAJOR.MINOR.PATCH[-prerelease]`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SemVer {
+    pub major: u64,
+    pub minor: u64,
+    pub patch: u64,
+    pub prerelease: Option<String>,
+}
+
+impl SemVer {
+    pub fn parse(raw: &str) -> Result<Self> {
+        let trimmed = raw.trim().trim_start_matches('v');
+        if trimmed.is_empty() {
+            bail!("SEMVER_INVALID: Empty version string");
+        }
+        let (core, pre) = match trimmed.split_once('-') {
+            Some((c, p)) => (c, Some(p.to_string())),
+            None => (trimmed, None),
+        };
+        let parts: Vec<&str> = core.split('.').collect();
+        if parts.len() != 3 {
+            bail!(
+                "SEMVER_INVALID: Expected MAJOR.MINOR.PATCH format, got '{}'",
+                raw
+            );
+        }
+        let major = parts[0]
+            .parse::<u64>()
+            .map_err(|_| anyhow::anyhow!("SEMVER_INVALID: bad major in '{}'", raw))?;
+        let minor = parts[1]
+            .parse::<u64>()
+            .map_err(|_| anyhow::anyhow!("SEMVER_INVALID: bad minor in '{}'", raw))?;
+        let patch = parts[2]
+            .parse::<u64>()
+            .map_err(|_| anyhow::anyhow!("SEMVER_INVALID: bad patch in '{}'", raw))?;
+        Ok(Self {
+            major,
+            minor,
+            patch,
+            prerelease: pre,
+        })
+    }
+}
+
+impl Ord for SemVer {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (self.major, self.minor, self.patch)
+            .cmp(&(other.major, other.minor, other.patch))
+            .then_with(|| match (&self.prerelease, &other.prerelease) {
+                (None, None) => Ordering::Equal,
+                (None, Some(_)) => Ordering::Greater,
+                (Some(_), None) => Ordering::Less,
+                (Some(a), Some(b)) => a.cmp(b),
+            })
+    }
+}
+
+impl PartialOrd for SemVer {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ReleaseLifecycleState {
+    Draft,
+    #[serde(rename = "RC")]
+    Rc,
+    Published,
+    Deprecated,
+    RolledBack,
+}
+
+impl ReleaseLifecycleState {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Draft => "Draft",
+            Self::Rc => "RC",
+            Self::Published => "Published",
+            Self::Deprecated => "Deprecated",
+            Self::RolledBack => "RolledBack",
+        }
+    }
+
+    pub fn from_str_checked(s: &str) -> Result<Self> {
+        match s.trim() {
+            "Draft" => Ok(Self::Draft),
+            "RC" | "Rc" => Ok(Self::Rc),
+            "Published" => Ok(Self::Published),
+            "Deprecated" => Ok(Self::Deprecated),
+            "RolledBack" => Ok(Self::RolledBack),
+            other => bail!("INVALID_LIFECYCLE_STATE: '{}'", other),
+        }
+    }
+
+    pub fn can_transition_to(&self, next: Self) -> bool {
+        matches!(
+            (*self, next),
+            (Self::Draft, Self::Rc | Self::Deprecated)
+                | (Self::Rc, Self::Published | Self::Deprecated | Self::Draft)
+                | (Self::Published, Self::Deprecated | Self::RolledBack)
+                | (Self::Deprecated, Self::Published | Self::RolledBack)
+                | (Self::RolledBack, Self::Published)
+        )
+    }
+}
+
+/// Version compatibility matrix for Project, Workflow, UI Schema, Module API, SQLite Schema, and Runtime
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct CompatibilityVersions {
@@ -12,18 +130,193 @@ pub struct CompatibilityVersions {
     pub ui_schema_version: u32,
     pub module_api_version: String,
     pub min_runtime_version: String,
+    #[serde(default = "default_sqlite_schema_version")]
+    pub sqlite_schema_version: u32,
 }
 
 impl Default for CompatibilityVersions {
     fn default() -> Self {
         Self {
             project_schema_version: 1,
-            workflow_schema_version: 1,
-            ui_schema_version: 1,
-            module_api_version: "1.0.0".to_string(),
-            min_runtime_version: "0.1.0".to_string(),
+            workflow_schema_version: SUPPORTED_WORKFLOW_SCHEMA_VERSION,
+            ui_schema_version: SUPPORTED_UI_SCHEMA_VERSION,
+            module_api_version: SUPPORTED_MODULE_API_VERSION.to_string(),
+            min_runtime_version: CURRENT_RUNTIME_VERSION.to_string(),
+            sqlite_schema_version: CURRENT_SQLITE_SCHEMA_VERSION,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RuntimeCompatibilityProfile {
+    pub runtime_version: String,
+    pub max_workflow_schema_version: u32,
+    pub max_ui_schema_version: u32,
+    pub module_api_version: String,
+    pub max_sqlite_schema_version: u32,
+}
+
+impl Default for RuntimeCompatibilityProfile {
+    fn default() -> Self {
+        Self {
+            runtime_version: CURRENT_RUNTIME_VERSION.to_string(),
+            max_workflow_schema_version: SUPPORTED_WORKFLOW_SCHEMA_VERSION,
+            max_ui_schema_version: SUPPORTED_UI_SCHEMA_VERSION,
+            module_api_version: SUPPORTED_MODULE_API_VERSION.to_string(),
+            max_sqlite_schema_version: CURRENT_SQLITE_SCHEMA_VERSION,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompatibilityDimensionCheck {
+    pub dimension: String,
+    pub required_or_bundle: String,
+    pub runtime_supported: String,
+    pub compatible: bool,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompatibilityReport {
+    pub compatible: bool,
+    pub checks: Vec<CompatibilityDimensionCheck>,
+    pub blocking_reasons: Vec<String>,
+}
+
+/// Evaluates all 5 required compatibility dimensions:
+/// Runtime Version, Workflow Schema Version, UI Schema Version, Module API Version, and SQLite Schema Version.
+pub fn evaluate_bundle_compatibility(
+    compat: &CompatibilityVersions,
+    ui_schema_version: u32,
+    workflow_versions: &[u32],
+    profile: &RuntimeCompatibilityProfile,
+) -> CompatibilityReport {
+    let mut checks = Vec::new();
+    let mut blocking = Vec::new();
+
+    // 1. Runtime Version
+    let rt_ok = match (
+        SemVer::parse(&profile.runtime_version),
+        SemVer::parse(&compat.min_runtime_version),
+    ) {
+        (Ok(cur), Ok(min_req)) => cur >= min_req,
+        _ => false,
+    };
+    if !rt_ok {
+        blocking.push(format!(
+            "RUNTIME_VERSION_INCOMPATIBLE: runtime v{} < required minRuntimeVersion v{}",
+            profile.runtime_version, compat.min_runtime_version
+        ));
+    }
+    checks.push(CompatibilityDimensionCheck {
+        dimension: "RuntimeVersion".to_string(),
+        required_or_bundle: format!(">= {}", compat.min_runtime_version),
+        runtime_supported: profile.runtime_version.clone(),
+        compatible: rt_ok,
+        detail: if rt_ok { "Compatible".to_string() } else { "Runtime upgrade required".to_string() },
+    });
+
+    // 2. Workflow Schema Version (manifest + all individual workflows)
+    let wf_max = workflow_versions
+        .iter()
+        .copied()
+        .max()
+        .unwrap_or(compat.workflow_schema_version);
+    let wf_ok = compat.workflow_schema_version <= profile.max_workflow_schema_version
+        && wf_max <= profile.max_workflow_schema_version;
+    if !wf_ok {
+        blocking.push(format!(
+            "WORKFLOW_SCHEMA_INCOMPATIBLE: bundle workflow schema v{} / max node v{} > supported v{}",
+            compat.workflow_schema_version, wf_max, profile.max_workflow_schema_version
+        ));
+    }
+    checks.push(CompatibilityDimensionCheck {
+        dimension: "WorkflowSchemaVersion".to_string(),
+        required_or_bundle: format!("v{} (max {})", compat.workflow_schema_version, wf_max),
+        runtime_supported: format!("<= v{}", profile.max_workflow_schema_version),
+        compatible: wf_ok,
+        detail: if wf_ok { "Compatible".to_string() } else { "Unsupported workflow schema version".to_string() },
+    });
+
+    // 3. UI Schema Version
+    let ui_ok = compat.ui_schema_version <= profile.max_ui_schema_version
+        && ui_schema_version <= profile.max_ui_schema_version;
+    if !ui_ok {
+        blocking.push(format!(
+            "UI_SCHEMA_INCOMPATIBLE: bundle UI schema v{} (doc v{}) > supported v{}",
+            compat.ui_schema_version, ui_schema_version, profile.max_ui_schema_version
+        ));
+    }
+    checks.push(CompatibilityDimensionCheck {
+        dimension: "UiSchemaVersion".to_string(),
+        required_or_bundle: format!("v{} (ui v{})", compat.ui_schema_version, ui_schema_version),
+        runtime_supported: format!("<= v{}", profile.max_ui_schema_version),
+        compatible: ui_ok,
+        detail: if ui_ok { "Compatible".to_string() } else { "Unsupported UI schema version".to_string() },
+    });
+
+    // 4. Module API Version (same major, runtime minor >= required minor)
+    let mod_ok = match (
+        SemVer::parse(&profile.module_api_version),
+        SemVer::parse(&compat.module_api_version),
+    ) {
+        (Ok(cur), Ok(req)) => cur.major == req.major && cur >= req,
+        _ => false,
+    };
+    if !mod_ok {
+        blocking.push(format!(
+            "MODULE_API_INCOMPATIBLE: required moduleApiVersion {} vs runtime {}",
+            compat.module_api_version, profile.module_api_version
+        ));
+    }
+    checks.push(CompatibilityDimensionCheck {
+        dimension: "ModuleApiVersion".to_string(),
+        required_or_bundle: compat.module_api_version.clone(),
+        runtime_supported: profile.module_api_version.clone(),
+        compatible: mod_ok,
+        detail: if mod_ok { "Compatible".to_string() } else { "Breaking Module API version".to_string() },
+    });
+
+    // 5. SQLite Schema Version
+    let sql_ok = compat.sqlite_schema_version <= profile.max_sqlite_schema_version;
+    if !sql_ok {
+        blocking.push(format!(
+            "SQLITE_SCHEMA_INCOMPATIBLE: bundle sqliteSchemaVersion v{} > runtime supported max v{}",
+            compat.sqlite_schema_version, profile.max_sqlite_schema_version
+        ));
+    }
+    checks.push(CompatibilityDimensionCheck {
+        dimension: "SqliteSchemaVersion".to_string(),
+        required_or_bundle: format!("v{}", compat.sqlite_schema_version),
+        runtime_supported: format!("<= v{}", profile.max_sqlite_schema_version),
+        compatible: sql_ok,
+        detail: if sql_ok { "Compatible".to_string() } else { "Target runtime cannot safely open newer DB schema".to_string() },
+    });
+
+    CompatibilityReport {
+        compatible: blocking.is_empty(),
+        checks,
+        blocking_reasons: blocking,
+    }
+}
+
+/// Guards SQLite downgrade safety BEFORE launching an older EXE against an existing DB.
+pub fn check_sqlite_downgrade_compatibility(
+    live_db_max_version: u32,
+    target_exe_supported_max_db_version: u32,
+) -> Result<()> {
+    if live_db_max_version > target_exe_supported_max_db_version {
+        bail!(
+            "SQLITE_DOWNGRADE_INCOMPATIBLE: Live database is at schema v{} which exceeds rollback EXE supported max v{}. Restore pre-update SQLite backup first!",
+            live_db_max_version,
+            target_exe_supported_max_db_version
+        );
+    }
+    Ok(())
 }
 
 /// Game Project definition (Platform-level entity, completely decoupled from any single game)

@@ -346,6 +346,102 @@ export interface ProjectReleaseRecord {
   signatureEd25519Hex: string;
   buildReportJson: string;
   builtAt: string;
+  lifecycleState: string;
+  releaseChannel: string;
+  changelogMd: string;
+  minRuntimeVersion: string;
+  workflowSchemaVersion: number;
+  uiSchemaVersion: number;
+  moduleApiVersion: string;
+  sqliteSchemaVersion: number;
+  gitCommit?: string | null;
+  signatureStatus: string;
+  promotedAt?: string | null;
+  rolledBackFromId?: string | null;
+}
+
+export interface ReleaseTransitionRecord {
+  id: string;
+  projectId: string;
+  releaseId: string;
+  fromState: string;
+  toState: string;
+  note: string;
+  transitionedAt: string;
+}
+
+export interface CompatibilityDimensionCheck {
+  dimension: string;
+  requiredOrBundle: string;
+  runtimeSupported: string;
+  compatible: boolean;
+  detail: string;
+}
+
+export interface CompatibilityReport {
+  compatible: boolean;
+  checks: CompatibilityDimensionCheck[];
+  blockingReasons: string[];
+}
+
+export interface ActiveVersionPointer {
+  projectSlug: string;
+  activeVersion: string;
+  previousVersion?: string | null;
+  exeName: string;
+  sqliteSchemaVersion: number;
+  minRuntimeVersion: string;
+  postUpdateAutoResumeBlocked: boolean;
+  blockedJobIds: string[];
+  backupDbPath?: string | null;
+  activatedAtUtc: string;
+  journalId: string;
+}
+
+export interface UpdateJournal {
+  journalId: string;
+  operation: string;
+  projectSlug: string;
+  sourceVersion?: string | null;
+  targetVersion: string;
+  stage: string;
+  backupDbPath?: string | null;
+  liveDbPath: string;
+  lastError?: string | null;
+  updatedAtUtc: string;
+}
+
+export interface UpdateOutcome {
+  operation: string;
+  status: string;
+  projectSlug: string;
+  previousVersion?: string | null;
+  activeVersion: string;
+  stageReached: string;
+  backupDbPath?: string | null;
+  backupVerifiedOk: boolean;
+  signatureVerifiedOk: boolean;
+  compatibilityVerifiedOk: boolean;
+  postUpdateAutoResumeBlocked: boolean;
+  blockedJobIds: string[];
+  journalPath: string;
+  detail: string;
+}
+
+export interface ReconcileOutcome {
+  status: string;
+  actionTaken: string;
+  recoveredFromStage?: string | null;
+  activeVersion?: string | null;
+  dbIntegrityOk: boolean;
+  journalPath: string;
+  detail: string;
+}
+
+export interface ManagedInstallInspection {
+  installRoot: string;
+  activePointer?: ActiveVersionPointer | null;
+  journal?: UpdateJournal | null;
 }
 
 export interface GameProjectDetail {

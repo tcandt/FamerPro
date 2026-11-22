@@ -241,7 +241,7 @@ pub struct JobResumeContext {
     pub latest_checkpoint: Option<CheckpointRecord>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectReleaseRecord {
     pub id: String,
@@ -257,6 +257,64 @@ pub struct ProjectReleaseRecord {
     pub signature_ed25519_hex: String,
     pub build_report_json: String,
     pub built_at: String,
+    #[serde(default = "default_release_lifecycle_published")]
+    pub lifecycle_state: String,
+    #[serde(default = "default_release_channel")]
+    pub release_channel: String,
+    #[serde(default)]
+    pub changelog_md: String,
+    #[serde(default = "default_min_runtime_ver")]
+    pub min_runtime_version: String,
+    #[serde(default = "default_schema_v1")]
+    pub workflow_schema_version: u32,
+    #[serde(default = "default_schema_v1")]
+    pub ui_schema_version: u32,
+    #[serde(default = "default_module_api_ver")]
+    pub module_api_version: String,
+    #[serde(default = "default_sqlite_schema_v4")]
+    pub sqlite_schema_version: u32,
+    #[serde(default)]
+    pub git_commit: String,
+    #[serde(default = "default_signature_status")]
+    pub signature_status: String,
+    #[serde(default)]
+    pub promoted_at: Option<String>,
+    #[serde(default)]
+    pub rolled_back_from_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReleaseTransitionRecord {
+    pub id: String,
+    pub project_id: String,
+    pub release_id: String,
+    pub from_state: String,
+    pub to_state: String,
+    pub note: String,
+    pub transitioned_at: String,
+}
+
+fn default_release_lifecycle_published() -> String {
+    "Published".to_string()
+}
+fn default_release_channel() -> String {
+    "internal".to_string()
+}
+fn default_min_runtime_ver() -> String {
+    "0.1.0".to_string()
+}
+fn default_schema_v1() -> u32 {
+    1
+}
+fn default_module_api_ver() -> String {
+    "1.0.0".to_string()
+}
+fn default_sqlite_schema_v4() -> u32 {
+    4
+}
+fn default_signature_status() -> String {
+    "Ed25519-Verified".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
