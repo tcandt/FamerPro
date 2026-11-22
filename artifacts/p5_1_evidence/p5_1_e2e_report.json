@@ -1,0 +1,103 @@
+{
+  "executedAtUtc": "2026-11-22T10:36:17.573Z",
+  "gitHead": "285f2eeed0ffe6be7960c16172ef5c72d2680726",
+  "adbLiveHardware": {
+    "adbDevicesOutput": "List of devices attached",
+    "ldplayer14Vm0IsRunning": "stop",
+    "status": "BLOCKED (0 ADB online)"
+  },
+  "consoleErrors": {
+    "studio": [],
+    "alphaMiniTool": [],
+    "betaMiniTool": []
+  },
+  "acceptanceTests": {
+    "testA_liveUiUpdateTestkit": {
+      "failClosedBeforeRun": true,
+      "step1MidflightSeen": true,
+      "step1Detail": {
+        "zone": "Sector-B7TESTKIT · Mô phỏng",
+        "res": "100TESTKIT · Mô phỏng",
+        "pill": "Đang làm",
+        "seqs": {
+          "mini:realtime-alpha::testkit": 4
+        }
+      },
+      "step2MidflightSeen": true,
+      "step2Detail": {
+        "zone": "Sector-B7TESTKIT · Mô phỏng",
+        "res": "250TESTKIT · Mô phỏng",
+        "pill": "Đang làm",
+        "seqs": {
+          "mini:realtime-alpha::testkit": 5
+        }
+      },
+      "postTask1Completed": true,
+      "crossProcessWalSeen": true,
+      "crossProcessDetail": {
+        "done": "2TESTKIT · Mô phỏng",
+        "res": "250TESTKIT · Mô phỏng"
+      }
+    },
+    "testB_eventLossDuplicateReconnectRecovery": {
+      "streamId": "mini:realtime-alpha::testkit",
+      "latestSeq": 12,
+      "duplicatesIgnored": 2,
+      "gapsRecovered": 1,
+      "reconnectSyncs": 2,
+      "zoneStillClean": true,
+      "badgeShowsTestkit": true
+    },
+    "testC_dataProvenanceDistinction": {
+      "testkitBadgeRenderedInUi": true,
+      "liveVerifiedNotClaimedOnMock": true,
+      "liveUnverifiedAndLegacyLabels": {
+        "zoneCell": "OCR-Raw-94LIVE · Chưa xác minh 94%",
+        "resCell": "777LEGACY · Chưa xác minh",
+        "liveUnverifiedLabelCorrect": true,
+        "legacyLabelCorrect": true
+      }
+    },
+    "testD_crossProjectIsolation": {
+      "initialZeroLeakFromAlpha": true,
+      "initialCells": [
+        "Chưa có thiết bị kết nối",
+        "com.titan.beta",
+        "OFFLINE",
+        "Chưa xác minh",
+        "Chưa xác minh"
+      ],
+      "afterBetaOwnVars": [
+        "Chưa có thiết bị kết nối",
+        "com.titan.beta",
+        "OFFLINE",
+        "Titan-RidgeTESTKIT · Mô phỏng",
+        "999TESTKIT · Mô phỏng"
+      ],
+      "hasTitanRidge": true,
+      "has999": true
+    },
+    "testF_secretProtectionRuntime": {
+      "pinLeakedInUiLogs": false,
+      "tokenLeakedInUiLogs": false,
+      "pinLeakedInTauriState": false,
+      "tokenLeakedInTauriState": false,
+      "pinLeakedInSqliteRaw": false,
+      "tokenLeakedInSqliteRaw": false,
+      "hasRedactedMarkers": true
+    },
+    "testG_studioEndToEndAndRestartRecovery": {
+      "cells": [
+        "Chưa có thiết bị kết nối",
+        "com.alpha.realtime",
+        "OFFLINE",
+        "Sector-B7TESTKIT · Mô phỏng",
+        "250TESTKIT · Mô phỏng",
+        "2TESTKIT · Mô phỏng"
+      ],
+      "hasSectorB7Testkit": true,
+      "hasResource250Testkit": true,
+      "hasCompleted2Testkit": true
+    }
+  }
+}
