@@ -9,13 +9,16 @@
 //! - Supports full Key Rotation (`rotate_producer_key`), DPAPI-protected Backup (`backup_signing_key`), and Restore (`restore_signing_key`).
 
 use anyhow::Result;
+use chrono::{Duration, Utc};
 use ed25519_dalek::{Signer, SigningKey};
+use fp_bundle_contract::{canonical_key_rotation_message, KeyRotationDelegation};
 use fp_bundle_verify::{
     canonical_signing_message, hex_encode, sha256_hex, SignedBundleEnvelope,
 };
 use fp_security::{PortableProducerKeyRecoveryBundle, ProducerKeyBackupBundle, ProducerKeystore};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use uuid::Uuid;
 
 pub use fp_security::ProducerKeyMetadata;
 
@@ -101,6 +104,42 @@ impl ProducerKeyManager {
             file_checksums,
             signature_ed25519_hex: sig_hex,
             signed_at_utc: chrono::Utc::now().to_rfc3339(),
+        }
+    }
+
+    /// Creates a forward-signed `KeyRotationDelegation` signed by `old_signing_key`, authorizing
+    /// `new_pubkey_hex` for `(publisher_id, product_slug)` within `[now, now + valid_days]`.
+    pub fn sign_key_rotation_delegation(
+        old_signing_key: &SigningKey,
+        new_pubkey_hex: &str,
+        publisher_id: &str,
+        product_slug: &str,
+        valid_days: i64,
+    ) -> KeyRotationDelegation {
+        let old_pub_hex = hex_encode(old_signing_key.verifying_key().as_bytes());
+        let now = Utc::now();
+        let issued_at_utc = now.to_rfc3339();
+        let expires_at_utc = (now + Duration::days(valid_days.max(1))).to_rfc3339();
+        let nonce = format!("rot-{}", Uuid::new_v4().simple());
+        let msg = canonical_key_rotation_message(
+            publisher_id,
+            product_slug,
+            &old_pub_hex,
+            new_pubkey_hex,
+            &issued_at_utc,
+            &expires_at_utc,
+            &nonce,
+        );
+        let sig = old_signing_key.sign(&msg);
+        KeyRotationDelegation {
+            publisher_id: publisher_id.to_string(),
+            product_slug: product_slug.to_string(),
+            old_pubkey_hex: old_pub_hex,
+            new_pubkey_hex: new_pubkey_hex.trim().to_ascii_lowercase(),
+            issued_at_utc,
+            expires_at_utc,
+            nonce,
+            signature_by_old_key_hex: hex_encode(&sig.to_bytes()),
         }
     }
 }

@@ -8,7 +8,7 @@ pub const CURRENT_RUNTIME_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const SUPPORTED_WORKFLOW_SCHEMA_VERSION: u32 = 1;
 pub const SUPPORTED_UI_SCHEMA_VERSION: u32 = 1;
 pub const SUPPORTED_MODULE_API_VERSION: &str = "1.0.0";
-pub const CURRENT_SQLITE_SCHEMA_VERSION: u32 = 4;
+pub const CURRENT_SQLITE_SCHEMA_VERSION: u32 = 5;
 
 fn default_sqlite_schema_version() -> u32 {
     3
@@ -581,6 +581,156 @@ impl ModuleRegistry {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum SigningMode {
+    #[default]
+    UnsignedInternal,
+    SelfSignedQa,
+    PublicSigned,
+}
+
+impl SigningMode {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::UnsignedInternal => "unsigned_internal",
+            Self::SelfSignedQa => "self_signed_qa",
+            Self::PublicSigned => "public_signed",
+        }
+    }
+
+    pub fn from_str_checked(s: &str) -> Result<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "unsigned_internal" | "unsigned" => Ok(Self::UnsignedInternal),
+            "self_signed_qa" | "self_signed" => Ok(Self::SelfSignedQa),
+            "public_signed" | "public" => Ok(Self::PublicSigned),
+            other => bail!("INVALID_SIGNING_MODE: '{}'", other),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AuthenticodeTrustStatus {
+    Unsigned,
+    SelfSignedUntrustedRoot,
+    TrustedPublicChain,
+    TamperedOrInvalid,
+    ExpiredOrTimestampError,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthenticodeVerificationReport {
+    pub signed: bool,
+    pub trust_status: AuthenticodeTrustStatus,
+    pub trusted_public_release: bool,
+    pub win_trust_error_code: u32,
+    pub signer_subject: Option<String>,
+    pub signer_issuer: Option<String>,
+    pub signer_thumbprint: Option<String>,
+    pub timestamp_status: String,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PeVersionInfoSpec {
+    pub company_name: String,
+    pub file_description: String,
+    pub file_version: String,
+    pub internal_name: String,
+    pub legal_copyright: String,
+    pub original_filename: String,
+    pub product_name: String,
+    pub product_version: String,
+}
+
+impl PeVersionInfoSpec {
+    pub fn parse_quad_version(raw: &str) -> [u16; 4] {
+        let core = raw.trim().trim_start_matches('v').split('-').next().unwrap_or("0.1.0");
+        let nums: Vec<u16> = core
+            .split('.')
+            .filter_map(|p| p.trim().parse::<u16>().ok())
+            .take(4)
+            .collect();
+        [
+            *nums.first().unwrap_or(&0),
+            *nums.get(1).unwrap_or(&0),
+            *nums.get(2).unwrap_or(&0),
+            *nums.get(3).unwrap_or(&0),
+        ]
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublisherIdentitySpec {
+    pub publisher_id: String,
+    pub display_name: String,
+    pub organization: String,
+    pub website: Option<String>,
+    pub support_contact: Option<String>,
+    pub copyright: String,
+    pub ed25519_key_id: String,
+    pub ed25519_pubkey_hex: String,
+    /// Non-secret cert reference ONLY (thumbprint or `CERT_STORE://CurrentUser/My/<sha1>` or PFX path; NEVER password/key!)
+    pub authenticode_cert_ref: Option<String>,
+    pub release_channel: String,
+    pub signing_policy: SigningMode,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct KeyRotationDelegation {
+    pub publisher_id: String,
+    pub product_slug: String,
+    pub old_pubkey_hex: String,
+    pub new_pubkey_hex: String,
+    pub issued_at_utc: String,
+    pub expires_at_utc: String,
+    pub nonce: String,
+    pub signature_by_old_key_hex: String,
+}
+
+pub fn canonical_key_rotation_message(
+    publisher_id: &str,
+    product_slug: &str,
+    old_pubkey_hex: &str,
+    new_pubkey_hex: &str,
+    issued_at_utc: &str,
+    expires_at_utc: &str,
+    nonce: &str,
+) -> Vec<u8> {
+    format!(
+        "FARMERPRO-KEY-ROTATION-V1|pub={}|slug={}|old={}|new={}|iat={}|exp={}|nonce={}",
+        publisher_id.trim(),
+        product_slug.trim(),
+        old_pubkey_hex.trim().to_ascii_lowercase(),
+        new_pubkey_hex.trim().to_ascii_lowercase(),
+        issued_at_utc.trim(),
+        expires_at_utc.trim(),
+        nonce.trim()
+    )
+    .into_bytes()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReleaseSigningMetadata {
+    pub signing_mode: SigningMode,
+    pub publisher_id: String,
+    pub publisher_organization: String,
+    pub release_channel: String,
+    pub authenticode_trust_status: AuthenticodeTrustStatus,
+    pub trusted_public_release: bool,
+    pub signer_thumbprint: Option<String>,
+    pub signer_subject: Option<String>,
+    pub version_info: PeVersionInfoSpec,
+    #[serde(default)]
+    pub key_rotation: Option<KeyRotationDelegation>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReleaseBundleManifest {
@@ -590,6 +740,10 @@ pub struct ReleaseBundleManifest {
     pub workflows_count: usize,
     pub templates_count: usize,
     pub built_at_utc: String,
+    #[serde(default)]
+    pub publisher: Option<PublisherIdentitySpec>,
+    #[serde(default)]
+    pub signing: Option<ReleaseSigningMetadata>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

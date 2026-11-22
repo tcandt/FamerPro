@@ -11,14 +11,17 @@ import {
   FolderGit2,
   Hammer,
   Image as ImageIcon,
+  Key,
   Layers,
   Layout,
+  Lock,
   Monitor,
   PackageCheck,
   Play,
   Plus,
   RefreshCw,
   Save,
+  ShieldAlert,
   ShieldCheck,
   Sliders,
   Sparkles,
@@ -30,13 +33,18 @@ import type {
   BuildPreflightReport,
   BuildReport,
   CompatibilityReport,
+  KeyRotationWithDelegationResult,
   ManagedInstallInspection,
   MiniLayoutPreset,
   MiniTaskDef,
   MiniToolUiSchema,
+  PeVersionInfoSpec,
   ProjectTaskRecord,
+  PublisherProfileRecord,
   ReleaseTransitionRecord,
   RuntimeColumnBinding,
+  SigningMode,
+  SigningPreflightReport,
   TaskCategoryDef,
   UtilityToggleDef,
 } from '../../types';
@@ -264,6 +272,35 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
   const [bundleAdb, setBundleAdb] = useState(false);
   const [customOutputDir, setCustomOutputDir] = useState('');
 
+  // P5.3 Publisher Identity, PE VERSIONINFO & Authenticode State
+  const [publisherProfiles, setPublisherProfiles] = useState<PublisherProfileRecord[]>([]);
+  const [selectedPublisherProfileId, setSelectedPublisherProfileId] = useState('');
+  const [signingMode, setSigningMode] = useState<SigningMode>('unsigned_internal');
+  const [certRef, setCertRef] = useState('');
+  const [verInfo, setVerInfo] = useState<PeVersionInfoSpec>({
+    companyName: 'FarmerPro Studio',
+    fileDescription: 'Mini Auto Tool',
+    fileVersion: '1.0.0.0',
+    internalName: 'mini-tool',
+    legalCopyright: 'Copyright (C) 2026 FarmerPro Studio',
+    originalFilename: 'Auto.exe',
+    productName: 'Mini Auto Tool',
+    productVersion: '1.0.0',
+  });
+  const [signingPreflight, setSigningPreflight] = useState<SigningPreflightReport | null>(null);
+  const [includePendingDelegation, setIncludePendingDelegation] = useState(false);
+  const [pendingDelegation, setPendingDelegation] = useState<KeyRotationWithDelegationResult | null>(
+    null
+  );
+  const [showPubEditor, setShowPubEditor] = useState(false);
+  const [pubIdDraft, setPubIdDraft] = useState('');
+  const [pubDisplayDraft, setPubDisplayDraft] = useState('');
+  const [pubOrgDraft, setPubOrgDraft] = useState('');
+  const [pubCopyDraft, setPubCopyDraft] = useState('');
+  const [pubWebsiteDraft, setPubWebsiteDraft] = useState('');
+  const [pubEmailDraft, setPubEmailDraft] = useState('');
+  const [pubChannelDraft, setPubChannelDraft] = useState('qa');
+
   const [selectedComponent, setSelectedComponent] = useState<ComponentId>('header_bar');
   const [previewState, setPreviewState] = useState<PreviewRuntimeState>('IDLE');
   const [previewCollapsed, setPreviewCollapsed] = useState<Record<string, boolean>>({});
@@ -276,6 +313,20 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
+  const loadPublisherProfiles = async () => {
+    try {
+      const list = await api.studioListPublisherProfiles();
+      setPublisherProfiles(list);
+      return list;
+    } catch {
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    loadPublisherProfiles();
+  }, []);
+
   useEffect(() => {
     if (!project) {
       setSchema(null);
@@ -284,6 +335,45 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
     setExeName(project.exeName);
     setVersion(project.version);
     setBundleAdb(project.bundleAdb);
+    setSelectedPublisherProfileId(project.publisherProfileId || '');
+    const pMode = (project.signingMode as SigningMode) || 'unsigned_internal';
+    setSigningMode(pMode);
+    let parsedVer: PeVersionInfoSpec | null = null;
+    if (project.versionInfoJson) {
+      try {
+        parsedVer = JSON.parse(project.versionInfoJson);
+      } catch {
+        parsedVer = null;
+      }
+    }
+    const matchingProf = publisherProfiles.find(
+      (p) => p.id === project.publisherProfileId || p.publisherId === project.publisherProfileId
+    );
+    if (matchingProf?.authenticodeCertRef) {
+      setCertRef(matchingProf.authenticodeCertRef);
+    } else if (!project.publisherProfileId) {
+      setCertRef('');
+    }
+    const verClean = (project.version || '1.0.0').replace(/^v/i, '');
+    const quadParts = verClean.split('.').slice(0, 3);
+    while (quadParts.length < 3) quadParts.push('0');
+    setVerInfo(
+      parsedVer || {
+        companyName: matchingProf?.organization || 'FarmerPro Studio',
+        fileDescription: `${project.name} Automation Runner`,
+        fileVersion: `${quadParts[0]}.${quadParts[1]}.${quadParts[2]}.0`,
+        internalName: project.slug,
+        legalCopyright:
+          matchingProf?.copyright ||
+          `Copyright (C) 2026 ${matchingProf?.organization || 'FarmerPro Studio'}`,
+        originalFilename: project.exeName,
+        productName: project.name,
+        productVersion: project.version,
+      }
+    );
+    setSigningPreflight(null);
+    setPendingDelegation(null);
+    setIncludePendingDelegation(false);
     setManagedInstallRoot((prev) => prev || `installed/${project.slug}`);
     setPreflight(null);
     setCompatReport(null);
@@ -419,11 +509,143 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
       windowTitle: updatedSchema.windowTitle.trim() || project.windowTitle,
       version: version.trim() || project.version,
       bundleAdb,
+      publisherProfileId: selectedPublisherProfileId,
+      signingMode,
+      versionInfoJson: JSON.stringify(verInfo),
     });
     await api.studioSaveUiSchema(activeProjectId, updatedSchema);
     setSchema(updatedSchema);
     await refreshActiveProject();
     return updatedSchema;
+  };
+
+  const handleSelectPublisherProfile = (profileId: string) => {
+    setSelectedPublisherProfileId(profileId);
+    const prof = publisherProfiles.find((p) => p.id === profileId || p.publisherId === profileId);
+    if (prof) {
+      setSigningMode((prof.signingPolicy as SigningMode) || 'unsigned_internal');
+      setCertRef(prof.authenticodeCertRef || '');
+      setVerInfo((prev) => ({
+        ...prev,
+        companyName: prof.organization,
+        legalCopyright: prof.copyright,
+      }));
+    }
+  };
+
+  const handleSavePublisherProfile = async () => {
+    if (!pubIdDraft.trim() || !pubDisplayDraft.trim() || !pubOrgDraft.trim()) {
+      setNotice({
+        kind: 'err',
+        text: 'Publisher ID, Display Name và Organization là bắt buộc.',
+      });
+      return;
+    }
+    setBusyAction('pub-save');
+    setNotice(null);
+    try {
+      const saved = await api.studioUpsertPublisherProfile({
+        publisherId: pubIdDraft.trim(),
+        displayName: pubDisplayDraft.trim(),
+        organization: pubOrgDraft.trim(),
+        copyright:
+          pubCopyDraft.trim() || `Copyright (C) 2026 ${pubOrgDraft.trim()}`,
+        website: pubWebsiteDraft.trim() || null,
+        supportContact: pubEmailDraft.trim() || null,
+        authenticodeCertRef: certRef.trim() || null,
+        releaseChannel: pubChannelDraft,
+        signingPolicy: signingMode,
+      });
+      await loadPublisherProfiles();
+      setSelectedPublisherProfileId(saved.id);
+      setVerInfo((prev) => ({
+        ...prev,
+        companyName: saved.organization,
+        legalCopyright: saved.copyright,
+      }));
+      setShowPubEditor(false);
+      setNotice({
+        kind: 'ok',
+        text: `Đã lưu Publisher Profile "${saved.displayName}" (${saved.publisherId}) vào SQLite.`,
+      });
+    } catch (err: any) {
+      setNotice({
+        kind: 'err',
+        text: `Lưu Publisher Profile thất bại: ${err?.message || String(err)}`,
+      });
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleCreateQaCert = async () => {
+    setBusyAction('qa-cert');
+    setNotice(null);
+    try {
+      const subj = verInfo.companyName.trim() || project?.name || 'FarmerPro QA Publisher';
+      const cert = await api.studioCreateSelfSignedQaCert(subj, 90);
+      setCertRef(cert.certRef);
+      setSigningMode('self_signed_qa');
+      setNotice({
+        kind: 'ok',
+        text: `Đã tạo Self-Signed QA CodeSigning Cert trong Windows CNG Store (${cert.thumbprint.slice(0, 12)}... · Không ghi private key/PFX password ra đĩa).`,
+      });
+    } catch (err: any) {
+      setNotice({ kind: 'err', text: `Tạo QA Cert thất bại: ${err?.message || String(err)}` });
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleRunSigningPreflight = async () => {
+    if (!activeProjectId) return;
+    setBusyAction('sign-preflight');
+    setNotice(null);
+    try {
+      await saveProjectAndSchema();
+      const rep = await api.studioSigningPreflight(
+        activeProjectId,
+        signingMode,
+        certRef.trim() || undefined
+      );
+      setSigningPreflight(rep);
+      setNotice({
+        kind: rep.ready ? 'ok' : 'err',
+        text: rep.ready
+          ? `Signing Preflight READY (${rep.signingMode}) · Signtool: ${rep.signtoolAvailable ? 'Found' : 'N/A'} · KeyID: ${rep.keystoreKeyId || '—'}`
+          : `Signing Preflight BLOCKED: ${rep.issues.join(' · ')}`,
+      });
+    } catch (err: any) {
+      setNotice({ kind: 'err', text: `Signing preflight lỗi: ${err?.message || String(err)}` });
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleRotateKeyWithDelegation = async () => {
+    if (!activeProjectId) return;
+    setBusyAction('rotate-key');
+    setNotice(null);
+    try {
+      const matchedProf = publisherProfiles.find(
+        (p) => p.id === selectedPublisherProfileId || p.publisherId === selectedPublisherProfileId
+      );
+      const res = await api.studioRotateProjectEd25519KeyWithDelegation(
+        activeProjectId,
+        matchedProf?.publisherId,
+        90
+      );
+      setPendingDelegation(res);
+      setIncludePendingDelegation(true);
+      setNotice({
+        kind: 'ok',
+        text: `Đã xoay khóa Ed25519 -> ${res.newMeta.keyId} kèm KeyRotationDelegation (Nonce ${res.delegation.nonce.slice(0, 10)}...).`,
+      });
+    } catch (err: any) {
+      setNotice({ kind: 'err', text: `Xoay khóa + Delegation lỗi: ${err?.message || String(err)}` });
+    } finally {
+      setBusyAction(null);
+    }
   };
 
   const handleSaveUiSchema = async () => {
@@ -533,13 +755,22 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
       }
       const res = await api.studioBuilderExportRelease(
         activeProjectId,
-        customOutputDir.trim() || undefined
+        customOutputDir.trim() || undefined,
+        undefined,
+        {
+          signingMode,
+          publisherProfileId: selectedPublisherProfileId || null,
+          authenticodeCertRef: certRef.trim() || null,
+          versionInfo: verInfo,
+          keyRotationDelegation: pendingDelegation?.delegation || null,
+          includePendingDelegation,
+        }
       );
       setLastBuildReport(res.buildReport);
       await refreshActiveProject();
       setNotice({
         kind: 'ok',
-        text: `Đã xuất & ký Ed25519 thành công: ${res.release.exePath} (Key ${res.release.keyId})`,
+        text: `Đã đóng gói & ký (${signingMode}): ${res.release.exePath} · Auth=${res.release.authenticodeTrustStatus || res.buildReport.authenticodeStatus} · PublicTrusted=${String(res.buildReport.trustedPublicRelease ?? false)}`,
       });
     } catch (err: any) {
       setNotice({ kind: 'err', text: `Build EXE thất bại: ${err?.message || String(err)}` });
@@ -1661,8 +1892,288 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
           </div>
         </div>
 
-        {/* Right Column (3 cols): Preflight & Signed Releases */}
+        {/* Right Column (3 cols): P5.3 Signing, Preflight & Signed Releases */}
         <div className="col-span-12 xl:col-span-3 fp-panel p-3.5 overflow-y-auto space-y-3.5 text-xs">
+          {/* P5.3 Publisher Profile, PE VERSIONINFO & Authenticode Signing */}
+          <div className="space-y-2 pb-2.5 border-b border-[#2A3647]">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-[#EDF3FC] flex items-center gap-1.5">
+                <Key size={13} className="text-[#F59E0B]" />
+                <span>Publisher &amp; PE Signing (P5.3)</span>
+              </span>
+              <span
+                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${
+                  signingMode === 'public_signed'
+                    ? 'bg-[#133528] text-[#3BC38D]'
+                    : signingMode === 'self_signed_qa'
+                    ? 'bg-[#3B2A12] text-[#F59E0B]'
+                    : 'bg-[#202B3B] text-[#A9B8CC]'
+                }`}
+              >
+                {signingMode === 'public_signed'
+                  ? 'PUBLIC'
+                  : signingMode === 'self_signed_qa'
+                  ? 'QA SELF-SIGNED'
+                  : 'INTERNAL'}
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[10px] text-[#A9B8CC]">
+                <span>Publisher Profile</span>
+                <button
+                  type="button"
+                  data-testid="p53-toggle-pub-editor"
+                  onClick={() => setShowPubEditor((v) => !v)}
+                  className="text-[#38BDF8] hover:underline cursor-pointer"
+                >
+                  {showPubEditor ? 'Đóng' : '+ Tạo / Cập nhật'}
+                </button>
+              </div>
+              <select
+                data-testid="p53-publisher-select"
+                value={selectedPublisherProfileId}
+                onChange={(e) => handleSelectPublisherProfile(e.target.value)}
+                className="w-full bg-[#101722] border border-[#2A3647] rounded px-2 py-1 text-[#EDF3FC] text-[11px]"
+              >
+                <option value="">— Default (FarmerPro Internal) —</option>
+                {publisherProfiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.displayName} ({p.organization})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {showPubEditor && (
+              <div className="p-2 rounded bg-[#101722] border border-[#2A3647] space-y-1.5 text-[10px]">
+                <input
+                  type="text"
+                  data-testid="p53-pub-id"
+                  value={pubIdDraft}
+                  onChange={(e) => setPubIdDraft(e.target.value)}
+                  placeholder="Publisher ID (vd: pub-studio-vn)"
+                  className="w-full bg-[#16202F] border border-[#2A3647] rounded px-2 py-1 text-[#EDF3FC] font-mono"
+                />
+                <input
+                  type="text"
+                  data-testid="p53-pub-display"
+                  value={pubDisplayDraft}
+                  onChange={(e) => setPubDisplayDraft(e.target.value)}
+                  placeholder="Display Name"
+                  className="w-full bg-[#16202F] border border-[#2A3647] rounded px-2 py-1 text-[#EDF3FC]"
+                />
+                <input
+                  type="text"
+                  data-testid="p53-pub-org"
+                  value={pubOrgDraft}
+                  onChange={(e) => setPubOrgDraft(e.target.value)}
+                  placeholder="Organization (PE CompanyName)"
+                  className="w-full bg-[#16202F] border border-[#2A3647] rounded px-2 py-1 text-[#EDF3FC]"
+                />
+                <input
+                  type="text"
+                  data-testid="p53-pub-copyright"
+                  value={pubCopyDraft}
+                  onChange={(e) => setPubCopyDraft(e.target.value)}
+                  placeholder="Copyright (PE LegalCopyright)"
+                  className="w-full bg-[#16202F] border border-[#2A3647] rounded px-2 py-1 text-[#EDF3FC]"
+                />
+                <div className="grid grid-cols-2 gap-1">
+                  <input
+                    type="text"
+                    value={pubWebsiteDraft}
+                    onChange={(e) => setPubWebsiteDraft(e.target.value)}
+                    placeholder="Website"
+                    className="bg-[#16202F] border border-[#2A3647] rounded px-1.5 py-1 text-[#EDF3FC]"
+                  />
+                  <input
+                    type="text"
+                    value={pubEmailDraft}
+                    onChange={(e) => setPubEmailDraft(e.target.value)}
+                    placeholder="Support email"
+                    className="bg-[#16202F] border border-[#2A3647] rounded px-1.5 py-1 text-[#EDF3FC]"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-1.5">
+                  <select
+                    value={pubChannelDraft}
+                    onChange={(e) => setPubChannelDraft(e.target.value)}
+                    className="bg-[#16202F] border border-[#2A3647] rounded px-1.5 py-1 text-[#EDF3FC]"
+                  >
+                    <option value="internal">Channel: internal</option>
+                    <option value="qa">Channel: qa</option>
+                    <option value="production">Channel: production</option>
+                  </select>
+                  <button
+                    type="button"
+                    data-testid="p53-pub-save"
+                    onClick={handleSavePublisherProfile}
+                    disabled={busyAction !== null}
+                    className="px-2.5 py-1 rounded bg-[#1878F5] text-white font-semibold cursor-pointer"
+                  >
+                    Lưu Profile
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <label className="block text-[10px] text-[#A9B8CC]">Authenticode Signing Mode</label>
+              <select
+                data-testid="p53-signing-mode"
+                value={signingMode}
+                onChange={(e) => setSigningMode(e.target.value as SigningMode)}
+                className="w-full bg-[#101722] border border-[#2A3647] rounded px-2 py-1 text-[#EDF3FC] text-[11px]"
+              >
+                <option value="unsigned_internal">Unsigned Internal (Dev/Internal)</option>
+                <option value="self_signed_qa">Self-Signed QA (CNG Store, Not Public Trust)</option>
+                <option value="public_signed">Public Signed Commercial (Requires CA Cert)</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[10px] text-[#A9B8CC]">
+                <span>Cert Reference (Thumbprint / PFX Path Only)</span>
+                <button
+                  type="button"
+                  data-testid="p53-gen-qa-cert"
+                  onClick={handleCreateQaCert}
+                  disabled={busyAction !== null}
+                  className="text-[#F59E0B] hover:underline cursor-pointer"
+                >
+                  + Tạo QA Cert CNG
+                </button>
+              </div>
+              <input
+                type="text"
+                data-testid="p53-cert-ref"
+                value={certRef}
+                onChange={(e) => setCertRef(e.target.value)}
+                placeholder="CERT_STORE://CurrentUser/My/<sha1>"
+                className="w-full bg-[#101722] border border-[#2A3647] rounded px-2 py-1 text-[#EDF3FC] font-mono text-[10px] outline-none"
+              />
+            </div>
+
+            {/* Windows PE VERSIONINFO Metadata */}
+            <details className="rounded bg-[#101722] border border-[#2A3647] p-2">
+              <summary className="cursor-pointer font-semibold text-[11px] text-[#EDF3FC]">
+                Windows PE VERSIONINFO (8 trường)
+              </summary>
+              <div className="grid grid-cols-2 gap-1.5 mt-2 text-[10px]">
+                <input
+                  type="text"
+                  data-testid="p53-vi-company"
+                  value={verInfo.companyName}
+                  onChange={(e) => setVerInfo({ ...verInfo, companyName: e.target.value })}
+                  placeholder="CompanyName"
+                  className="bg-[#16202F] border border-[#2A3647] rounded px-1.5 py-1 text-[#EDF3FC]"
+                />
+                <input
+                  type="text"
+                  data-testid="p53-vi-product"
+                  value={verInfo.productName}
+                  onChange={(e) => setVerInfo({ ...verInfo, productName: e.target.value })}
+                  placeholder="ProductName"
+                  className="bg-[#16202F] border border-[#2A3647] rounded px-1.5 py-1 text-[#EDF3FC]"
+                />
+                <input
+                  type="text"
+                  data-testid="p53-vi-desc"
+                  value={verInfo.fileDescription}
+                  onChange={(e) => setVerInfo({ ...verInfo, fileDescription: e.target.value })}
+                  placeholder="FileDescription"
+                  className="col-span-2 bg-[#16202F] border border-[#2A3647] rounded px-1.5 py-1 text-[#EDF3FC]"
+                />
+                <input
+                  type="text"
+                  data-testid="p53-vi-copyright"
+                  value={verInfo.legalCopyright}
+                  onChange={(e) => setVerInfo({ ...verInfo, legalCopyright: e.target.value })}
+                  placeholder="LegalCopyright"
+                  className="col-span-2 bg-[#16202F] border border-[#2A3647] rounded px-1.5 py-1 text-[#EDF3FC]"
+                />
+                <input
+                  type="text"
+                  value={verInfo.fileVersion}
+                  onChange={(e) => setVerInfo({ ...verInfo, fileVersion: e.target.value })}
+                  placeholder="FileVersion (1.0.0.0)"
+                  className="bg-[#16202F] border border-[#2A3647] rounded px-1.5 py-1 text-[#EDF3FC] font-mono"
+                />
+                <input
+                  type="text"
+                  value={verInfo.productVersion}
+                  onChange={(e) => setVerInfo({ ...verInfo, productVersion: e.target.value })}
+                  placeholder="ProductVersion"
+                  className="bg-[#16202F] border border-[#2A3647] rounded px-1.5 py-1 text-[#EDF3FC] font-mono"
+                />
+              </div>
+            </details>
+
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <button
+                type="button"
+                data-testid="p53-signing-preflight"
+                onClick={handleRunSigningPreflight}
+                disabled={busyAction !== null}
+                className="px-2 py-1 rounded bg-[#16202F] hover:bg-[#202B3B] border border-[#2A3647] text-[10px] text-[#38BDF8] font-semibold cursor-pointer"
+              >
+                Signing Preflight
+              </button>
+              <button
+                type="button"
+                data-testid="p53-rotate-delegation"
+                onClick={handleRotateKeyWithDelegation}
+                disabled={busyAction !== null}
+                className="px-2 py-1 rounded bg-[#16202F] hover:bg-[#202B3B] border border-[#2A3647] text-[10px] text-[#B291F7] font-semibold cursor-pointer"
+              >
+                Rotate Key + Delegation
+              </button>
+            </div>
+
+            <label className="flex items-center gap-1.5 text-[10px] text-[#A9B8CC] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includePendingDelegation}
+                onChange={(e) => setIncludePendingDelegation(e.target.checked)}
+                className="accent-[#B291F7]"
+              />
+              <span>Đính kèm KeyRotationDelegation vào Release mới</span>
+            </label>
+
+            {signingPreflight && (
+              <div
+                className={`p-2 rounded border text-[10px] font-mono space-y-0.5 ${
+                  signingPreflight.ready
+                    ? 'bg-[#133528]/60 border-[#3BC38D]/40 text-[#3BC38D]'
+                    : 'bg-[#381E24]/70 border-[#F27883]/40 text-[#F27883]'
+                }`}
+              >
+                <div>
+                  Signing Preflight: {signingPreflight.ready ? 'READY' : 'BLOCKED'} · signtool:{' '}
+                  {signingPreflight.signtoolAvailable ? 'OK' : 'MISSING'}
+                </div>
+                {signingPreflight.warnings.map((w, i) => (
+                  <div key={i} className="text-[#F59E0B] font-sans">
+                    {w}
+                  </div>
+                ))}
+                {signingPreflight.issues.map((iss, i) => (
+                  <div key={i} className="text-[#F27883] font-sans">
+                    {iss}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {pendingDelegation && (
+              <div className="p-2 rounded bg-[#1B1633] border border-[#B291F7]/40 text-[10px] font-mono text-[#D8B4FE] space-y-0.5">
+                <div>Rotated Key: {pendingDelegation.newMeta.keyId}</div>
+                <div className="truncate">Nonce: {pendingDelegation.delegation.nonce}</div>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-1.5">
             <div className="font-bold text-[#EDF3FC]">Thư mục Xuất Release (Tuỳ chọn)</div>
             <input
@@ -1715,7 +2226,29 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
 
           {lastBuildReport && (
             <div className="space-y-1.5 pt-2 border-t border-[#2A3647] text-[11px]">
-              <div className="font-bold text-[#3BC38D]">Build Report Mới nhất</div>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-[#3BC38D]">Build Report Mới nhất</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold inline-flex items-center gap-1 ${
+                    lastBuildReport.trustedPublicRelease
+                      ? 'bg-[#133528] text-[#3BC38D]'
+                      : lastBuildReport.signingMode === 'self_signed_qa'
+                      ? 'bg-[#3B2A12] text-[#F59E0B]'
+                      : 'bg-[#202B3B] text-[#A9B8CC]'
+                  }`}
+                >
+                  {lastBuildReport.trustedPublicRelease ? (
+                    <Lock size={9} />
+                  ) : (
+                    <ShieldAlert size={9} />
+                  )}
+                  <span>
+                    {lastBuildReport.trustedPublicRelease
+                      ? 'PUBLIC TRUSTED'
+                      : lastBuildReport.authenticodeStatus}
+                  </span>
+                </span>
+              </div>
               <div className="p-2 rounded bg-[#101722] border border-[#3BC38D]/40 font-mono space-y-1 text-[10px]">
                 <div className="text-[#EDF3FC] break-all">{lastBuildReport.toolExePath}</div>
                 <div className="text-[#A9B8CC]">
@@ -1725,6 +2258,12 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
                   Key: {lastBuildReport.keyId} · PE Verified:{' '}
                   {String(lastBuildReport.peEmbeddedPubkeyVerified)}
                 </div>
+                {lastBuildReport.versionInfo && (
+                  <div className="text-[#38BDF8] truncate">
+                    PE Meta: {lastBuildReport.versionInfo.companyName} ·{' '}
+                    {lastBuildReport.versionInfo.fileVersion}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1844,6 +2383,25 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
                     </div>
                     <div className="font-mono text-[10px] text-[#3BC38D]">
                       Key {rel.keyId} · {rel.exeSizeBytes.toLocaleString()} bytes
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap font-mono text-[9px]">
+                      <span
+                        className={`px-1.5 py-0.5 rounded font-bold ${
+                          rel.trustedPublicRelease
+                            ? 'bg-[#133528] text-[#3BC38D]'
+                            : rel.signingMode === 'self_signed_qa'
+                            ? 'bg-[#3B2A12] text-[#F59E0B]'
+                            : 'bg-[#202B3B] text-[#A9B8CC]'
+                        }`}
+                      >
+                        {rel.signingMode || 'unsigned_internal'} ·{' '}
+                        {rel.authenticodeTrustStatus || 'unsigned'}
+                      </span>
+                      {rel.authenticodeThumbprint && (
+                        <span className="text-[#74869D] truncate">
+                          SHA1:{rel.authenticodeThumbprint.slice(0, 10)}...
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-1 pt-0.5">
                       {rel.lifecycleState === 'Draft' && (

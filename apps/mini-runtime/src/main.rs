@@ -5,13 +5,13 @@ use anyhow::{bail, Context, Result};
 use fp_adb::AdbRunner;
 use fp_bundle_contract::{
     audit_portable_environment, check_sqlite_downgrade_compatibility,
-    resolve_writable_runtime_db_path, MiniToolUiSchema, ModuleCapability, ModuleRegistry,
-    ReleaseBundleManifest, RuntimeCompatibilityProfile, CURRENT_RUNTIME_VERSION,
-    CURRENT_SQLITE_SCHEMA_VERSION,
+    resolve_writable_runtime_db_path, AuthenticodeTrustStatus, MiniToolUiSchema, ModuleCapability,
+    ModuleRegistry, ReleaseBundleManifest, RuntimeCompatibilityProfile, SigningMode,
+    CURRENT_RUNTIME_VERSION, CURRENT_SQLITE_SCHEMA_VERSION,
 };
 use fp_bundle_verify::{
-    read_pe_embedded_pubkey_from_current_process, sha256_hex, verify_bundle_compatibility_gate,
-    SignedBundleEnvelope, PE_ED25519_PUBKEY_RESOURCE_ID,
+    read_pe_embedded_pubkey_from_current_process, sha256_hex, verify_authenticode_pe,
+    verify_bundle_compatibility_gate, SignedBundleEnvelope, PE_ED25519_PUBKEY_RESOURCE_ID,
 };
 use fp_domain::{
     ConnectionState, DeviceDriver, DeviceSummary, RuntimeVarDeltaEvent, RuntimeVariableEnvelope,
@@ -160,6 +160,28 @@ fn load_and_verify_bundle(bundle_dir: &Path, is_demo_mode: bool) -> Result<MiniR
     //    An attacker CANNOT bypass verification by editing `bundle/trusted_publisher.pub` on disk.
     let pe_trusted_pubkey_hex = read_pe_embedded_pubkey_from_current_process()?;
 
+    // 1b. Verify PE Authenticode Integrity of the running executable (closes P5.2 Startup Integrity Backlog)
+    if let Ok(cur_exe) = std::env::current_exe() {
+        let auth_rep = verify_authenticode_pe(&cur_exe);
+        match auth_rep.trust_status {
+            AuthenticodeTrustStatus::TamperedOrInvalid => {
+                bail!(
+                    "STARTUP_AUTHENTICODE_TAMPERED: Executable Authenticode signature invalid (0x{:08X}: {})",
+                    auth_rep.win_trust_error_code,
+                    auth_rep.detail
+                );
+            }
+            AuthenticodeTrustStatus::ExpiredOrTimestampError => {
+                bail!(
+                    "STARTUP_AUTHENTICODE_EXPIRED: Certificate/timestamp validation failed (0x{:08X}: {})",
+                    auth_rep.win_trust_error_code,
+                    auth_rep.detail
+                );
+            }
+            _ => {}
+        }
+    }
+
     let sig_path = bundle_dir.join("signature.fpbundle.json");
     let sig_bytes = std::fs::read(&sig_path)
         .with_context(|| format!("Missing bundle signature file at {}", sig_path.display()))?;
@@ -187,6 +209,19 @@ fn load_and_verify_bundle(bundle_dir: &Path, is_demo_mode: bool) -> Result<MiniR
     // 2. Load Verified Manifest, UI Schema, and Workflows
     let manifest: ReleaseBundleManifest =
         serde_json::from_slice(&std::fs::read(bundle_dir.join("manifest.fpbundle.json"))?)?;
+    if let Some(ref signing_meta) = manifest.signing {
+        if signing_meta.signing_mode == SigningMode::PublicSigned {
+            if let Ok(cur_exe) = std::env::current_exe() {
+                let auth_rep = verify_authenticode_pe(&cur_exe);
+                if !auth_rep.trusted_public_release {
+                    bail!(
+                        "STARTUP_PUBLIC_TRUST_REQUIRED: PublicSigned release failed TrustedPublicChain check ({:?})",
+                        auth_rep.trust_status
+                    );
+                }
+            }
+        }
+    }
     let ui_schema: MiniToolUiSchema =
         serde_json::from_slice(&std::fs::read(bundle_dir.join("ui-schema.json"))?)?;
     let workflows: Vec<WorkflowDocument> =

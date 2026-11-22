@@ -7,10 +7,12 @@
 //!   and ZERO private key material.
 
 use anyhow::{bail, Context, Result};
+use chrono::{DateTime, Utc};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use fp_bundle_contract::{
-    evaluate_bundle_compatibility, CompatibilityReport, MiniToolUiSchema, ReleaseBundleManifest,
-    RuntimeCompatibilityProfile,
+    canonical_key_rotation_message, evaluate_bundle_compatibility, AuthenticodeTrustStatus,
+    AuthenticodeVerificationReport, CompatibilityReport, KeyRotationDelegation, MiniToolUiSchema,
+    PeVersionInfoSpec, ReleaseBundleManifest, RuntimeCompatibilityProfile,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -388,6 +390,535 @@ pub fn read_pe_embedded_pubkey_from_current_process() -> Result<String> {
     read_pe_embedded_pubkey_from_exe(&exe)
 }
 
+/// Verifies a forward-signed Ed25519 `KeyRotationDelegation` certificate under `expected_old_pubkey_hex`.
+pub fn verify_key_rotation_delegation(
+    delegation: &KeyRotationDelegation,
+    expected_old_pubkey_hex: &str,
+    expected_publisher_id: Option<&str>,
+    expected_product_slug: Option<&str>,
+    now_utc: Option<DateTime<Utc>>,
+) -> Result<()> {
+    if !delegation
+        .old_pubkey_hex
+        .trim()
+        .eq_ignore_ascii_case(expected_old_pubkey_hex.trim())
+    {
+        bail!(
+            "KEY_ROTATION_OLD_PUBKEY_MISMATCH: delegation old_pubkey '{}' != expected '{}'",
+            delegation.old_pubkey_hex,
+            expected_old_pubkey_hex
+        );
+    }
+    if delegation
+        .old_pubkey_hex
+        .trim()
+        .eq_ignore_ascii_case(delegation.new_pubkey_hex.trim())
+    {
+        bail!("KEY_ROTATION_NOOP_KEY: new_pubkey_hex must differ from old_pubkey_hex");
+    }
+    if let Some(exp_pub) = expected_publisher_id {
+        if delegation.publisher_id.trim() != exp_pub.trim() {
+            bail!(
+                "KEY_ROTATION_PUBLISHER_MISMATCH: '{}' != '{}'",
+                delegation.publisher_id,
+                exp_pub
+            );
+        }
+    }
+    if let Some(exp_slug) = expected_product_slug {
+        if delegation.product_slug.trim() != exp_slug.trim() {
+            bail!(
+                "KEY_ROTATION_PRODUCT_MISMATCH: '{}' != '{}'",
+                delegation.product_slug,
+                exp_slug
+            );
+        }
+    }
+    if delegation.nonce.trim().len() < 8 {
+        bail!("KEY_ROTATION_INVALID_NONCE: nonce missing or too short");
+    }
+
+    let iat = DateTime::parse_from_rfc3339(&delegation.issued_at_utc)
+        .context("KEY_ROTATION_INVALID_IAT")?
+        .with_timezone(&Utc);
+    let exp = DateTime::parse_from_rfc3339(&delegation.expires_at_utc)
+        .context("KEY_ROTATION_INVALID_EXP")?
+        .with_timezone(&Utc);
+    let now = now_utc.unwrap_or_else(Utc::now);
+    if exp <= iat {
+        bail!("KEY_ROTATION_INVALID_WINDOW: expiresAtUtc <= issuedAtUtc");
+    }
+    if now > exp {
+        bail!("KEY_ROTATION_EXPIRED: delegation expired at {}", exp.to_rfc3339());
+    }
+    if now < iat - chrono::Duration::minutes(5) {
+        bail!("KEY_ROTATION_NOT_YET_VALID: issuedAtUtc {} is in the future", iat.to_rfc3339());
+    }
+
+    let old_bytes = hex_decode(&delegation.old_pubkey_hex).context("KEY_ROTATION_OLD_HEX")?;
+    if old_bytes.len() != 32 {
+        bail!("KEY_ROTATION_OLD_LEN: expected 32 bytes");
+    }
+    let old_arr: [u8; 32] = old_bytes.try_into().unwrap();
+    let old_vk = VerifyingKey::from_bytes(&old_arr)
+        .map_err(|e| anyhow::anyhow!("KEY_ROTATION_OLD_VK: {}", e))?;
+
+    let new_bytes = hex_decode(&delegation.new_pubkey_hex).context("KEY_ROTATION_NEW_HEX")?;
+    if new_bytes.len() != 32 {
+        bail!("KEY_ROTATION_NEW_LEN: expected 32 bytes");
+    }
+    let new_arr: [u8; 32] = new_bytes.try_into().unwrap();
+    let _ = VerifyingKey::from_bytes(&new_arr)
+        .map_err(|e| anyhow::anyhow!("KEY_ROTATION_NEW_VK: {}", e))?;
+
+    let sig_bytes = hex_decode(&delegation.signature_by_old_key_hex).context("KEY_ROTATION_SIG_HEX")?;
+    if sig_bytes.len() != 64 {
+        bail!("KEY_ROTATION_SIG_LEN: expected 64 bytes");
+    }
+    let sig_arr: [u8; 64] = sig_bytes.try_into().unwrap();
+    let sig = Signature::from_bytes(&sig_arr);
+
+    let msg = canonical_key_rotation_message(
+        &delegation.publisher_id,
+        &delegation.product_slug,
+        &delegation.old_pubkey_hex,
+        &delegation.new_pubkey_hex,
+        &delegation.issued_at_utc,
+        &delegation.expires_at_utc,
+        &delegation.nonce,
+    );
+    old_vk.verify(&msg, &sig).map_err(|e| {
+        anyhow::anyhow!(
+            "KEY_ROTATION_SIGNATURE_INVALID: delegation not validly signed by trusted old key ({})",
+            e
+        )
+    })?;
+    Ok(())
+}
+
+#[cfg(windows)]
+mod win_authenticode_and_version {
+    use super::*;
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+
+    type HANDLE = *mut core::ffi::c_void;
+    type HWND = *mut core::ffi::c_void;
+    type DWORD = u32;
+    type LONG = i32;
+    type BOOL = i32;
+    type LPCWSTR = *const u16;
+    type LPVOID = *mut core::ffi::c_void;
+
+    #[repr(C)]
+    struct Guid {
+        data1: u32,
+        data2: u16,
+        data3: u16,
+        data4: [u8; 8],
+    }
+
+    #[repr(C)]
+    struct WintrustFileInfo {
+        cb_struct: DWORD,
+        pcwsz_file_path: LPCWSTR,
+        h_file: HANDLE,
+        pg_known_subject: *const Guid,
+    }
+
+    #[repr(C)]
+    struct WintrustData {
+        cb_struct: DWORD,
+        p_policy_callback_data: LPVOID,
+        p_sip_client_data: LPVOID,
+        dw_ui_choice: DWORD,
+        fdw_revocation_checks: DWORD,
+        dw_union_choice: DWORD,
+        p_file: *mut WintrustFileInfo,
+        dw_state_action: DWORD,
+        h_wvt_state_data: HANDLE,
+        pwsz_url_reference: LPCWSTR,
+        dw_prov_flags: DWORD,
+        dw_ui_context: DWORD,
+        p_signature_settings: LPVOID,
+    }
+
+    #[repr(C)]
+    struct CertContext {
+        dw_cert_encoding_type: DWORD,
+        pb_cert_encoded: *const u8,
+        cb_cert_encoded: DWORD,
+        p_cert_info: LPVOID,
+        h_cert_store: LPVOID,
+    }
+
+    const WTD_UI_NONE: DWORD = 2;
+    const WTD_REVOKE_NONE: DWORD = 0;
+    const WTD_CHOICE_FILE: DWORD = 1;
+    const WTD_STATEACTION_VERIFY: DWORD = 1;
+    const WTD_STATEACTION_CLOSE: DWORD = 2;
+    const WTD_CACHE_ONLY_URL_RETRIEVAL: DWORD = 0x0000_1000;
+
+    const CERT_QUERY_OBJECT_FILE: DWORD = 1;
+    const CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED: DWORD = 1 << 10;
+    const CERT_QUERY_FORMAT_FLAG_BINARY: DWORD = 1 << 1;
+    const CERT_NAME_SIMPLE_DISPLAY_TYPE: DWORD = 4;
+    const CERT_NAME_ISSUER_FLAG: DWORD = 1;
+    const CERT_SHA1_HASH_PROP_ID: DWORD = 3;
+
+    #[link(name = "wintrust")]
+    unsafe extern "system" {
+        fn WinVerifyTrust(hwnd: HWND, pgActionID: *mut Guid, pWVTData: *mut WintrustData) -> LONG;
+    }
+
+    #[link(name = "crypt32")]
+    unsafe extern "system" {
+        fn CryptQueryObject(
+            dwObjectType: DWORD,
+            pvObject: LPVOID,
+            dwExpectedContentTypeFlags: DWORD,
+            dwExpectedFormatTypeFlags: DWORD,
+            dwFlags: DWORD,
+            pdwMsgAndCertEncodingType: *mut DWORD,
+            pdwContentType: *mut DWORD,
+            pdwFormatType: *mut DWORD,
+            phCertStore: *mut HANDLE,
+            phMsg: *mut LPVOID,
+            ppvContext: *mut LPVOID,
+        ) -> BOOL;
+        fn CertEnumCertificatesInStore(
+            hCertStore: HANDLE,
+            pPrevCertContext: *const CertContext,
+        ) -> *const CertContext;
+        fn CertGetNameStringW(
+            pCertContext: *const CertContext,
+            dwType: DWORD,
+            dwFlags: DWORD,
+            pvTypePara: LPVOID,
+            pszNameString: *mut u16,
+            cchNameString: DWORD,
+        ) -> DWORD;
+        fn CertGetCertificateContextProperty(
+            pCertContext: *const CertContext,
+            dwPropId: DWORD,
+            pvData: LPVOID,
+            pcbData: *mut DWORD,
+        ) -> BOOL;
+        fn CertFreeCertificateContext(pCertContext: *const CertContext) -> BOOL;
+        fn CertCloseStore(hCertStore: HANDLE, dwFlags: DWORD) -> BOOL;
+        fn CryptMsgClose(hCryptMsg: LPVOID) -> BOOL;
+    }
+
+    #[link(name = "version")]
+    unsafe extern "system" {
+        fn GetFileVersionInfoSizeW(lptstrFilename: LPCWSTR, lpdwHandle: *mut DWORD) -> DWORD;
+        fn GetFileVersionInfoW(
+            lptstrFilename: LPCWSTR,
+            dwHandle: DWORD,
+            dwLen: DWORD,
+            lpData: LPVOID,
+        ) -> BOOL;
+        fn VerQueryValueW(
+            pBlock: LPVOID,
+            lpSubBlock: LPCWSTR,
+            lplpBuffer: *mut LPVOID,
+            puLen: *mut u32,
+        ) -> BOOL;
+    }
+
+    fn to_wide(s: &OsStr) -> Vec<u16> {
+        s.encode_wide().chain(std::iter::once(0)).collect()
+    }
+
+    fn query_embedded_signer_cert_info(exe_wide: &[u16]) -> (Option<String>, Option<String>, Option<String>) {
+        unsafe {
+            let mut h_store: HANDLE = std::ptr::null_mut();
+            let mut h_msg: LPVOID = std::ptr::null_mut();
+            let ok = CryptQueryObject(
+                CERT_QUERY_OBJECT_FILE,
+                exe_wide.as_ptr() as LPVOID,
+                CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED,
+                CERT_QUERY_FORMAT_FLAG_BINARY,
+                0,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                &mut h_store,
+                &mut h_msg,
+                std::ptr::null_mut(),
+            );
+            if ok == 0 || h_store.is_null() {
+                return (None, None, None);
+            }
+
+            let cert = CertEnumCertificatesInStore(h_store, std::ptr::null());
+            let res = if !cert.is_null() {
+                let mut subj_buf = [0u16; 256];
+                let slen = CertGetNameStringW(
+                    cert,
+                    CERT_NAME_SIMPLE_DISPLAY_TYPE,
+                    0,
+                    std::ptr::null_mut(),
+                    subj_buf.as_mut_ptr(),
+                    subj_buf.len() as DWORD,
+                );
+                let subject = if slen > 1 {
+                    Some(String::from_utf16_lossy(&subj_buf[..(slen as usize - 1)]))
+                } else {
+                    None
+                };
+
+                let mut iss_buf = [0u16; 256];
+                let ilen = CertGetNameStringW(
+                    cert,
+                    CERT_NAME_SIMPLE_DISPLAY_TYPE,
+                    CERT_NAME_ISSUER_FLAG,
+                    std::ptr::null_mut(),
+                    iss_buf.as_mut_ptr(),
+                    iss_buf.len() as DWORD,
+                );
+                let issuer = if ilen > 1 {
+                    Some(String::from_utf16_lossy(&iss_buf[..(ilen as usize - 1)]))
+                } else {
+                    None
+                };
+
+                let mut hash_buf = [0u8; 20];
+                let mut hash_len: DWORD = 20;
+                let thumbprint = if CertGetCertificateContextProperty(
+                    cert,
+                    CERT_SHA1_HASH_PROP_ID,
+                    hash_buf.as_mut_ptr() as LPVOID,
+                    &mut hash_len,
+                ) != 0
+                {
+                    Some(hex_encode(&hash_buf[..(hash_len as usize)]).to_ascii_uppercase())
+                } else {
+                    None
+                };
+
+                let _ = CertFreeCertificateContext(cert);
+                (subject, issuer, thumbprint)
+            } else {
+                (None, None, None)
+            };
+
+            if !h_msg.is_null() {
+                let _ = CryptMsgClose(h_msg);
+            }
+            let _ = CertCloseStore(h_store, 0);
+            res
+        }
+    }
+
+    pub fn verify_authenticode_win32(exe_path: &Path) -> AuthenticodeVerificationReport {
+        if !exe_path.exists() {
+            return AuthenticodeVerificationReport {
+                signed: false,
+                trust_status: AuthenticodeTrustStatus::TamperedOrInvalid,
+                trusted_public_release: false,
+                win_trust_error_code: 2,
+                signer_subject: None,
+                signer_issuer: None,
+                signer_thumbprint: None,
+                timestamp_status: "MISSING_FILE".to_string(),
+                detail: format!("Target binary missing: {}", exe_path.display()),
+            };
+        }
+
+        let wide_path = to_wide(exe_path.as_os_str());
+        let (subject, issuer, thumbprint) = query_embedded_signer_cert_info(&wide_path);
+
+        let mut action_guid = Guid {
+            data1: 0x00AA_C56B,
+            data2: 0xCD44,
+            data3: 0x11d0,
+            data4: [0x8C, 0xC2, 0x00, 0xC0, 0x4F, 0xC2, 0x95, 0xEE],
+        };
+        let mut file_info = WintrustFileInfo {
+            cb_struct: std::mem::size_of::<WintrustFileInfo>() as DWORD,
+            pcwsz_file_path: wide_path.as_ptr(),
+            h_file: std::ptr::null_mut(),
+            pg_known_subject: std::ptr::null(),
+        };
+        let mut wvt = WintrustData {
+            cb_struct: std::mem::size_of::<WintrustData>() as DWORD,
+            p_policy_callback_data: std::ptr::null_mut(),
+            p_sip_client_data: std::ptr::null_mut(),
+            dw_ui_choice: WTD_UI_NONE,
+            fdw_revocation_checks: WTD_REVOKE_NONE,
+            dw_union_choice: WTD_CHOICE_FILE,
+            p_file: &mut file_info,
+            dw_state_action: WTD_STATEACTION_VERIFY,
+            h_wvt_state_data: std::ptr::null_mut(),
+            pwsz_url_reference: std::ptr::null(),
+            dw_prov_flags: WTD_CACHE_ONLY_URL_RETRIEVAL,
+            dw_ui_context: 0,
+            p_signature_settings: std::ptr::null_mut(),
+        };
+
+        let status = unsafe { WinVerifyTrust(std::ptr::null_mut(), &mut action_guid, &mut wvt) } as u32;
+        wvt.dw_state_action = WTD_STATEACTION_CLOSE;
+        unsafe {
+            let _ = WinVerifyTrust(std::ptr::null_mut(), &mut action_guid, &mut wvt);
+        }
+
+        const TRUST_E_NOSIGNATURE: u32 = 0x800B_0100;
+        const TRUST_E_EXPLICIT_DISTRUST: u32 = 0x800B_0111;
+        const CERT_E_UNTRUSTEDROOT: u32 = 0x800B_0109;
+        const CERT_E_CHAINING: u32 = 0x800B_010A;
+        const CERT_E_EXPIRED: u32 = 0x800B_0101;
+        const TRUST_E_TIME_STAMP: u32 = 0x8009_6005;
+        const TRUST_E_BAD_DIGEST: u32 = 0x8009_6010;
+        const CRYPT_E_NO_MATCH: u32 = 0x8009_2009;
+
+        match status {
+            0 => AuthenticodeVerificationReport {
+                signed: true,
+                trust_status: AuthenticodeTrustStatus::TrustedPublicChain,
+                trusted_public_release: true,
+                win_trust_error_code: 0,
+                signer_subject: subject,
+                signer_issuer: issuer,
+                signer_thumbprint: thumbprint,
+                timestamp_status: "VALID_OR_UNCHECKED".to_string(),
+                detail: "WinVerifyTrust passed (ERROR_SUCCESS): valid Authenticode signature & trusted Windows chain.".to_string(),
+            },
+            TRUST_E_NOSIGNATURE => AuthenticodeVerificationReport {
+                signed: false,
+                trust_status: AuthenticodeTrustStatus::Unsigned,
+                trusted_public_release: false,
+                win_trust_error_code: status,
+                signer_subject: None,
+                signer_issuer: None,
+                signer_thumbprint: None,
+                timestamp_status: "NONE".to_string(),
+                detail: "Unsigned Internal Build (TRUST_E_NOSIGNATURE 0x800B0100).".to_string(),
+            },
+            CERT_E_UNTRUSTEDROOT | CERT_E_CHAINING => AuthenticodeVerificationReport {
+                signed: true,
+                trust_status: AuthenticodeTrustStatus::SelfSignedUntrustedRoot,
+                trusted_public_release: false,
+                win_trust_error_code: status,
+                signer_subject: subject,
+                signer_issuer: issuer,
+                signer_thumbprint: thumbprint,
+                timestamp_status: "NONE_OR_QA".to_string(),
+                detail: format!(
+                    "Self-Signed / Untrusted Root (0x{:08X}): Authenticode PE hash intact, NOT trusted as Public Release.",
+                    status
+                ),
+            },
+            CERT_E_EXPIRED | TRUST_E_TIME_STAMP => AuthenticodeVerificationReport {
+                signed: true,
+                trust_status: AuthenticodeTrustStatus::ExpiredOrTimestampError,
+                trusted_public_release: false,
+                win_trust_error_code: status,
+                signer_subject: subject,
+                signer_issuer: issuer,
+                signer_thumbprint: thumbprint,
+                timestamp_status: format!("EXPIRED_OR_TIMESTAMP_FAIL (0x{:08X})", status),
+                detail: format!("Certificate expired or timestamp failure (0x{:08X}).", status),
+            },
+            TRUST_E_BAD_DIGEST | TRUST_E_EXPLICIT_DISTRUST | CRYPT_E_NO_MATCH | _ => AuthenticodeVerificationReport {
+                signed: subject.is_some() || thumbprint.is_some(),
+                trust_status: AuthenticodeTrustStatus::TamperedOrInvalid,
+                trusted_public_release: false,
+                win_trust_error_code: status,
+                signer_subject: subject,
+                signer_issuer: issuer,
+                signer_thumbprint: thumbprint,
+                timestamp_status: format!("INVALID (0x{:08X})", status),
+                detail: format!(
+                    "AUTHENTICODE_INVALID (0x{:08X}): binary modified post-signing or signature corrupt!",
+                    status
+                ),
+            },
+        }
+    }
+
+    pub fn read_pe_version_info_win32(exe_path: &Path) -> Result<PeVersionInfoSpec> {
+        let wide_path = to_wide(exe_path.as_os_str());
+        let mut handle: DWORD = 0;
+        let sz = unsafe { GetFileVersionInfoSizeW(wide_path.as_ptr(), &mut handle) };
+        if sz == 0 {
+            bail!("PE_VERSIONINFO_MISSING: GetFileVersionInfoSizeW returned 0 for {}", exe_path.display());
+        }
+        let mut buf = vec![0u8; sz as usize];
+        let ok = unsafe { GetFileVersionInfoW(wide_path.as_ptr(), handle, sz, buf.as_mut_ptr() as LPVOID) };
+        if ok == 0 {
+            bail!("PE_VERSIONINFO_READ_FAILED on {}", exe_path.display());
+        }
+
+        let mut query_str = |key: &str| -> String {
+            for lang_cp in ["040904B0", "040904b0", "000004B0"] {
+                let sub = format!("\\StringFileInfo\\{}\\{}", lang_cp, key);
+                let wsub: Vec<u16> = OsStr::new(&sub).encode_wide().chain(std::iter::once(0)).collect();
+                let mut ptr: LPVOID = std::ptr::null_mut();
+                let mut len: u32 = 0;
+                let ok_q = unsafe { VerQueryValueW(buf.as_mut_ptr() as LPVOID, wsub.as_ptr(), &mut ptr, &mut len) };
+                if ok_q != 0 && !ptr.is_null() && len > 0 {
+                    let slice = unsafe { std::slice::from_raw_parts(ptr as *const u16, len as usize) };
+                    let s = String::from_utf16_lossy(slice)
+                        .trim_end_matches('\0')
+                        .to_string();
+                    if !s.is_empty() {
+                        return s;
+                    }
+                }
+            }
+            String::new()
+        };
+
+        Ok(PeVersionInfoSpec {
+            company_name: query_str("CompanyName"),
+            file_description: query_str("FileDescription"),
+            file_version: query_str("FileVersion"),
+            internal_name: query_str("InternalName"),
+            legal_copyright: query_str("LegalCopyright"),
+            original_filename: query_str("OriginalFilename"),
+            product_name: query_str("ProductName"),
+            product_version: query_str("ProductVersion"),
+        })
+    }
+}
+
+/// Verifies Windows Authenticode signature & trust chain natively via Win32 `WinVerifyTrust`.
+pub fn verify_authenticode_pe(exe_path: &Path) -> AuthenticodeVerificationReport {
+    #[cfg(windows)]
+    {
+        win_authenticode_and_version::verify_authenticode_win32(exe_path)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = exe_path;
+        AuthenticodeVerificationReport {
+            signed: false,
+            trust_status: AuthenticodeTrustStatus::Unsigned,
+            trusted_public_release: false,
+            win_trust_error_code: 0,
+            signer_subject: None,
+            signer_issuer: None,
+            signer_thumbprint: None,
+            timestamp_status: "UNSUPPORTED_OS".to_string(),
+            detail: "Authenticode verification requires Windows".to_string(),
+        }
+    }
+}
+
+/// Reads Windows PE `RT_VERSION` string fields (`CompanyName`, `ProductName`, etc.) natively via `version.dll`.
+pub fn read_pe_version_info_from_exe(exe_path: &Path) -> Result<PeVersionInfoSpec> {
+    #[cfg(windows)]
+    {
+        win_authenticode_and_version::read_pe_version_info_win32(exe_path)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = exe_path;
+        bail!("PE VERSIONINFO reading requires Windows")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -459,6 +990,8 @@ mod tests {
             workflows_count: 1,
             templates_count: 0,
             built_at_utc: "2026-11-22T00:00:00Z".to_string(),
+            publisher: None,
+            signing: None,
         };
         let ui = MiniToolUiSchema {
             schema_version: 1,

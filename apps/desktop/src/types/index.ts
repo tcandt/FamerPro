@@ -198,6 +198,99 @@ export interface MiniToolUiSchema {
   initialRuntimeVars: Record<string, any>;
 }
 
+export interface PeVersionInfoSpec {
+  companyName: string;
+  fileDescription: string;
+  fileVersion: string;
+  internalName: string;
+  legalCopyright: string;
+  originalFilename: string;
+  productName: string;
+  productVersion: string;
+}
+
+export type SigningMode = 'unsigned_internal' | 'self_signed_qa' | 'public_signed';
+
+export interface PublisherProfileRecord {
+  id: string;
+  publisherId: string;
+  displayName: string;
+  organization: string;
+  website?: string | null;
+  supportContact?: string | null;
+  copyright: string;
+  ed25519KeyId: string;
+  ed25519PubkeyHex: string;
+  authenticodeCertRef?: string | null;
+  releaseChannel: string;
+  signingPolicy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublisherProfileInput {
+  id?: string | null;
+  publisherId: string;
+  displayName: string;
+  organization: string;
+  website?: string | null;
+  supportContact?: string | null;
+  copyright: string;
+  ed25519KeyId?: string | null;
+  ed25519PubkeyHex?: string | null;
+  authenticodeCertRef?: string | null;
+  releaseChannel: string;
+  signingPolicy: string;
+}
+
+export interface KeyRotationDelegation {
+  publisherId: string;
+  productSlug: string;
+  oldPubkeyHex: string;
+  newPubkeyHex: string;
+  issuedAtUtc: string;
+  expiresAtUtc: string;
+  nonce: string;
+  signatureByOldKeyHex: string;
+}
+
+export interface QaSelfSignedCertInfo {
+  subject: string;
+  thumbprint: string;
+  storeLocation: string;
+  certRef: string;
+  notAfterUtc: string;
+}
+
+export interface SigningPreflightReport {
+  ready: boolean;
+  signtoolAvailable: boolean;
+  signtoolPath?: string | null;
+  signingMode: SigningMode;
+  publisherProfilePresent: boolean;
+  certRefPresent: boolean;
+  keystoreKeyId?: string | null;
+  issues: string[];
+  warnings: string[];
+}
+
+export interface BuilderExportOptions {
+  signingMode?: SigningMode | null;
+  publisherProfileId?: string | null;
+  authenticodeCertRef?: string | null;
+  timestampUrl?: string | null;
+  releaseChannel?: string | null;
+  versionInfo?: PeVersionInfoSpec | null;
+  keyRotationDelegation?: KeyRotationDelegation | null;
+  includePendingDelegation?: boolean | null;
+}
+
+export interface KeyRotationWithDelegationResult {
+  newMeta: ProducerKeyMetadata;
+  delegation: KeyRotationDelegation;
+  delegationSavedPath: string;
+}
+
 export interface GameProjectRecord {
   id: string;
   slug: string;
@@ -213,6 +306,9 @@ export interface GameProjectRecord {
   projectDirPath: string;
   createdAt: string;
   updatedAt: string;
+  publisherProfileId?: string | null;
+  signingMode?: string;
+  versionInfoJson?: string | null;
 }
 
 export interface GameProjectSummary {
@@ -253,6 +349,9 @@ export interface UpdateProjectRequest {
   targetWidthPx?: number | null;
   targetHeightPx?: number | null;
   bundleAdb?: boolean | null;
+  publisherProfileId?: string | null;
+  signingMode?: string | null;
+  versionInfoJson?: string | null;
 }
 
 export interface CloneProjectRequest {
@@ -358,6 +457,12 @@ export interface ProjectReleaseRecord {
   signatureStatus: string;
   promotedAt?: string | null;
   rolledBackFromId?: string | null;
+  publisherProfileId?: string | null;
+  signingMode?: string;
+  authenticodeTrustStatus?: string;
+  authenticodeThumbprint?: string | null;
+  authenticodeSubject?: string | null;
+  trustedPublicRelease?: boolean;
 }
 
 export interface ReleaseTransitionRecord {
@@ -708,6 +813,20 @@ export interface BuildReport {
   peEmbeddedPubkeyResourceId: number;
   peEmbeddedPubkeyVerified: boolean;
   authenticodeStatus: string;
+  signingMode?: SigningMode;
+  trustedPublicRelease?: boolean;
+  versionInfo?: PeVersionInfoSpec | null;
+  authenticodeVerification?: {
+    signed: boolean;
+    trustStatus: string;
+    trustedPublicRelease: boolean;
+    winTrustErrorCode: number;
+    signerSubject?: string | null;
+    signerIssuer?: string | null;
+    signerThumbprint?: string | null;
+    timestampStatus: string;
+    detail: string;
+  } | null;
   keyId: string;
   publisherPublicKeyHex: string;
   externalKeystorePath: string;

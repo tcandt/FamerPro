@@ -22,6 +22,52 @@ pub struct GameProjectRecord {
     pub project_dir_path: String,
     pub created_at: String,
     pub updated_at: String,
+    #[serde(default)]
+    pub publisher_profile_id: Option<String>,
+    #[serde(default = "default_signing_mode_str")]
+    pub signing_mode: String,
+    #[serde(default)]
+    pub version_info_json: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublisherProfileRecord {
+    pub id: String,
+    pub publisher_id: String,
+    pub display_name: String,
+    pub organization: String,
+    pub website: Option<String>,
+    pub support_contact: Option<String>,
+    pub copyright: String,
+    pub ed25519_key_id: String,
+    pub ed25519_pubkey_hex: String,
+    pub authenticode_cert_ref: Option<String>,
+    pub release_channel: String,
+    pub signing_policy: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublisherProfileInput {
+    pub id: Option<String>,
+    pub publisher_id: String,
+    pub display_name: String,
+    pub organization: String,
+    pub website: Option<String>,
+    pub support_contact: Option<String>,
+    pub copyright: String,
+    pub ed25519_key_id: Option<String>,
+    pub ed25519_pubkey_hex: Option<String>,
+    pub authenticode_cert_ref: Option<String>,
+    pub release_channel: String,
+    pub signing_policy: String,
+}
+
+fn default_signing_mode_str() -> String {
+    "unsigned_internal".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,7 +101,7 @@ pub struct CreateProjectRequest {
     pub enabled_modules: Option<Vec<String>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateProjectRequest {
     pub id: String,
@@ -68,6 +114,12 @@ pub struct UpdateProjectRequest {
     pub target_width_px: Option<u32>,
     pub target_height_px: Option<u32>,
     pub bundle_adb: Option<bool>,
+    #[serde(default)]
+    pub publisher_profile_id: Option<String>,
+    #[serde(default)]
+    pub signing_mode: Option<String>,
+    #[serde(default)]
+    pub version_info_json: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -281,6 +333,22 @@ pub struct ProjectReleaseRecord {
     pub promoted_at: Option<String>,
     #[serde(default)]
     pub rolled_back_from_id: Option<String>,
+    #[serde(default)]
+    pub publisher_profile_id: Option<String>,
+    #[serde(default = "default_signing_mode_str")]
+    pub signing_mode: String,
+    #[serde(default = "default_auth_trust_unsigned")]
+    pub authenticode_trust_status: String,
+    #[serde(default)]
+    pub authenticode_thumbprint: Option<String>,
+    #[serde(default)]
+    pub authenticode_subject: Option<String>,
+    #[serde(default)]
+    pub trusted_public_release: bool,
+}
+
+fn default_auth_trust_unsigned() -> String {
+    "unsigned".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

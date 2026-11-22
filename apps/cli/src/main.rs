@@ -459,14 +459,8 @@ fn run_p2_sandbox_verification(
     let updated_slg = storage.update_project(UpdateProjectRequest {
         id: proj_slg.id.clone(),
         name: Some("Kingdom Rise: Tactics SLG (Verified)".to_string()),
-        game_package_id: None,
         version: Some("1.2.1".to_string()),
-        exe_name: None,
-        window_title: None,
-        icon_rel_path: None,
-        target_width_px: None,
-        target_height_px: None,
-        bundle_adb: None,
+        ..Default::default()
     })?;
 
     storage.save_project_workflow(
@@ -648,14 +642,8 @@ fn run_p2_sandbox_verification(
                 UpdateProjectRequest {
                     id: proj_slg.id.clone(),
                     name: Some("Broken Name".to_string()),
-                    game_package_id: None,
                     version: Some("9.9.9".to_string()),
-                    exe_name: None,
-                    window_title: None,
-                    icon_rel_path: None,
-                    target_width_px: None,
-                    target_height_px: None,
-                    bundle_adb: None,
+                    ..Default::default()
                 },
                 CrashFaultPoint::FailBeforeDbCommit,
             )
@@ -997,14 +985,8 @@ fn run_crash_worker(
             let _ = storage.update_project(UpdateProjectRequest {
                 id: tid.to_string(),
                 name: Some("Mutated Uncommitted".to_string()),
-                game_package_id: None,
                 version: Some("9.9.9".to_string()),
-                exe_name: None,
-                window_title: None,
-                icon_rel_path: None,
-                target_width_px: None,
-                target_height_px: None,
-                bundle_adb: None,
+                ..Default::default()
             });
         }
         "delete:after_move_to_trash_before_commit" | "delete:after_db_commit_before_cleanup" => {

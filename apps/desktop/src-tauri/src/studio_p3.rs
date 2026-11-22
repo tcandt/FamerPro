@@ -2,11 +2,18 @@ use crate::AppState;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use fp_actions::{SafeRegionSampler, SafeTapPolicy};
 use fp_adb::{validate_adb_token, AdbDeviceDriver};
-use fp_builder::{BuildPreflightReport, BuildReport, MiniToolPackager};
+use fp_builder::{
+    authenticode::{create_self_signed_qa_cert, find_signtool_exe, QaSelfSignedCertInfo},
+    security::{ProducerKeyManager, ProducerKeyMetadata},
+    BuildPreflightReport, BuildReport, MiniToolPackager, ReleaseBuildOptions,
+};
+use fp_security::ProducerKeystore;
 use fp_bundle_contract::{
-    evaluate_bundle_compatibility, CompatibilityReport, CompatibilityVersions,
-    RuntimeCompatibilityProfile, SemVer, CURRENT_RUNTIME_VERSION, CURRENT_SQLITE_SCHEMA_VERSION,
-    SUPPORTED_MODULE_API_VERSION, SUPPORTED_UI_SCHEMA_VERSION, SUPPORTED_WORKFLOW_SCHEMA_VERSION,
+    evaluate_bundle_compatibility, AuthenticodeTrustStatus, CompatibilityReport,
+    CompatibilityVersions, KeyRotationDelegation, PeVersionInfoSpec, PublisherIdentitySpec,
+    RuntimeCompatibilityProfile, SemVer, SigningMode, CURRENT_RUNTIME_VERSION,
+    CURRENT_SQLITE_SCHEMA_VERSION, SUPPORTED_MODULE_API_VERSION, SUPPORTED_UI_SCHEMA_VERSION,
+    SUPPORTED_WORKFLOW_SCHEMA_VERSION,
 };
 use fp_bundle_verify::{sha256_hex, validate_safe_relative_path};
 use fp_domain::{
@@ -16,8 +23,9 @@ use fp_domain::{
 use fp_proxy::{probe_proxy, ProxyConfig, ProxyProbeReport};
 use fp_scheduler::DeviceLease;
 use fp_storage::{
-    JobResumeContext, ProjectJobRecord, ProjectReleaseRecord, ReleaseTransitionRecord,
-    RuntimeVariablesSnapshot, StorageManager, VisionTemplateInput, VisionTemplateRecord,
+    JobResumeContext, ProjectJobRecord, ProjectReleaseRecord, PublisherProfileInput,
+    PublisherProfileRecord, ReleaseTransitionRecord, RuntimeVariablesSnapshot, StorageManager,
+    VisionTemplateInput, VisionTemplateRecord,
 };
 use fp_updater::{
     ActiveVersionPointer, MiniToolUpdater, ReconcileOutcome, UpdateExecutionOptions, UpdateJournal,
@@ -78,6 +86,41 @@ pub struct TemplateMatchPreviewReport {
 pub struct BuilderReleaseExportResult {
     pub release: ProjectReleaseRecord,
     pub build_report: BuildReport,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BuilderExportOptions {
+    pub signing_mode: Option<SigningMode>,
+    pub publisher_profile_id: Option<String>,
+    pub authenticode_cert_ref: Option<String>,
+    pub timestamp_url: Option<String>,
+    pub release_channel: Option<String>,
+    pub version_info: Option<PeVersionInfoSpec>,
+    pub key_rotation_delegation: Option<KeyRotationDelegation>,
+    pub include_pending_delegation: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SigningPreflightReport {
+    pub ready: bool,
+    pub signtool_available: bool,
+    pub signtool_path: Option<String>,
+    pub signing_mode: SigningMode,
+    pub publisher_profile_present: bool,
+    pub cert_ref_present: bool,
+    pub keystore_key_id: Option<String>,
+    pub issues: Vec<String>,
+    pub warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeyRotationWithDelegationResult {
+    pub new_meta: ProducerKeyMetadata,
+    pub delegation: KeyRotationDelegation,
+    pub delegation_saved_path: String,
 }
 
 // =========================================================================
@@ -288,6 +331,16 @@ pub(crate) fn handle_builder_preflight(
     .map_err(|e| e.to_string())
 }
 
+fn authenticode_status_str(s: AuthenticodeTrustStatus) -> &'static str {
+    match s {
+        AuthenticodeTrustStatus::Unsigned => "unsigned",
+        AuthenticodeTrustStatus::SelfSignedUntrustedRoot => "self_signed_untrusted_root",
+        AuthenticodeTrustStatus::TrustedPublicChain => "trusted_public_chain",
+        AuthenticodeTrustStatus::TamperedOrInvalid => "tampered_or_invalid",
+        AuthenticodeTrustStatus::ExpiredOrTimestampError => "expired_or_timestamp_error",
+    }
+}
+
 pub(crate) fn handle_builder_export_release(
     storage: &StorageManager,
     project_id: &str,
@@ -295,6 +348,26 @@ pub(crate) fn handle_builder_export_release(
     workspace_bin_dir: Option<&Path>,
     output_release_dir: &Path,
     keystore_dir: Option<&Path>,
+) -> Result<BuilderReleaseExportResult, String> {
+    handle_builder_export_release_with_options(
+        storage,
+        project_id,
+        runtime_exe,
+        workspace_bin_dir,
+        output_release_dir,
+        keystore_dir,
+        None,
+    )
+}
+
+pub(crate) fn handle_builder_export_release_with_options(
+    storage: &StorageManager,
+    project_id: &str,
+    runtime_exe: &Path,
+    workspace_bin_dir: Option<&Path>,
+    output_release_dir: &Path,
+    keystore_dir: Option<&Path>,
+    options: Option<BuilderExportOptions>,
 ) -> Result<BuilderReleaseExportResult, String> {
     let proj = storage
         .get_project(project_id)
@@ -315,12 +388,117 @@ pub(crate) fn handle_builder_export_release(
         ));
     }
 
-    let report = MiniToolPackager::build_and_export_release(
+    let opts = options.unwrap_or_default();
+    let effective_profile_id = opts
+        .publisher_profile_id
+        .clone()
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| proj.publisher_profile_id.clone());
+
+    let profile_rec = if let Some(ref pid) = effective_profile_id {
+        storage.get_publisher_profile(pid).map_err(|e| e.to_string())?
+    } else {
+        None
+    };
+
+    let signing_mode = opts
+        .signing_mode
+        .or_else(|| SigningMode::from_str_checked(&proj.signing_mode).ok())
+        .unwrap_or(SigningMode::UnsignedInternal);
+
+    let effective_cert_ref = opts
+        .authenticode_cert_ref
+        .clone()
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| {
+            profile_rec
+                .as_ref()
+                .and_then(|p| p.authenticode_cert_ref.clone())
+        });
+
+    let effective_channel = opts
+        .release_channel
+        .clone()
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| profile_rec.as_ref().map(|p| p.release_channel.clone()))
+        .unwrap_or_else(|| match signing_mode {
+            SigningMode::UnsignedInternal => "internal".to_string(),
+            SigningMode::SelfSignedQa => "qa".to_string(),
+            SigningMode::PublicSigned => "production".to_string(),
+        });
+
+    let publisher_spec: Option<PublisherIdentitySpec> =
+        profile_rec.as_ref().map(|p| PublisherIdentitySpec {
+            publisher_id: p.publisher_id.clone(),
+            display_name: p.display_name.clone(),
+            organization: p.organization.clone(),
+            website: p.website.clone(),
+            support_contact: p.support_contact.clone(),
+            copyright: p.copyright.clone(),
+            ed25519_key_id: p.ed25519_key_id.clone(),
+            ed25519_pubkey_hex: p.ed25519_pubkey_hex.clone(),
+            authenticode_cert_ref: effective_cert_ref.clone(),
+            release_channel: effective_channel.clone(),
+            signing_policy: signing_mode,
+        });
+
+    let version_info: Option<PeVersionInfoSpec> = opts
+        .version_info
+        .clone()
+        .or_else(|| {
+            proj.version_info_json
+                .as_deref()
+                .and_then(|raw| serde_json::from_str::<PeVersionInfoSpec>(raw).ok())
+        })
+        .or_else(|| {
+            let org = profile_rec
+                .as_ref()
+                .map(|p| p.organization.clone())
+                .unwrap_or_else(|| "FarmerPro Studio".to_string());
+            let copy = profile_rec
+                .as_ref()
+                .map(|p| p.copyright.clone())
+                .unwrap_or_else(|| format!("Copyright (C) 2026 {}", org));
+            let q = PeVersionInfoSpec::parse_quad_version(&proj.version);
+            Some(PeVersionInfoSpec {
+                company_name: org,
+                file_description: format!("{} Automation Runner", proj.name),
+                file_version: format!("{}.{}.{}.{}", q[0], q[1], q[2], q[3]),
+                internal_name: proj.slug.clone(),
+                legal_copyright: copy,
+                original_filename: proj.exe_name.clone(),
+                product_name: proj.name.clone(),
+                product_version: proj.version.clone(),
+            })
+        });
+
+    let key_rotation_delegation = opts.key_rotation_delegation.clone().or_else(|| {
+        if opts.include_pending_delegation.unwrap_or(false) {
+            let del_path = Path::new(&proj.project_dir_path).join("key-rotation-delegation.json");
+            std::fs::read(&del_path)
+                .ok()
+                .and_then(|b| serde_json::from_slice::<KeyRotationDelegation>(&b).ok())
+        } else {
+            None
+        }
+    });
+
+    let release_opts = ReleaseBuildOptions {
+        signing_mode,
+        authenticode_cert_ref: effective_cert_ref,
+        timestamp_url: opts.timestamp_url.clone(),
+        publisher_profile: publisher_spec,
+        version_info,
+        key_rotation_delegation,
+    };
+
+    let report = MiniToolPackager::build_and_export_release_with_options(
         Path::new(&proj.project_dir_path),
         runtime_exe,
         workspace_bin_dir,
         output_release_dir,
         keystore_dir,
+        &release_opts,
     )
     .map_err(|e| e.to_string())?;
 
@@ -331,6 +509,15 @@ pub(crate) fn handle_builder_export_release(
         .filter(|o| o.status.success())
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
         .unwrap_or_default();
+
+    let (auth_status_str, auth_thumb, auth_subj) = match report.authenticode_verification.as_ref() {
+        Some(v) => (
+            authenticode_status_str(v.trust_status).to_string(),
+            v.signer_thumbprint.clone(),
+            v.signer_subject.clone(),
+        ),
+        None => ("unsigned".to_string(), None, None),
+    };
 
     let compat = CompatibilityVersions::default();
     let release = ProjectReleaseRecord {
@@ -348,7 +535,7 @@ pub(crate) fn handle_builder_export_release(
         build_report_json: serde_json::to_string(&report).map_err(|e| e.to_string())?,
         built_at: chrono::Utc::now().to_rfc3339(),
         lifecycle_state: "Draft".to_string(),
-        release_channel: "stable".to_string(),
+        release_channel: effective_channel,
         changelog_md: String::new(),
         min_runtime_version: compat.min_runtime_version,
         workflow_schema_version: compat.workflow_schema_version,
@@ -359,6 +546,12 @@ pub(crate) fn handle_builder_export_release(
         signature_status: report.authenticode_status.clone(),
         promoted_at: None,
         rolled_back_from_id: None,
+        publisher_profile_id: profile_rec.map(|p| p.id),
+        signing_mode: signing_mode.as_str().to_string(),
+        authenticode_trust_status: auth_status_str,
+        authenticode_thumbprint: auth_thumb,
+        authenticode_subject: auth_subj,
+        trusted_public_release: report.trusted_public_release,
     };
 
     storage
@@ -840,6 +1033,7 @@ pub fn studio_builder_export_release(
     project_id: String,
     output_dir: Option<String>,
     runtime_exe_override: Option<String>,
+    options: Option<BuilderExportOptions>,
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<BuilderReleaseExportResult, String> {
     let (default_runtime, bin_dir) = resolve_runtime_and_bin_paths();
@@ -865,14 +1059,219 @@ pub fn studio_builder_export_release(
                 .join(format!("v{}", proj.version))
         });
 
-    handle_builder_export_release(
+    handle_builder_export_release_with_options(
         &st.storage,
         &project_id,
         &runtime_exe,
         bin_dir.as_deref(),
         &release_dir,
         None,
+        options,
     )
+}
+
+#[tauri::command]
+pub fn studio_list_publisher_profiles(
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<Vec<PublisherProfileRecord>, String> {
+    let st = state.lock().unwrap();
+    st.storage
+        .list_publisher_profiles()
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn studio_upsert_publisher_profile(
+    input: PublisherProfileInput,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<PublisherProfileRecord, String> {
+    let st = state.lock().unwrap();
+    st.storage
+        .upsert_publisher_profile(input)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn studio_delete_publisher_profile(
+    id: String,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<bool, String> {
+    let st = state.lock().unwrap();
+    st.storage
+        .delete_publisher_profile(&id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn studio_create_self_signed_qa_cert(
+    subject_cn: Option<String>,
+    _valid_days: Option<u32>,
+) -> Result<QaSelfSignedCertInfo, String> {
+    let raw_cn = subject_cn
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| "FarmerPro QA Publisher".to_string());
+    let cn = raw_cn
+        .trim()
+        .strip_prefix("CN=")
+        .or_else(|| raw_cn.trim().strip_prefix("cn="))
+        .unwrap_or(raw_cn.trim())
+        .to_string();
+    create_self_signed_qa_cert(&cn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn studio_signing_preflight(
+    project_id: String,
+    signing_mode: Option<String>,
+    cert_ref: Option<String>,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<SigningPreflightReport, String> {
+    let st = state.lock().unwrap();
+    let proj = st
+        .storage
+        .get_project(&project_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("GameProject '{}' not found", project_id))?;
+
+    let mode = signing_mode
+        .as_deref()
+        .or(Some(proj.signing_mode.as_str()))
+        .and_then(|s| SigningMode::from_str_checked(s).ok())
+        .unwrap_or(SigningMode::UnsignedInternal);
+
+    let profile = if let Some(ref pid) = proj.publisher_profile_id {
+        st.storage
+            .get_publisher_profile(pid)
+            .map_err(|e| e.to_string())?
+    } else {
+        None
+    };
+
+    let effective_cert = cert_ref
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| {
+            profile
+                .as_ref()
+                .and_then(|p| p.authenticode_cert_ref.clone())
+        });
+
+    let (signtool_available, signtool_path) = match find_signtool_exe() {
+        Some(p) => (true, Some(p.to_string_lossy().to_string())),
+        None => (false, None),
+    };
+
+    let ks_dir = ProducerKeystore::default_external_keystore_dir();
+    let keystore_key_id = ProducerKeystore::load_or_create_signing_key(&ks_dir)
+        .ok()
+        .map(|(_, m)| m.key_id);
+
+    let mut issues = Vec::new();
+    let mut warnings = Vec::new();
+    match mode {
+        SigningMode::UnsignedInternal => {
+            warnings.push(
+                "Unsigned Internal build: PE VERSIONINFO & Ed25519 bundle signature applied; no Authenticode signature (dev/internal only)."
+                    .to_string(),
+            );
+        }
+        SigningMode::SelfSignedQa => {
+            if !signtool_available {
+                issues.push(
+                    "Windows SDK signtool.exe not found; required for SelfSignedQa Authenticode signing."
+                        .to_string(),
+                );
+            }
+            if effective_cert.is_none() {
+                warnings.push(
+                    "No Authenticode thumbprint/cert selected; Builder can auto-create a local Windows CNG QA cert during build or right here."
+                        .to_string(),
+                );
+            } else {
+                warnings.push(
+                    "Self-Signed QA builds verify cryptographic integrity & Authenticode signature but DO NOT claim TrustedPublicRelease."
+                        .to_string(),
+                );
+            }
+        }
+        SigningMode::PublicSigned => {
+            if !signtool_available {
+                issues.push(
+                    "Windows SDK signtool.exe not found; required for PublicSigned Authenticode signing."
+                        .to_string(),
+                );
+            }
+            if effective_cert.is_none() {
+                issues.push(
+                    "PublicSigned mode requires a commercial Code Signing certificate reference (thumbprint or PFX) — never falls back to Self-Signed QA."
+                        .to_string(),
+                );
+            }
+        }
+    }
+
+    Ok(SigningPreflightReport {
+        ready: issues.is_empty(),
+        signtool_available,
+        signtool_path,
+        signing_mode: mode,
+        publisher_profile_present: profile.is_some(),
+        cert_ref_present: effective_cert.is_some(),
+        keystore_key_id,
+        issues,
+        warnings,
+    })
+}
+
+#[tauri::command]
+pub fn studio_rotate_project_ed25519_key_with_delegation(
+    project_id: String,
+    publisher_id: Option<String>,
+    valid_days: Option<i64>,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<KeyRotationWithDelegationResult, String> {
+    let st = state.lock().unwrap();
+    let proj = st
+        .storage
+        .get_project(&project_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("GameProject '{}' not found", project_id))?;
+
+    let eff_pub_id = publisher_id
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| {
+            proj.publisher_profile_id
+                .as_deref()
+                .and_then(|pid| st.storage.get_publisher_profile(pid).ok().flatten())
+                .map(|p| p.publisher_id)
+        })
+        .unwrap_or_else(|| format!("pub-{}", proj.slug));
+
+    let ks_dir = ProducerKeystore::default_external_keystore_dir();
+    let (old_key, _old_meta) =
+        ProducerKeystore::load_or_create_signing_key(&ks_dir).map_err(|e| e.to_string())?;
+    let (_new_key, new_meta) = ProducerKeystore::rotate_producer_key(
+        &ks_dir,
+        &format!("p5_3_delegated_rotation:{}", proj.slug),
+    )
+    .map_err(|e| e.to_string())?;
+
+    let delegation = ProducerKeyManager::sign_key_rotation_delegation(
+        &old_key,
+        &new_meta.public_key_hex,
+        &eff_pub_id,
+        &proj.slug,
+        valid_days.unwrap_or(90),
+    );
+
+    let del_path = PathBuf::from(&proj.project_dir_path).join("key-rotation-delegation.json");
+    let bytes = serde_json::to_vec_pretty(&delegation).map_err(|e| e.to_string())?;
+    std::fs::write(&del_path, bytes).map_err(|e| e.to_string())?;
+
+    Ok(KeyRotationWithDelegationResult {
+        new_meta,
+        delegation,
+        delegation_saved_path: del_path.to_string_lossy().to_string(),
+    })
 }
 
 fn parse_hex_bgra(accent_hex: Option<&str>) -> [u8; 4] {

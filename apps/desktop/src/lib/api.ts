@@ -685,13 +685,62 @@ export const api = {
   async studioBuilderExportRelease(
     projectId: string,
     outputDir?: string,
-    runtimeExeOverride?: string
+    runtimeExeOverride?: string,
+    options?: import('../types').BuilderExportOptions
   ): Promise<BuilderReleaseExportResult> {
     requireTauri('studio_builder_export_release');
     return await invoke<BuilderReleaseExportResult>('studio_builder_export_release', {
       projectId,
       outputDir,
       runtimeExeOverride,
+      options,
+    });
+  },
+
+  async studioListPublisherProfiles(): Promise<import('../types').PublisherProfileRecord[]> {
+    if (!isTauri()) return [];
+    return await invoke('studio_list_publisher_profiles');
+  },
+
+  async studioUpsertPublisherProfile(
+    input: import('../types').PublisherProfileInput
+  ): Promise<import('../types').PublisherProfileRecord> {
+    requireTauri('studio_upsert_publisher_profile');
+    return await invoke('studio_upsert_publisher_profile', { input });
+  },
+
+  async studioDeletePublisherProfile(id: string): Promise<boolean> {
+    requireTauri('studio_delete_publisher_profile');
+    return await invoke('studio_delete_publisher_profile', { id });
+  },
+
+  async studioCreateSelfSignedQaCert(
+    subjectCn?: string,
+    validDays?: number
+  ): Promise<import('../types').QaSelfSignedCertInfo> {
+    requireTauri('studio_create_self_signed_qa_cert');
+    return await invoke('studio_create_self_signed_qa_cert', { subjectCn, validDays });
+  },
+
+  async studioSigningPreflight(
+    projectId: string,
+    signingMode?: string,
+    certRef?: string
+  ): Promise<import('../types').SigningPreflightReport> {
+    requireTauri('studio_signing_preflight');
+    return await invoke('studio_signing_preflight', { projectId, signingMode, certRef });
+  },
+
+  async studioRotateProjectEd25519KeyWithDelegation(
+    projectId: string,
+    publisherId?: string,
+    validDays?: number
+  ): Promise<import('../types').KeyRotationWithDelegationResult> {
+    requireTauri('studio_rotate_project_ed25519_key_with_delegation');
+    return await invoke('studio_rotate_project_ed25519_key_with_delegation', {
+      projectId,
+      publisherId,
+      validDays,
     });
   },
 

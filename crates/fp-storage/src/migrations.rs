@@ -478,6 +478,33 @@ CREATE INDEX IF NOT EXISTS idx_release_transitions_rel
     ON project_release_transitions(release_id, transitioned_at DESC);
 "#;
 
+pub const MIGRATION_V5_PUBLISHER_PROFILES_SQL: &str = r#"
+CREATE TABLE IF NOT EXISTS publisher_profiles (
+    id TEXT PRIMARY KEY,
+    publisher_id TEXT NOT NULL UNIQUE,
+    display_name TEXT NOT NULL,
+    organization TEXT NOT NULL,
+    website TEXT,
+    support_contact TEXT,
+    copyright TEXT NOT NULL,
+    ed25519_key_id TEXT NOT NULL DEFAULT '',
+    ed25519_pubkey_hex TEXT NOT NULL DEFAULT '',
+    authenticode_cert_ref TEXT,
+    release_channel TEXT NOT NULL DEFAULT 'internal',
+    signing_policy TEXT NOT NULL DEFAULT 'unsigned_internal',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS used_key_rotation_nonces (
+    nonce TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    old_pubkey_hex TEXT NOT NULL,
+    new_pubkey_hex TEXT NOT NULL,
+    accepted_at TEXT NOT NULL
+);
+"#;
+
 pub fn list_applied_versions(conn: &Connection) -> Result<Vec<i64>> {
     let table_exists: i64 = conn.query_row(
         "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='schema_migrations'",
@@ -522,7 +549,12 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
     }
 
     let applied: HashSet<i64> = list_applied_versions(conn)?.into_iter().collect();
-    if applied.contains(&1) && applied.contains(&2) && applied.contains(&3) && applied.contains(&4) {
+    if applied.contains(&1)
+        && applied.contains(&2)
+        && applied.contains(&3)
+        && applied.contains(&4)
+        && applied.contains(&5)
+    {
         return list_applied_versions(conn);
     }
     let now = Utc::now().to_rfc3339();
@@ -757,6 +789,44 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
 
         tx.execute(
             "INSERT INTO schema_migrations (version, applied_at) VALUES (4, ?1);",
+            params![now],
+        )?;
+        tx.commit()?;
+    }
+
+    // Migration v5: P5.3 Publisher Profiles, Authenticode & PE VERSIONINFO Metadata, Key Rotation Replay Nonces
+    if !applied.contains(&5) {
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        tx.execute_batch(MIGRATION_V5_PUBLISHER_PROFILES_SQL)
+            .context("Failed applying SQLite migration v5 tables")?;
+
+        let proj_alters: &[(&str, &str)] = &[
+            ("publisher_profile_id", "ALTER TABLE projects ADD COLUMN publisher_profile_id TEXT;"),
+            ("signing_mode", "ALTER TABLE projects ADD COLUMN signing_mode TEXT NOT NULL DEFAULT 'unsigned_internal';"),
+            ("version_info_json", "ALTER TABLE projects ADD COLUMN version_info_json TEXT;"),
+        ];
+        for (col, sql) in proj_alters {
+            if !table_has_column(&tx, "projects", col)? {
+                tx.execute(sql, [])?;
+            }
+        }
+
+        let rel_alters: &[(&str, &str)] = &[
+            ("publisher_profile_id", "ALTER TABLE project_releases ADD COLUMN publisher_profile_id TEXT;"),
+            ("signing_mode", "ALTER TABLE project_releases ADD COLUMN signing_mode TEXT NOT NULL DEFAULT 'unsigned_internal';"),
+            ("authenticode_trust_status", "ALTER TABLE project_releases ADD COLUMN authenticode_trust_status TEXT NOT NULL DEFAULT 'unsigned';"),
+            ("authenticode_thumbprint", "ALTER TABLE project_releases ADD COLUMN authenticode_thumbprint TEXT;"),
+            ("authenticode_subject", "ALTER TABLE project_releases ADD COLUMN authenticode_subject TEXT;"),
+            ("trusted_public_release", "ALTER TABLE project_releases ADD COLUMN trusted_public_release INTEGER NOT NULL DEFAULT 0;"),
+        ];
+        for (col, sql) in rel_alters {
+            if !table_has_column(&tx, "project_releases", col)? {
+                tx.execute(sql, [])?;
+            }
+        }
+
+        tx.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (5, ?1);",
             params![now],
         )?;
         tx.commit()?;

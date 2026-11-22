@@ -1,12 +1,14 @@
 use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use fp_bundle_contract::{
-    check_sqlite_downgrade_compatibility, CompatibilityVersions, MiniToolUiSchema,
-    ReleaseBundleManifest, RuntimeCompatibilityProfile, SemVer, CURRENT_SQLITE_SCHEMA_VERSION,
+    check_sqlite_downgrade_compatibility, AuthenticodeTrustStatus, AuthenticodeVerificationReport,
+    CompatibilityVersions, MiniToolUiSchema, ReleaseBundleManifest,
+    RuntimeCompatibilityProfile, SemVer, SigningMode, CURRENT_SQLITE_SCHEMA_VERSION,
 };
 use fp_bundle_verify::{
-    read_pe_embedded_pubkey_from_exe, validate_safe_relative_path, verify_bundle_compatibility_gate,
-    SignedBundleEnvelope, PE_ED25519_PUBKEY_RESOURCE_ID,
+    read_pe_embedded_pubkey_from_exe, validate_safe_relative_path, verify_authenticode_pe,
+    verify_bundle_compatibility_gate, verify_key_rotation_delegation, SignedBundleEnvelope,
+    PE_ED25519_PUBKEY_RESOURCE_ID,
 };
 use fp_storage::StorageManager;
 use fp_workflow_schema::WorkflowDocument;
@@ -84,16 +86,15 @@ pub struct ActiveVersionPointer {
     pub journal_id: String,
 }
 
-/// Forward-signed key rotation delegation contract (designed for P5.3):
-/// Allows rotating from `old_pubkey_hex` -> `new_pubkey_hex` ONLY when signed by `old_pubkey_hex`.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// Persistent root-of-trust anchor ledger kept in `.updater/trust-state.json`.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct KeyRotationDelegation {
-    pub old_pubkey_hex: String,
-    pub new_pubkey_hex: String,
-    pub issued_at_utc: String,
-    pub expires_at_utc: String,
-    pub signature_by_old_key_hex: String,
+pub struct PersistentTrustState {
+    pub publisher_id: Option<String>,
+    pub trusted_pubkeys: Vec<String>,
+    pub revoked_pubkeys: Vec<String>,
+    pub used_rotation_nonces: Vec<String>,
+    pub updated_at_utc: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -169,6 +170,9 @@ pub struct VerifiedCandidateRelease {
     pub workflows: Vec<WorkflowDocument>,
     pub exe_path: PathBuf,
     pub pe_pubkey_hex: String,
+    pub authenticode: AuthenticodeVerificationReport,
+    pub rotated_from_pubkey_hex: Option<String>,
+    pub publisher_id: Option<String>,
 }
 
 pub struct MiniToolUpdater {
@@ -200,6 +204,83 @@ impl MiniToolUpdater {
 
     pub fn journal_path(&self) -> PathBuf {
         self.updater_dir().join("update-journal.json")
+    }
+
+    pub fn trust_state_path(&self) -> PathBuf {
+        self.updater_dir().join("trust-state.json")
+    }
+
+    pub fn read_trust_state(&self) -> Result<Option<PersistentTrustState>> {
+        let p = self.trust_state_path();
+        if !p.exists() {
+            return Ok(None);
+        }
+        let bytes = fs::read(&p)
+            .with_context(|| format!("Failed reading trust-state.json at {}", p.display()))?;
+        let state: PersistentTrustState = serde_json::from_slice(&bytes)?;
+        Ok(Some(state))
+    }
+
+    pub fn write_trust_state(&self, state: &PersistentTrustState) -> Result<()> {
+        let dir = self.updater_dir();
+        fs::create_dir_all(&dir)?;
+        let bytes = serde_json::to_vec_pretty(state)?;
+        atomic_write_file(&self.trust_state_path(), &bytes)
+    }
+
+    /// Startup / pre-update integrity check of the currently installed active executable:
+    /// checks embedded `RT_RCDATA #7777` key matches `active_version.json` and rejects any broken Authenticode signature.
+    pub fn verify_installed_exe_integrity(&self) -> Result<AuthenticodeVerificationReport> {
+        let active = self.read_active_pointer()?.ok_or_else(|| {
+            anyhow::anyhow!(
+                "ACTIVE_VERSION_MISSING: no active_version.json in {}",
+                self.install_root.display()
+            )
+        })?;
+        let active_exe = self
+            .versions_dir()
+            .join(format!("v{}", active.active_version))
+            .join(&active.exe_name);
+        if !active_exe.exists() {
+            bail!(
+                "INSTALLED_EXE_MISSING: expected installed binary at {}",
+                active_exe.display()
+            );
+        }
+        let pe_pk = read_pe_embedded_pubkey_from_exe(&active_exe).with_context(|| {
+            format!(
+                "INSTALLED_ROOT_OF_TRUST_MISSING: failed reading RT_RCDATA #{} from {}",
+                PE_ED25519_PUBKEY_RESOURCE_ID,
+                active_exe.display()
+            )
+        })?;
+        if let Some(ref ptr_pk) = active.trusted_pubkey_hex {
+            if !ptr_pk.trim().eq_ignore_ascii_case(&pe_pk) {
+                bail!(
+                    "INSTALLED_ROOT_OF_TRUST_MISMATCH: active_version.json pubkey != installed EXE RT_RCDATA #{}",
+                    PE_ED25519_PUBKEY_RESOURCE_ID
+                );
+            }
+        }
+        let report = verify_authenticode_pe(&active_exe);
+        match report.trust_status {
+            AuthenticodeTrustStatus::TamperedOrInvalid => {
+                bail!(
+                    "INSTALLED_EXECUTABLE_TAMPERED: active EXE failed WinVerifyTrust (0x{:08X}: {})",
+                    report.win_trust_error_code,
+                    report.detail
+                );
+            }
+            AuthenticodeTrustStatus::ExpiredOrTimestampError => {
+                bail!(
+                    "INSTALLED_EXECUTABLE_CERT_EXPIRED: active EXE certificate/timestamp invalid (0x{:08X}: {})",
+                    report.win_trust_error_code,
+                    report.detail
+                );
+            }
+            _ => {}
+        }
+        Ok(report)
     }
 
     pub fn active_pointer_path(&self) -> PathBuf {
@@ -318,23 +399,96 @@ impl MiniToolUpdater {
             )
         })?;
 
-        // CRITICAL P5.2 ROOT OF TRUST ENFORCEMENT:
+        // Check PE Authenticode signature & Windows trust chain
+        let authenticode = verify_authenticode_pe(&exe_path);
+        match authenticode.trust_status {
+            AuthenticodeTrustStatus::TamperedOrInvalid => {
+                bail!(
+                    "AUTHENTICODE_TAMPERED_OR_INVALID: PE Authenticode verification failed (0x{:08X}: {})",
+                    authenticode.win_trust_error_code,
+                    authenticode.detail
+                );
+            }
+            AuthenticodeTrustStatus::ExpiredOrTimestampError => {
+                bail!(
+                    "AUTHENTICODE_TIMESTAMP_OR_EXPIRED: PE certificate or timestamp invalid (0x{:08X}: {})",
+                    authenticode.win_trust_error_code,
+                    authenticode.detail
+                );
+            }
+            _ => {}
+        }
+
+        if let Some(ref signing_meta) = manifest.signing {
+            match signing_meta.signing_mode {
+                SigningMode::PublicSigned => {
+                    if !authenticode.trusted_public_release {
+                        bail!(
+                            "AUTHENTICODE_PUBLIC_TRUST_REQUIRED: release requires TrustedPublicChain, got {:?} ({})",
+                            authenticode.trust_status,
+                            authenticode.detail
+                        );
+                    }
+                }
+                SigningMode::SelfSignedQa => {
+                    if !authenticode.signed || authenticode.trust_status == AuthenticodeTrustStatus::Unsigned {
+                        bail!(
+                            "AUTHENTICODE_SIGNATURE_MISSING: release requires SelfSignedQa signature but binary is unsigned"
+                        );
+                    }
+                }
+                SigningMode::UnsignedInternal => {}
+            }
+            if signing_meta.release_channel.eq_ignore_ascii_case("production")
+                && !authenticode.trusted_public_release
+            {
+                bail!(
+                    "AUTHENTICODE_PRODUCTION_TRUST_REQUIRED: production channel release must hold TrustedPublicChain Authenticode signature"
+                );
+            }
+        }
+
+        // CRITICAL P5.2 + P5.3 ROOT OF TRUST & KEY ROTATION DELEGATION ENFORCEMENT:
         // When updating from an already-installed Mini Tool, the trusted Ed25519 publisher key
-        // MUST come from the previously installed trusted binary (or explicit trust anchor),
-        // NOT self-asserted solely by the untrusted incoming candidate EXE.
+        // MUST come from the previously installed trusted binary (or explicit trust anchor).
+        // Rotating from old_pubkey_hex -> new_pubkey_hex requires a valid signed KeyRotationDelegation!
+        let mut rotated_from_pubkey_hex: Option<String> = None;
+        let expected_publisher_id = manifest.publisher.as_ref().map(|p| p.publisher_id.as_str());
         let effective_trust_pubkey = match trusted_anchor_pubkey_hex {
             Some(anchor) => {
-                if !pe_pubkey_hex.eq_ignore_ascii_case(anchor.trim()) {
+                let anchor_norm = anchor.trim().to_ascii_lowercase();
+                if pe_pubkey_hex.eq_ignore_ascii_case(&anchor_norm) {
+                    anchor_norm
+                } else if let Some(delegation) =
+                    manifest.signing.as_ref().and_then(|s| s.key_rotation.as_ref())
+                {
+                    if !delegation.new_pubkey_hex.eq_ignore_ascii_case(&pe_pubkey_hex) {
+                        bail!(
+                            "KEY_ROTATION_TARGET_MISMATCH: delegation newPubkeyHex '{}' != candidate PE key '{}'",
+                            delegation.new_pubkey_hex,
+                            pe_pubkey_hex
+                        );
+                    }
+                    verify_key_rotation_delegation(
+                        delegation,
+                        &anchor_norm,
+                        expected_publisher_id,
+                        Some(&manifest.project.slug),
+                        None,
+                    )
+                    .context("KEY_ROTATION_DELEGATION_INVALID")?;
+                    rotated_from_pubkey_hex = Some(anchor_norm);
+                    pe_pubkey_hex.to_ascii_lowercase()
+                } else {
                     bail!(
-                        "UPDATE_ROOT_OF_TRUST_UNTRUSTED: candidate PE RT_RCDATA #{} pubkey '{}' does not match installed trusted publisher pubkey '{}' (key rotation requires P5.3 signed delegation)",
+                        "UPDATE_ROOT_OF_TRUST_UNTRUSTED: candidate PE RT_RCDATA #{} pubkey '{}' does not match installed trusted publisher pubkey '{}' and no valid KeyRotationDelegation was provided",
                         PE_ED25519_PUBKEY_RESOURCE_ID,
                         pe_pubkey_hex,
                         anchor.trim()
                     );
                 }
-                anchor.trim().to_string()
             }
-            None => pe_pubkey_hex.clone(),
+            None => pe_pubkey_hex.to_ascii_lowercase(),
         };
 
         let disk_pub = fs::read_to_string(bundle_dir.join("trusted_publisher.pub"))
@@ -363,12 +517,27 @@ impl MiniToolUpdater {
         let wf_versions: Vec<u32> = workflows.iter().map(|w| w.schema_version).collect();
         verify_bundle_compatibility_gate(&manifest, &ui_schema, &wf_versions, runtime_profile)?;
 
+        let publisher_id = manifest
+            .publisher
+            .as_ref()
+            .map(|p| p.publisher_id.clone())
+            .or_else(|| {
+                manifest
+                    .signing
+                    .as_ref()
+                    .map(|s| s.publisher_id.clone())
+                    .filter(|s| !s.is_empty())
+            });
+
         Ok(VerifiedCandidateRelease {
             manifest,
             ui_schema,
             workflows,
             exe_path,
             pe_pubkey_hex: effective_trust_pubkey,
+            authenticode,
+            rotated_from_pubkey_hex,
+            publisher_id,
         })
     }
 
@@ -490,6 +659,19 @@ impl MiniToolUpdater {
             journal_id: journal.journal_id.clone(),
         };
         self.write_active_pointer_with_shadow(&pointer)?;
+        let mut init_trust = self.read_trust_state()?.unwrap_or_default();
+        init_trust.publisher_id = staged_verified.publisher_id.clone();
+        if !init_trust
+            .trusted_pubkeys
+            .iter()
+            .any(|k| k.eq_ignore_ascii_case(&staged_verified.pe_pubkey_hex))
+        {
+            init_trust
+                .trusted_pubkeys
+                .push(staged_verified.pe_pubkey_hex.clone());
+        }
+        init_trust.updated_at_utc = Utc::now().to_rfc3339();
+        self.write_trust_state(&init_trust)?;
         journal.stage = UpdateStage::Completed;
         self.write_journal(&mut journal)?;
 
@@ -563,11 +745,61 @@ impl MiniToolUpdater {
             }
         }
 
+        let _ = self.verify_installed_exe_integrity()?;
+
         let verified = Self::verify_candidate_release_dir_with_anchor(
             candidate_release_dir,
             &RuntimeCompatibilityProfile::default(),
             Some(&installed_trusted_pubkey),
         )?;
+
+        let trust_state = self.read_trust_state()?.unwrap_or_else(|| PersistentTrustState {
+            publisher_id: None,
+            trusted_pubkeys: vec![installed_trusted_pubkey.to_ascii_lowercase()],
+            revoked_pubkeys: vec![],
+            used_rotation_nonces: vec![],
+            updated_at_utc: Utc::now().to_rfc3339(),
+        });
+        if trust_state
+            .revoked_pubkeys
+            .iter()
+            .any(|k| k.eq_ignore_ascii_case(&verified.pe_pubkey_hex))
+        {
+            bail!(
+                "KEY_REVOKED: candidate public key '{}' has been revoked",
+                verified.pe_pubkey_hex
+            );
+        }
+        if let (Some(ref expected_pub), Some(ref cand_pub)) =
+            (&trust_state.publisher_id, &verified.publisher_id)
+        {
+            if expected_pub != cand_pub {
+                bail!(
+                    "PUBLISHER_IDENTITY_MISMATCH: installed publisher '{}' does not match candidate '{}'",
+                    expected_pub,
+                    cand_pub
+                );
+            }
+        }
+        if verified.rotated_from_pubkey_hex.is_some() {
+            if let Some(ref deleg) = verified
+                .manifest
+                .signing
+                .as_ref()
+                .and_then(|s| s.key_rotation.as_ref())
+            {
+                if trust_state
+                    .used_rotation_nonces
+                    .iter()
+                    .any(|n| n == &deleg.nonce)
+                {
+                    bail!(
+                        "KEY_ROTATION_NONCE_REPLAYED: rotation nonce '{}' was already used",
+                        deleg.nonce
+                    );
+                }
+            }
+        }
 
         if verified.manifest.project.slug != active.project_slug {
             bail!(
@@ -724,13 +956,46 @@ impl MiniToolUpdater {
                 .compatibility
                 .min_runtime_version
                 .clone(),
-            trusted_pubkey_hex: Some(installed_trusted_pubkey.clone()),
+            trusted_pubkey_hex: Some(staged_verified.pe_pubkey_hex.clone()),
             post_update_auto_resume_blocked: auto_blocked,
             blocked_job_ids: unverified_checkpoint_jobs.clone(),
             backup_db_path: journal.backup_db_path.clone(),
             activated_at_utc: Utc::now().to_rfc3339(),
             journal_id: journal.journal_id.clone(),
         };
+        let mut updated_trust = self.read_trust_state()?.unwrap_or_else(|| PersistentTrustState {
+            publisher_id: staged_verified.publisher_id.clone(),
+            trusted_pubkeys: vec![installed_trusted_pubkey.to_ascii_lowercase()],
+            revoked_pubkeys: vec![],
+            used_rotation_nonces: vec![],
+            updated_at_utc: Utc::now().to_rfc3339(),
+        });
+        if updated_trust.publisher_id.is_none() {
+            updated_trust.publisher_id = staged_verified.publisher_id.clone();
+        }
+        if !updated_trust
+            .trusted_pubkeys
+            .iter()
+            .any(|k| k.eq_ignore_ascii_case(&staged_verified.pe_pubkey_hex))
+        {
+            updated_trust
+                .trusted_pubkeys
+                .push(staged_verified.pe_pubkey_hex.clone());
+        }
+        if staged_verified.rotated_from_pubkey_hex.is_some() {
+            if let Some(ref deleg) = staged_verified
+                .manifest
+                .signing
+                .as_ref()
+                .and_then(|s| s.key_rotation.as_ref())
+            {
+                if !updated_trust.used_rotation_nonces.contains(&deleg.nonce) {
+                    updated_trust.used_rotation_nonces.push(deleg.nonce.clone());
+                }
+            }
+        }
+        updated_trust.updated_at_utc = Utc::now().to_rfc3339();
+        self.write_trust_state(&updated_trust)?;
         self.write_active_pointer_with_shadow(&next_pointer)?;
         journal.stage = UpdateStage::Activated;
         self.write_journal(&mut journal)?;
@@ -789,11 +1054,38 @@ impl MiniToolUpdater {
         })?;
 
         let prev_dir = self.versions_dir().join(format!("v{}", prev_ver));
-        let prev_verified = Self::verify_candidate_release_dir_with_anchor(
+        let trust_state_opt = self.read_trust_state().ok().flatten();
+        let prev_verified = match Self::verify_candidate_release_dir_with_anchor(
             &prev_dir,
             &RuntimeCompatibilityProfile::default(),
             Some(&installed_trusted_pubkey),
-        )?;
+        ) {
+            Ok(v) => v,
+            Err(anchor_err) => {
+                let unanchored = Self::verify_candidate_release_dir_with_anchor(
+                    &prev_dir,
+                    &RuntimeCompatibilityProfile::default(),
+                    None,
+                )
+                .map_err(|_| anchor_err)?;
+                let in_trust = trust_state_opt.as_ref().map_or(false, |ts| {
+                    ts.trusted_pubkeys
+                        .iter()
+                        .any(|k| k.eq_ignore_ascii_case(&unanchored.pe_pubkey_hex))
+                        && !ts
+                            .revoked_pubkeys
+                            .iter()
+                            .any(|r| r.eq_ignore_ascii_case(&unanchored.pe_pubkey_hex))
+                });
+                if !in_trust {
+                    bail!(
+                        "ROLLBACK_ROOT_OF_TRUST_UNTRUSTED: previous version key '{}' is not in persistent trust store or was revoked",
+                        unanchored.pe_pubkey_hex
+                    );
+                }
+                unanchored
+            }
+        };
         if !skip_child_verify_exec {
             verify_staged_exe_bundle(&prev_verified.exe_path, &self.data_dir())?;
         }
@@ -891,7 +1183,7 @@ impl MiniToolUpdater {
                 .compatibility
                 .min_runtime_version
                 .clone(),
-            trusted_pubkey_hex: Some(installed_trusted_pubkey),
+            trusted_pubkey_hex: Some(prev_verified.pe_pubkey_hex.clone()),
             post_update_auto_resume_blocked: true,
             blocked_job_ids: active.blocked_job_ids.clone(),
             backup_db_path: restored_backup_path.clone().or_else(|| active.backup_db_path.clone()),
@@ -1123,22 +1415,34 @@ impl MiniToolUpdater {
                 }
             }
         }
-        // 2. Fallback to previous pointer in journal
+        // 2. Fallback to previous pointer in journal ONLY if the journal did not complete an upgrade
+        // (when Completed, scanning trusted versions/v* below recovers the highest completed active version).
         if let Some(j) = journal_opt {
-            if let Some(ref prev_ptr) = j.previous_active_pointer {
-                let vdir = self.versions_dir().join(format!("v{}", prev_ptr.active_version));
-                if Self::verify_candidate_release_dir_with_anchor(
-                    &vdir,
-                    &RuntimeCompatibilityProfile::default(),
-                    prev_ptr.trusted_pubkey_hex.as_deref(),
-                )
-                .is_ok()
-                {
-                    return Ok(Some(prev_ptr.clone()));
+            if !matches!(j.stage, UpdateStage::Completed) {
+                if let Some(ref prev_ptr) = j.previous_active_pointer {
+                    let vdir = self.versions_dir().join(format!("v{}", prev_ptr.active_version));
+                    if Self::verify_candidate_release_dir_with_anchor(
+                        &vdir,
+                        &RuntimeCompatibilityProfile::default(),
+                        prev_ptr.trusted_pubkey_hex.as_deref(),
+                    )
+                    .is_ok()
+                    {
+                        return Ok(Some(prev_ptr.clone()));
+                    }
                 }
             }
         }
-        // 3. Scan `versions/v*` for highest SemVer passing full cryptographic & compatibility check
+        // 3. Scan `versions/v*` ONLY against persistent `.updater/trust-state.json` trusted pubkeys (P5.2 Backlog closed).
+        // Never blindly trust an unanchored folder on disk when both pointers & journal are missing.
+        let trust_state_opt = self.read_trust_state().ok().flatten();
+        let Some(ref trust_state) = trust_state_opt else {
+            return Ok(None);
+        };
+        if trust_state.trusted_pubkeys.is_empty() {
+            return Ok(None);
+        }
+
         let mut best: Option<(SemVer, ActiveVersionPointer)> = None;
         if let Ok(entries) = fs::read_dir(self.versions_dir()) {
             for ent in entries.flatten() {
@@ -1149,6 +1453,17 @@ impl MiniToolUpdater {
                 if let Ok(ver) =
                     Self::verify_candidate_release_dir_with_anchor(&p, &RuntimeCompatibilityProfile::default(), None)
                 {
+                    let is_trusted = trust_state
+                        .trusted_pubkeys
+                        .iter()
+                        .any(|k| k.eq_ignore_ascii_case(&ver.pe_pubkey_hex))
+                        && !trust_state
+                            .revoked_pubkeys
+                            .iter()
+                            .any(|r| r.eq_ignore_ascii_case(&ver.pe_pubkey_hex));
+                    if !is_trusted {
+                        continue;
+                    }
                     if let Ok(sv) = SemVer::parse(&ver.manifest.project.version) {
                         let ptr = ActiveVersionPointer {
                             project_slug: ver.manifest.project.slug.clone(),
@@ -1702,6 +2017,8 @@ mod tests {
             workflows_count: 1,
             templates_count: 0,
             built_at_utc: Utc::now().to_rfc3339(),
+            publisher: None,
+            signing: None,
         };
         let ui_schema = MiniToolUiSchema {
             schema_version: 1,
@@ -2327,6 +2644,190 @@ mod tests {
         assert_eq!(rec_scan.status, "RECOVERED_POINTER");
         assert_eq!(updater.read_active_pointer().unwrap().unwrap().active_version, "1.1.0");
 
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_p5_3_authenticode_tamper_key_rotation_replay_and_trusted_pointer_recovery() {
+        use fp_builder::authenticode::{
+            create_self_signed_qa_cert, find_signtool_exe, sign_pe_authenticode_and_verify,
+            AuthenticodeSignRequest,
+        };
+        use fp_builder::security::ProducerKeyManager;
+        use fp_bundle_contract::{
+            KeyRotationDelegation, PeVersionInfoSpec, PublisherIdentitySpec, ReleaseSigningMetadata,
+        };
+
+        let tmp = std::env::temp_dir().join(format!("fp_updater_p53_{}", Uuid::new_v4()));
+        let rel_100 = tmp.join("rel_100");
+        let rel_110_rotated = tmp.join("rel_110_rot");
+        let rel_120_replayed = tmp.join("rel_120_replay");
+        let rel_130_rogue_del = tmp.join("rel_130_rogue");
+
+        let key_old = SigningKey::from_bytes(&[21u8; 32]);
+        let key_new = SigningKey::from_bytes(&[33u8; 32]);
+        let key_rogue = SigningKey::from_bytes(&[99u8; 32]);
+        let pub_old_hex: String = key_old.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let pub_new_hex: String = key_new.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let pub_rogue_hex: String = key_rogue.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+
+        let pub_spec = PublisherIdentitySpec {
+            publisher_id: "pub-qa-studio".to_string(),
+            display_name: "QA Studio".to_string(),
+            organization: "FarmerPro QA Labs".to_string(),
+            website: None,
+            support_contact: None,
+            copyright: "Copyright (C) 2026 FarmerPro QA Labs".to_string(),
+            ed25519_key_id: "key-qa-old".to_string(),
+            ed25519_pubkey_hex: pub_old_hex.clone(),
+            authenticode_cert_ref: None,
+            release_channel: "qa".to_string(),
+            signing_policy: SigningMode::UnsignedInternal,
+        };
+
+        // Helper to stamp publisher + signing metadata + re-sign bundle
+        let attach_signing = |dir: &Path, sk: &SigningKey, mode: SigningMode, pub_id: &str, rot: Option<KeyRotationDelegation>| {
+            let bdir = dir.join("bundle");
+            let mut m: ReleaseBundleManifest =
+                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap()).unwrap();
+            let mut p = pub_spec.clone();
+            p.publisher_id = pub_id.to_string();
+            p.signing_policy = mode;
+            m.publisher = Some(p);
+            m.signing = Some(ReleaseSigningMetadata {
+                signing_mode: mode,
+                publisher_id: pub_id.to_string(),
+                publisher_organization: "FarmerPro QA Labs".to_string(),
+                release_channel: "qa".to_string(),
+                authenticode_trust_status: AuthenticodeTrustStatus::Unsigned,
+                trusted_public_release: false,
+                signer_thumbprint: None,
+                signer_subject: None,
+                version_info: PeVersionInfoSpec::default(),
+                key_rotation: rot,
+            });
+            let mb = serde_json::to_vec_pretty(&m).unwrap();
+            fs::write(bdir.join("manifest.fpbundle.json"), &mb).unwrap();
+            let mut sig_env: SignedBundleEnvelope =
+                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap()).unwrap();
+            sig_env.file_checksums.insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
+            let msha = sha256_hex(&mb);
+            let tjson = serde_json::to_string(&sig_env.file_checksums).unwrap();
+            let thash = sha256_hex(tjson.as_bytes());
+            let msg = fp_bundle_verify::canonical_signing_message(&sig_env.key_id, &msha, &thash);
+            let s = sk.sign(&msg);
+            sig_env.manifest_sha256 = msha;
+            sig_env.checksums_table_sha256 = thash;
+            sig_env.signature_ed25519_hex = s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+            fs::write(bdir.join("signature.fpbundle.json"), serde_json::to_vec_pretty(&sig_env).unwrap()).unwrap();
+        };
+
+        create_signed_test_release(&rel_100, "p53-tool", "Auto_P53.exe", "1.0.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [21u8; 32]);
+        attach_signing(&rel_100, &key_old, SigningMode::UnsignedInternal, "pub-qa-studio", None);
+
+        let delegation = ProducerKeyManager::sign_key_rotation_delegation(
+            &key_old,
+            &pub_new_hex,
+            "pub-qa-studio",
+            "p53-tool",
+            30,
+        );
+
+        create_signed_test_release(&rel_110_rotated, "p53-tool", "Auto_P53.exe", "1.1.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [33u8; 32]);
+        attach_signing(&rel_110_rotated, &key_new, SigningMode::UnsignedInternal, "pub-qa-studio", Some(delegation.clone()));
+
+        // Authenticode signing + post-sign PE tampering test (if signtool.exe present)
+        let mut test_cert_thumb: Option<String> = None;
+        if find_signtool_exe().is_some() {
+            if let Ok(qa_cert) = create_self_signed_qa_cert("CN=FarmerPro P5.3 Test QA") {
+                test_cert_thumb = Some(qa_cert.thumbprint.clone());
+                let exe_100 = rel_100.join("Auto_P53.exe");
+                let auth_rep = sign_pe_authenticode_and_verify(
+                    &exe_100,
+                    &AuthenticodeSignRequest {
+                        signing_mode: SigningMode::SelfSignedQa,
+                        cert_ref: Some(qa_cert.thumbprint.clone()),
+                        description: Some("FarmerPro P5.3 Test Runner".to_string()),
+                        timestamp_url: None,
+                    },
+                )
+                .unwrap();
+                assert_eq!(auth_rep.trust_status, AuthenticodeTrustStatus::SelfSignedUntrustedRoot);
+                assert!(!auth_rep.trusted_public_release);
+
+                // Tamper PE after Authenticode signing -> MUST fail even when bundle JSON is untouched!
+                let rel_tampered_pe = tmp.join("rel_tampered_pe");
+                copy_dir_recursive(&rel_100, &rel_tampered_pe).unwrap();
+                let mut pe_bytes = fs::read(rel_tampered_pe.join("Auto_P53.exe")).unwrap();
+                let len = pe_bytes.len();
+                pe_bytes[len / 2] ^= 0x5A;
+                fs::write(rel_tampered_pe.join("Auto_P53.exe"), &pe_bytes).unwrap();
+                let err_auth = MiniToolUpdater::verify_candidate_release_dir_with_anchor(
+                    &rel_tampered_pe,
+                    &RuntimeCompatibilityProfile::default(),
+                    None,
+                ).unwrap_err().to_string();
+                assert!(err_auth.contains("AUTHENTICODE_TAMPERED_OR_INVALID"), "got: {}", err_auth);
+            }
+        }
+
+        let install_root = tmp.join("installed/P53Tool");
+        let updater = MiniToolUpdater::new(&install_root);
+        let opts = UpdateExecutionOptions { skip_child_verify_exec: true, ..Default::default() };
+
+        // 1. Install v1.0.0 with Key Old
+        updater.install_initial(&rel_100, &opts).unwrap();
+
+        // 2. Rogue delegation (signed by rogue key, claiming to rotate old -> rogue) MUST be rejected
+        let rogue_del = KeyRotationDelegation {
+            publisher_id: "pub-qa-studio".to_string(),
+            product_slug: "p53-tool".to_string(),
+            old_pubkey_hex: pub_old_hex.clone(),
+            new_pubkey_hex: pub_rogue_hex.clone(),
+            issued_at_utc: delegation.issued_at_utc.clone(),
+            expires_at_utc: delegation.expires_at_utc.clone(),
+            nonce: "rogue-nonce-12345678".to_string(),
+            signature_by_old_key_hex: ProducerKeyManager::sign_key_rotation_delegation(&key_rogue, &pub_rogue_hex, "pub-qa-studio", "p53-tool", 10).signature_by_old_key_hex,
+        };
+        create_signed_test_release(&rel_130_rogue_del, "p53-tool", "Auto_P53.exe", "1.3.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [99u8; 32]);
+        attach_signing(&rel_130_rogue_del, &key_rogue, SigningMode::UnsignedInternal, "pub-qa-studio", Some(rogue_del));
+        let err_rdel = updater.upgrade_from_release(&rel_130_rogue_del, &opts).unwrap_err().to_string();
+        assert!(err_rdel.contains("KEY_ROTATION_DELEGATION_INVALID"), "got: {}", err_rdel);
+
+        // 3. Valid KeyRotationDelegation v1.0.0 -> v1.1.0 SUCCEEDS!
+        let up = updater.upgrade_from_release(&rel_110_rotated, &opts).unwrap();
+        assert_eq!(up.active_version, "1.1.0");
+        let ts = updater.read_trust_state().unwrap().unwrap();
+        assert!(ts.used_rotation_nonces.contains(&delegation.nonce));
+        assert!(ts.trusted_pubkeys.iter().any(|k| k.eq_ignore_ascii_case(&pub_new_hex)));
+
+        // 4. Replay / Rollback check & Trust-anchored pointer recovery (drop untrusted v9.9.9 into versions/)
+        let rogue_v999 = updater.versions_dir().join("v9.9.9");
+        create_signed_test_release(&rogue_v999, "p53-tool", "Auto_P53.exe", "9.9.9", CURRENT_SQLITE_SCHEMA_VERSION, 1, [99u8; 32]);
+        fs::remove_file(updater.active_pointer_path()).unwrap();
+        fs::remove_file(updater.backup_pointer_path()).unwrap();
+        let rec = updater.reconcile_incomplete_journal(true).unwrap();
+        assert_eq!(rec.status, "RECOVERED_POINTER");
+        assert_eq!(updater.read_active_pointer().unwrap().unwrap().active_version, "1.1.0");
+
+        // Also test nonce replay rejection via another fresh install anchored on key_old with pre-recorded nonce
+        let rel_replay_2 = rel_120_replayed;
+        create_signed_test_release(&rel_replay_2, "p53-tool", "Auto_P53.exe", "1.2.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [33u8; 32]);
+        attach_signing(&rel_replay_2, &key_new, SigningMode::UnsignedInternal, "pub-qa-studio", Some(delegation.clone()));
+        let install_replay = tmp.join("installed/P53Replay");
+        let up_rep = MiniToolUpdater::new(&install_replay);
+        up_rep.install_initial(&rel_100, &opts).unwrap();
+        let mut seeded_ts = up_rep.read_trust_state().unwrap().unwrap();
+        seeded_ts.used_rotation_nonces.push(delegation.nonce.clone());
+        up_rep.write_trust_state(&seeded_ts).unwrap();
+        let err_replay = up_rep.upgrade_from_release(&rel_replay_2, &opts).unwrap_err().to_string();
+        assert!(err_replay.contains("KEY_ROTATION_NONCE_REPLAYED"), "got: {}", err_replay);
+
+        if let Some(thumb) = test_cert_thumb {
+            let _ = std::process::Command::new("powershell")
+                .args(["-NoProfile", "-Command", &format!("Remove-Item 'Cert:\\CurrentUser\\My\\{}' -ErrorAction SilentlyContinue", thumb)])
+                .output();
+        }
         let _ = fs::remove_dir_all(&tmp);
     }
 }

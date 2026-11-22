@@ -64,6 +64,8 @@ fn build_signed_dummy_release(dir: &Path, slug: &str, exe_name: &str, version: &
         workflows_count: 1,
         templates_count: 0,
         built_at_utc: Utc::now().to_rfc3339(),
+        publisher: None,
+        signing: None,
     };
     let ui_schema = MiniToolUiSchema {
         schema_version: 1,

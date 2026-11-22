@@ -1417,6 +1417,9 @@ impl StorageManager {
             project_dir_path: row.get(11)?,
             created_at: row.get(12)?,
             updated_at: row.get(13)?,
+            publisher_profile_id: row.get(14)?,
+            signing_mode: row.get(15)?,
+            version_info_json: row.get(16)?,
         })
     }
 
@@ -1424,7 +1427,8 @@ impl StorageManager {
         let mut stmt = conn.prepare(
             "SELECT id, slug, name, game_package_id, version, exe_name, window_title,
                     icon_rel_path, target_width_px, target_height_px, bundle_adb,
-                    project_dir_path, created_at, updated_at
+                    project_dir_path, created_at, updated_at,
+                    publisher_profile_id, signing_mode, version_info_json
              FROM projects WHERE id = ?1;",
         )?;
         let mut rows = stmt.query(params![project_id])?;
@@ -1446,7 +1450,8 @@ impl StorageManager {
         let mut stmt = conn.prepare(
             "SELECT id, slug, name, game_package_id, version, exe_name, window_title,
                     icon_rel_path, target_width_px, target_height_px, bundle_adb,
-                    project_dir_path, created_at, updated_at
+                    project_dir_path, created_at, updated_at,
+                    publisher_profile_id, signing_mode, version_info_json
              FROM projects WHERE slug = ?1;",
         )?;
         let mut rows = stmt.query(params![clean_slug])?;
@@ -1715,6 +1720,9 @@ impl StorageManager {
             project_dir_path: proj_dir_str,
             created_at: now.clone(),
             updated_at: now,
+            publisher_profile_id: None,
+            signing_mode: "unsigned_internal".to_string(),
+            version_info_json: None,
         })
     }
 
@@ -1723,7 +1731,8 @@ impl StorageManager {
         let mut stmt = conn.prepare(
             "SELECT id, slug, name, game_package_id, version, exe_name, window_title,
                     icon_rel_path, target_width_px, target_height_px, bundle_adb,
-                    project_dir_path, created_at, updated_at
+                    project_dir_path, created_at, updated_at,
+                    publisher_profile_id, signing_mode, version_info_json
              FROM projects ORDER BY created_at ASC, name ASC;",
         )?;
         let records: Vec<GameProjectRecord> = stmt
@@ -1843,6 +1852,33 @@ impl StorageManager {
         let target_w = req.target_width_px.unwrap_or(existing.target_width_px);
         let target_h = req.target_height_px.unwrap_or(existing.target_height_px);
         let bundle_adb = req.bundle_adb.unwrap_or(existing.bundle_adb);
+        let publisher_profile_id = match req.publisher_profile_id {
+            Some(s) => {
+                let t = s.trim().to_string();
+                if t.is_empty() {
+                    None
+                } else {
+                    Some(t)
+                }
+            }
+            None => existing.publisher_profile_id.clone(),
+        };
+        let signing_mode = req
+            .signing_mode
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| existing.signing_mode.clone());
+        let version_info_json = match req.version_info_json {
+            Some(s) => {
+                let t = s.trim().to_string();
+                if t.is_empty() {
+                    None
+                } else {
+                    Some(t)
+                }
+            }
+            None => existing.version_info_json.clone(),
+        };
         let now = Utc::now().to_rfc3339();
 
         let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
@@ -1850,8 +1886,9 @@ impl StorageManager {
             "UPDATE projects SET
                 name = ?1, game_package_id = ?2, version = ?3, exe_name = ?4,
                 window_title = ?5, icon_rel_path = ?6, target_width_px = ?7,
-                target_height_px = ?8, bundle_adb = ?9, updated_at = ?10
-             WHERE id = ?11;",
+                target_height_px = ?8, bundle_adb = ?9, publisher_profile_id = ?10,
+                signing_mode = ?11, version_info_json = ?12, updated_at = ?13
+             WHERE id = ?14;",
             params![
                 name,
                 game_package_id,
@@ -1862,6 +1899,9 @@ impl StorageManager {
                 target_w as i64,
                 target_h as i64,
                 if bundle_adb { 1 } else { 0 },
+                publisher_profile_id,
+                signing_mode,
+                version_info_json,
                 now,
                 req.id
             ],
@@ -2007,6 +2047,9 @@ impl StorageManager {
             project_dir_path: existing.project_dir_path,
             created_at: existing.created_at,
             updated_at: now,
+            publisher_profile_id,
+            signing_mode,
+            version_info_json,
         })
     }
 
@@ -2090,8 +2133,9 @@ impl StorageManager {
             "INSERT INTO projects (
                 id, slug, name, game_package_id, version, exe_name, window_title,
                 icon_rel_path, target_width_px, target_height_px, bundle_adb,
-                project_dir_path, created_at, updated_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13);",
+                project_dir_path, publisher_profile_id, signing_mode, version_info_json,
+                created_at, updated_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?16);",
             params![
                 new_id,
                 new_slug,
@@ -2105,6 +2149,9 @@ impl StorageManager {
                 src.target_height_px as i64,
                 if src.bundle_adb { 1 } else { 0 },
                 new_proj_dir_str,
+                src.publisher_profile_id,
+                src.signing_mode,
+                src.version_info_json,
                 now
             ],
         )?;
@@ -2387,6 +2434,9 @@ impl StorageManager {
             project_dir_path: new_proj_dir_str,
             created_at: now.clone(),
             updated_at: now,
+            publisher_profile_id: src.publisher_profile_id,
+            signing_mode: src.signing_mode,
+            version_info_json: src.version_info_json,
         })
     }
 
@@ -3870,8 +3920,10 @@ impl StorageManager {
                 signature_ed25519_hex, build_report_json, built_at,
                 lifecycle_state, release_channel, changelog_md, min_runtime_version,
                 workflow_schema_version, ui_schema_version, module_api_version,
-                sqlite_schema_version, git_commit, signature_status, promoted_at, rolled_back_from_id
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25);",
+                sqlite_schema_version, git_commit, signature_status, promoted_at, rolled_back_from_id,
+                publisher_profile_id, signing_mode, authenticode_trust_status,
+                authenticode_thumbprint, authenticode_subject, trusted_public_release
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31);",
             params![
                 release.id,
                 release.project_id,
@@ -3897,7 +3949,13 @@ impl StorageManager {
                 release.git_commit,
                 release.signature_status,
                 release.promoted_at,
-                release.rolled_back_from_id
+                release.rolled_back_from_id,
+                release.publisher_profile_id,
+                release.signing_mode,
+                release.authenticode_trust_status,
+                release.authenticode_thumbprint,
+                release.authenticode_subject,
+                if release.trusted_public_release { 1 } else { 0 }
             ],
         )?;
         tx.execute(
@@ -3925,7 +3983,9 @@ impl StorageManager {
                     signature_ed25519_hex, build_report_json, built_at,
                     lifecycle_state, release_channel, changelog_md, min_runtime_version,
                     workflow_schema_version, ui_schema_version, module_api_version,
-                    sqlite_schema_version, git_commit, signature_status, promoted_at, rolled_back_from_id
+                    sqlite_schema_version, git_commit, signature_status, promoted_at, rolled_back_from_id,
+                    publisher_profile_id, signing_mode, authenticode_trust_status,
+                    authenticode_thumbprint, authenticode_subject, trusted_public_release
              FROM project_releases WHERE id = ?1 LIMIT 1;",
         )?;
         let mut rows = stmt.query(params![release_id])?;
@@ -4095,7 +4155,9 @@ impl StorageManager {
                     signature_ed25519_hex, build_report_json, built_at,
                     lifecycle_state, release_channel, changelog_md, min_runtime_version,
                     workflow_schema_version, ui_schema_version, module_api_version,
-                    sqlite_schema_version, git_commit, signature_status, promoted_at, rolled_back_from_id
+                    sqlite_schema_version, git_commit, signature_status, promoted_at, rolled_back_from_id,
+                    publisher_profile_id, signing_mode, authenticode_trust_status,
+                    authenticode_thumbprint, authenticode_subject, trusted_public_release
              FROM project_releases WHERE project_id = ?1 AND project_id IS NOT NULL ORDER BY built_at DESC;",
         )?;
         let rows = stmt.query_map(params![project_id], row_to_project_release)?;
@@ -4124,6 +4186,194 @@ impl StorageManager {
             accounts,
             releases,
         }))
+    }
+
+    pub fn upsert_publisher_profile(
+        &self,
+        input: PublisherProfileInput,
+    ) -> Result<PublisherProfileRecord> {
+        let publisher_id = input.publisher_id.trim().to_string();
+        let display_name = input.display_name.trim().to_string();
+        let organization = input.organization.trim().to_string();
+        let copyright = input.copyright.trim().to_string();
+        if publisher_id.is_empty() || display_name.is_empty() || organization.is_empty() {
+            bail!("PUBLISHER_PROFILE_INVALID: publisher_id, display_name, and organization are required");
+        }
+        let now = Utc::now().to_rfc3339();
+        let conn = self.conn.lock().unwrap();
+        let existing_id: Option<String> = conn
+            .query_row(
+                "SELECT id FROM publisher_profiles WHERE id = ?1 OR publisher_id = ?2 LIMIT 1;",
+                params![input.id.clone().unwrap_or_default(), publisher_id],
+                |r| r.get(0),
+            )
+            .ok();
+        let id = existing_id.unwrap_or_else(|| {
+            input
+                .id
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or_else(|| format!("pub-{}", uuid::Uuid::new_v4()))
+        });
+        let created_at: String = conn
+            .query_row(
+                "SELECT created_at FROM publisher_profiles WHERE id = ?1 LIMIT 1;",
+                params![id],
+                |r| r.get(0),
+            )
+            .unwrap_or_else(|_| now.clone());
+
+        conn.execute(
+            "INSERT INTO publisher_profiles (
+                id, publisher_id, display_name, organization, website, support_contact,
+                copyright, ed25519_key_id, ed25519_pubkey_hex, authenticode_cert_ref,
+                release_channel, signing_policy, created_at, updated_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+             ON CONFLICT(id) DO UPDATE SET
+                publisher_id = excluded.publisher_id,
+                display_name = excluded.display_name,
+                organization = excluded.organization,
+                website = excluded.website,
+                support_contact = excluded.support_contact,
+                copyright = excluded.copyright,
+                ed25519_key_id = excluded.ed25519_key_id,
+                ed25519_pubkey_hex = excluded.ed25519_pubkey_hex,
+                authenticode_cert_ref = excluded.authenticode_cert_ref,
+                release_channel = excluded.release_channel,
+                signing_policy = excluded.signing_policy,
+                updated_at = excluded.updated_at;",
+            params![
+                id,
+                publisher_id,
+                display_name,
+                organization,
+                input.website.map(|s| s.trim().to_string()).filter(|s| !s.is_empty()),
+                input.support_contact.map(|s| s.trim().to_string()).filter(|s| !s.is_empty()),
+                if copyright.is_empty() {
+                    format!("Copyright (C) {} {}", Utc::now().format("%Y"), organization)
+                } else {
+                    copyright
+                },
+                input.ed25519_key_id.unwrap_or_default(),
+                input.ed25519_pubkey_hex.unwrap_or_default(),
+                input.authenticode_cert_ref.map(|s| s.trim().to_string()).filter(|s| !s.is_empty()),
+                if input.release_channel.trim().is_empty() {
+                    "internal".to_string()
+                } else {
+                    input.release_channel.trim().to_string()
+                },
+                if input.signing_policy.trim().is_empty() {
+                    "unsigned_internal".to_string()
+                } else {
+                    input.signing_policy.trim().to_string()
+                },
+                created_at,
+                now
+            ],
+        )?;
+        drop(conn);
+        self.get_publisher_profile(&id)?
+            .context("Failed reloading saved publisher profile")
+    }
+
+    pub fn list_publisher_profiles(&self) -> Result<Vec<PublisherProfileRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut st = conn.prepare(
+            "SELECT id, publisher_id, display_name, organization, website, support_contact,
+                    copyright, ed25519_key_id, ed25519_pubkey_hex, authenticode_cert_ref,
+                    release_channel, signing_policy, created_at, updated_at
+             FROM publisher_profiles ORDER BY updated_at DESC, display_name ASC;",
+        )?;
+        let rows = st.query_map([], |r| {
+            Ok(PublisherProfileRecord {
+                id: r.get(0)?,
+                publisher_id: r.get(1)?,
+                display_name: r.get(2)?,
+                organization: r.get(3)?,
+                website: r.get(4)?,
+                support_contact: r.get(5)?,
+                copyright: r.get(6)?,
+                ed25519_key_id: r.get(7)?,
+                ed25519_pubkey_hex: r.get(8)?,
+                authenticode_cert_ref: r.get(9)?,
+                release_channel: r.get(10)?,
+                signing_policy: r.get(11)?,
+                created_at: r.get(12)?,
+                updated_at: r.get(13)?,
+            })
+        })?;
+        Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
+    }
+
+    pub fn get_publisher_profile(
+        &self,
+        id_or_publisher_id: &str,
+    ) -> Result<Option<PublisherProfileRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut st = conn.prepare(
+            "SELECT id, publisher_id, display_name, organization, website, support_contact,
+                    copyright, ed25519_key_id, ed25519_pubkey_hex, authenticode_cert_ref,
+                    release_channel, signing_policy, created_at, updated_at
+             FROM publisher_profiles WHERE id = ?1 OR publisher_id = ?1 LIMIT 1;",
+        )?;
+        let mut rows = st.query(params![id_or_publisher_id])?;
+        if let Some(r) = rows.next()? {
+            Ok(Some(PublisherProfileRecord {
+                id: r.get(0)?,
+                publisher_id: r.get(1)?,
+                display_name: r.get(2)?,
+                organization: r.get(3)?,
+                website: r.get(4)?,
+                support_contact: r.get(5)?,
+                copyright: r.get(6)?,
+                ed25519_key_id: r.get(7)?,
+                ed25519_pubkey_hex: r.get(8)?,
+                authenticode_cert_ref: r.get(9)?,
+                release_channel: r.get(10)?,
+                signing_policy: r.get(11)?,
+                created_at: r.get(12)?,
+                updated_at: r.get(13)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn delete_publisher_profile(&self, id: &str) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE projects SET publisher_profile_id = NULL WHERE publisher_profile_id = ?1;",
+            params![id],
+        )?;
+        let affected = conn.execute("DELETE FROM publisher_profiles WHERE id = ?1;", params![id])?;
+        Ok(affected > 0)
+    }
+
+    /// Atomically checks and records a single-use KeyRotationDelegation nonce.
+    /// Returns `Ok(true)` if fresh and recorded; `Ok(false)` if already used (replay).
+    pub fn check_and_record_key_rotation_nonce(
+        &self,
+        nonce: &str,
+        project_id: &str,
+        old_pubkey_hex: &str,
+        new_pubkey_hex: &str,
+    ) -> Result<bool> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let exists: i64 = tx.query_row(
+            "SELECT COUNT(*) FROM used_key_rotation_nonces WHERE nonce = ?1;",
+            params![nonce],
+            |r| r.get(0),
+        )?;
+        if exists > 0 {
+            return Ok(false);
+        }
+        tx.execute(
+            "INSERT INTO used_key_rotation_nonces (nonce, project_id, old_pubkey_hex, new_pubkey_hex, accepted_at)
+             VALUES (?1, ?2, ?3, ?4, ?5);",
+            params![nonce, project_id, old_pubkey_hex, new_pubkey_hex, Utc::now().to_rfc3339()],
+        )?;
+        tx.commit()?;
+        Ok(true)
     }
 }
 
@@ -4189,6 +4439,12 @@ fn row_to_project_release(r: &rusqlite::Row<'_>) -> rusqlite::Result<ProjectRele
         signature_status: r.get(22)?,
         promoted_at: r.get(23)?,
         rolled_back_from_id: r.get(24)?,
+        publisher_profile_id: r.get(25)?,
+        signing_mode: r.get(26)?,
+        authenticode_trust_status: r.get(27)?,
+        authenticode_thumbprint: r.get(28)?,
+        authenticode_subject: r.get(29)?,
+        trusted_public_release: r.get::<_, i64>(30)? != 0,
     })
 }
 
@@ -4468,13 +4724,13 @@ mod tests {
             ).unwrap();
         }
 
-        // 2. Open with StorageManager -> runs v1 + v2 + v3 + v4 migrations atomically
+        // 2. Open with StorageManager -> runs v1..v5 migrations atomically
         let storage = StorageManager::new(&db_file).unwrap();
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4]);
+        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5]);
 
-        // 3. Verify idempotency: running migrations again causes zero errors and keeps versions [1, 2, 3, 4]
+        // 3. Verify idempotency: running migrations again causes zero errors and keeps versions [1, 2, 3, 4, 5]
         storage.run_migrations().unwrap();
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4]);
+        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5]);
 
         // 4. Verify 100% data preservation + attachment to default GameProject
         let integrity = storage.check_integrity().unwrap();
@@ -4506,15 +4762,15 @@ mod tests {
             .save_workflow_draft("wf-keep", "Keep Me", "{}")
             .unwrap();
 
-        let bad_v5_sql = "
+        let bad_v6_sql = "
             CREATE TABLE should_not_exist (id TEXT PRIMARY KEY);
             INSERT INTO nonexistent_table_triggering_rollback VALUES (1);
         ";
-        let res = storage.apply_transactional_migration(5, bad_v5_sql);
+        let res = storage.apply_transactional_migration(6, bad_v6_sql);
         assert!(res.is_err());
 
-        // Version 5 must NOT be recorded and `should_not_exist` table must NOT exist
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4]);
+        // Version 6 must NOT be recorded and `should_not_exist` table must NOT exist
+        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5]);
         let integrity = storage.check_integrity().unwrap();
         assert!(integrity.is_healthy);
         assert!(!integrity.table_counts.contains_key("should_not_exist"));
@@ -4866,14 +5122,13 @@ mod tests {
             .update_project(UpdateProjectRequest {
                 id: proj.id.clone(),
                 name: Some("Edge Game Pro".to_string()),
-                game_package_id: None,
                 version: Some("2.1.0".to_string()),
                 exe_name: Some("   ".to_string()),
                 window_title: Some("Edge Pro Window".to_string()),
-                icon_rel_path: None,
                 target_width_px: Some(1920),
                 target_height_px: Some(1080),
                 bundle_adb: Some(false),
+                ..Default::default()
             })
             .unwrap();
         assert_eq!(updated.exe_name, "Auto_Edge_Game.exe");
@@ -5348,14 +5603,9 @@ mod tests {
             UpdateProjectRequest {
                 id: src.id.clone(),
                 name: Some("Broken Rename".to_string()),
-                game_package_id: None,
                 version: Some("9.9.9".to_string()),
-                exe_name: None,
                 window_title: Some("Broken Window".to_string()),
-                icon_rel_path: None,
-                target_width_px: None,
-                target_height_px: None,
-                bundle_adb: None,
+                ..Default::default()
             },
             CrashFaultPoint::FailBeforeDbCommit,
         );
@@ -5691,7 +5941,7 @@ mod tests {
         // 2. Upgrade live DB to latest and write project data
         {
             let storage = StorageManager::new(&live_db).unwrap();
-            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4]);
+            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5]);
             let _ = storage
                 .create_project(
                     CreateProjectRequest {
@@ -5716,7 +5966,7 @@ mod tests {
         let report =
             StorageManager::rollback_database_from_backup(&live_db, &pre_v2_backup, &safety_snap)
                 .unwrap();
-        assert_eq!(report.pre_rollback_versions, vec![1, 2, 3, 4]);
+        assert_eq!(report.pre_rollback_versions, vec![1, 2, 3, 4, 5]);
         assert!(report.post_rollback_versions.is_empty());
         assert!(report.post_rollback_integrity.is_healthy);
         assert_eq!(report.post_rollback_integrity.foreign_key_violations, 0);
@@ -5944,10 +6194,10 @@ mod tests {
             bk.run_to_completion(100, Duration::from_millis(5), None).unwrap();
         }
 
-        // 2. Open with v4 StorageManager -> migrates legacy P4 snapshots to LEGACY_UNVERIFIED + scrubs secrets
+        // 2. Open with v5 StorageManager -> migrates legacy P4 snapshots to LEGACY_UNVERIFIED + scrubs secrets
         {
             let storage = StorageManager::new(&db_file).unwrap();
-            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4]);
+            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5]);
             let snap = storage
                 .load_runtime_snapshot_with_recovery("mini:jx2-mobile", None)
                 .unwrap();
@@ -5965,7 +6215,7 @@ mod tests {
         // 3. Verify rollback back to pre-v3 backup cleanly restores pre-v3 schema versions [1, 2]
         let rb = StorageManager::rollback_database_from_backup(&db_file, &pre_v3_backup, &safety_snap)
             .unwrap();
-        assert_eq!(rb.pre_rollback_versions, vec![1, 2, 3, 4]);
+        assert_eq!(rb.pre_rollback_versions, vec![1, 2, 3, 4, 5]);
         assert_eq!(rb.post_rollback_versions, vec![1, 2]);
         assert!(rb.post_rollback_integrity.is_healthy);
 
@@ -6534,5 +6784,54 @@ mod tests {
 
         drop(verifier);
         let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p5_3_publisher_profile_crud_v5_and_nonce_replay() {
+        let storage = StorageManager::new_in_memory().unwrap();
+        assert_eq!(
+            storage.applied_migration_versions().unwrap(),
+            vec![1, 2, 3, 4, 5]
+        );
+        // Re-running migrations is idempotent
+        storage.run_migrations().unwrap();
+        assert_eq!(
+            storage.applied_migration_versions().unwrap(),
+            vec![1, 2, 3, 4, 5]
+        );
+
+        let prof_a = storage
+            .upsert_publisher_profile(PublisherProfileInput {
+                id: None,
+                publisher_id: "pub-studio-alpha".to_string(),
+                display_name: "Alpha Studio".to_string(),
+                organization: "Alpha Automation Co., Ltd.".to_string(),
+                website: Some("https://alpha.example.invalid".to_string()),
+                support_contact: Some("support@alpha.example.invalid".to_string()),
+                copyright: "Copyright (C) 2026 Alpha Automation Co., Ltd.".to_string(),
+                ed25519_key_id: Some("key-alpha-1".to_string()),
+                ed25519_pubkey_hex: Some("aa".repeat(32)),
+                authenticode_cert_ref: Some("CERT_STORE://CurrentUser/My/DEADBEEF".to_string()),
+                release_channel: "qa".to_string(),
+                signing_policy: "self_signed_qa".to_string(),
+            })
+            .unwrap();
+        assert_eq!(prof_a.publisher_id, "pub-studio-alpha");
+        assert_eq!(prof_a.signing_policy, "self_signed_qa");
+
+        let listed = storage.list_publisher_profiles().unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].id, prof_a.id);
+
+        // Key rotation nonce replay protection
+        assert!(storage
+            .check_and_record_key_rotation_nonce("nonce-1234567890ab", "proj-1", "oldpk", "newpk")
+            .unwrap());
+        assert!(!storage
+            .check_and_record_key_rotation_nonce("nonce-1234567890ab", "proj-1", "oldpk", "newpk")
+            .unwrap());
+
+        assert!(storage.delete_publisher_profile(&prof_a.id).unwrap());
+        assert!(storage.list_publisher_profiles().unwrap().is_empty());
     }
 }

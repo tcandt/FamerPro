@@ -1,21 +1,25 @@
+pub mod authenticode;
 pub mod orchestrator;
 pub mod pe_icon;
+pub mod pe_version;
 pub mod security;
 
 pub use fp_bundle_contract as contracts;
 pub use fp_bundle_verify as verify;
 
 use anyhow::{bail, Context, Result};
+use authenticode::{sign_pe_authenticode_and_verify, AuthenticodeSignRequest};
 use fp_bundle_contract::*;
 use fp_bundle_verify::{
-    read_pe_embedded_pubkey_from_exe, sha256_hex, validate_safe_relative_path,
-    PE_ED25519_PUBKEY_RESOURCE_ID,
+    read_pe_embedded_pubkey_from_exe, read_pe_version_info_from_exe, sha256_hex,
+    validate_safe_relative_path, PE_ED25519_PUBKEY_RESOURCE_ID,
 };
 use fp_workflow_schema::{WorkflowDocument, WorkflowValidator};
 use pe_icon::{
     inject_ed25519_pubkey_into_pe_exe, inject_ico_into_pe_exe, verify_pe_embedded_pubkey_resource,
     verify_pe_icon_resource,
 };
+use pe_version::inject_pe_version_info;
 use security::ProducerKeyManager;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -30,6 +34,18 @@ pub struct BuildStepMetric {
     pub duration_ms: u64,
     pub status: String,
     pub detail: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReleaseBuildOptions {
+    #[serde(default)]
+    pub signing_mode: SigningMode,
+    pub authenticode_cert_ref: Option<String>,
+    pub timestamp_url: Option<String>,
+    pub publisher_profile: Option<PublisherIdentitySpec>,
+    pub version_info: Option<PeVersionInfoSpec>,
+    pub key_rotation_delegation: Option<KeyRotationDelegation>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,6 +63,14 @@ pub struct BuildReport {
     pub pe_embedded_pubkey_resource_id: usize,
     pub pe_embedded_pubkey_verified: bool,
     pub authenticode_status: String,
+    #[serde(default)]
+    pub signing_mode: SigningMode,
+    #[serde(default)]
+    pub trusted_public_release: bool,
+    #[serde(default)]
+    pub version_info: Option<PeVersionInfoSpec>,
+    #[serde(default)]
+    pub authenticode_verification: Option<AuthenticodeVerificationReport>,
     pub key_id: String,
     pub publisher_public_key_hex: String,
     pub external_keystore_path: String,
@@ -80,21 +104,34 @@ pub struct BuildPreflightReport {
 pub struct MiniToolPackager;
 
 impl MiniToolPackager {
-    /// Full 8-step Release Pipeline using RFC 8032 Ed25519 (`ed25519-dalek`) and External Producer Keystore:
-    /// 1. Validate Project, UI Schema & Workflows
-    /// 2. Verify Assets & Path Traversal Security
-    /// 3. Resolve 5-State Module Matrix
-    /// 4. Copy Dedicated `fp-mini-runtime.exe` Binary
-    /// 5. Inject Custom PE Icon (.ico) + Pin Ed25519 Public Key in PE `RT_RCDATA #7777` & Verify BEFORE Signing
-    /// 6. Package Assets (`bundle/ui-schema.json`, `bundle/workflows.fpbundle.json`, `bundle/templates/*`, `bin/adb*`)
-    /// 7. Compute SHA-256 Checksums & Sign Envelope with External Producer Ed25519 Key
-    /// 8. Verify Signed Bundle via `fp-bundle-verify` (using PE-Embedded Root of Trust Public Key) & Emit `build-report.json`
+    /// Default P5.2/P5.1-compatible release export wrapper (defaults to `UnsignedInternal` + derived PE VERSIONINFO).
     pub fn build_and_export_release(
         project_dir: &Path,
         runtime_template_exe: &Path,
         workspace_bin_dir: Option<&Path>,
         output_release_dir: &Path,
         custom_keystore_dir: Option<&Path>,
+    ) -> Result<BuildReport> {
+        Self::build_and_export_release_with_options(
+            project_dir,
+            runtime_template_exe,
+            workspace_bin_dir,
+            output_release_dir,
+            custom_keystore_dir,
+            &ReleaseBuildOptions::default(),
+        )
+    }
+
+    /// Full P5.3 8-step Release Pipeline:
+    /// Build -> Inject Icon + PE VERSIONINFO + Ed25519 RT_RCDATA #7777 -> Finalize & Sign Bundle ->
+    /// Sign Authenticode (signtool.exe) -> Verify Authenticode (WinVerifyTrust) & SHA-256 -> Emit BuildReport.
+    pub fn build_and_export_release_with_options(
+        project_dir: &Path,
+        runtime_template_exe: &Path,
+        workspace_bin_dir: Option<&Path>,
+        output_release_dir: &Path,
+        custom_keystore_dir: Option<&Path>,
+        options: &ReleaseBuildOptions,
     ) -> Result<BuildReport> {
         let total_start = Instant::now();
         let mut steps = Vec::new();
@@ -210,26 +247,64 @@ impl MiniToolPackager {
             .unwrap_or_else(ProducerKeyManager::default_external_keystore_dir);
         let (signing_key, key_meta) = ProducerKeyManager::load_or_create_signing_key(&keystore_dir)?;
 
-        // STEP 5: Inject Custom PE Icon Resource AND Pin Ed25519 Public Key in PE RT_RCDATA #7777 BEFORE Signing
+        // Build derived PE VERSIONINFO cleanly if caller didn't override every field
+        let mut version_spec = options.version_info.clone().unwrap_or_else(|| PeVersionInfoSpec {
+            company_name: options
+                .publisher_profile
+                .as_ref()
+                .map(|p| p.organization.clone())
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or_else(|| "FarmerPro Internal Studio".to_string()),
+            file_description: format!("{} Automated Mini Tool", project.name),
+            file_version: project.version.clone(),
+            internal_name: project.slug.clone(),
+            legal_copyright: options
+                .publisher_profile
+                .as_ref()
+                .map(|p| p.copyright.clone())
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or_else(|| format!("Copyright (c) 2026 {}", project.name)),
+            original_filename: project.exe_name.clone(),
+            product_name: project.name.clone(),
+            product_version: project.version.clone(),
+        });
+        if version_spec.original_filename.trim().is_empty() {
+            version_spec.original_filename = project.exe_name.clone();
+        }
+        if version_spec.internal_name.trim().is_empty() {
+            version_spec.internal_name = project.slug.clone();
+        }
+        if version_spec.file_version.trim().is_empty() {
+            version_spec.file_version = project.version.clone();
+        }
+        if version_spec.product_version.trim().is_empty() {
+            version_spec.product_version = project.version.clone();
+        }
+
+        // STEP 5: Inject Custom PE Icon + Win32 VERSIONINFO + Ed25519 Public Key in PE RT_RCDATA #7777 BEFORE Signing
         let t5 = Instant::now();
         let layers_injected = inject_ico_into_pe_exe(&target_exe_path, &icon_path)?;
+        inject_pe_version_info(&target_exe_path, &version_spec)?;
         inject_ed25519_pubkey_into_pe_exe(&target_exe_path, &key_meta.public_key_hex)?;
-        // Verify BOTH PE Icon resources and PE RT_RCDATA #7777 Public Key after all PE resource updates complete
+        // Verify PE Icon, VERSIONINFO, and RT_RCDATA #7777 BEFORE bundle finalization / Authenticode signing
         let (grp_bytes, ico1_bytes) = verify_pe_icon_resource(&target_exe_path)?;
+        let verified_vi = read_pe_version_info_from_exe(&target_exe_path)?;
         let verified_pe_pubkey =
             verify_pe_embedded_pubkey_resource(&target_exe_path, &key_meta.public_key_hex)?;
         steps.push(BuildStepMetric {
             step_no: 5,
-            name: "PE Icon + Ed25519 Root-of-Trust Public Key Injection (RT_RCDATA #7777)".to_string(),
+            name: "PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection".to_string(),
             duration_ms: t5.elapsed().as_millis() as u64,
             status: "PASS".to_string(),
             detail: format!(
-                "Injected {} icon layers (RT_GROUP_ICON={}B, RT_ICON#1={}B) and pinned Ed25519 PubKey ({}) in PE RT_RCDATA #{}",
+                "Injected {} icon layers ({}B/{}B), VERSIONINFO (Product='{}', Company='{}'), PE RT_RCDATA #{}={}",
                 layers_injected,
                 grp_bytes,
                 ico1_bytes,
+                verified_vi.product_name,
+                verified_vi.company_name,
+                PE_ED25519_PUBKEY_RESOURCE_ID,
                 &verified_pe_pubkey[..16],
-                PE_ED25519_PUBKEY_RESOURCE_ID
             ),
         });
 
@@ -239,6 +314,50 @@ impl MiniToolPackager {
         let bundle_tpl_dir = bundle_dir.join("templates");
         std::fs::create_dir_all(&bundle_tpl_dir)?;
 
+        let effective_publisher = options.publisher_profile.clone().or_else(|| {
+            Some(PublisherIdentitySpec {
+                publisher_id: "internal-default".to_string(),
+                display_name: verified_vi.company_name.clone(),
+                organization: verified_vi.company_name.clone(),
+                website: None,
+                support_contact: None,
+                copyright: verified_vi.legal_copyright.clone(),
+                ed25519_key_id: key_meta.key_id.clone(),
+                ed25519_pubkey_hex: key_meta.public_key_hex.clone(),
+                authenticode_cert_ref: options.authenticode_cert_ref.clone(),
+                release_channel: match options.signing_mode {
+                    SigningMode::PublicSigned => "stable",
+                    SigningMode::SelfSignedQa => "qa",
+                    SigningMode::UnsignedInternal => "internal",
+                }
+                .to_string(),
+                signing_policy: options.signing_mode,
+            })
+        });
+
+        let signing_meta = ReleaseSigningMetadata {
+            signing_mode: options.signing_mode,
+            publisher_id: effective_publisher
+                .as_ref()
+                .map(|p| p.publisher_id.clone())
+                .unwrap_or_else(|| "internal-default".to_string()),
+            publisher_organization: verified_vi.company_name.clone(),
+            release_channel: effective_publisher
+                .as_ref()
+                .map(|p| p.release_channel.clone())
+                .unwrap_or_else(|| "internal".to_string()),
+            authenticode_trust_status: match options.signing_mode {
+                SigningMode::PublicSigned => AuthenticodeTrustStatus::TrustedPublicChain,
+                SigningMode::SelfSignedQa => AuthenticodeTrustStatus::SelfSignedUntrustedRoot,
+                SigningMode::UnsignedInternal => AuthenticodeTrustStatus::Unsigned,
+            },
+            trusted_public_release: options.signing_mode == SigningMode::PublicSigned,
+            signer_thumbprint: options.authenticode_cert_ref.clone(),
+            signer_subject: None,
+            version_info: verified_vi.clone(),
+            key_rotation: options.key_rotation_delegation.clone(),
+        };
+
         let release_manifest = ReleaseBundleManifest {
             compatibility: project.compatibility.clone(),
             project: project.clone(),
@@ -246,6 +365,8 @@ impl MiniToolPackager {
             workflows_count: validated_workflows.len(),
             templates_count: project.template_files.len(),
             built_at_utc: chrono::Utc::now().to_rfc3339(),
+            publisher: effective_publisher,
+            signing: Some(signing_meta),
         };
 
         let manifest_json = serde_json::to_vec_pretty(&release_manifest)?;
@@ -354,12 +475,27 @@ impl MiniToolPackager {
             ),
         });
 
-        // STEP 8: Verify Signed Bundle using `fp-bundle-verify` (Anchored to PE-Embedded Public Key!) & Audit Dependencies
+        // STEP 8: Sign PE Executable Authenticode LAST (NEVER modify PE resources after signing!),
+        // verify Win32 WinVerifyTrust + PE RT_RCDATA #7777 Ed25519 RoT + compute FINAL EXE SHA-256
         let t8 = Instant::now();
+        let effective_cert_ref = options.authenticode_cert_ref.clone().or_else(|| {
+            options
+                .publisher_profile
+                .as_ref()
+                .and_then(|p| p.authenticode_cert_ref.clone())
+        });
+        let auth_rep = sign_pe_authenticode_and_verify(
+            &target_exe_path,
+            &AuthenticodeSignRequest {
+                signing_mode: options.signing_mode,
+                cert_ref: effective_cert_ref,
+                description: Some(verified_vi.file_description.clone()),
+                timestamp_url: options.timestamp_url.clone(),
+            },
+        )?;
         let pe_root_pubkey = read_pe_embedded_pubkey_from_exe(&target_exe_path)?;
         envelope.verify_ed25519_with_public_key(&bundle_dir, &pe_root_pubkey)?;
         let dep_audit = audit_portable_environment(output_release_dir, &project.slug);
-        // Remove empty `data/` directory left by build-time ACL write probe so exported release packages never ship a `data/` tree
         let probe_data_dir = output_release_dir.join("data");
         if probe_data_dir.is_dir() {
             let _ = std::fs::remove_dir(&probe_data_dir);
@@ -367,16 +503,34 @@ impl MiniToolPackager {
         let exe_bytes = std::fs::read(&target_exe_path)?;
         let exe_sha256 = sha256_hex(&exe_bytes);
 
+        let auth_status_label = match auth_rep.trust_status {
+            AuthenticodeTrustStatus::TrustedPublicChain => format!(
+                "Authenticode TrustedPublicChain (Subject='{}', Thumbprint={})",
+                auth_rep.signer_subject.as_deref().unwrap_or("?"),
+                auth_rep.signer_thumbprint.as_deref().unwrap_or("?")
+            ),
+            AuthenticodeTrustStatus::SelfSignedUntrustedRoot => format!(
+                "Authenticode Self-Signed QA Build (NOT TrustedPublicRelease; Subject='{}', Thumbprint={})",
+                auth_rep.signer_subject.as_deref().unwrap_or("?"),
+                auth_rep.signer_thumbprint.as_deref().unwrap_or("?")
+            ),
+            AuthenticodeTrustStatus::Unsigned => {
+                "Unsigned Internal Build (No Authenticode; Ed25519 PE RT_RCDATA #7777 Verified)".to_string()
+            }
+            other => format!("Authenticode {:?}: {}", other, auth_rep.detail),
+        };
+
         steps.push(BuildStepMetric {
             step_no: 8,
-            name: "Verify RFC 8032 Ed25519 Signature via PE-Embedded Root of Trust & Audit Dependencies".to_string(),
+            name: "Authenticode Sign/Verify (WinVerifyTrust) & Final PE Root-of-Trust Check".to_string(),
             duration_ms: t8.elapsed().as_millis() as u64,
             status: "PASS".to_string(),
             detail: format!(
-                "Ed25519 verified against PE RT_RCDATA #{} key; exe SHA-256={}; WebView2={}",
-                PE_ED25519_PUBKEY_RESOURCE_ID,
+                "Mode={:?}, Trust={:?}, TrustedPublicRelease={}, exe SHA-256={}",
+                options.signing_mode,
+                auth_rep.trust_status,
+                auth_rep.trusted_public_release,
                 &exe_sha256[..16],
-                dep_audit.webview2_evergreen_installed
             ),
         });
 
@@ -392,7 +546,11 @@ impl MiniToolPackager {
             pe_icon_first_layer_bytes: ico1_bytes,
             pe_embedded_pubkey_resource_id: PE_ED25519_PUBKEY_RESOURCE_ID,
             pe_embedded_pubkey_verified: true,
-            authenticode_status: "Unsigned Portable PE Binary (PE Icon + RT_RCDATA #7777 Ed25519 Root-of-Trust Public Key injected at Step 5; ready for optional signtool.exe Authenticode code-signing as final post-resource step)".to_string(),
+            authenticode_status: auth_status_label,
+            signing_mode: options.signing_mode,
+            trusted_public_release: auth_rep.trusted_public_release,
+            version_info: Some(verified_vi),
+            authenticode_verification: Some(auth_rep),
             key_id: key_meta.key_id,
             publisher_public_key_hex: key_meta.public_key_hex,
             external_keystore_path: key_meta.key_store_path,
@@ -1513,6 +1671,151 @@ mod tests {
         assert!(ok.ready, "Issues: {:?}", ok.issues);
         assert_eq!(ok.exe_name, "Auto_Generic_RPG.exe");
         assert!(ok.keystore_key_id.is_some());
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_p5_3_pe_version_info_readback_authenticode_self_signed_qa_and_public_signed_gate() {
+        let tmp = std::env::temp_dir().join(format!("fp_p53_builder_{}", uuid::Uuid::new_v4()));
+        let proj_dir = tmp.join("p53-brand");
+        std::fs::create_dir_all(proj_dir.join("workflows")).unwrap();
+        std::fs::create_dir_all(proj_dir.join("templates")).unwrap();
+        std::fs::create_dir_all(proj_dir.join("branding")).unwrap();
+
+        let runtime_exe = std::env::current_exe().unwrap();
+        let ks_dir = tmp.join("keystore");
+        let manifest = GameProjectManifest {
+            compatibility: CompatibilityVersions::default(),
+            project_id: "proj-p53-brand".to_string(),
+            slug: "p53-brand".to_string(),
+            name: "P53 Branded Auto".to_string(),
+            game_package_id: "com.example.p53".to_string(),
+            version: "2.3.4".to_string(),
+            exe_name: "Auto_P53_Brand.exe".to_string(),
+            window_title: "P53 Branded Auto".to_string(),
+            icon_rel_path: "branding/icon.ico".to_string(),
+            target_resolution: (1280, 720),
+            workflow_files: vec!["workflows/main.fpwf.json".to_string()],
+            template_files: vec![],
+            packaged_modules: vec!["mod.adb_core".to_string()],
+            bundle_adb: false,
+        };
+        std::fs::write(proj_dir.join("project.json"), serde_json::to_vec_pretty(&manifest).unwrap()).unwrap();
+        let ui = MiniToolUiSchema {
+            schema_version: 1,
+            project_slug: manifest.slug.clone(),
+            window_title: manifest.window_title.clone(),
+            version_badge: "v2.3.4".to_string(),
+            theme_accent_hex: "#1878F5".to_string(),
+            header_bg_hex: "#121E2A".to_string(),
+            layout_preset: MiniLayoutPreset::Compact1Col,
+            default_window_size: (680, 480),
+            sections_order: vec!["header_bar".to_string()],
+            hidden_components: vec![],
+            device_columns: vec![],
+            task_categories: vec![],
+            tasks: vec![],
+            utilities: vec![],
+            initial_runtime_vars: HashMap::new(),
+        };
+        std::fs::write(proj_dir.join("ui-schema.json"), serde_json::to_vec_pretty(&ui).unwrap()).unwrap();
+        let wf = r#"{"schemaVersion":1,"workflowId":"wf-main","name":"Main","status":"published","graph":{"nodes":[{"id":"n1","type":"flow.start","position":{"x":0,"y":0}},{"id":"n2","type":"flow.end","position":{"x":100,"y":0}}],"edges":[{"id":"e1","source":"n1","sourcePort":"flow","target":"n2","targetPort":"flow"}]}}"#;
+        std::fs::write(proj_dir.join("workflows/main.fpwf.json"), wf).unwrap();
+
+        // Build minimal 32x32 ICO
+        let mut ico = vec![0, 0, 1, 0, 1, 0, 32, 32, 0, 0, 1, 0, 32, 0];
+        let bmp_size = (40 + 32 * 32 * 4 + 32 * 4) as u32;
+        ico.extend_from_slice(&bmp_size.to_le_bytes());
+        ico.extend_from_slice(&22u32.to_le_bytes());
+        ico.extend_from_slice(&40u32.to_le_bytes());
+        ico.extend_from_slice(&32i32.to_le_bytes());
+        ico.extend_from_slice(&64i32.to_le_bytes());
+        ico.extend_from_slice(&1u16.to_le_bytes());
+        ico.extend_from_slice(&32u16.to_le_bytes());
+        ico.resize(ico.len() + 24 + 32 * 32 * 4 + 32 * 4, 0u8);
+        std::fs::write(proj_dir.join("branding/icon.ico"), &ico).unwrap();
+
+        let ver_spec = PeVersionInfoSpec {
+            company_name: "FarmerPro Studio QA".to_string(),
+            file_description: "P53 Branded Automation Runner".to_string(),
+            file_version: "2.3.4.0".to_string(),
+            internal_name: "p53-brand".to_string(),
+            legal_copyright: "Copyright (C) 2026 FarmerPro Studio QA".to_string(),
+            original_filename: "Auto_P53_Brand.exe".to_string(),
+            product_name: "P53 Branded Auto".to_string(),
+            product_version: "2.3.4".to_string(),
+        };
+
+        // 1. Unsigned Internal build -> VERSIONINFO injected and readable via Win32 GetFileVersionInfoW!
+        let out_unsigned = tmp.join("rel_unsigned");
+        let rep_unsigned = MiniToolPackager::build_and_export_release_with_options(
+            &proj_dir,
+            &runtime_exe,
+            None,
+            &out_unsigned,
+            Some(&ks_dir),
+            &ReleaseBuildOptions {
+                signing_mode: SigningMode::UnsignedInternal,
+                version_info: Some(ver_spec.clone()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(rep_unsigned.signing_mode, SigningMode::UnsignedInternal);
+        assert!(!rep_unsigned.trusted_public_release);
+        let readback = fp_bundle_verify::read_pe_version_info_from_exe(Path::new(&rep_unsigned.tool_exe_path)).unwrap();
+        assert_eq!(readback.company_name, ver_spec.company_name);
+        assert_eq!(readback.product_name, ver_spec.product_name);
+        assert_eq!(readback.file_description, ver_spec.file_description);
+        assert_eq!(readback.legal_copyright, ver_spec.legal_copyright);
+        assert_eq!(readback.file_version, ver_spec.file_version);
+
+        // 2. SelfSignedQa build with Windows CNG cert + PublicSigned fail-closed gate
+        if authenticode::find_signtool_exe().is_some() {
+            let qa_cert = authenticode::create_self_signed_qa_cert("FarmerPro P53 Builder Test").unwrap();
+            let out_qa = tmp.join("rel_qa");
+            let rep_qa = MiniToolPackager::build_and_export_release_with_options(
+                &proj_dir,
+                &runtime_exe,
+                None,
+                &out_qa,
+                Some(&ks_dir),
+                &ReleaseBuildOptions {
+                    signing_mode: SigningMode::SelfSignedQa,
+                    authenticode_cert_ref: Some(qa_cert.thumbprint.clone()),
+                    version_info: Some(ver_spec.clone()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            assert_eq!(rep_qa.signing_mode, SigningMode::SelfSignedQa);
+            assert!(!rep_qa.trusted_public_release);
+            assert!(rep_qa.pe_embedded_pubkey_verified);
+            let qa_ver_readback = fp_bundle_verify::read_pe_version_info_from_exe(Path::new(&rep_qa.tool_exe_path)).unwrap();
+            assert_eq!(qa_ver_readback.company_name, ver_spec.company_name);
+
+            // PublicSigned MUST FAIL CLOSED on self-signed cert (cannot claim TrustedPublicRelease)
+            let out_pub_fail = tmp.join("rel_pub_fail");
+            let pub_err = MiniToolPackager::build_and_export_release_with_options(
+                &proj_dir,
+                &runtime_exe,
+                None,
+                &out_pub_fail,
+                Some(&ks_dir),
+                &ReleaseBuildOptions {
+                    signing_mode: SigningMode::PublicSigned,
+                    authenticode_cert_ref: Some(qa_cert.thumbprint.clone()),
+                    version_info: Some(ver_spec),
+                    ..Default::default()
+                },
+            );
+            assert!(pub_err.is_err(), "PublicSigned must reject untrusted self-signed cert");
+
+            let _ = std::process::Command::new("powershell")
+                .args(["-NoProfile", "-Command", &format!("Remove-Item 'Cert:\\CurrentUser\\My\\{}' -ErrorAction SilentlyContinue", qa_cert.thumbprint)])
+                .output();
+        }
 
         let _ = std::fs::remove_dir_all(&tmp);
     }

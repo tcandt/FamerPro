@@ -290,14 +290,8 @@ fn forced_crash_worker_entry() {
             let _ = storage.update_project(UpdateProjectRequest {
                 id: target_id,
                 name: Some("Mutated Uncommitted Name".to_string()),
-                game_package_id: None,
                 version: Some("9.9.9".to_string()),
-                exe_name: None,
-                window_title: None,
-                icon_rel_path: None,
-                target_width_px: None,
-                target_height_px: None,
-                bundle_adb: None,
+                ..Default::default()
             });
         }
         "delete:after_move_to_trash_before_commit" | "delete:after_db_commit_before_cleanup" => {
