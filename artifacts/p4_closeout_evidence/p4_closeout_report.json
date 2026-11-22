@@ -1,0 +1,169 @@
+{
+  "executedAtUtc": "2026-11-22T06:40:28.589Z",
+  "gitHead": "6d89364e85ba62a1e6f6a5e612b9bdd6788d7b02",
+  "adbHardwareInvestigation": {
+    "adbDevicesOutput": "List of devices attached",
+    "ldplayer14Vm0IsRunning": "stop",
+    "rootCause": "During P1.1, LDPlayer14 (emulator-5554, SM_X710N Android 14 1280x720) had already been launched interactively with UAC elevation. Currently LDPlayer14 index 0 is in state \"stop\" and requires Windows UAC elevation to start; non-elevated execution leaves adb devices -l empty."
+  },
+  "studioConsoleErrors": [],
+  "functionalMatrix": [
+    {
+      "module": "Projects & Dashboard",
+      "uiRender": "PASS",
+      "ipcIntegration": "PASS",
+      "functional": "PASS",
+      "liveDevice": "N/A"
+    },
+    {
+      "module": "Workflow Studio (TestKit)",
+      "uiRender": "PASS",
+      "ipcIntegration": "PASS",
+      "functional": "PASS",
+      "liveDevice": "BLOCKED (0 ADB)"
+    },
+    {
+      "module": "Tasks & Modules",
+      "uiRender": "PASS",
+      "ipcIntegration": "PASS",
+      "functional": "PASS",
+      "liveDevice": "BLOCKED (0 ADB)"
+    },
+    {
+      "module": "Device Lab (Health/ROI/Ports)",
+      "uiRender": "PASS",
+      "ipcIntegration": "PASS",
+      "functional": "PASS (TESTKIT)",
+      "liveDevice": "BLOCKED (0 ADB)"
+    },
+    {
+      "module": "Test & Debug Lab",
+      "uiRender": "PASS",
+      "ipcIntegration": "PASS",
+      "functional": "PASS",
+      "liveDevice": "BLOCKED (0 ADB)"
+    },
+    {
+      "module": "WYSIWYG Mini Tool Builder",
+      "uiRender": "PASS",
+      "ipcIntegration": "PASS",
+      "functional": "PASS",
+      "liveDevice": "N/A"
+    },
+    {
+      "module": "Account Vault",
+      "uiRender": "PASS",
+      "ipcIntegration": "PASS",
+      "functional": "PASS",
+      "liveDevice": "N/A"
+    },
+    {
+      "module": "Proxy & Port Map",
+      "uiRender": "PASS",
+      "ipcIntegration": "PASS",
+      "functional": "PASS",
+      "liveDevice": "BLOCKED (ADB ports)"
+    },
+    {
+      "module": "System Settings (VACUUM WAL)",
+      "uiRender": "PASS",
+      "ipcIntegration": "PASS",
+      "functional": "PASS",
+      "liveDevice": "N/A"
+    }
+  ],
+  "runtimeVarBindingReport": {
+    "studioWorkflowRun": {
+      "summaryVars": {
+        "farm_zone": "Sector-B7",
+        "last_data_source": "Synthetic",
+        "last_updated_utc": "2026-11-22T06:40:08.756495400+00:00",
+        "last_task_state": "succeeded",
+        "resource_count": 250
+      },
+      "p1SnapshotVars": {
+        "resource_count": 250,
+        "farm_zone": "Sector-B7",
+        "last_data_source": "Synthetic",
+        "last_task_state": "succeeded",
+        "last_updated_utc": "2026-11-22T06:40:08.756495400+00:00"
+      },
+      "p2IsolatedEmpty": true
+    },
+    "builderVarPicker": {
+      "activeProjectBanner": true,
+      "hasResourceCountVar": true,
+      "hasFarmZoneVar": true,
+      "hasTaskCompletedCountVar": true
+    },
+    "beforeRunUnverifiedCheck": {
+      "runtimeVarsOnBoot": {},
+      "cellsText": [
+        "Chưa có thiết bị kết nối",
+        "com.harvest.vars",
+        "OFFLINE",
+        "Chưa xác minh",
+        "Chưa xác minh",
+        "Chưa xác minh"
+      ],
+      "allCustomColsShowUnverified": true,
+      "failClosedErr": "NO_LIVE_ADB_DEVICE_ONLINE: 0 ready Android devices found via ADB. Fail-closed: connect a device or explicitly enable Demo Mode."
+    },
+    "workflowMockReceiptVars": {
+      "last_updated_utc": "2026-11-22T06:40:23.571195400+00:00",
+      "farm_zone": "Sector-B7",
+      "last_task_id": "t-harvest",
+      "task_completed_count": 1,
+      "last_data_source": "DEMO_SIMULATION(FakeDeviceDriver)",
+      "resource_count": 250,
+      "last_task_state": "Succeeded"
+    },
+    "afterRunReloadedUiCheck": {
+      "runtimeVarsLoadedFromSqlite": {
+        "last_updated_utc": "2026-11-22T06:40:23.571195400+00:00",
+        "farm_zone": "Sector-B7",
+        "last_task_id": "t-harvest",
+        "task_completed_count": 1,
+        "resource_count": 250,
+        "last_data_source": "DEMO_SIMULATION(FakeDeviceDriver)",
+        "last_task_state": "Succeeded"
+      },
+      "cellsText": [
+        "Chưa có thiết bị kết nối",
+        "com.harvest.vars",
+        "OFFLINE",
+        "Sector-B7",
+        "250",
+        "1"
+      ],
+      "hasSectorB7": true,
+      "hasResource250": true,
+      "hasCompleted1": true
+    },
+    "titanProjectIsolationCheck": {
+      "projectSlug": "titan-suite",
+      "runtimeVars": {},
+      "cellsText": [
+        "Chưa có thiết bị kết nối",
+        "com.titan.arena",
+        "OFFLINE",
+        "Chưa xác minh"
+      ],
+      "isolatedFromAlpha": true
+    }
+  },
+  "standaloneSummaries": {
+    "alphaVarsCompact": {
+      "STANDALONE_LAUNCH_PASS": true,
+      "LIVE_WORKFLOW_EXECUTION_PASS": false,
+      "testkitWorkflowVarBindingPass": true,
+      "consoleErrors": []
+    },
+    "titanExpanded": {
+      "STANDALONE_LAUNCH_PASS": true,
+      "LIVE_WORKFLOW_EXECUTION_PASS": false,
+      "isolatedUnverifiedStatePass": true,
+      "consoleErrors": []
+    }
+  }
+}
