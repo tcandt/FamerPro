@@ -17,6 +17,17 @@ pub struct QaSelfSignedCertInfo {
     pub not_after_utc: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SigningToolchainStatus {
+    pub signtool_found: bool,
+    pub discovered_path: Option<PathBuf>,
+    pub sdk_bundled_in_app: bool,
+    pub searched_locations: Vec<String>,
+    pub unsigned_internal_supported: bool,
+    pub guidance: String,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct AuthenticodeSignRequest {
     pub signing_mode: SigningMode,
@@ -27,30 +38,126 @@ pub struct AuthenticodeSignRequest {
     pub timestamp_url: Option<String>,
 }
 
-/// Locates Windows SDK `signtool.exe` cleanly via filesystem probe (zero shell interpolation).
-pub fn find_signtool_exe() -> Option<PathBuf> {
+/// Discovers an installed Windows SDK `signtool.exe` cleanly via filesystem & PATH probe
+/// (never hardcodes one SDK build, zero shell interpolation, and NEVER bundles Microsoft SDK files).
+pub fn discover_signing_toolchain() -> SigningToolchainStatus {
+    let mut searched = Vec::new();
+    if let Ok(explicit) = std::env::var("FP_SIGNTOOL_PATH") {
+        let p = PathBuf::from(explicit.trim());
+        searched.push(format!("FP_SIGNTOOL_PATH={}", p.display()));
+        if p.is_file() {
+            return SigningToolchainStatus {
+                signtool_found: true,
+                discovered_path: Some(p),
+                sdk_bundled_in_app: false,
+                searched_locations: searched,
+                unsigned_internal_supported: true,
+                guidance: "Using FP_SIGNTOOL_PATH override; UnsignedInternal works without SDK.".to_string(),
+            };
+        }
+    }
+    searched.push("PATH".to_string());
     if let Ok(path_env) = std::env::var("PATH") {
         for dir in std::env::split_paths(&path_env) {
             let c = dir.join("signtool.exe");
             if c.is_file() {
-                return Some(c);
+                return SigningToolchainStatus {
+                    signtool_found: true,
+                    discovered_path: Some(c),
+                    sdk_bundled_in_app: false,
+                    searched_locations: searched,
+                    unsigned_internal_supported: true,
+                    guidance: "Found signtool.exe on PATH; SDK components are not bundled.".to_string(),
+                };
             }
         }
     }
-    let kits_bin = Path::new(r"C:\Program Files (x86)\Windows Kits\10\bin");
-    if kits_bin.is_dir() {
-        let mut versions: Vec<PathBuf> = std::fs::read_dir(kits_bin)
-            .ok()?
-            .flatten()
-            .map(|e| e.path().join("x64").join("signtool.exe"))
-            .filter(|p| p.is_file())
-            .collect();
-        versions.sort();
-        if let Some(latest) = versions.pop() {
-            return Some(latest);
+    for arch in ["x64", "arm64", "x86"] {
+        let kits_bin = Path::new(r"C:\Program Files (x86)\Windows Kits\10\bin");
+        searched.push(format!("{}\\*\\{}\\signtool.exe", kits_bin.display(), arch));
+        if kits_bin.is_dir() {
+            if let Ok(rd) = std::fs::read_dir(kits_bin) {
+                let mut versions: Vec<PathBuf> = rd
+                    .flatten()
+                    .map(|e| e.path().join(arch).join("signtool.exe"))
+                    .filter(|p| p.is_file())
+                    .collect();
+                versions.sort();
+                if let Some(latest) = versions.pop() {
+                    return SigningToolchainStatus {
+                        signtool_found: true,
+                        discovered_path: Some(latest),
+                        sdk_bundled_in_app: false,
+                        searched_locations: searched,
+                        unsigned_internal_supported: true,
+                        guidance: "Detected Windows SDK signtool.exe on host (external SDK; not bundled).".to_string(),
+                    };
+                }
+            }
         }
     }
-    None
+    let kit_ack = Path::new(r"C:\Program Files (x86)\Windows Kits\10\App Certification Kit\signtool.exe");
+    searched.push(kit_ack.to_string_lossy().to_string());
+    if kit_ack.is_file() {
+        return SigningToolchainStatus {
+            signtool_found: true,
+            discovered_path: Some(kit_ack.to_path_buf()),
+            sdk_bundled_in_app: false,
+            searched_locations: searched,
+            unsigned_internal_supported: true,
+            guidance: "Detected App Certification Kit signtool.exe on host.".to_string(),
+        };
+    }
+
+    SigningToolchainStatus {
+        signtool_found: false,
+        discovered_path: None,
+        sdk_bundled_in_app: false,
+        searched_locations: searched,
+        unsigned_internal_supported: true,
+        guidance: "Windows SDK signtool.exe not installed on this machine. UnsignedInternal builds with Ed25519 + VERSIONINFO still work normally; install Windows 10/11 SDK or set FP_SIGNTOOL_PATH for Authenticode signing.".to_string(),
+    }
+}
+
+/// Locates Windows SDK `signtool.exe` cleanly via filesystem probe (zero shell interpolation).
+pub fn find_signtool_exe() -> Option<PathBuf> {
+    discover_signing_toolchain().discovered_path
+}
+
+/// Checks whether a certificate Subject matches Publisher Profile identity
+/// (never relies solely on `VERSIONINFO.CompanyName`, which is unauthenticated metadata).
+pub fn verify_publisher_matches_cert_subject(
+    publisher: Option<&fp_bundle_contract::PublisherIdentitySpec>,
+    cert_subject: Option<&str>,
+) -> (bool, String) {
+    let Some(subj) = cert_subject.map(|s| s.trim()).filter(|s| !s.is_empty()) else {
+        return (
+            false,
+            "No X.509 certificate subject present (VERSIONINFO CompanyName alone does not verify publisher identity).".to_string(),
+        );
+    };
+    let Some(pub_spec) = publisher else {
+        return (
+            false,
+            format!("Certificate subject '{}' present, but no PublisherIdentitySpec declared.", subj),
+        );
+    };
+    let subj_lc = subj.to_ascii_lowercase();
+    let org_lc = pub_spec.organization.trim().to_ascii_lowercase();
+    let disp_lc = pub_spec.display_name.trim().to_ascii_lowercase();
+    let matches = (!org_lc.is_empty() && subj_lc.contains(&org_lc))
+        || (!disp_lc.is_empty() && subj_lc.contains(&disp_lc));
+    if matches {
+        (
+            true,
+            format!("Certificate subject '{}' matches declared publisher '{}'", subj, pub_spec.organization),
+        )
+    } else {
+        (
+            false,
+            format!("PUBLISHER_CERT_SUBJECT_MISMATCH: cert subject '{}' does not match publisher organization '{}' / '{}'", subj, pub_spec.organization, pub_spec.display_name),
+        )
+    }
 }
 
 /// Creates a genuine X.509 RSA-2048 CodeSigning certificate directly inside `Cert:\CurrentUser\My`

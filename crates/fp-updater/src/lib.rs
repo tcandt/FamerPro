@@ -86,15 +86,25 @@ pub struct ActiveVersionPointer {
     pub journal_id: String,
 }
 
-/// Persistent root-of-trust anchor ledger kept in `.updater/trust-state.json`.
+/// Persistent root-of-trust anchor ledger kept in `.updater/trust-state.json`,
+/// shadow-backed at `.updater/trust-state.bak.json`, and strictly monotonic-guarded
+/// by SQLite `.updater/trust-ledger.db` against file rollback/downgrade attacks.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct PersistentTrustState {
+    #[serde(default = "default_trust_epoch")]
+    pub trust_epoch: u64,
     pub publisher_id: Option<String>,
     pub trusted_pubkeys: Vec<String>,
     pub revoked_pubkeys: Vec<String>,
     pub used_rotation_nonces: Vec<String>,
+    #[serde(default)]
+    pub previous_state_sha256: Option<String>,
     pub updated_at_utc: String,
+}
+
+fn default_trust_epoch() -> u64 {
+    1
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -210,22 +220,235 @@ impl MiniToolUpdater {
         self.updater_dir().join("trust-state.json")
     }
 
+    pub fn trust_state_backup_path(&self) -> PathBuf {
+        self.updater_dir().join("trust-state.bak.json")
+    }
+
+    pub fn trust_ledger_db_path(&self) -> PathBuf {
+        self.updater_dir().join("trust-ledger.db")
+    }
+
+    fn ensure_trust_ledger_schema(conn: &Connection) -> Result<()> {
+        conn.execute_batch(
+            "PRAGMA journal_mode = WAL;
+             PRAGMA synchronous = NORMAL;
+             CREATE TABLE IF NOT EXISTS updater_trust_ledger (
+                 id INTEGER PRIMARY KEY CHECK (id = 1),
+                 trust_epoch INTEGER NOT NULL,
+                 publisher_id TEXT,
+                 trusted_pubkeys_json TEXT NOT NULL,
+                 revoked_pubkeys_json TEXT NOT NULL,
+                 used_nonces_json TEXT NOT NULL,
+                 state_sha256 TEXT NOT NULL,
+                 updated_at TEXT NOT NULL
+             );
+             CREATE TABLE IF NOT EXISTS updater_trust_history (
+                 seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                 trust_epoch INTEGER NOT NULL,
+                 event_type TEXT NOT NULL,
+                 detail TEXT NOT NULL,
+                 state_sha256 TEXT NOT NULL,
+                 recorded_at TEXT NOT NULL
+             );",
+        )?;
+        Ok(())
+    }
+
+    fn read_trust_ledger_row(conn: &Connection) -> Result<Option<(u64, Vec<String>, Vec<String>)>> {
+        let mut st = conn.prepare(
+            "SELECT trust_epoch, revoked_pubkeys_json, used_nonces_json FROM updater_trust_ledger WHERE id = 1;",
+        )?;
+        let mut rows = st.query([])?;
+        if let Some(r) = rows.next()? {
+            let epoch: i64 = r.get(0)?;
+            let rev_json: String = r.get(1)?;
+            let nonces_json: String = r.get(2)?;
+            let rev: Vec<String> = serde_json::from_str(&rev_json).unwrap_or_default();
+            let nonces: Vec<String> = serde_json::from_str(&nonces_json).unwrap_or_default();
+            Ok(Some((epoch as u64, rev, nonces)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn sync_trust_ledger_db(&self, state: &PersistentTrustState, event_type: &str, detail: &str) -> Result<()> {
+        let dir = self.updater_dir();
+        fs::create_dir_all(&dir)?;
+        let mut conn = Connection::open(self.trust_ledger_db_path())?;
+        Self::ensure_trust_ledger_schema(&conn)?;
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        if let Some((cur_epoch, cur_revoked, cur_nonces)) = Self::read_trust_ledger_row(&tx)? {
+            if state.trust_epoch < cur_epoch {
+                bail!(
+                    "TRUST_STATE_ROLLBACK_DETECTED: attempted to lower trust_epoch {} < ledger {}",
+                    state.trust_epoch,
+                    cur_epoch
+                );
+            }
+            for r in &cur_revoked {
+                if !state.revoked_pubkeys.iter().any(|x| x.eq_ignore_ascii_case(r)) {
+                    bail!(
+                        "TRUST_STATE_ROLLBACK_DETECTED: revoked pubkey '{}' missing from proposed trust state",
+                        r
+                    );
+                }
+            }
+            for n in &cur_nonces {
+                if !state.used_rotation_nonces.contains(n) {
+                    bail!(
+                        "TRUST_STATE_ROLLBACK_DETECTED: used nonce '{}' missing from proposed trust state",
+                        n
+                    );
+                }
+            }
+        }
+        let trusted_json = serde_json::to_string(&state.trusted_pubkeys)?;
+        let revoked_json = serde_json::to_string(&state.revoked_pubkeys)?;
+        let nonces_json = serde_json::to_string(&state.used_rotation_nonces)?;
+        let canonical = serde_json::to_vec(state)?;
+        let state_sha = fp_bundle_verify::sha256_hex(&canonical);
+        tx.execute(
+            "INSERT INTO updater_trust_ledger (
+                id, trust_epoch, publisher_id, trusted_pubkeys_json,
+                revoked_pubkeys_json, used_nonces_json, state_sha256, updated_at
+             ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(id) DO UPDATE SET
+                trust_epoch = excluded.trust_epoch,
+                publisher_id = excluded.publisher_id,
+                trusted_pubkeys_json = excluded.trusted_pubkeys_json,
+                revoked_pubkeys_json = excluded.revoked_pubkeys_json,
+                used_nonces_json = excluded.used_nonces_json,
+                state_sha256 = excluded.state_sha256,
+                updated_at = excluded.updated_at;",
+            rusqlite::params![
+                state.trust_epoch as i64,
+                state.publisher_id,
+                trusted_json,
+                revoked_json,
+                nonces_json,
+                state_sha,
+                state.updated_at_utc
+            ],
+        )?;
+        tx.execute(
+            "INSERT INTO updater_trust_history (trust_epoch, event_type, detail, state_sha256, recorded_at)
+             VALUES (?1, ?2, ?3, ?4, ?5);",
+            rusqlite::params![
+                state.trust_epoch as i64,
+                event_type,
+                detail,
+                state_sha,
+                Utc::now().to_rfc3339()
+            ],
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn read_trust_state(&self) -> Result<Option<PersistentTrustState>> {
         let p = self.trust_state_path();
-        if !p.exists() {
-            return Ok(None);
+        let state_opt: Option<PersistentTrustState> = if p.exists() {
+            let bytes = fs::read(&p)
+                .with_context(|| format!("Failed reading trust-state.json at {}", p.display()))?;
+            Some(serde_json::from_slice(&bytes)?)
+        } else if self.trust_state_backup_path().exists() {
+            let bytes = fs::read(self.trust_state_backup_path())?;
+            Some(serde_json::from_slice(&bytes)?)
+        } else {
+            None
+        };
+
+        let ledger_path = self.trust_ledger_db_path();
+        if ledger_path.exists() {
+            let conn = Connection::open(&ledger_path)?;
+            Self::ensure_trust_ledger_schema(&conn)?;
+            if let Some((db_epoch, db_revoked, db_nonces)) = Self::read_trust_ledger_row(&conn)? {
+                let Some(ref st) = state_opt else {
+                    bail!(
+                        "TRUST_STATE_MISSING_WITH_LEDGER: trust-state.json was deleted while trust-ledger.db records epoch {}",
+                        db_epoch
+                    );
+                };
+                if st.trust_epoch < db_epoch {
+                    bail!(
+                        "TRUST_STATE_ROLLBACK_DETECTED: local trust-state.json epoch {} < authoritative ledger epoch {}",
+                        st.trust_epoch,
+                        db_epoch
+                    );
+                }
+                for r in &db_revoked {
+                    if !st.revoked_pubkeys.iter().any(|x| x.eq_ignore_ascii_case(r)) {
+                        bail!(
+                            "TRUST_STATE_ROLLBACK_DETECTED: revoked pubkey '{}' was stripped from trust-state.json",
+                            r
+                        );
+                    }
+                }
+                for n in &db_nonces {
+                    if !st.used_rotation_nonces.contains(n) {
+                        bail!(
+                            "TRUST_STATE_ROLLBACK_DETECTED: committed rotation nonce '{}' was stripped from trust-state.json",
+                            n
+                        );
+                    }
+                }
+            }
         }
-        let bytes = fs::read(&p)
-            .with_context(|| format!("Failed reading trust-state.json at {}", p.display()))?;
-        let state: PersistentTrustState = serde_json::from_slice(&bytes)?;
-        Ok(Some(state))
+
+        Ok(state_opt)
     }
 
     pub fn write_trust_state(&self, state: &PersistentTrustState) -> Result<()> {
+        let mut normalized = state.clone();
+        if normalized.trust_epoch == 0 {
+            normalized.trust_epoch = 1;
+        }
+        let prev_sha = if self.trust_state_path().exists() {
+            fs::read(self.trust_state_path())
+                .ok()
+                .map(|b| fp_bundle_verify::sha256_hex(&b))
+        } else {
+            None
+        };
+        if normalized.previous_state_sha256.is_none() {
+            normalized.previous_state_sha256 = prev_sha;
+        }
+        self.sync_trust_ledger_db(&normalized, "sync_trust_state", "atomic_trust_update")?;
         let dir = self.updater_dir();
         fs::create_dir_all(&dir)?;
-        let bytes = serde_json::to_vec_pretty(state)?;
-        atomic_write_file(&self.trust_state_path(), &bytes)
+        let bytes = serde_json::to_vec_pretty(&normalized)?;
+        atomic_write_file(&self.trust_state_path(), &bytes)?;
+        let _ = atomic_write_file(&self.trust_state_backup_path(), &bytes);
+        Ok(())
+    }
+
+    /// Explicitly revokes an Ed25519 publisher key, removes it from `trusted_pubkeys`,
+    /// bumps monotonic `trust_epoch`, and commits atomically to `trust-ledger.db` & `trust-state.json`.
+    pub fn revoke_pubkey(&self, pubkey_hex: &str, reason: &str) -> Result<PersistentTrustState> {
+        let mut st = self
+            .read_trust_state()?
+            .unwrap_or_else(|| PersistentTrustState {
+                trust_epoch: 0,
+                ..Default::default()
+            });
+        let norm = pubkey_hex.trim().to_ascii_lowercase();
+        st.trusted_pubkeys
+            .retain(|k| !k.eq_ignore_ascii_case(&norm));
+        if !st
+            .revoked_pubkeys
+            .iter()
+            .any(|r| r.eq_ignore_ascii_case(&norm))
+        {
+            st.revoked_pubkeys.push(norm.clone());
+        }
+        st.trust_epoch = st.trust_epoch.saturating_add(1).max(1);
+        st.previous_state_sha256 = None;
+        st.updated_at_utc = Utc::now().to_rfc3339();
+        self.sync_trust_ledger_db(&st, "revoke_pubkey", &format!("{}:{}", norm, reason))?;
+        let bytes = serde_json::to_vec_pretty(&st)?;
+        atomic_write_file(&self.trust_state_path(), &bytes)?;
+        let _ = atomic_write_file(&self.trust_state_backup_path(), &bytes);
+        Ok(st)
     }
 
     /// Startup / pre-update integrity check of the currently installed active executable:
@@ -754,10 +977,12 @@ impl MiniToolUpdater {
         )?;
 
         let trust_state = self.read_trust_state()?.unwrap_or_else(|| PersistentTrustState {
+            trust_epoch: 1,
             publisher_id: None,
             trusted_pubkeys: vec![installed_trusted_pubkey.to_ascii_lowercase()],
             revoked_pubkeys: vec![],
             used_rotation_nonces: vec![],
+            previous_state_sha256: None,
             updated_at_utc: Utc::now().to_rfc3339(),
         });
         if trust_state
@@ -964,15 +1189,18 @@ impl MiniToolUpdater {
             journal_id: journal.journal_id.clone(),
         };
         let mut updated_trust = self.read_trust_state()?.unwrap_or_else(|| PersistentTrustState {
+            trust_epoch: 1,
             publisher_id: staged_verified.publisher_id.clone(),
             trusted_pubkeys: vec![installed_trusted_pubkey.to_ascii_lowercase()],
             revoked_pubkeys: vec![],
             used_rotation_nonces: vec![],
+            previous_state_sha256: None,
             updated_at_utc: Utc::now().to_rfc3339(),
         });
         if updated_trust.publisher_id.is_none() {
             updated_trust.publisher_id = staged_verified.publisher_id.clone();
         }
+        let mut trust_changed = false;
         if !updated_trust
             .trusted_pubkeys
             .iter()
@@ -981,6 +1209,7 @@ impl MiniToolUpdater {
             updated_trust
                 .trusted_pubkeys
                 .push(staged_verified.pe_pubkey_hex.clone());
+            trust_changed = true;
         }
         if staged_verified.rotated_from_pubkey_hex.is_some() {
             if let Some(ref deleg) = staged_verified
@@ -991,10 +1220,15 @@ impl MiniToolUpdater {
             {
                 if !updated_trust.used_rotation_nonces.contains(&deleg.nonce) {
                     updated_trust.used_rotation_nonces.push(deleg.nonce.clone());
+                    trust_changed = true;
                 }
             }
         }
-        updated_trust.updated_at_utc = Utc::now().to_rfc3339();
+        if trust_changed {
+            updated_trust.trust_epoch = updated_trust.trust_epoch.saturating_add(1).max(1);
+            updated_trust.previous_state_sha256 = None;
+            updated_trust.updated_at_utc = Utc::now().to_rfc3339();
+        }
         self.write_trust_state(&updated_trust)?;
         self.write_active_pointer_with_shadow(&next_pointer)?;
         journal.stage = UpdateStage::Activated;
@@ -1054,7 +1288,7 @@ impl MiniToolUpdater {
         })?;
 
         let prev_dir = self.versions_dir().join(format!("v{}", prev_ver));
-        let trust_state_opt = self.read_trust_state().ok().flatten();
+        let trust_state_opt = self.read_trust_state()?;
         let prev_verified = match Self::verify_candidate_release_dir_with_anchor(
             &prev_dir,
             &RuntimeCompatibilityProfile::default(),
@@ -1086,6 +1320,18 @@ impl MiniToolUpdater {
                 unanchored
             }
         };
+        if let Some(ref ts) = trust_state_opt {
+            if ts
+                .revoked_pubkeys
+                .iter()
+                .any(|r| r.eq_ignore_ascii_case(&prev_verified.pe_pubkey_hex))
+            {
+                bail!(
+                    "ROLLBACK_ROOT_OF_TRUST_UNTRUSTED: previous version key '{}' has been revoked",
+                    prev_verified.pe_pubkey_hex
+                );
+            }
+        }
         if !skip_child_verify_exec {
             verify_staged_exe_bundle(&prev_verified.exe_path, &self.data_dir())?;
         }
@@ -1320,23 +1566,28 @@ impl MiniToolUpdater {
 
             UpdateStage::Activated => {
                 // Active pointer already points to target version. Verify staged dir & DB integrity;
-                // verify strictly against previous trusted anchor if present!
+                // verify strictly against previous trusted anchor (allowing valid KeyRotationDelegation!).
                 let anchor_opt = journal
                     .previous_active_pointer
                     .as_ref()
                     .and_then(|p| p.trusted_pubkey_hex.clone());
                 let target_dir = PathBuf::from(&journal.staged_version_dir);
+                let mut rotated_ver_opt: Option<VerifiedCandidateRelease> = None;
                 let forward_ok = if target_dir.exists() {
                     if let Ok(ver_rel) = Self::verify_candidate_release_dir_with_anchor(
                         &target_dir,
                         &RuntimeCompatibilityProfile::default(),
                         anchor_opt.as_deref(),
                     ) {
-                        if skip_child_verify_exec {
+                        let exec_ok = if skip_child_verify_exec {
                             true
                         } else {
                             verify_staged_exe_bundle(&ver_rel.exe_path, &self.data_dir()).is_ok()
+                        };
+                        if exec_ok {
+                            rotated_ver_opt = Some(ver_rel);
                         }
+                        exec_ok
                     } else {
                         false
                     }
@@ -1345,6 +1596,46 @@ impl MiniToolUpdater {
                 };
 
                 if forward_ok && verify_db_ok_if_exists(&live_db_path) {
+                    // Ensure Trust State <-> Active Release <-> Nonce Ledger stay 100% consistent after rotation crash!
+                    if let Some(ref ver_rel) = rotated_ver_opt {
+                        let mut ts = self.read_trust_state()?.unwrap_or_else(|| PersistentTrustState {
+                            trust_epoch: 1,
+                            publisher_id: ver_rel.publisher_id.clone(),
+                            trusted_pubkeys: anchor_opt.into_iter().collect(),
+                            revoked_pubkeys: vec![],
+                            used_rotation_nonces: vec![],
+                            previous_state_sha256: None,
+                            updated_at_utc: Utc::now().to_rfc3339(),
+                        });
+                        let mut changed = false;
+                        if !ts
+                            .trusted_pubkeys
+                            .iter()
+                            .any(|k| k.eq_ignore_ascii_case(&ver_rel.pe_pubkey_hex))
+                        {
+                            ts.trusted_pubkeys.push(ver_rel.pe_pubkey_hex.clone());
+                            changed = true;
+                        }
+                        if ver_rel.rotated_from_pubkey_hex.is_some() {
+                            if let Some(ref deleg) = ver_rel
+                                .manifest
+                                .signing
+                                .as_ref()
+                                .and_then(|s| s.key_rotation.as_ref())
+                            {
+                                if !ts.used_rotation_nonces.contains(&deleg.nonce) {
+                                    ts.used_rotation_nonces.push(deleg.nonce.clone());
+                                    changed = true;
+                                }
+                            }
+                        }
+                        if changed {
+                            ts.trust_epoch = ts.trust_epoch.saturating_add(1).max(1);
+                            ts.previous_state_sha256 = None;
+                            ts.updated_at_utc = Utc::now().to_rfc3339();
+                            self.write_trust_state(&ts)?;
+                        }
+                    }
                     if !pointer_valid {
                         if let Some(recovered) = self.recover_missing_or_corrupt_pointer(Some(&journal))? {
                             self.write_active_pointer_with_shadow(&recovered)?;
@@ -1359,7 +1650,7 @@ impl MiniToolUpdater {
                         active_version: self.read_active_pointer()?.map(|p| p.active_version),
                         db_integrity_ok: true,
                         journal_path: self.journal_path().to_string_lossy().to_string(),
-                        detail: "Crash happened after atomic activation; verified target release and completed journal.".to_string(),
+                        detail: "Crash happened after atomic activation; verified target release & synchronized trust ledger.".to_string(),
                     })
                 } else {
                     if let (Some(bk), true) = (journal.backup_db_path.as_ref(), live_db_path.exists()) {
@@ -1433,9 +1724,9 @@ impl MiniToolUpdater {
                 }
             }
         }
-        // 3. Scan `versions/v*` ONLY against persistent `.updater/trust-state.json` trusted pubkeys (P5.2 Backlog closed).
+        // 3. Scan `versions/v*` ONLY against persistent `.updater/trust-state.json` + `.updater/trust-ledger.db` (P5.4 anti-rollback enforced).
         // Never blindly trust an unanchored folder on disk when both pointers & journal are missing.
-        let trust_state_opt = self.read_trust_state().ok().flatten();
+        let trust_state_opt = self.read_trust_state()?;
         let Some(ref trust_state) = trust_state_opt else {
             return Ok(None);
         };
@@ -2828,6 +3119,159 @@ mod tests {
                 .args(["-NoProfile", "-Command", &format!("Remove-Item 'Cert:\\CurrentUser\\My\\{}' -ErrorAction SilentlyContinue", thumb)])
                 .output();
         }
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_p5_4_trust_state_anti_rollback_revocation_and_key_rotation_crash_recovery() {
+        use fp_builder::security::ProducerKeyManager;
+        use fp_bundle_contract::{
+            KeyRotationDelegation, PeVersionInfoSpec, PublisherIdentitySpec, ReleaseSigningMetadata,
+        };
+
+        let tmp = std::env::temp_dir().join(format!("fp_updater_p54_trust_{}", Uuid::new_v4()));
+        let rel_100 = tmp.join("rel_100");
+        let rel_110 = tmp.join("rel_110");
+        let key_old = SigningKey::from_bytes(&[41u8; 32]);
+        let key_new = SigningKey::from_bytes(&[52u8; 32]);
+        let pub_old: String = key_old.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let pub_new: String = key_new.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+
+        let attach = |dir: &Path, sk: &SigningKey, pk_hex: &str, rot: Option<KeyRotationDelegation>| {
+            let bdir = dir.join("bundle");
+            let mut m: ReleaseBundleManifest =
+                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap()).unwrap();
+            m.publisher = Some(PublisherIdentitySpec {
+                publisher_id: "pub-p54-test".to_string(),
+                display_name: "P54 Test Publisher".to_string(),
+                organization: "P54 Labs".to_string(),
+                website: None,
+                support_contact: None,
+                copyright: "Copyright (C) 2026 P54 Labs".to_string(),
+                ed25519_key_id: "k-p54".to_string(),
+                ed25519_pubkey_hex: pk_hex.to_string(),
+                authenticode_cert_ref: None,
+                release_channel: "qa".to_string(),
+                signing_policy: SigningMode::UnsignedInternal,
+            });
+            m.signing = Some(ReleaseSigningMetadata {
+                signing_mode: SigningMode::UnsignedInternal,
+                publisher_id: "pub-p54-test".to_string(),
+                publisher_organization: "P54 Labs".to_string(),
+                release_channel: "qa".to_string(),
+                authenticode_trust_status: AuthenticodeTrustStatus::Unsigned,
+                trusted_public_release: false,
+                signer_thumbprint: None,
+                signer_subject: None,
+                version_info: PeVersionInfoSpec::default(),
+                key_rotation: rot,
+            });
+            let mb = serde_json::to_vec_pretty(&m).unwrap();
+            fs::write(bdir.join("manifest.fpbundle.json"), &mb).unwrap();
+            let mut sig_env: SignedBundleEnvelope =
+                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap()).unwrap();
+            sig_env.file_checksums.insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
+            let msha = sha256_hex(&mb);
+            let tjson = serde_json::to_string(&sig_env.file_checksums).unwrap();
+            let thash = sha256_hex(tjson.as_bytes());
+            let msg = fp_bundle_verify::canonical_signing_message(&sig_env.key_id, &msha, &thash);
+            let s = sk.sign(&msg);
+            sig_env.manifest_sha256 = msha;
+            sig_env.checksums_table_sha256 = thash;
+            sig_env.signature_ed25519_hex = s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+            fs::write(bdir.join("signature.fpbundle.json"), serde_json::to_vec_pretty(&sig_env).unwrap()).unwrap();
+        };
+
+        create_signed_test_release(&rel_100, "p54-trust", "Auto_P54Trust.exe", "1.0.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [41u8; 32]);
+        attach(&rel_100, &key_old, &pub_old, None);
+
+        let delegation = ProducerKeyManager::sign_key_rotation_delegation(&key_old, &pub_new, "pub-p54-test", "p54-trust", 30);
+        create_signed_test_release(&rel_110, "p54-trust", "Auto_P54Trust.exe", "1.1.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [52u8; 32]);
+        attach(&rel_110, &key_new, &pub_new, Some(delegation.clone()));
+
+        let install_root = tmp.join("installed/TrustTool");
+        let updater = MiniToolUpdater::new(&install_root);
+        let opts = UpdateExecutionOptions { skip_child_verify_exec: true, ..Default::default() };
+
+        // 1. Install v1.0.0 (epoch=1) and snapshot old trust-state.json before rotation
+        updater.install_initial(&rel_100, &opts).unwrap();
+        let old_trust_json = fs::read(updater.trust_state_path()).unwrap();
+        let old_ts = updater.read_trust_state().unwrap().unwrap();
+        assert_eq!(old_ts.trust_epoch, 1);
+
+        // 2. Upgrade v1.0.0 -> v1.1.0 with KeyRotationDelegation (bumps epoch -> 2)
+        let up = updater.upgrade_from_release(&rel_110, &opts).unwrap();
+        assert_eq!(up.active_version, "1.1.0");
+        let ts_after_rot = updater.read_trust_state().unwrap().unwrap();
+        assert_eq!(ts_after_rot.trust_epoch, 2);
+        assert!(ts_after_rot.used_rotation_nonces.contains(&delegation.nonce));
+
+        // 3. Rollback test 1: Restore OLD trust-state.json (epoch 1) & backup -> MUST BE REJECTED by SQLite trust-ledger.db!
+        fs::write(updater.trust_state_path(), &old_trust_json).unwrap();
+        let _ = fs::write(updater.trust_state_backup_path(), &old_trust_json);
+        let rollback_err = updater.read_trust_state().unwrap_err().to_string();
+        assert!(rollback_err.contains("TRUST_STATE_ROLLBACK_DETECTED"), "got: {}", rollback_err);
+
+        // Restore valid epoch=2 trust-state.json so we can test rollback BEFORE & AFTER revoking old key
+        updater.sync_trust_ledger_db(&ts_after_rot, "restore_test", "restore").ok();
+        let bytes2 = serde_json::to_vec_pretty(&ts_after_rot).unwrap();
+        fs::write(updater.trust_state_path(), &bytes2).unwrap();
+        fs::write(updater.trust_state_backup_path(), &bytes2).unwrap();
+
+        // 4. Rollback binary cleanly v1.1.0 -> v1.0.0 when old key is NOT revoked -> SUCCEEDS, then re-upgrade v1.1.0 -> revoke old key -> rollback BLOCKED!
+        let install_rev = tmp.join("installed/RevokeTool");
+        let u2 = MiniToolUpdater::new(&install_rev);
+        u2.install_initial(&rel_100, &opts).unwrap();
+        u2.upgrade_from_release(&rel_110, &opts).unwrap();
+        let ts_rev = u2.revoke_pubkey(&pub_old, "compromised_old_key").unwrap();
+        assert_eq!(ts_rev.trust_epoch, 3);
+        let rev_rb_err = u2.rollback_to_previous(false, true).unwrap_err().to_string();
+        assert!(rev_rb_err.contains("ROLLBACK_ROOT_OF_TRUST_UNTRUSTED"), "got: {}", rev_rb_err);
+
+        // Attempt to replace trust-state.json to bring revoked old key back -> BLOCKED by trust-ledger.db!
+        let mut forged_ts = ts_rev.clone();
+        forged_ts.revoked_pubkeys.clear();
+        forged_ts.trusted_pubkeys.push(pub_old.clone());
+        fs::write(u2.trust_state_path(), serde_json::to_vec_pretty(&forged_ts).unwrap()).unwrap();
+        let forged_err = u2.read_trust_state().unwrap_err().to_string();
+        assert!(forged_err.contains("TRUST_STATE_ROLLBACK_DETECTED"), "got: {}", forged_err);
+
+        // 5. Simulate interrupted crash at Activated stage during KeyRotationDelegation -> reconcile synchronizes Trust State <-> Active Release <-> Nonce Ledger!
+        let install_crash = tmp.join("installed/CrashRotTool");
+        let u3 = MiniToolUpdater::new(&install_crash);
+        u3.install_initial(&rel_100, &opts).unwrap();
+        let pre_ptr = u3.read_active_pointer().unwrap().unwrap();
+        copy_dir_recursive(&rel_110, &u3.versions_dir().join("v1.1.0")).unwrap();
+        let mut crashed_ptr = pre_ptr.clone();
+        crashed_ptr.active_version = "1.1.0".to_string();
+        crashed_ptr.previous_version = Some("1.0.0".to_string());
+        crashed_ptr.trusted_pubkey_hex = Some(pub_new.clone());
+        u3.write_active_pointer_with_shadow(&crashed_ptr).unwrap();
+        let mut j = UpdateJournal {
+            journal_id: "upd-crash-rot".to_string(),
+            operation: "upgrade".to_string(),
+            project_slug: "p54-trust".to_string(),
+            source_version: Some("1.0.0".to_string()),
+            target_version: "1.1.0".to_string(),
+            source_release_dir: rel_110.to_string_lossy().to_string(),
+            stage: UpdateStage::Activated,
+            backup_db_path: None,
+            live_db_path: u3.data_dir().join("runtime_p54-trust.db").to_string_lossy().to_string(),
+            staged_staging_dir: None,
+            staged_version_dir: u3.versions_dir().join("v1.1.0").to_string_lossy().to_string(),
+            previous_active_pointer: Some(pre_ptr),
+            target_compat: CompatibilityVersions::default(),
+            auto_resume_blocked_jobs: vec![],
+            last_error: None,
+            updated_at_utc: Utc::now().to_rfc3339(),
+        };
+        u3.write_journal(&mut j).unwrap();
+        let rec = u3.reconcile_incomplete_journal(true).unwrap();
+        assert_eq!(rec.status, "RECOVERED_ROLL_FORWARD");
+        let rec_ts = u3.read_trust_state().unwrap().unwrap();
+        assert!(rec_ts.used_rotation_nonces.contains(&delegation.nonce));
+        assert!(rec_ts.trusted_pubkeys.iter().any(|k| k.eq_ignore_ascii_case(&pub_new)));
+
         let _ = fs::remove_dir_all(&tmp);
     }
 }

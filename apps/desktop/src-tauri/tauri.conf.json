@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.farmerpro.studio",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -27,7 +27,39 @@
     }
   },
   "bundle": {
-    "active": false,
-    "targets": []
+    "active": true,
+    "targets": ["nsis"],
+    "shortDescription": "FarmerPro Android Workflow Automation Studio",
+    "longDescription": "FarmerPro Software Factory for building, signing, packaging, and updating independent Mini Auto-Tools.",
+    "copyright": "Copyright (C) 2026 FarmerPro Team",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "resources": {
+      "../../../target/release/fp-mini-runtime.exe": "fp-mini-runtime.exe",
+      "../../../target/release/fp-updater.exe": "fp-updater.exe",
+      "../../../bin/adb.exe": "bin/adb.exe",
+      "../../../bin/AdbWinApi.dll": "bin/AdbWinApi.dll",
+      "../../../bin/AdbWinUsbApi.dll": "bin/AdbWinUsbApi.dll",
+      "../../../THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper",
+        "silent": true
+      },
+      "allowDowngrades": false,
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "nsis/hooks.nsh",
+        "compression": "lzma",
+        "displayLanguageSelector": false,
+        "startMenuFolder": "FarmerPro"
+      }
+    }
   }
 }

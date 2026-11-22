@@ -3,17 +3,21 @@ use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use fp_actions::{SafeRegionSampler, SafeTapPolicy};
 use fp_adb::{validate_adb_token, AdbDeviceDriver};
 use fp_builder::{
-    authenticode::{create_self_signed_qa_cert, find_signtool_exe, QaSelfSignedCertInfo},
+    authenticode::{
+        create_self_signed_qa_cert, discover_signing_toolchain, find_signtool_exe,
+        QaSelfSignedCertInfo, SigningToolchainStatus,
+    },
     security::{ProducerKeyManager, ProducerKeyMetadata},
-    BuildPreflightReport, BuildReport, MiniToolPackager, ReleaseBuildOptions,
+    verify_final_distributed_release, BuildPreflightReport, BuildReport, MiniToolPackager,
+    ReleaseBuildOptions,
 };
 use fp_security::ProducerKeystore;
 use fp_bundle_contract::{
     evaluate_bundle_compatibility, AuthenticodeTrustStatus, CompatibilityReport,
-    CompatibilityVersions, KeyRotationDelegation, PeVersionInfoSpec, PublisherIdentitySpec,
-    RuntimeCompatibilityProfile, SemVer, SigningMode, CURRENT_RUNTIME_VERSION,
-    CURRENT_SQLITE_SCHEMA_VERSION, SUPPORTED_MODULE_API_VERSION, SUPPORTED_UI_SCHEMA_VERSION,
-    SUPPORTED_WORKFLOW_SCHEMA_VERSION,
+    CompatibilityVersions, FinalReleaseVerificationReport, KeyRotationDelegation, PeVersionInfoSpec,
+    PublisherIdentitySpec, RuntimeCompatibilityProfile, SemVer, SigningMode,
+    TimestampVerificationPolicy, CURRENT_RUNTIME_VERSION, CURRENT_SQLITE_SCHEMA_VERSION,
+    SUPPORTED_MODULE_API_VERSION, SUPPORTED_UI_SCHEMA_VERSION, SUPPORTED_WORKFLOW_SCHEMA_VERSION,
 };
 use fp_bundle_verify::{sha256_hex, validate_safe_relative_path};
 use fp_domain::{
@@ -565,17 +569,18 @@ pub(crate) fn handle_builder_export_release_with_options(
 }
 
 fn resolve_runtime_and_bin_paths() -> (PathBuf, Option<PathBuf>) {
-    let mut exe_candidates: Vec<PathBuf> = Vec::new();
+    let mut runtime_candidates: Vec<PathBuf> = Vec::new();
     if let Ok(cur_exe) = std::env::current_exe() {
         if let Some(dir) = cur_exe.parent() {
-            exe_candidates.push(dir.join("fp-mini-runtime.exe"));
+            runtime_candidates.push(dir.join("fp-mini-runtime.exe"));
+            runtime_candidates.push(dir.join("resources").join("fp-mini-runtime.exe"));
         }
     }
-    exe_candidates.push(PathBuf::from("target/release/fp-mini-runtime.exe"));
-    exe_candidates.push(PathBuf::from("target/debug/fp-mini-runtime.exe"));
-    exe_candidates.push(PathBuf::from("dist-portable/FarmerPro/fp-mini-runtime.exe"));
+    runtime_candidates.push(PathBuf::from("target/release/fp-mini-runtime.exe"));
+    runtime_candidates.push(PathBuf::from("target/debug/fp-mini-runtime.exe"));
+    runtime_candidates.push(PathBuf::from("dist-portable/FarmerPro/fp-mini-runtime.exe"));
 
-    let runtime_exe = exe_candidates
+    let runtime_exe = runtime_candidates
         .into_iter()
         .find(|p| p.exists())
         .unwrap_or_else(|| PathBuf::from("target/debug/fp-mini-runtime.exe"));
@@ -584,6 +589,7 @@ fn resolve_runtime_and_bin_paths() -> (PathBuf, Option<PathBuf>) {
     if let Ok(cur_exe) = std::env::current_exe() {
         if let Some(dir) = cur_exe.parent() {
             bin_candidates.push(dir.join("bin"));
+            bin_candidates.push(dir.join("resources").join("bin"));
         }
     }
     bin_candidates.push(PathBuf::from("dist-portable/FarmerPro/bin"));
@@ -1155,10 +1161,14 @@ pub fn studio_signing_preflight(
                 .and_then(|p| p.authenticode_cert_ref.clone())
         });
 
-    let (signtool_available, signtool_path) = match find_signtool_exe() {
-        Some(p) => (true, Some(p.to_string_lossy().to_string())),
-        None => (false, None),
-    };
+    let toolchain = discover_signing_toolchain();
+    let (signtool_available, signtool_path) = (
+        toolchain.signtool_found,
+        toolchain
+            .discovered_path
+            .as_ref()
+            .map(|p| p.to_string_lossy().to_string()),
+    );
 
     let ks_dir = ProducerKeystore::default_external_keystore_dir();
     let keystore_key_id = ProducerKeystore::load_or_create_signing_key(&ks_dir)
@@ -1170,20 +1180,17 @@ pub fn studio_signing_preflight(
     match mode {
         SigningMode::UnsignedInternal => {
             warnings.push(
-                "Unsigned Internal build: PE VERSIONINFO & Ed25519 bundle signature applied; no Authenticode signature (dev/internal only)."
+                "Unsigned Internal build: PE VERSIONINFO & Ed25519 bundle signature applied; works with ZERO Windows SDK installed."
                     .to_string(),
             );
         }
         SigningMode::SelfSignedQa => {
             if !signtool_available {
-                issues.push(
-                    "Windows SDK signtool.exe not found; required for SelfSignedQa Authenticode signing."
-                        .to_string(),
-                );
+                issues.push(toolchain.guidance.clone());
             }
             if effective_cert.is_none() {
                 warnings.push(
-                    "No Authenticode thumbprint/cert selected; Builder can auto-create a local Windows CNG QA cert during build or right here."
+                    "No Authenticode thumbprint/cert selected; Builder can create a local Windows CNG QA cert right here."
                         .to_string(),
                 );
             } else {
@@ -1195,10 +1202,7 @@ pub fn studio_signing_preflight(
         }
         SigningMode::PublicSigned => {
             if !signtool_available {
-                issues.push(
-                    "Windows SDK signtool.exe not found; required for PublicSigned Authenticode signing."
-                        .to_string(),
-                );
+                issues.push(toolchain.guidance.clone());
             }
             if effective_cert.is_none() {
                 issues.push(
@@ -1220,6 +1224,24 @@ pub fn studio_signing_preflight(
         issues,
         warnings,
     })
+}
+
+#[tauri::command]
+pub fn studio_discover_signing_toolchain() -> SigningToolchainStatus {
+    discover_signing_toolchain()
+}
+
+#[tauri::command]
+pub fn studio_verify_final_release(
+    release_dir: String,
+    require_public_chain: Option<bool>,
+) -> Result<FinalReleaseVerificationReport, String> {
+    verify_final_distributed_release(
+        Path::new(&release_dir),
+        require_public_chain.unwrap_or(false),
+        TimestampVerificationPolicy::AllowOfflineUnsignedTimestamp,
+    )
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

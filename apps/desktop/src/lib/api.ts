@@ -731,6 +731,19 @@ export const api = {
     return await invoke('studio_signing_preflight', { projectId, signingMode, certRef });
   },
 
+  async studioDiscoverSigningToolchain(): Promise<import('../types').SigningToolchainStatus> {
+    requireTauri('studio_discover_signing_toolchain');
+    return await invoke('studio_discover_signing_toolchain');
+  },
+
+  async studioVerifyFinalRelease(
+    releaseDir: string,
+    requirePublicChain = false
+  ): Promise<import('../types').FinalReleaseVerificationReport> {
+    requireTauri('studio_verify_final_release');
+    return await invoke('studio_verify_final_release', { releaseDir, requirePublicChain });
+  },
+
   async studioRotateProjectEd25519KeyWithDelegation(
     projectId: string,
     publisherId?: string,

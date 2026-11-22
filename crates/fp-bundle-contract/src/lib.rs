@@ -760,6 +760,77 @@ pub struct PortableDependencyAudit {
     pub resolved_sqlite_db_path: String,
     pub fallback_to_local_appdata_used: bool,
     pub offline_execution_ready: bool,
+    #[serde(default)]
+    pub third_party_notices_present: bool,
+    #[serde(default)]
+    pub updater_bundled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DistributedFileEntry {
+    pub rel_path: String,
+    pub size_bytes: u64,
+    pub sha256: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PortableRuntimeRequirements {
+    pub requires_rust: bool,
+    pub requires_cargo: bool,
+    pub requires_node: bool,
+    pub requires_python: bool,
+    pub requires_windows_sdk: bool,
+    pub webview2_strategy: String,
+    pub offline_ready: bool,
+    pub data_isolation_policy: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReleasePackageManifest {
+    pub package_schema_version: u32,
+    pub package_type: String,
+    pub project_slug: String,
+    pub product_name: String,
+    pub version: String,
+    pub exe_name: String,
+    pub final_exe_sha256: String,
+    pub built_at_utc: String,
+    pub requirements: PortableRuntimeRequirements,
+    pub publisher: Option<PublisherIdentitySpec>,
+    pub signing: Option<ReleaseSigningMetadata>,
+    pub distributed_files: Vec<DistributedFileEntry>,
+    pub third_party_notices: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum TimestampVerificationPolicy {
+    #[default]
+    AllowOfflineUnsignedTimestamp,
+    RequireTimestampWhenPublicSigned,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FinalReleaseVerificationReport {
+    pub verified: bool,
+    pub release_dir: String,
+    pub exe_name: String,
+    pub final_exe_sha256: String,
+    pub authenticode_checked: bool,
+    pub authenticode_trust_status: AuthenticodeTrustStatus,
+    pub authenticode_trusted_public_chain: bool,
+    pub ed25519_bundle_verified: bool,
+    pub pe_root_pubkey_matches: bool,
+    pub pe_version_info_valid: bool,
+    pub publisher_identity_matches_cert: bool,
+    pub publisher_identity_detail: String,
+    pub distributed_files_checked: usize,
+    pub distributed_file_mismatches: Vec<String>,
+    pub issues: Vec<String>,
 }
 
 /// Resolves a writable SQLite path for a Mini Tool by physically probing write access on `<exe_dir>/data`.
@@ -833,6 +904,10 @@ pub fn audit_portable_environment(
         })
         .unwrap_or(true);
 
+    let notices_ok = release_dir.join("THIRD_PARTY_NOTICES.txt").exists();
+    let updater_ok = release_dir.join("updater").join("fp-updater.exe").exists()
+        || release_dir.join("fp-updater.exe").exists();
+
     PortableDependencyAudit {
         webview2_evergreen_installed: wv2_ok,
         webview2_version_or_note: wv2_note,
@@ -845,16 +920,61 @@ pub fn audit_portable_environment(
         resolved_sqlite_db_path: db_path.to_string_lossy().to_string(),
         fallback_to_local_appdata_used: fallback_used,
         offline_execution_ready: true,
+        third_party_notices_present: notices_ok,
+        updater_bundled: updater_ok,
     }
 }
 
-fn detect_webview2_runtime() -> (bool, String) {
-    let candidates = [
-        r"C:\Program Files (x86)\Microsoft\EdgeWebView\Application",
-        r"C:\Program Files\Microsoft\EdgeWebView\Application",
+/// Public WebView2 probe callable by Mini Runtime, Studio, and Tests.
+pub fn detect_webview2_runtime() -> (bool, String) {
+    let default_paths = [
+        Path::new(r"C:\Program Files (x86)\Microsoft\EdgeWebView\Application"),
+        Path::new(r"C:\Program Files\Microsoft\EdgeWebView\Application"),
     ];
-    for c in candidates {
-        let p = Path::new(c);
+    let reg_ver = probe_webview2_registry();
+    detect_webview2_runtime_at(&default_paths, reg_ver.as_deref())
+}
+
+fn probe_webview2_registry() -> Option<String> {
+    #[cfg(windows)]
+    {
+        for key in [
+            r"HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
+            r"HKCU\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
+            r"HKLM\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
+        ] {
+            if let Ok(out) = std::process::Command::new("reg")
+                .args(["query", key, "/v", "pv"])
+                .output()
+            {
+                if out.status.success() {
+                    let s = String::from_utf8_lossy(&out.stdout);
+                    for line in s.lines() {
+                        if let Some(idx) = line.find("REG_SZ") {
+                            let v = line[idx + 6..].trim().to_string();
+                            if !v.is_empty() && v != "0.0.0.0" {
+                                return Some(v);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+pub fn detect_webview2_runtime_at(paths: &[&Path], reg_version: Option<&str>) -> (bool, String) {
+    if let Some(v) = reg_version.map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        return (
+            true,
+            format!(
+                "Evergreen Runtime v{} (Registry Client Verified; offline target requires WebView2 Evergreen/Bootstrapper if missing)",
+                v
+            ),
+        );
+    }
+    for p in paths {
         if p.exists() {
             if let Ok(entries) = std::fs::read_dir(p) {
                 for entry in entries.flatten() {
@@ -875,7 +995,7 @@ fn detect_webview2_runtime() -> (bool, String) {
     }
     (
         false,
-        "WebView2 Evergreen not detected in standard Program Files; requires Evergreen Bootstrapper or Fixed Version bundle".to_string(),
+        "WEBVIEW2_MISSING: Microsoft Edge WebView2 Runtime not found. Install MicrosoftEdgeWebView2Setup.exe (included in FarmerPro Installer) or download Evergreen Standalone Installer before launching GUI.".to_string(),
     )
 }
 

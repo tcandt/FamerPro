@@ -1100,6 +1100,21 @@ fn main() {
     let is_demo = args.iter().any(|a| a == "--dev-demo");
     if args.len() > 1 && args[1].starts_with("--") && args[1] != "--gui" && args[1] != "--dev-demo"
     {
+        if args[1] == "--check-deps" {
+            let exe_dir = std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+                .unwrap_or_else(|| PathBuf::from("."));
+            let bundle_dir = resolve_bundle_dir();
+            let slug = std::fs::read(bundle_dir.join("manifest.fpbundle.json"))
+                .ok()
+                .and_then(|b| serde_json::from_slice::<ReleaseBundleManifest>(&b).ok())
+                .map(|m| m.project.slug)
+                .unwrap_or_else(|| "mini-tool".to_string());
+            let audit = audit_portable_environment(&exe_dir, &slug);
+            println!("{}", serde_json::to_string_pretty(&audit).unwrap_or_default());
+            std::process::exit(0);
+        }
         match run_cli_mode(&args) {
             Ok(true) => std::process::exit(0),
             Ok(false) => {}
@@ -1108,6 +1123,11 @@ fn main() {
                 std::process::exit(1);
             }
         }
+    }
+
+    let (wv2_ok, wv2_msg) = fp_bundle_contract::detect_webview2_runtime();
+    if !wv2_ok {
+        eprintln!("WEBVIEW2_RUNTIME_MISSING: {}", wv2_msg);
     }
 
     let bundle_dir = resolve_bundle_dir();

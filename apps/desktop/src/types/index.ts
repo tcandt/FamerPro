@@ -291,6 +291,33 @@ export interface KeyRotationWithDelegationResult {
   delegationSavedPath: string;
 }
 
+export interface SigningToolchainStatus {
+  signtoolFound: boolean;
+  discoveredPath?: string | null;
+  sdkBundledInApp: boolean;
+  searchedLocations: string[];
+  unsignedInternalSupported: boolean;
+  guidance: string;
+}
+
+export interface FinalReleaseVerificationReport {
+  verified: boolean;
+  releaseDir: string;
+  exeName: string;
+  finalExeSha256: string;
+  authenticodeChecked: boolean;
+  authenticodeTrustStatus: string;
+  authenticodeTrustedPublicChain: boolean;
+  ed25519BundleVerified: boolean;
+  peRootPubkeyMatches: boolean;
+  peVersionInfoValid: boolean;
+  publisherIdentityMatchesCert: boolean;
+  publisherIdentityDetail: string;
+  distributedFilesChecked: number;
+  distributedFileMismatches: string[];
+  issues: string[];
+}
+
 export interface GameProjectRecord {
   id: string;
   slug: string;

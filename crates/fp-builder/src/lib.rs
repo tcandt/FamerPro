@@ -8,11 +8,14 @@ pub use fp_bundle_contract as contracts;
 pub use fp_bundle_verify as verify;
 
 use anyhow::{bail, Context, Result};
-use authenticode::{sign_pe_authenticode_and_verify, AuthenticodeSignRequest};
+use authenticode::{
+    sign_pe_authenticode_and_verify, verify_publisher_matches_cert_subject, AuthenticodeSignRequest,
+};
 use fp_bundle_contract::*;
 use fp_bundle_verify::{
     read_pe_embedded_pubkey_from_exe, read_pe_version_info_from_exe, sha256_hex,
-    validate_safe_relative_path, PE_ED25519_PUBKEY_RESOURCE_ID,
+    validate_safe_relative_path, verify_authenticode_pe, SignedBundleEnvelope,
+    PE_ED25519_PUBKEY_RESOURCE_ID,
 };
 use fp_workflow_schema::{WorkflowDocument, WorkflowValidator};
 use pe_icon::{
@@ -365,8 +368,8 @@ impl MiniToolPackager {
             workflows_count: validated_workflows.len(),
             templates_count: project.template_files.len(),
             built_at_utc: chrono::Utc::now().to_rfc3339(),
-            publisher: effective_publisher,
-            signing: Some(signing_meta),
+            publisher: effective_publisher.clone(),
+            signing: Some(signing_meta.clone()),
         };
 
         let manifest_json = serde_json::to_vec_pretty(&release_manifest)?;
@@ -390,6 +393,11 @@ impl MiniToolPackager {
             std::fs::copy(&png_candidate, bundle_brand_dir.join("icon.png"))?;
         }
 
+        let mut notice_items: Vec<String> = vec![
+            "FarmerPro Mini Runtime — MIT OR Apache-2.0".to_string(),
+            "Microsoft Edge WebView2 Loader / Evergreen Runtime — Redistributable Notice (requires Evergreen Runtime or Fixed Version on offline Windows targets)".to_string(),
+        ];
+
         if project.bundle_adb {
             if let Some(bin_src) = workspace_bin_dir {
                 if bin_src.exists() {
@@ -401,12 +409,44 @@ impl MiniToolPackager {
                             std::fs::copy(&s, bin_dst.join(f))?;
                         }
                     }
+                    notice_items.push(
+                        "Android Debug Bridge (adb.exe, AdbWinApi.dll, AdbWinUsbApi.dll) — Apache License 2.0 (Android SDK Platform-Tools)"
+                            .to_string(),
+                    );
                 }
             }
         }
+
+        // Bundle standalone fp-updater.exe alongside portable Mini Tool if present next to runtime template
+        let updater_candidates = [
+            runtime_template_exe.with_file_name("fp-updater.exe"),
+            runtime_template_exe
+                .parent()
+                .map(|p| p.join("resources").join("fp-updater.exe"))
+                .unwrap_or_default(),
+            PathBuf::from("target/release/fp-updater.exe"),
+            PathBuf::from("target/debug/fp-updater.exe"),
+        ];
+        if let Some(up_src) = updater_candidates.into_iter().find(|p| p.is_file()) {
+            let up_dir = output_release_dir.join("updater");
+            std::fs::create_dir_all(&up_dir)?;
+            std::fs::copy(&up_src, up_dir.join("fp-updater.exe"))?;
+        }
+
+        std::fs::write(
+            output_release_dir.join("THIRD_PARTY_NOTICES.txt"),
+            format!(
+                "FARMERPRO PORTABLE RELEASE — THIRD PARTY & LICENSE NOTICES\n\
+                 ==========================================================\n\
+                 {}\n\n\
+                 NOTE: Windows SDK signtool.exe is NOT redistributed in FarmerPro installers or Mini Tool packages.\n",
+                notice_items.join("\n")
+            ),
+        )?;
+
         steps.push(BuildStepMetric {
             step_no: 6,
-            name: "Package Bundle Assets & Android ADB Dependencies".to_string(),
+            name: "Package Bundle Assets, Notices & Standalone Updater/ADB".to_string(),
             duration_ms: t6.elapsed().as_millis() as u64,
             status: "PASS".to_string(),
             detail: format!(
@@ -476,11 +516,11 @@ impl MiniToolPackager {
         });
 
         // STEP 8: Sign PE Executable Authenticode LAST (NEVER modify PE resources after signing!),
-        // verify Win32 WinVerifyTrust + PE RT_RCDATA #7777 Ed25519 RoT + compute FINAL EXE SHA-256
+        // verify Win32 WinVerifyTrust + PE RT_RCDATA #7777 Ed25519 RoT + compute FINAL EXE SHA-256,
+        // emit release-manifest.json & execute Final Post-Sign Distributed Verification!
         let t8 = Instant::now();
         let effective_cert_ref = options.authenticode_cert_ref.clone().or_else(|| {
-            options
-                .publisher_profile
+            effective_publisher
                 .as_ref()
                 .and_then(|p| p.authenticode_cert_ref.clone())
         });
@@ -503,6 +543,53 @@ impl MiniToolPackager {
         let exe_bytes = std::fs::read(&target_exe_path)?;
         let exe_sha256 = sha256_hex(&exe_bytes);
 
+        let mut final_signing_meta = signing_meta;
+        final_signing_meta.authenticode_trust_status = auth_rep.trust_status;
+        final_signing_meta.trusted_public_release = auth_rep.trusted_public_release;
+        final_signing_meta.signer_thumbprint = auth_rep.signer_thumbprint.clone();
+        final_signing_meta.signer_subject = auth_rep.signer_subject.clone();
+
+        let distributed_files = collect_distributed_files(output_release_dir)?;
+        let pkg_manifest = ReleasePackageManifest {
+            package_schema_version: 1,
+            package_type: "mini_tool_portable_win_x64".to_string(),
+            project_slug: project.slug.clone(),
+            product_name: verified_vi.product_name.clone(),
+            version: project.version.clone(),
+            exe_name: project.exe_name.clone(),
+            final_exe_sha256: exe_sha256.clone(),
+            built_at_utc: chrono::Utc::now().to_rfc3339(),
+            requirements: PortableRuntimeRequirements {
+                requires_rust: false,
+                requires_cargo: false,
+                requires_node: false,
+                requires_python: false,
+                requires_windows_sdk: false,
+                webview2_strategy: dep_audit.webview2_version_or_note.clone(),
+                offline_ready: dep_audit.offline_execution_ready,
+                data_isolation_policy: "External data/ next to install root OR %LOCALAPPDATA%\\FarmerPro\\MiniTools\\<slug> fallback; never inside versions/v*".to_string(),
+            },
+            publisher: effective_publisher.clone(),
+            signing: Some(final_signing_meta),
+            distributed_files,
+            third_party_notices: notice_items,
+        };
+        std::fs::write(
+            output_release_dir.join("release-manifest.json"),
+            serde_json::to_vec_pretty(&pkg_manifest)?,
+        )?;
+        let final_verify = verify_final_distributed_release(
+            output_release_dir,
+            options.signing_mode == SigningMode::PublicSigned,
+            TimestampVerificationPolicy::AllowOfflineUnsignedTimestamp,
+        )?;
+        if !final_verify.verified {
+            bail!(
+                "FINAL_DISTRIBUTED_RELEASE_VERIFY_FAILED: {}",
+                final_verify.issues.join("; ")
+            );
+        }
+
         let auth_status_label = match auth_rep.trust_status {
             AuthenticodeTrustStatus::TrustedPublicChain => format!(
                 "Authenticode TrustedPublicChain (Subject='{}', Thumbprint={})",
@@ -522,14 +609,15 @@ impl MiniToolPackager {
 
         steps.push(BuildStepMetric {
             step_no: 8,
-            name: "Authenticode Sign/Verify (WinVerifyTrust) & Final PE Root-of-Trust Check".to_string(),
+            name: "Authenticode Sign/Verify (WinVerifyTrust) & Final Release Manifest Check".to_string(),
             duration_ms: t8.elapsed().as_millis() as u64,
             status: "PASS".to_string(),
             detail: format!(
-                "Mode={:?}, Trust={:?}, TrustedPublicRelease={}, exe SHA-256={}",
+                "Mode={:?}, Trust={:?}, FilesChecked={}, PubCertMatch={}, exe SHA-256={}",
                 options.signing_mode,
                 auth_rep.trust_status,
-                auth_rep.trusted_public_release,
+                final_verify.distributed_files_checked,
+                final_verify.publisher_identity_matches_cert,
                 &exe_sha256[..16],
             ),
         });
@@ -1246,6 +1334,156 @@ pub fn seed_two_poc_projects(repo_root: &Path) -> Result<(PathBuf, PathBuf)> {
     Ok((jx2_dir, slg_dir))
 }
 
+fn collect_distributed_files(release_dir: &Path) -> Result<Vec<DistributedFileEntry>> {
+    fn walk(root: &Path, cur: &Path, out: &mut Vec<DistributedFileEntry>) -> Result<()> {
+        for ent in std::fs::read_dir(cur)? {
+            let ent = ent?;
+            let p = ent.path();
+            let name = ent.file_name().to_string_lossy().to_string();
+            if p.is_dir() {
+                if name == "data" || name == ".updater" {
+                    continue;
+                }
+                walk(root, &p, out)?;
+            } else if p.is_file() {
+                let rel = p
+                    .strip_prefix(root)
+                    .unwrap_or(&p)
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                if rel == "release-manifest.json" || rel == "build-report.json" {
+                    continue;
+                }
+                let bytes = std::fs::read(&p)?;
+                out.push(DistributedFileEntry {
+                    rel_path: rel,
+                    size_bytes: bytes.len() as u64,
+                    sha256: sha256_hex(&bytes),
+                });
+            }
+        }
+        Ok(())
+    }
+    let mut entries = Vec::new();
+    walk(release_dir, release_dir, &mut entries)?;
+    entries.sort_by(|a, b| a.rel_path.cmp(&b.rel_path));
+    Ok(entries)
+}
+
+/// Verifies a final exported portable Mini Tool directory AFTER all PE resource injections & Authenticode signing:
+/// checks Authenticode PE signature, Ed25519 bundle signature, RT_RCDATA #7777 pubkey pinning,
+/// PE VERSIONINFO readability, Publisher-vs-Certificate identity correspondence, and distributed file SHA-256 hashes.
+pub fn verify_final_distributed_release(
+    release_dir: &Path,
+    require_public_chain: bool,
+    timestamp_policy: TimestampVerificationPolicy,
+) -> Result<FinalReleaseVerificationReport> {
+    let mut issues = Vec::new();
+    let pkg_bytes = std::fs::read(release_dir.join("release-manifest.json"))
+        .context("FINAL_VERIFY_ERROR: missing release-manifest.json")?;
+    let pkg: ReleasePackageManifest = serde_json::from_slice(&pkg_bytes)?;
+
+    let exe_path = release_dir.join(&pkg.exe_name);
+    if !exe_path.is_file() {
+        bail!("FINAL_VERIFY_ERROR: missing target exe '{}'", exe_path.display());
+    }
+    let final_exe_sha = sha256_hex(&std::fs::read(&exe_path)?);
+    if !final_exe_sha.eq_ignore_ascii_case(&pkg.final_exe_sha256) {
+        issues.push(format!(
+            "EXE_SHA256_MISMATCH: disk '{}' != manifest '{}'",
+            final_exe_sha, pkg.final_exe_sha256
+        ));
+    }
+
+    let auth_rep = verify_authenticode_pe(&exe_path);
+    match auth_rep.trust_status {
+        AuthenticodeTrustStatus::TamperedOrInvalid => {
+            issues.push(format!(
+                "AUTHENTICODE_TAMPERED_OR_INVALID: 0x{:08X} {}",
+                auth_rep.win_trust_error_code, auth_rep.detail
+            ));
+        }
+        AuthenticodeTrustStatus::ExpiredOrTimestampError => {
+            issues.push(format!(
+                "AUTHENTICODE_EXPIRED_OR_TIMESTAMP: 0x{:08X} {}",
+                auth_rep.win_trust_error_code, auth_rep.detail
+            ));
+        }
+        _ => {}
+    }
+    if require_public_chain && !auth_rep.trusted_public_release {
+        issues.push(format!(
+            "PUBLIC_CHAIN_REQUIRED: Authenticode status is {:?}, expected TrustedPublicChain",
+            auth_rep.trust_status
+        ));
+    }
+    if timestamp_policy == TimestampVerificationPolicy::RequireTimestampWhenPublicSigned
+        && require_public_chain
+        && auth_rep.timestamp_status.to_ascii_lowercase().contains("missing")
+    {
+        issues.push("AUTHENTICODE_TIMESTAMP_REQUIRED: missing counter-signature timestamp".to_string());
+    }
+
+    let bundle_dir = release_dir.join("bundle");
+    let pe_pub = read_pe_embedded_pubkey_from_exe(&exe_path)?;
+    let sig_bytes = std::fs::read(bundle_dir.join("signature.fpbundle.json"))?;
+    let env: SignedBundleEnvelope = serde_json::from_slice(&sig_bytes)?;
+    let ed_ok = env.verify_ed25519_with_public_key(&bundle_dir, &pe_pub).is_ok();
+    if !ed_ok {
+        issues.push("ED25519_BUNDLE_VERIFY_FAILED".to_string());
+    }
+    let disk_pub = std::fs::read_to_string(bundle_dir.join("trusted_publisher.pub")).unwrap_or_default();
+    let pe_match = disk_pub.trim().eq_ignore_ascii_case(&pe_pub);
+    if !pe_match {
+        issues.push("PE_RCDATA_PUBKEY_MISMATCH".to_string());
+    }
+
+    let vi_ok = read_pe_version_info_from_exe(&exe_path).is_ok();
+    if !vi_ok {
+        issues.push("PE_VERSIONINFO_READ_FAILED".to_string());
+    }
+
+    let (pub_cert_match, pub_cert_detail) =
+        verify_publisher_matches_cert_subject(pkg.publisher.as_ref(), auth_rep.signer_subject.as_deref());
+
+    let mut file_mismatches = Vec::new();
+    for entry in &pkg.distributed_files {
+        let p = release_dir.join(&entry.rel_path);
+        match std::fs::read(&p) {
+            Ok(bytes) => {
+                let actual = sha256_hex(&bytes);
+                if actual != entry.sha256 {
+                    file_mismatches.push(format!("{}: expected {}, got {}", entry.rel_path, entry.sha256, actual));
+                }
+            }
+            Err(e) => {
+                file_mismatches.push(format!("{}: missing or unreadable ({})", entry.rel_path, e));
+            }
+        }
+    }
+    if !file_mismatches.is_empty() {
+        issues.push(format!("{} distributed file hash mismatch(es)", file_mismatches.len()));
+    }
+
+    Ok(FinalReleaseVerificationReport {
+        verified: issues.is_empty(),
+        release_dir: release_dir.to_string_lossy().to_string(),
+        exe_name: pkg.exe_name,
+        final_exe_sha256: final_exe_sha,
+        authenticode_checked: true,
+        authenticode_trust_status: auth_rep.trust_status,
+        authenticode_trusted_public_chain: auth_rep.trusted_public_release,
+        ed25519_bundle_verified: ed_ok,
+        pe_root_pubkey_matches: pe_match,
+        pe_version_info_valid: vi_ok,
+        publisher_identity_matches_cert: pub_cert_match,
+        publisher_identity_detail: pub_cert_detail,
+        distributed_files_checked: pkg.distributed_files.len(),
+        distributed_file_mismatches: file_mismatches,
+        issues,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1816,6 +2054,152 @@ mod tests {
                 .args(["-NoProfile", "-Command", &format!("Remove-Item 'Cert:\\CurrentUser\\My\\{}' -ErrorAction SilentlyContinue", qa_cert.thumbprint)])
                 .output();
         }
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_p5_4_final_release_manifest_tamper_sdk_discovery_and_publisher_cert_mismatch() {
+        use authenticode::discover_signing_toolchain;
+        // 1. Verify Signing Toolchain Discovery fails safely when FP_SIGNTOOL_PATH points nowhere (no crash, UnsignedInternal available)
+        let prev_env = std::env::var("FP_SIGNTOOL_PATH").ok();
+        std::env::set_var("FP_SIGNTOOL_PATH", r"Z:\nonexistent\signtool.exe");
+        let tc_status = discover_signing_toolchain();
+        assert!(!tc_status.sdk_bundled_in_app);
+        assert!(tc_status.unsigned_internal_supported);
+        if let Some(p) = prev_env {
+            std::env::set_var("FP_SIGNTOOL_PATH", p);
+        } else {
+            std::env::remove_var("FP_SIGNTOOL_PATH");
+        }
+
+        // 2. Verify WebView2 missing detection path cleanly
+        let (wv_ok, wv_msg) = fp_bundle_contract::detect_webview2_runtime_at(
+            &[Path::new(r"Z:\nonexistent\EdgeWebView\Application")],
+            None,
+        );
+        assert!(!wv_ok);
+        assert!(wv_msg.contains("WEBVIEW2_MISSING"));
+
+        // 3. Build full portable release -> check release-manifest.json, THIRD_PARTY_NOTICES.txt, final verify, & tamper rejection!
+        let tmp = std::env::temp_dir().join(format!("fp_p54_builder_{}", uuid::Uuid::new_v4()));
+        let proj_dir = tmp.join("p54-portable");
+        std::fs::create_dir_all(proj_dir.join("workflows")).unwrap();
+        std::fs::create_dir_all(proj_dir.join("templates")).unwrap();
+        std::fs::create_dir_all(proj_dir.join("branding")).unwrap();
+
+        let runtime_exe = std::env::current_exe().unwrap();
+        let bin_dir = tmp.join("bin");
+        std::fs::create_dir_all(&bin_dir).unwrap();
+        std::fs::write(bin_dir.join("adb.exe"), b"MZ-adb-test").unwrap();
+        std::fs::write(bin_dir.join("AdbWinApi.dll"), b"MZ-dll1").unwrap();
+        std::fs::write(bin_dir.join("AdbWinUsbApi.dll"), b"MZ-dll2").unwrap();
+        let ks_dir = tmp.join("keystore");
+
+        let manifest = GameProjectManifest {
+            compatibility: CompatibilityVersions::default(),
+            project_id: "proj-p54".to_string(),
+            slug: "p54-portable".to_string(),
+            name: "P54 Portable Auto".to_string(),
+            game_package_id: "com.example.p54".to_string(),
+            version: "1.4.0".to_string(),
+            exe_name: "Auto_P54.exe".to_string(),
+            window_title: "P54 Portable Auto".to_string(),
+            icon_rel_path: "branding/icon.ico".to_string(),
+            target_resolution: (1280, 720),
+            workflow_files: vec!["workflows/main.fpwf.json".to_string()],
+            template_files: vec![],
+            packaged_modules: vec!["mod.adb_core".to_string()],
+            bundle_adb: true,
+        };
+        std::fs::write(proj_dir.join("project.json"), serde_json::to_vec_pretty(&manifest).unwrap()).unwrap();
+        let ui = MiniToolUiSchema {
+            schema_version: 1,
+            project_slug: manifest.slug.clone(),
+            window_title: manifest.window_title.clone(),
+            version_badge: "v1.4.0".to_string(),
+            theme_accent_hex: "#10B981".to_string(),
+            header_bg_hex: "#121E2A".to_string(),
+            layout_preset: MiniLayoutPreset::Compact1Col,
+            default_window_size: (680, 480),
+            sections_order: vec!["header_bar".to_string()],
+            hidden_components: vec![],
+            device_columns: vec![],
+            task_categories: vec![],
+            tasks: vec![],
+            utilities: vec![],
+            initial_runtime_vars: HashMap::new(),
+        };
+        std::fs::write(proj_dir.join("ui-schema.json"), serde_json::to_vec_pretty(&ui).unwrap()).unwrap();
+        let wf = r#"{"schemaVersion":1,"workflowId":"wf-main","name":"Main","status":"published","graph":{"nodes":[{"id":"n1","type":"flow.start","position":{"x":0,"y":0}},{"id":"n2","type":"flow.end","position":{"x":100,"y":0}}],"edges":[{"id":"e1","source":"n1","sourcePort":"flow","target":"n2","targetPort":"flow"}]}}"#;
+        std::fs::write(proj_dir.join("workflows/main.fpwf.json"), wf).unwrap();
+
+        let mut ico = vec![0, 0, 1, 0, 1, 0, 32, 32, 0, 0, 1, 0, 32, 0];
+        let bmp_size = (40 + 32 * 32 * 4 + 32 * 4) as u32;
+        ico.extend_from_slice(&bmp_size.to_le_bytes());
+        ico.extend_from_slice(&22u32.to_le_bytes());
+        ico.extend_from_slice(&40u32.to_le_bytes());
+        ico.extend_from_slice(&32i32.to_le_bytes());
+        ico.extend_from_slice(&64i32.to_le_bytes());
+        ico.extend_from_slice(&1u16.to_le_bytes());
+        ico.extend_from_slice(&32u16.to_le_bytes());
+        ico.resize(ico.len() + 24 + 32 * 32 * 4 + 32 * 4, 0u8);
+        std::fs::write(proj_dir.join("branding/icon.ico"), &ico).unwrap();
+
+        let out_dir = tmp.join("portable_release");
+        let rep = MiniToolPackager::build_and_export_release_with_options(
+            &proj_dir,
+            &runtime_exe,
+            Some(&bin_dir),
+            &out_dir,
+            Some(&ks_dir),
+            &ReleaseBuildOptions::default(),
+        )
+        .unwrap();
+        assert!(out_dir.join("release-manifest.json").is_file());
+        assert!(out_dir.join("THIRD_PARTY_NOTICES.txt").is_file());
+        assert!(rep.dependency_audit.third_party_notices_present);
+
+        let verify_ok = verify_final_distributed_release(
+            &out_dir,
+            false,
+            TimestampVerificationPolicy::AllowOfflineUnsignedTimestamp,
+        )
+        .unwrap();
+        assert!(verify_ok.verified, "issues: {:?}", verify_ok.issues);
+        assert!(verify_ok.distributed_files_checked >= 5);
+        // Unsigned build MUST explicitly state publisher identity is NOT proven by cert/VERSIONINFO alone!
+        assert!(!verify_ok.publisher_identity_matches_cert);
+
+        // Publisher-vs-Certificate subject check
+        let fake_pub = PublisherIdentitySpec {
+            publisher_id: "pub-alpha".to_string(),
+            display_name: "Alpha Corp".to_string(),
+            organization: "Alpha Automation Co., Ltd.".to_string(),
+            website: None,
+            support_contact: None,
+            copyright: "Copyright (C) 2026 Alpha".to_string(),
+            ed25519_key_id: "k1".to_string(),
+            ed25519_pubkey_hex: "00".repeat(32),
+            authenticode_cert_ref: None,
+            release_channel: "qa".to_string(),
+            signing_policy: SigningMode::SelfSignedQa,
+        };
+        let (mismatch, _) = verify_publisher_matches_cert_subject(Some(&fake_pub), Some("CN=Different Rogue Publisher"));
+        assert!(!mismatch);
+        let (matched, _) = verify_publisher_matches_cert_subject(Some(&fake_pub), Some("CN=Alpha Automation Co., Ltd."));
+        assert!(matched);
+
+        // Tamper 1 distributed file after packaging -> verify_final_distributed_release MUST FAIL!
+        std::fs::write(out_dir.join("bin/adb.exe"), b"MZ-tampered-adb").unwrap();
+        let verify_tampered = verify_final_distributed_release(
+            &out_dir,
+            false,
+            TimestampVerificationPolicy::AllowOfflineUnsignedTimestamp,
+        )
+        .unwrap();
+        assert!(!verify_tampered.verified);
+        assert!(!verify_tampered.distributed_file_mismatches.is_empty());
 
         let _ = std::fs::remove_dir_all(&tmp);
     }

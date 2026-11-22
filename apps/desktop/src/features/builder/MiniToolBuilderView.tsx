@@ -2404,6 +2404,25 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
                       )}
                     </div>
                     <div className="flex flex-wrap gap-1 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const rep = await api.studioVerifyFinalRelease(rel.outputDirPath, false);
+                            setNotice({
+                              kind: rep.verified ? 'ok' : 'err',
+                              text: rep.verified
+                                ? `Final Verify PASS (${rep.distributedFilesChecked} files checked · EXE SHA=${rep.finalExeSha256.slice(0, 14)}... · ${rep.publisherIdentityDetail})`
+                                : `Final Verify FAILED: ${rep.issues.join(' · ')}`,
+                            });
+                          } catch (err: any) {
+                            setNotice({ kind: 'err', text: String(err) });
+                          }
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-[#16202F] hover:bg-[#202B3B] border border-[#2A3647] text-[#A9B8CC] text-[10px] font-semibold cursor-pointer"
+                      >
+                        Verify Final
+                      </button>
                       {rel.lifecycleState === 'Draft' && (
                         <button
                           type="button"

@@ -1022,25 +1022,72 @@ fn base64_encode(bytes: &[u8]) -> String {
     result
 }
 
+fn is_dir_writable(dir: &std::path::Path) -> bool {
+    if std::fs::create_dir_all(dir).is_err() {
+        return false;
+    }
+    let probe = dir.join(format!(".fp_write_probe_{}", std::process::id()));
+    match std::fs::write(&probe, b"ok") {
+        Ok(()) => {
+            let _ = std::fs::remove_file(&probe);
+            true
+        }
+        Err(_) => false,
+    }
+}
+
 fn resolve_portable_paths() -> (std::path::PathBuf, bool) {
-    // 1. Check next to executable: <exe_dir>/data
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(exe_dir) = exe_path.parent() {
-            let data_dir = exe_dir.join("data");
+    if let Ok(override_dir) = std::env::var("FARMERPRO_DATA_DIR") {
+        let trimmed = override_dir.trim();
+        if !trimmed.is_empty() {
+            let data_dir = std::path::PathBuf::from(trimmed);
             if std::fs::create_dir_all(&data_dir).is_ok() {
-                let db_path = data_dir.join("farmerpro.db");
-                return (db_path, true);
+                return (data_dir.join("farmerpro.db"), false);
             }
         }
     }
 
-    // 2. Check current working dir data/
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            // If running from an NSIS installation (uninstall.exe present), ALWAYS isolate user DB/projects
+            // inside %LOCALAPPDATA%\FarmerPro\StudioData so upgrades & uninstalls NEVER delete user data!
+            let is_nsis_installed = exe_dir.join("uninstall.exe").exists()
+                || exe_dir.join("Uninstall.exe").exists()
+                || exe_dir.join(".nsis_installed").exists();
+            if is_nsis_installed {
+                let appdata = std::env::var("LOCALAPPDATA")
+                    .map(std::path::PathBuf::from)
+                    .unwrap_or_else(|_| exe_dir.to_path_buf());
+                let user_data_dir = appdata.join("FarmerPro").join("StudioData").join("data");
+                if is_dir_writable(&user_data_dir) {
+                    return (user_data_dir.join("farmerpro.db"), false);
+                }
+            }
+
+            // Otherwise (Portable / Sandbox mode): check next to executable <exe_dir>/data
+            let data_dir = exe_dir.join("data");
+            if is_dir_writable(&data_dir) {
+                return (data_dir.join("farmerpro.db"), true);
+            }
+        }
+    }
+
+    // Standard fallback: %LOCALAPPDATA%\FarmerPro\StudioData\data
+    if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
+        let fallback_data = std::path::PathBuf::from(local_app)
+            .join("FarmerPro")
+            .join("StudioData")
+            .join("data");
+        if is_dir_writable(&fallback_data) {
+            return (fallback_data.join("farmerpro.db"), false);
+        }
+    }
+
     let local_data = std::path::Path::new("data");
-    if std::fs::create_dir_all(local_data).is_ok() {
+    if is_dir_writable(local_data) {
         return (local_data.join("farmerpro.db"), true);
     }
 
-    // 3. Fallback to current working dir farmerpro.db
     (std::path::PathBuf::from("farmerpro.db"), false)
 }
 
@@ -1178,6 +1225,8 @@ fn main() {
             studio_p3::studio_delete_publisher_profile,
             studio_p3::studio_create_self_signed_qa_cert,
             studio_p3::studio_signing_preflight,
+            studio_p3::studio_discover_signing_toolchain,
+            studio_p3::studio_verify_final_release,
             studio_p3::studio_rotate_project_ed25519_key_with_delegation,
             studio_p3::studio_get_project_runtime_vars,
             studio_p3::studio_list_project_releases,

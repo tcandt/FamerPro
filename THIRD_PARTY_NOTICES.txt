@@ -1,0 +1,21 @@
+FARMERPRO STUDIO & MINI TOOLS — THIRD-PARTY & REDISTRIBUTION NOTICES
+=========================================================================
+
+1. FarmerPro Core, Mini Runtime & External Updater
+   License: MIT OR Apache-2.0
+
+2. Android Debug Bridge (adb.exe, AdbWinApi.dll, AdbWinUsbApi.dll)
+   Source: Android SDK Platform-Tools
+   License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+
+3. Tauri Framework & Plugins
+   License: MIT OR Apache-2.0
+
+4. Microsoft Edge WebView2 Runtime / Bootstrapper
+   Subject to Microsoft Edge WebView2 Redistributable Terms.
+
+5. NSIS Installer Runtime (Tauri Windows Bundle)
+   License: zlib/libpng License
+
+IMPORTANT SDK POLICY:
+Microsoft Windows SDK components (including signtool.exe) are NOT bundled or redistributed with FarmerPro Studio or exported Mini Tool packages. Studio dynamically discovers an already-installed Windows SDK signtool.exe at signing time when Authenticode signing is requested; Unsigned Internal builds with Ed25519 + PE VERSIONINFO do not require Windows SDK.
