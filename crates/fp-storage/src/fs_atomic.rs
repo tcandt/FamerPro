@@ -154,19 +154,27 @@ pub fn ensure_contained_project_dir(projects_root: &Path, target_dir: &Path) -> 
         return Ok(canon_target);
     }
 
-    // Target doesn't exist yet: check parent
-    let parent = target_dir
-        .parent()
-        .context("Project dir missing parent directory")?;
-    if parent.exists() {
-        let canon_parent = std::fs::canonicalize(parent)?;
-        if !canon_parent.starts_with(&canon_root) {
-            bail!(
-                "PROJECT_ISOLATION_VIOLATION: Parent '{}' escapes projects_root '{}'",
-                canon_parent.display(),
-                canon_root.display()
-            );
+    // Target doesn't exist yet: walk up to first existing ancestor and verify containment + non-symlink
+    let mut probe = target_dir.parent();
+    while let Some(ancestor) = probe {
+        if ancestor.exists() {
+            if is_reparse_or_symlink(ancestor) {
+                bail!(
+                    "PROJECT_ISOLATION_VIOLATION: Ancestor '{}' is a symlink/junction",
+                    ancestor.display()
+                );
+            }
+            let canon_anc = std::fs::canonicalize(ancestor)?;
+            if !canon_anc.starts_with(&canon_root) {
+                bail!(
+                    "PROJECT_ISOLATION_VIOLATION: Ancestor '{}' escapes projects_root '{}'",
+                    canon_anc.display(),
+                    canon_root.display()
+                );
+            }
+            break;
         }
+        probe = ancestor.parent();
     }
     Ok(target_dir.to_path_buf())
 }
@@ -204,7 +212,7 @@ pub fn atomic_write_bytes(target: &Path, bytes: &[u8]) -> Result<()> {
     Ok(())
 }
 
-/// Safely copies regular files from `src` to `dst`, rejecting symlinks/junctions.
+/// Safely copies regular files and subdirectories from `src` to `dst`, rejecting symlinks/junctions.
 pub fn copy_dir_files_safe(src: &Path, dst: &Path) -> Result<()> {
     if !src.exists() {
         return Ok(());
@@ -221,13 +229,16 @@ pub fn copy_dir_files_safe(src: &Path, dst: &Path) -> Result<()> {
         let p = entry.path();
         if is_reparse_or_symlink(&p) {
             bail!(
-                "PROJECT_ISOLATION_VIOLATION: Symlink/junction file rejected during copy: '{}'",
+                "PROJECT_ISOLATION_VIOLATION: Symlink/junction entry rejected during copy: '{}'",
                 p.display()
             );
         }
-        if p.is_file() {
+        let target = dst.join(entry.file_name());
+        if p.is_dir() {
+            copy_dir_files_safe(&p, &target)?;
+        } else if p.is_file() {
             let bytes = std::fs::read(&p)?;
-            atomic_write_bytes(&dst.join(entry.file_name()), &bytes)?;
+            atomic_write_bytes(&target, &bytes)?;
         }
     }
     Ok(())
@@ -238,6 +249,7 @@ pub fn copy_dir_files_safe(src: &Path, dst: &Path) -> Result<()> {
 /// - Any `.fp_staging/*` folder is uncommitted by definition (since `tx.commit()` only runs AFTER rename out of staging) -> safe to purge!
 /// - Any `.fp_journal/delete_<id>.json`: if `project_id` is NOT in `active_project_ids`, DB delete committed -> purge `trash_dir` & journal;
 ///   if `project_id` IS still in `active_project_ids` and `original_dir` doesn't exist -> restore `trash_dir` back to `original_dir`!
+///   Journal and trash entries are preserved if recovery fails so data is never silently lost.
 pub fn reconcile_project_storage_orphans(
     projects_root: &Path,
     active_project_ids: &[String],
@@ -246,6 +258,8 @@ pub fn reconcile_project_storage_orphans(
         return Ok(0);
     }
     let mut cleaned = 0usize;
+    let canon_root = std::fs::canonicalize(projects_root)?;
+    let trash_root = projects_root.join(TRASH_DIR_NAME);
 
     let staging_root = projects_root.join(STAGING_DIR_NAME);
     if staging_root.exists() {
@@ -262,6 +276,9 @@ pub fn reconcile_project_storage_orphans(
         }
     }
 
+    let mut protected_trash_paths: std::collections::HashSet<PathBuf> =
+        std::collections::HashSet::new();
+
     let journal_root = projects_root.join(JOURNAL_DIR_NAME);
     if journal_root.exists() {
         for entry in std::fs::read_dir(&journal_root)? {
@@ -275,26 +292,69 @@ pub fn reconcile_project_storage_orphans(
                     let still_in_db = active_project_ids.iter().any(|id| id == &item.project_id);
                     let trash_p = PathBuf::from(&item.trash_dir);
                     let orig_p = PathBuf::from(&item.original_dir);
-                    if still_in_db {
-                        if trash_p.exists() && !orig_p.exists() {
-                            let _ = std::fs::rename(&trash_p, &orig_p);
-                            cleaned += 1;
+
+                    // Ensure journal paths stay strictly inside projects_root
+                    let trash_inside = trash_p
+                        .parent()
+                        .and_then(|p| std::fs::canonicalize(p).ok())
+                        .map(|cp| cp.starts_with(&canon_root))
+                        .unwrap_or(false);
+                    let orig_inside = orig_p
+                        .parent()
+                        .and_then(|p| std::fs::canonicalize(p).ok())
+                        .map(|cp| cp.starts_with(&canon_root))
+                        .unwrap_or(false);
+
+                    let mut journal_resolved = false;
+                    if trash_inside && orig_inside {
+                        if still_in_db {
+                            if trash_p.exists() && !orig_p.exists() {
+                                if std::fs::rename(&trash_p, &orig_p).is_ok() {
+                                    cleaned += 1;
+                                    journal_resolved = true;
+                                } else {
+                                    protected_trash_paths.insert(
+                                        std::fs::canonicalize(&trash_p).unwrap_or_else(|_| trash_p.clone()),
+                                    );
+                                }
+                            } else if !trash_p.exists() {
+                                journal_resolved = true;
+                            } else {
+                                protected_trash_paths.insert(
+                                    std::fs::canonicalize(&trash_p).unwrap_or_else(|_| trash_p.clone()),
+                                );
+                            }
+                        } else if trash_p.exists() {
+                            if std::fs::remove_dir_all(&trash_p).is_ok() {
+                                cleaned += 1;
+                                journal_resolved = true;
+                            } else {
+                                protected_trash_paths.insert(
+                                    std::fs::canonicalize(&trash_p).unwrap_or_else(|_| trash_p.clone()),
+                                );
+                            }
+                        } else {
+                            journal_resolved = true;
                         }
-                    } else if trash_p.exists() && std::fs::remove_dir_all(&trash_p).is_ok() {
-                        cleaned += 1;
                     }
-                    let _ = std::fs::remove_file(&jpath);
+
+                    if journal_resolved {
+                        let _ = std::fs::remove_file(&jpath);
+                    }
                 }
             }
         }
     }
 
-    // Any remaining unreferenced dirs in .fp_trash can also be purged
-    let trash_root = projects_root.join(TRASH_DIR_NAME);
+    // Any remaining unreferenced dirs in .fp_trash (not protected by an unresolved journal) can be purged
     if trash_root.exists() {
         for entry in std::fs::read_dir(&trash_root)? {
             let entry = entry?;
             let p = entry.path();
+            let p_cmp = std::fs::canonicalize(&p).unwrap_or_else(|_| p.clone());
+            if protected_trash_paths.contains(&p_cmp) || protected_trash_paths.contains(&p) {
+                continue;
+            }
             if p.is_dir() {
                 if std::fs::remove_dir_all(&p).is_ok() {
                     cleaned += 1;

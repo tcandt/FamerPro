@@ -522,12 +522,26 @@ fn run_p2_sandbox_verification(
                 rusqlite::params![DEFAULT_LEGACY_PROJECT_ID, now_sql],
             )
             .is_err();
+        let cross_wf_move_blocked = raw_conn
+            .execute(
+                "UPDATE workflows SET project_id = ?1 WHERE id = 'wf-slg-harvest-01';",
+                rusqlite::params![DEFAULT_LEGACY_PROJECT_ID],
+            )
+            .is_err();
+        let cross_wf_ver_move_blocked = raw_conn
+            .execute(
+                "UPDATE workflow_versions SET workflow_id = 'wf-jx2-01-login' WHERE id = 'wf-slg-harvest-01-v1';",
+                [],
+            )
+            .is_err();
         serde_json::json!({
             "crossProjectTaskInsertBlockedBySqlite": cross_task_blocked,
             "nullProjectWorkflowInsertBlockedBySqlite": null_wf_blocked,
             "nullProjectAccountInsertBlockedBySqlite": null_acc_blocked,
             "crossProjectJobAccountBlockedBySqlite": cross_job_acc_blocked,
-            "allDirectSqlProbesBlocked": cross_task_blocked && null_wf_blocked && null_acc_blocked && cross_job_acc_blocked,
+            "crossProjectWorkflowMoveBlockedBySqlite": cross_wf_move_blocked,
+            "crossProjectWorkflowVersionMoveBlockedBySqlite": cross_wf_ver_move_blocked,
+            "allDirectSqlProbesBlocked": cross_task_blocked && null_wf_blocked && null_acc_blocked && cross_job_acc_blocked && cross_wf_move_blocked && cross_wf_ver_move_blocked,
         })
     };
 

@@ -72,16 +72,12 @@ fn default_exe_name_from_slug(slug: &str) -> String {
 }
 
 fn ensure_default_fallback_project_conn(conn: &Connection, now: &str) -> Result<String> {
-    let existing: Option<String> = {
-        let mut st = conn.prepare(
-            "SELECT id FROM projects WHERE id = ?1
-             UNION ALL
-             SELECT id FROM projects ORDER BY id ASC LIMIT 1;",
-        )?;
+    let legacy_exists: Option<String> = {
+        let mut st = conn.prepare("SELECT id FROM projects WHERE id = ?1 LIMIT 1;")?;
         let mut rows = st.query(params![DEFAULT_LEGACY_PROJECT_ID])?;
         rows.next()?.map(|r| r.get(0)).transpose()?
     };
-    if let Some(pid) = existing {
+    if let Some(pid) = legacy_exists {
         return Ok(pid);
     }
     conn.execute(
@@ -577,7 +573,22 @@ impl StorageManager {
             }
         };
 
-        // 4. Ensure job exists (always non-null project_id matching workflow owner)
+        // 4. Ensure job exists (always non-null project_id matching workflow owner and existing job owner)
+        let existing_job_owner: Option<Option<String>> = {
+            let mut st = conn.prepare("SELECT project_id FROM jobs WHERE id = ?1;")?;
+            let mut rows = st.query(params![job_id])?;
+            rows.next()?.map(|r| r.get(0)).transpose()?
+        };
+        if let Some(Some(ref job_owner)) = existing_job_owner {
+            if job_owner != &resolved_pid {
+                bail!(
+                    "PROJECT_ISOLATION_VIOLATION: Job '{}' belongs to project '{}', cannot update from '{}'",
+                    job_id,
+                    job_owner,
+                    resolved_pid
+                );
+            }
+        }
         conn.execute(
             "INSERT INTO jobs (id, project_id, device_id, workflow_version_id, priority, state, created_at, updated_at)
              VALUES (?1, ?2, ?3, ?4, 0, 'running', ?5, ?5)
@@ -1742,10 +1753,13 @@ impl StorageManager {
     // -------------------------------------------------------------------------
 
     pub fn list_project_modules(&self, project_id: &str) -> Result<Vec<ProjectModuleRecord>> {
+        if project_id.trim().is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT project_id, module_id, packaged_in_release, enabled_by_default, config_json, updated_at
-             FROM project_modules WHERE project_id = ?1 ORDER BY module_id ASC;",
+             FROM project_modules WHERE project_id = ?1 AND project_id IS NOT NULL ORDER BY module_id ASC;",
         )?;
         let rows = stmt.query_map(params![project_id], |r| {
             Ok(ProjectModuleRecord {
@@ -2041,6 +2055,9 @@ impl StorageManager {
     }
 
     pub fn delete_project_workflow(&self, project_id: &str, workflow_id: &str) -> Result<bool> {
+        if project_id.trim().is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
         let mut conn = self.conn.lock().unwrap();
         let owner: Option<Option<String>> = {
             let mut st = conn.prepare("SELECT project_id FROM workflows WHERE id = ?1;")?;
@@ -2089,8 +2106,14 @@ impl StorageManager {
         let project = Self::fetch_project_by_id_conn(&conn, &input.project_id)?
             .with_context(|| format!("Project '{}' not found", input.project_id))?;
 
-        let (rel_clean, _) =
-            validate_safe_rel_path(Path::new(&project.project_dir_path), &input.rel_path)?;
+        let proj_dir = Path::new(&project.project_dir_path);
+        if is_reparse_or_symlink(proj_dir) {
+            bail!(
+                "PROJECT_ISOLATION_VIOLATION: Refusing template registration on symlinked project dir '{}'",
+                proj_dir.display()
+            );
+        }
+        let (rel_clean, _) = validate_safe_rel_path(proj_dir, &input.rel_path)?;
 
         let id = input
             .id
@@ -2324,6 +2347,9 @@ impl StorageManager {
     }
 
     pub fn delete_vision_template(&self, project_id: &str, template_id: &str) -> Result<bool> {
+        if project_id.trim().is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
         let conn = self.conn.lock().unwrap();
         let affected = conn.execute(
             "DELETE FROM vision_templates WHERE id = ?1 AND project_id = ?2;",
@@ -2473,6 +2499,9 @@ impl StorageManager {
     }
 
     pub fn delete_project_task(&self, project_id: &str, task_id: &str) -> Result<bool> {
+        if project_id.trim().is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
         let conn = self.conn.lock().unwrap();
         let affected = conn.execute(
             "DELETE FROM task_definitions WHERE id = ?1 AND project_id = ?2;",
@@ -2679,6 +2708,9 @@ impl StorageManager {
     }
 
     pub fn record_project_release(&self, release: ProjectReleaseRecord) -> Result<()> {
+        if release.project_id.trim().is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
         let conn = self.conn.lock().unwrap();
         conn.execute(
             "INSERT INTO project_releases (
@@ -2706,12 +2738,15 @@ impl StorageManager {
     }
 
     pub fn list_project_releases(&self, project_id: &str) -> Result<Vec<ProjectReleaseRecord>> {
+        if project_id.trim().is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, project_id, version, output_dir_path, exe_path, exe_size_bytes,
                     exe_sha256, key_id, publisher_public_key_hex, pe_rcdata_pubkey_id,
                     signature_ed25519_hex, build_report_json, built_at
-             FROM project_releases WHERE project_id = ?1 ORDER BY built_at DESC;",
+             FROM project_releases WHERE project_id = ?1 AND project_id IS NOT NULL ORDER BY built_at DESC;",
         )?;
         let rows = stmt.query_map(params![project_id], |r| {
             Ok(ProjectReleaseRecord {
@@ -3573,6 +3608,83 @@ mod tests {
                 params![proj_b.id],
             )
             .is_err());
+        assert!(conn
+            .execute(
+                "UPDATE workflow_versions SET workflow_id = 'wf-sql-b' WHERE id = 'wf-sql-a-v1';",
+                [],
+            )
+            .is_err());
+        assert!(conn
+            .execute(
+                "UPDATE task_definitions SET project_id = ?1, workflow_id = 'wf-sql-a' WHERE id = 'task-sql-b-ok';",
+                params![proj_a.id],
+            )
+            .is_err());
+        assert!(conn
+            .execute(
+                "UPDATE jobs SET project_id = ?1 WHERE id = 'job-sql-a-ok';",
+                params![proj_b.id],
+            )
+            .is_err());
+
+        // 7. Reassigning a workflow with only workflow_versions (no tasks/jobs) or vision_templates across projects MUST FAIL
+        drop(conn);
+        storage
+            .save_project_workflow(&proj_a.id, "wf-sql-a-unlinked", "WF A2", "NV", "{}")
+            .unwrap();
+        storage
+            .register_vision_template(VisionTemplateInput {
+                id: Some("tpl-sql-a".to_string()),
+                project_id: proj_a.id.clone(),
+                name: "tpl_a".to_string(),
+                rel_path: "templates/tpl_a.png".to_string(),
+                width_px: 10,
+                height_px: 10,
+                source_crop_x: None,
+                source_crop_y: None,
+                default_confidence: None,
+                sha256: "a".repeat(64),
+            })
+            .unwrap();
+        // Cross-project job ID collision via handler MUST FAIL
+        assert!(storage
+            .ensure_project_job_exists(
+                &proj_b.id,
+                "job-sql-a-ok",
+                "dev-sql-1",
+                "wf-sql-b",
+                "WF B",
+                "{}"
+            )
+            .unwrap_err()
+            .to_string()
+            .contains("PROJECT_ISOLATION_VIOLATION"));
+        // Fallback v1 save_workflow_draft must NOT hijack proj_a even when proj_a sorts before DEFAULT_LEGACY_PROJECT_ID
+        storage
+            .save_workflow_draft("wf-v1-fallback-check", "V1 Fallback", "{}")
+            .unwrap();
+        assert_eq!(storage.list_project_workflows(&proj_a.id).unwrap().len(), 2);
+        assert_eq!(
+            storage
+                .list_project_workflows(DEFAULT_LEGACY_PROJECT_ID)
+                .unwrap()
+                .len(),
+            1
+        );
+
+        let conn = storage.conn.lock().unwrap();
+        assert!(conn
+            .execute(
+                "UPDATE workflows SET project_id = ?1 WHERE id = 'wf-sql-a-unlinked';",
+                params![proj_b.id],
+            )
+            .is_err());
+        assert!(conn
+            .execute(
+                "UPDATE vision_templates SET project_id = ?1 WHERE id = 'tpl-sql-a';",
+                params![proj_b.id],
+            )
+            .is_err());
 
         let rep = check_integrity_on_conn(&conn).unwrap();
         assert!(rep.is_healthy);
@@ -3663,6 +3775,43 @@ mod tests {
             )
             .unwrap();
         assert!(src_dir.join("templates").join("btn_solid.png").exists());
+
+        // 2b. Nested template directory must survive clone_project intact
+        storage
+            .save_project_template_file(
+                VisionTemplateInput {
+                    id: Some("tpl-solid-nested".to_string()),
+                    project_id: src.id.clone(),
+                    name: "btn_nested".to_string(),
+                    rel_path: "templates/sub/btn_nested.png".to_string(),
+                    width_px: 16,
+                    height_px: 16,
+                    source_crop_x: None,
+                    source_crop_y: None,
+                    default_confidence: Some(0.9),
+                    sha256: String::new(),
+                },
+                b"fake-nested-png",
+            )
+            .unwrap();
+        let cloned_nested = storage
+            .clone_project(
+                CloneProjectRequest {
+                    source_project_id: src.id.clone(),
+                    new_slug: "solid-nested-clone".to_string(),
+                    new_name: "Solid Nested Clone".to_string(),
+                    new_game_package_id: None,
+                    new_exe_name: None,
+                },
+                &projects_root,
+            )
+            .unwrap();
+        assert!(PathBuf::from(&cloned_nested.project_dir_path)
+            .join("templates")
+            .join("sub")
+            .join("btn_nested.png")
+            .exists());
+        assert!(storage.delete_project(&cloned_nested.id, true).unwrap());
 
         // 3. Fault during save_project_workflow -> rolls back BOTH DB and disk workflow/manifest
         let wf_fault = storage.save_project_workflow_with_fault(
@@ -3760,6 +3909,43 @@ mod tests {
         assert!(src_dir.join("project.json").exists());
         assert!(src_dir.join("templates").join("btn_solid.png").exists());
 
+        // 2b. Nested template directory must survive clone_project intact
+        storage
+            .save_project_template_file(
+                VisionTemplateInput {
+                    id: Some("tpl-solid-nested".to_string()),
+                    project_id: src.id.clone(),
+                    name: "btn_nested".to_string(),
+                    rel_path: "templates/sub/btn_nested.png".to_string(),
+                    width_px: 16,
+                    height_px: 16,
+                    source_crop_x: None,
+                    source_crop_y: None,
+                    default_confidence: Some(0.9),
+                    sha256: String::new(),
+                },
+                b"fake-nested-png",
+            )
+            .unwrap();
+        let cloned_nested = storage
+            .clone_project(
+                CloneProjectRequest {
+                    source_project_id: src.id.clone(),
+                    new_slug: "solid-nested-clone".to_string(),
+                    new_name: "Solid Nested Clone".to_string(),
+                    new_game_package_id: None,
+                    new_exe_name: None,
+                },
+                &projects_root,
+            )
+            .unwrap();
+        assert!(PathBuf::from(&cloned_nested.project_dir_path)
+            .join("templates")
+            .join("sub")
+            .join("btn_nested.png")
+            .exists());
+        assert!(storage.delete_project(&cloned_nested.id, true).unwrap());
+
         // 8. Fault during delete_project AFTER DB commit (trash purge interrupted) -> DB gone, dir gone, reconcile cleans trash!
         let del_orphan = storage.delete_project_with_fault(
             &src.id,
@@ -3777,6 +3963,45 @@ mod tests {
                 .count(),
             0
         );
+
+        // 9. Journal/Trash safety: if project is STILL active in DB and restore cannot overwrite an existing dir,
+        // reconcile_projects_storage MUST preserve both trash & journal rather than destroying active project data!
+        let p_keep = storage
+            .create_project(
+                CreateProjectRequest {
+                    slug: "keep-active".to_string(),
+                    name: "Keep Active".to_string(),
+                    game_package_id: "com.keep.active".to_string(),
+                    version: None,
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                    enabled_modules: None,
+                },
+                &projects_root,
+            )
+            .unwrap();
+        let keep_orig = PathBuf::from(&p_keep.project_dir_path);
+        let keep_trash = projects_root.join(TRASH_DIR_NAME).join("keep-active.saved");
+        std::fs::create_dir_all(&keep_trash).unwrap();
+        std::fs::write(keep_trash.join("important.txt"), b"must-not-lose").unwrap();
+        let keep_journal = projects_root
+            .join(JOURNAL_DIR_NAME)
+            .join(format!("delete_{}.json", p_keep.id));
+        let j_entry = DeleteJournalEntry {
+            project_id: p_keep.id.clone(),
+            project_slug: p_keep.slug.clone(),
+            original_dir: keep_orig.to_string_lossy().to_string(),
+            trash_dir: keep_trash.to_string_lossy().to_string(),
+            created_at: Utc::now().to_rfc3339(),
+        };
+        atomic_write_bytes(&keep_journal, &serde_json::to_vec_pretty(&j_entry).unwrap()).unwrap();
+        let _ = storage.reconcile_projects_storage(&projects_root).unwrap();
+        assert!(keep_trash.join("important.txt").exists());
+        assert!(keep_journal.exists());
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }

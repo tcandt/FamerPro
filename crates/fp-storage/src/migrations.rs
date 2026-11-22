@@ -206,15 +206,13 @@ BEGIN
     SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: workflows.project_id cannot be NULL');
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_workflows_cross_move_guard
+DROP TRIGGER IF EXISTS trg_workflows_cross_move_guard;
+CREATE TRIGGER trg_workflows_cross_move_guard
 BEFORE UPDATE OF project_id ON workflows
 FOR EACH ROW
-WHEN OLD.project_id IS NOT NULL AND NEW.project_id != OLD.project_id AND (
-    EXISTS (SELECT 1 FROM task_definitions t WHERE t.workflow_id = NEW.id)
-    OR EXISTS (SELECT 1 FROM jobs j JOIN workflow_versions wv ON wv.id = j.workflow_version_id WHERE wv.workflow_id = NEW.id)
-)
+WHEN OLD.project_id IS NOT NULL AND NEW.project_id != OLD.project_id
 BEGIN
-    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: cannot reassign workflow referenced by tasks or jobs across projects');
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: cannot reassign workflow across projects');
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_task_definitions_isolation_insert
@@ -227,14 +225,17 @@ BEGIN
     SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: task_definitions workflow_id must belong to same project_id');
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_task_definitions_isolation_update
+DROP TRIGGER IF EXISTS trg_task_definitions_isolation_update;
+CREATE TRIGGER trg_task_definitions_isolation_update
 BEFORE UPDATE ON task_definitions
 FOR EACH ROW
-WHEN NEW.project_id IS NULL OR NOT EXISTS (
-    SELECT 1 FROM workflows w WHERE w.id = NEW.workflow_id AND w.project_id = NEW.project_id
-)
+WHEN NEW.project_id IS NULL
+    OR (OLD.project_id IS NOT NULL AND NEW.project_id != OLD.project_id)
+    OR NOT EXISTS (
+        SELECT 1 FROM workflows w WHERE w.id = NEW.workflow_id AND w.project_id = NEW.project_id
+    )
 BEGIN
-    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: task_definitions workflow_id must belong to same project_id');
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: task_definitions workflow_id must belong to same project_id and cannot move across projects');
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_accounts_isolation_insert
@@ -253,14 +254,13 @@ BEGIN
     SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: accounts.project_id cannot be NULL');
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_accounts_cross_move_guard
+DROP TRIGGER IF EXISTS trg_accounts_cross_move_guard;
+CREATE TRIGGER trg_accounts_cross_move_guard
 BEFORE UPDATE OF project_id ON accounts
 FOR EACH ROW
-WHEN OLD.project_id IS NOT NULL AND NEW.project_id != OLD.project_id AND EXISTS (
-    SELECT 1 FROM jobs j WHERE j.account_id = NEW.id
-)
+WHEN OLD.project_id IS NOT NULL AND NEW.project_id != OLD.project_id
 BEGIN
-    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: cannot reassign account referenced by jobs across projects');
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: cannot reassign account across projects');
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_workflow_versions_isolation_insert
@@ -273,14 +273,21 @@ BEGIN
     SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: workflow_versions must reference a project-owned workflow');
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_workflow_versions_isolation_update
+DROP TRIGGER IF EXISTS trg_workflow_versions_isolation_update;
+CREATE TRIGGER trg_workflow_versions_isolation_update
 BEFORE UPDATE ON workflow_versions
 FOR EACH ROW
 WHEN NOT EXISTS (
     SELECT 1 FROM workflows w WHERE w.id = NEW.workflow_id AND w.project_id IS NOT NULL
+) OR (
+    NEW.workflow_id != OLD.workflow_id AND (
+        SELECT w1.project_id FROM workflows w1 WHERE w1.id = OLD.workflow_id
+    ) != (
+        SELECT w2.project_id FROM workflows w2 WHERE w2.id = NEW.workflow_id
+    )
 )
 BEGIN
-    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: workflow_versions must reference a project-owned workflow');
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: workflow_versions cannot be detached or moved across projects');
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_jobs_isolation_insert
@@ -302,10 +309,12 @@ BEGIN
     SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: job project_id must match workflow_version and account project_id');
 END;
 
-CREATE TRIGGER IF NOT EXISTS trg_jobs_isolation_update
+DROP TRIGGER IF EXISTS trg_jobs_isolation_update;
+CREATE TRIGGER trg_jobs_isolation_update
 BEFORE UPDATE ON jobs
 FOR EACH ROW
 WHEN NEW.project_id IS NULL
+    OR (OLD.project_id IS NOT NULL AND NEW.project_id != OLD.project_id)
     OR NOT EXISTS (
         SELECT 1 FROM workflow_versions wv
         JOIN workflows w ON w.id = wv.workflow_id
@@ -319,6 +328,38 @@ WHEN NEW.project_id IS NULL
     )
 BEGIN
     SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: job project_id must match workflow_version and account project_id');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_vision_templates_cross_move_guard
+BEFORE UPDATE OF project_id ON vision_templates
+FOR EACH ROW
+WHEN OLD.project_id IS NOT NULL AND NEW.project_id != OLD.project_id
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: cannot reassign vision_template across projects');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_project_modules_cross_move_guard
+BEFORE UPDATE OF project_id ON project_modules
+FOR EACH ROW
+WHEN OLD.project_id IS NOT NULL AND NEW.project_id != OLD.project_id
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: cannot reassign project_module across projects');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_mini_tool_schemas_cross_move_guard
+BEFORE UPDATE OF project_id ON mini_tool_schemas
+FOR EACH ROW
+WHEN OLD.project_id IS NOT NULL AND NEW.project_id != OLD.project_id
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: cannot reassign mini_tool_schema across projects');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_project_releases_cross_move_guard
+BEFORE UPDATE OF project_id ON project_releases
+FOR EACH ROW
+WHEN OLD.project_id IS NOT NULL AND NEW.project_id != OLD.project_id
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: cannot reassign project_release across projects');
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_checkpoints_isolation_insert

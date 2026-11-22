@@ -682,8 +682,32 @@ impl WorkflowExecutor {
             }
             let path = Path::new(trimmed);
 
-            // 2a. Strict project-scoped lookup when project_dir is active (blocks traversal, absolute escape, symlinks & NTFS junctions)
+            // 2a. Strict project-scoped lookup when project_dir is active (blocks traversal, absolute escape, drive-relative paths, symlinks & NTFS junctions)
             if let Some(proj_dir) = project_dir {
+                fn is_reparse_or_symlink_path(p: &Path) -> bool {
+                    if let Ok(meta) = std::fs::symlink_metadata(p) {
+                        if meta.file_type().is_symlink() {
+                            return true;
+                        }
+                        #[cfg(windows)]
+                        {
+                            use std::os::windows::fs::MetadataExt;
+                            const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0400;
+                            if (meta.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT) != 0 {
+                                return true;
+                            }
+                        }
+                    }
+                    false
+                }
+
+                if is_reparse_or_symlink_path(proj_dir) {
+                    bail!(
+                        "PROJECT_ISOLATION_VIOLATION: Project directory '{}' is a symlink/junction",
+                        proj_dir.display()
+                    );
+                }
+
                 let canonical_proj = std::fs::canonicalize(proj_dir).with_context(|| {
                     format!(
                         "PROJECT_ISOLATION_VIOLATION: Project directory does not exist or cannot be resolved: {}",
@@ -703,12 +727,20 @@ impl WorkflowExecutor {
                         return Ok(None);
                     }
                     // Reject any symlink/reparse point component along the relative hierarchy
-                    if let Ok(meta) = std::fs::symlink_metadata(candidate) {
-                        if meta.file_type().is_symlink() {
+                    let mut cur = candidate.to_path_buf();
+                    loop {
+                        if is_reparse_or_symlink_path(&cur) {
                             bail!(
-                                "PROJECT_ISOLATION_VIOLATION: Symlink template path rejected: {}",
-                                candidate.display()
+                                "PROJECT_ISOLATION_VIOLATION: Symlink/junction template path component rejected: {}",
+                                cur.display()
                             );
+                        }
+                        if cur == proj_dir || cur == canonical_proj {
+                            break;
+                        }
+                        match cur.parent() {
+                            Some(parent) => cur = parent.to_path_buf(),
+                            None => break,
                         }
                     }
                     let canonical_cand = std::fs::canonicalize(candidate).with_context(|| {
@@ -738,6 +770,20 @@ impl WorkflowExecutor {
                         "PROJECT_ISOLATION_VIOLATION: Absolute templateRef '{}' is outside or missing from project '{}'",
                         path_str,
                         canonical_proj.display()
+                    );
+                }
+
+                if path.components().any(|c| {
+                    matches!(
+                        c,
+                        std::path::Component::Prefix(_)
+                            | std::path::Component::RootDir
+                            | std::path::Component::ParentDir
+                    )
+                }) {
+                    bail!(
+                        "PROJECT_ISOLATION_VIOLATION: Unsafe drive/root/parent component in templateRef '{}'",
+                        path_str
                     );
                 }
 
@@ -1263,6 +1309,25 @@ mod tests {
         )
         .unwrap_err();
         assert!(abs_err.to_string().contains("PROJECT_ISOLATION_VIOLATION"));
+
+        // Windows drive-relative path (e.g. C:only_in_a.png) must be BLOCKED
+        #[cfg(windows)]
+        {
+            let node_drive_rel = WorkflowNode {
+                id: "n-drive-rel".to_string(),
+                node_type: "vision.find_image".to_string(),
+                position: fp_workflow_schema::NodePosition { x: 0.0, y: 0.0 },
+                config: serde_json::json!({ "templateRef": "C:only_in_a.png" }),
+                timeout_ms: None,
+                retry_policy: None,
+            };
+            let dr_err = WorkflowExecutor::resolve_template_bytes_with_project(
+                &node_drive_rel,
+                Some(&temp_dir.join("projects").join("game-b")),
+            )
+            .unwrap_err();
+            assert!(dr_err.to_string().contains("PROJECT_ISOLATION_VIOLATION"));
+        }
 
         // NTFS Junction inside Project B pointing outside to Project A must be BLOCKED
         #[cfg(windows)]

@@ -644,8 +644,8 @@ impl ProducerKeystore {
         let ciphertext = B64
             .decode(bundle.ciphertext_b64.trim())
             .context("Invalid ciphertext base64")?;
-        if nonce_vec.len() != 16 || ciphertext.len() != 32 {
-            bail!("RECOVERY_MALFORMED_PAYLOAD: Unexpected nonce or ciphertext length");
+        if salt_vec.len() < 16 || nonce_vec.len() != 16 || ciphertext.len() != 32 {
+            bail!("RECOVERY_MALFORMED_PAYLOAD: Unexpected salt, nonce, or ciphertext length");
         }
         let mut nonce = [0u8; 16];
         nonce.copy_from_slice(&nonce_vec);

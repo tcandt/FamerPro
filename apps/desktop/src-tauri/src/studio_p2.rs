@@ -426,18 +426,31 @@ pub fn studio_restore_producer_key(backup_path: String) -> Result<ProducerKeyMet
         .map_err(|e| e.to_string())
 }
 
+pub(crate) fn handle_export_portable_producer_key(
+    keystore_dir: &std::path::Path,
+    backup_path: &std::path::Path,
+    passphrase: &str,
+) -> Result<PortableProducerKeyRecoveryBundle, String> {
+    ProducerKeystore::export_portable_recovery_bundle(keystore_dir, backup_path, passphrase)
+        .map_err(|e| e.to_string())
+}
+
+pub(crate) fn handle_import_portable_producer_key(
+    keystore_dir: &std::path::Path,
+    backup_path: &std::path::Path,
+    passphrase: &str,
+) -> Result<ProducerKeyMetadata, String> {
+    ProducerKeystore::import_portable_recovery_bundle(backup_path, keystore_dir, passphrase)
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn studio_export_portable_producer_key(
     backup_path: String,
     passphrase: String,
 ) -> Result<PortableProducerKeyRecoveryBundle, String> {
     let ks_dir = ProducerKeystore::default_external_keystore_dir();
-    ProducerKeystore::export_portable_recovery_bundle(
-        &ks_dir,
-        PathBuf::from(backup_path).as_path(),
-        &passphrase,
-    )
-    .map_err(|e| e.to_string())
+    handle_export_portable_producer_key(&ks_dir, PathBuf::from(backup_path).as_path(), &passphrase)
 }
 
 #[tauri::command]
@@ -446,12 +459,7 @@ pub fn studio_import_portable_producer_key(
     passphrase: String,
 ) -> Result<ProducerKeyMetadata, String> {
     let ks_dir = ProducerKeystore::default_external_keystore_dir();
-    ProducerKeystore::import_portable_recovery_bundle(
-        PathBuf::from(backup_path).as_path(),
-        &ks_dir,
-        &passphrase,
-    )
-    .map_err(|e| e.to_string())
+    handle_import_portable_producer_key(&ks_dir, PathBuf::from(backup_path).as_path(), &passphrase)
 }
 
 #[tauri::command]
@@ -574,6 +582,28 @@ mod tests {
             1
         );
         assert!(handle_vault_delete_secret(&state, "project", Some("ipc-game-one"), "test_key").unwrap());
+
+        // Portable producer key export/import IPC handler tests
+        let ks_src = temp_dir.join("ks_src");
+        let ks_dst = temp_dir.join("ks_dst");
+        let recovery_file = temp_dir.join("portable_recovery.json");
+        let (_, meta_src) = ProducerKeystore::load_or_create_signing_key(&ks_src).unwrap();
+        let exported = handle_export_portable_producer_key(
+            &ks_src,
+            &recovery_file,
+            "Studio-IPC-Passphrase-2026",
+        )
+        .unwrap();
+        assert_eq!(exported.key_id, meta_src.key_id);
+        assert!(handle_import_portable_producer_key(&ks_dst, &recovery_file, "WrongPass").is_err());
+        let imported = handle_import_portable_producer_key(
+            &ks_dst,
+            &recovery_file,
+            "Studio-IPC-Passphrase-2026",
+        )
+        .unwrap();
+        assert_eq!(imported.key_id, meta_src.key_id);
+        assert_eq!(imported.public_key_hex, meta_src.public_key_hex);
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
