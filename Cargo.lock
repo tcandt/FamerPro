@@ -1418,6 +1418,7 @@ dependencies = [
  "chrono",
  "fp-bundle-contract",
  "fp-domain",
+ "fp-security",
  "fp-workflow-schema",
  "image",
  "rusqlite",
