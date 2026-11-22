@@ -1,8 +1,8 @@
 use fp_bundle_contract::{MiniTaskDef, TaskCategoryDef};
 use fp_storage::{
     fs_atomic::{JOURNAL_DIR_NAME, STAGING_DIR_NAME, TRASH_DIR_NAME},
-    CreateProjectRequest, ProjectAccountInput, StorageManager, UpdateProjectRequest,
-    VisionTemplateInput,
+    CloneProjectRequest, CreateProjectRequest, ProjectAccountInput, StorageManager,
+    UpdateProjectRequest, VisionTemplateInput,
 };
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -303,6 +303,20 @@ fn forced_crash_worker_entry() {
         "delete:after_move_to_trash_before_commit" | "delete:after_db_commit_before_cleanup" => {
             let _ = storage.delete_project(&target_id, true);
         }
+        "clone:after_staging_before_rename"
+        | "clone:after_rename_before_db_commit"
+        | "clone:after_db_commit_before_cleanup" => {
+            let _ = storage.clone_project(
+                CloneProjectRequest {
+                    source_project_id: target_id,
+                    new_slug: "deep-clone-crash".to_string(),
+                    new_name: "Deep Clone Crash Target".to_string(),
+                    new_game_package_id: Some("com.deep.clone.target".to_string()),
+                    new_exe_name: None,
+                },
+                &projects_root,
+            );
+        }
         other => panic!("Unknown FP_FORCE_CRASH_STAGE: {}", other),
     }
 }
@@ -530,6 +544,133 @@ fn test_forced_kill_6_after_delete_commit_before_cleanup() {
     assert!(!projects_root.join("target-crash-proj").exists());
     assert_no_orphan_dirs_or_journals(&projects_root);
     assert_victim_intact_and_db_healthy(&reopened, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
+
+#[test]
+fn test_forced_kill_7_deep_clone_multi_asset_pre_and_post_commit() {
+    let temp_dir = std::env::temp_dir().join(format!("fp_fk7_deep_clone_{}", uuid::Uuid::new_v4()));
+    let db_path = temp_dir.join("sandbox.db");
+    let projects_root = temp_dir.join("projects");
+    let (victim_id, target_id, v_mf, v_wf, v_tpl) =
+        seed_sandbox_with_victim_and_target(&db_path, &projects_root);
+
+    // Enrich `target_id` with 10 workflows, 8 PNG templates (including nested subdirs), 3 tasks, accounts & branding asset
+    {
+        let storage = StorageManager::new(&db_path).unwrap();
+        for i in 2..=10 {
+            let wf_id = format!("wf-deep-{:02}", i);
+            let wf_json = format!(
+                r#"{{"schemaVersion":1,"workflowId":"{}","name":"Deep Flow {}","status":"published","graph":{{"nodes":[{{"id":"s{}","type":"flow.start","position":{{"x":0,"y":0}}}},{{"id":"e{}","type":"flow.end","position":{{"x":100,"y":0}}}}],"edges":[{{"id":"ed{}","source":"s{}","sourcePort":"flow","target":"e{}","targetPort":"flow"}}]}}}}"#,
+                wf_id, i, i, i, i, i, i
+            );
+            storage
+                .save_project_workflow(&target_id, &wf_id, &format!("Deep Flow {}", i), "Deep", &wf_json)
+                .unwrap();
+        }
+        for i in 1..=8 {
+            let rel = if i <= 4 {
+                format!("templates/btn_{:02}.png", i)
+            } else {
+                format!("templates/nested/icon_{:02}.png", i)
+            };
+            storage
+                .save_project_template_file(
+                    VisionTemplateInput {
+                        id: Some(format!("tpl-deep-{:02}", i)),
+                        project_id: target_id.clone(),
+                        name: format!("deep_tpl_{}", i),
+                        rel_path: rel,
+                        width_px: 48,
+                        height_px: 48,
+                        source_crop_x: Some(i * 10),
+                        source_crop_y: Some(i * 12),
+                        default_confidence: Some(0.9),
+                        sha256: String::new(),
+                    },
+                    format!("FAKEPNG_ASSET_PAYLOAD_{:02}", i).as_bytes(),
+                )
+                .unwrap();
+        }
+        for i in 1..=3 {
+            storage
+                .upsert_project_task(
+                    &target_id,
+                    MiniTaskDef {
+                        id: format!("task-deep-{:02}", i),
+                        title: format!("Deep Task {}", i),
+                        category_id: "cat-deep".to_string(),
+                        workflow_id: if i == 1 {
+                            "wf-target-01".to_string()
+                        } else {
+                            format!("wf-deep-{:02}", i)
+                        },
+                        default_enabled: i == 1,
+                        priority: i as i32,
+                        estimate_sec: 30,
+                        settings_schema: vec![],
+                    },
+                    &TaskCategoryDef {
+                        id: "cat-deep".to_string(),
+                        short_tag: "[DEEP]".to_string(),
+                        display_name: "Deep Assets".to_string(),
+                        color_hex: "#38BDF8".to_string(),
+                    },
+                )
+                .unwrap();
+        }
+        std::fs::write(
+            projects_root.join("target-crash-proj").join("branding").join("icon.ico"),
+            b"FAKE-ICO-BRANDING-DEEP-CLONE",
+        )
+        .unwrap();
+    }
+
+    // 7a. Kill mid-staging before rename (multi-asset clone aborted cleanly)
+    run_forced_kill_child(&db_path, &projects_root, "clone:after_staging_before_rename", &target_id);
+    let (reopened_a, _rep_a) = StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
+    assert!(reopened_a.get_project_by_slug("deep-clone-crash").unwrap().is_none());
+    assert!(!projects_root.join("deep-clone-crash").exists());
+    assert_no_orphan_dirs_or_journals(&projects_root);
+    assert_victim_intact_and_db_healthy(&reopened_a, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+    drop(reopened_a);
+
+    // 7b. Kill AFTER rename of deep-cloned dir -> projects/deep-clone-crash BEFORE SQLite commit!
+    run_forced_kill_child(&db_path, &projects_root, "clone:after_rename_before_db_commit", &target_id);
+    assert!(projects_root.join("deep-clone-crash").exists());
+    let (reopened_b, rep_b) = StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
+    assert_eq!(rep_b.uncommitted_dirs_reverted, 1);
+    assert!(reopened_b.get_project_by_slug("deep-clone-crash").unwrap().is_none());
+    assert!(!projects_root.join("deep-clone-crash").exists());
+    assert_no_orphan_dirs_or_journals(&projects_root);
+    assert_victim_intact_and_db_healthy(&reopened_b, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+    assert_eq!(reopened_b.list_project_workflows(&target_id).unwrap().len(), 10);
+    assert_eq!(reopened_b.list_vision_templates(&target_id).unwrap().len(), 8);
+    drop(reopened_b);
+
+    // 7c. Kill AFTER SQLite commit BEFORE cleanup -> deep clone with ALL 10 workflows, 8 nested templates, 3 tasks preserved!
+    run_forced_kill_child(&db_path, &projects_root, "clone:after_db_commit_before_cleanup", &target_id);
+    let (reopened_c, rep_c) = StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
+    assert_eq!(rep_c.creates_finalized, 1);
+    let cloned = reopened_c
+        .get_project_by_slug("deep-clone-crash")
+        .unwrap()
+        .expect("Committed deep clone must survive post-commit crash");
+    assert_eq!(reopened_c.list_project_workflows(&cloned.id).unwrap().len(), 10);
+    assert_eq!(reopened_c.list_vision_templates(&cloned.id).unwrap().len(), 8);
+    assert_eq!(reopened_c.list_project_tasks(&cloned.id).unwrap().len(), 3);
+    assert!(PathBuf::from(&cloned.project_dir_path)
+        .join("templates")
+        .join("nested")
+        .join("icon_08.png")
+        .exists());
+    assert!(PathBuf::from(&cloned.project_dir_path)
+        .join("branding")
+        .join("icon.ico")
+        .exists());
+    assert_no_orphan_dirs_or_journals(&projects_root);
+    assert_victim_intact_and_db_healthy(&reopened_c, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }

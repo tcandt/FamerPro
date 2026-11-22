@@ -12,8 +12,10 @@ pub struct FakeDeviceDriver {
     pub height: u32,
     pub tap_count: AtomicU32,
     pub swipe_count: AtomicU32,
+    pub key_events: Arc<tokio::sync::Mutex<Vec<u32>>>,
     pub launched_package: Arc<tokio::sync::Mutex<Option<String>>>,
     pub should_fail_next_action: AtomicBool,
+    pub simulated_delay_ms: AtomicU32,
     pub current_screen_state: Arc<tokio::sync::Mutex<String>>,
 }
 
@@ -25,8 +27,10 @@ impl FakeDeviceDriver {
             height,
             tap_count: AtomicU32::new(0),
             swipe_count: AtomicU32::new(0),
+            key_events: Arc::new(tokio::sync::Mutex::new(Vec::new())),
             launched_package: Arc::new(tokio::sync::Mutex::new(None)),
             should_fail_next_action: AtomicBool::new(false),
+            simulated_delay_ms: AtomicU32::new(0),
             current_screen_state: Arc::new(tokio::sync::Mutex::new("home".to_string())),
         }
     }
@@ -98,6 +102,10 @@ impl DeviceDriver for FakeDeviceDriver {
     }
 
     async fn tap(&self, x: u32, y: u32) -> Result<ActionReceipt> {
+        let delay = self.simulated_delay_ms.load(Ordering::SeqCst);
+        if delay > 0 {
+            tokio::time::sleep(std::time::Duration::from_millis(delay as u64)).await;
+        }
         if self.should_fail_next_action.swap(false, Ordering::SeqCst) {
             anyhow::bail!("Simulated hardware tap failure");
         }
@@ -133,6 +141,20 @@ impl DeviceDriver for FakeDeviceDriver {
         Ok(ActionReceipt {
             success: true,
             duration_ms: 150,
+            error: None,
+            point_tapped: None,
+            verify_passed: false,
+        })
+    }
+
+    async fn key_event(&self, keycode: u32) -> Result<ActionReceipt> {
+        if self.should_fail_next_action.swap(false, Ordering::SeqCst) {
+            anyhow::bail!("Simulated hardware key_event failure");
+        }
+        self.key_events.lock().await.push(keycode);
+        Ok(ActionReceipt {
+            success: true,
+            duration_ms: 10,
             error: None,
             point_tapped: None,
             verify_passed: false,

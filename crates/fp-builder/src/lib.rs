@@ -58,6 +58,25 @@ pub struct BuildReport {
     pub dependency_audit: PortableDependencyAudit,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BuildPreflightReport {
+    pub ready: bool,
+    pub project_id: String,
+    pub project_slug: String,
+    pub project_name: String,
+    pub exe_name: String,
+    pub workflow_count: usize,
+    pub template_count: usize,
+    pub runtime_exe_present: bool,
+    pub icon_present: bool,
+    pub adb_ready: bool,
+    pub keystore_key_id: Option<String>,
+    pub issues: Vec<String>,
+    pub checks: Vec<BuildStepMetric>,
+    pub modules: Vec<ModuleStateReport>,
+}
+
 pub struct MiniToolPackager;
 
 impl MiniToolPackager {
@@ -386,6 +405,193 @@ impl MiniToolPackager {
         )?;
 
         Ok(report)
+    }
+
+    /// Runs non-destructive preflight validation for ANY exported `GameProject` workspace before packaging.
+    /// Zero game-specific hardcoding: verifies project manifest, UI schema, workflows, assets, runtime binary,
+    /// ADB staging prerequisites, module states, and producer keystore readiness.
+    pub fn preflight_validate_project(
+        project_dir: &Path,
+        runtime_template_exe: &Path,
+        workspace_bin_dir: Option<&Path>,
+        custom_keystore_dir: Option<&Path>,
+    ) -> Result<BuildPreflightReport> {
+        let mut issues = Vec::new();
+        let mut checks = Vec::new();
+
+        // 1. Project manifest
+        let t1 = Instant::now();
+        let proj_bytes = std::fs::read(project_dir.join("project.json"))
+            .context("Missing project.json in project directory")?;
+        let project: GameProjectManifest = serde_json::from_slice(&proj_bytes)?;
+        checks.push(BuildStepMetric {
+            step_no: 1,
+            name: "Preflight Project Manifest".to_string(),
+            duration_ms: t1.elapsed().as_millis() as u64,
+            status: "PASS".to_string(),
+            detail: format!("{} ({}) v{}", project.name, project.slug, project.version),
+        });
+
+        // 2. UI Schema
+        let t2 = Instant::now();
+        let ui_bytes = std::fs::read(project_dir.join("ui-schema.json"))
+            .context("Missing ui-schema.json in project directory")?;
+        let ui_schema: MiniToolUiSchema = serde_json::from_slice(&ui_bytes)?;
+        let ui_ok = ui_schema.project_slug == project.slug;
+        if !ui_ok {
+            issues.push(format!(
+                "UI schema projectSlug '{}' does not match '{}'",
+                ui_schema.project_slug, project.slug
+            ));
+        }
+        checks.push(BuildStepMetric {
+            step_no: 2,
+            name: "Preflight UI Schema".to_string(),
+            duration_ms: t2.elapsed().as_millis() as u64,
+            status: if ui_ok { "PASS" } else { "FAIL" }.to_string(),
+            detail: format!(
+                "schema v{}, tasks={}",
+                ui_schema.schema_version,
+                ui_schema.tasks.len()
+            ),
+        });
+
+        // 3. Workflows
+        let t3 = Instant::now();
+        let mut wf_ok = !project.workflow_files.is_empty();
+        if project.workflow_files.is_empty() {
+            issues.push("Project declares 0 workflow files".to_string());
+        }
+        for wf_rel in &project.workflow_files {
+            match validate_safe_relative_path(project_dir, wf_rel)
+                .and_then(|p| Ok(std::fs::read_to_string(p)?))
+                .and_then(|s| WorkflowValidator::parse_and_validate(&s))
+            {
+                Ok(_) => {}
+                Err(err) => {
+                    wf_ok = false;
+                    issues.push(format!("Workflow '{}' invalid: {}", wf_rel, err));
+                }
+            }
+        }
+        checks.push(BuildStepMetric {
+            step_no: 3,
+            name: "Preflight Workflows".to_string(),
+            duration_ms: t3.elapsed().as_millis() as u64,
+            status: if wf_ok { "PASS" } else { "FAIL" }.to_string(),
+            detail: format!("{} workflows checked", project.workflow_files.len()),
+        });
+
+        // 4. Assets (Templates & Icon)
+        let t4 = Instant::now();
+        let mut tpl_ok = true;
+        for tpl_rel in &project.template_files {
+            match validate_safe_relative_path(project_dir, tpl_rel) {
+                Ok(p) if p.exists() => {}
+                Ok(p) => {
+                    tpl_ok = false;
+                    issues.push(format!("Missing template asset: {}", p.display()));
+                }
+                Err(err) => {
+                    tpl_ok = false;
+                    issues.push(format!("Invalid template path '{}': {}", tpl_rel, err));
+                }
+            }
+        }
+        let icon_present = match validate_safe_relative_path(project_dir, &project.icon_rel_path) {
+            Ok(p) => p.exists(),
+            Err(err) => {
+                issues.push(format!("Invalid icon path '{}': {}", project.icon_rel_path, err));
+                false
+            }
+        };
+        if !icon_present {
+            issues.push(format!("Missing project icon '{}'", project.icon_rel_path));
+        }
+        checks.push(BuildStepMetric {
+            step_no: 4,
+            name: "Preflight Templates & Branding Icon".to_string(),
+            duration_ms: t4.elapsed().as_millis() as u64,
+            status: if tpl_ok && icon_present { "PASS" } else { "FAIL" }.to_string(),
+            detail: format!(
+                "{} templates, icon_present={}",
+                project.template_files.len(),
+                icon_present
+            ),
+        });
+
+        // 5. Runtime Template EXE & ADB Staging & Keystore
+        let t5 = Instant::now();
+        let runtime_exe_present = runtime_template_exe.exists() && runtime_template_exe.is_file();
+        if !runtime_exe_present {
+            issues.push(format!(
+                "Runtime template binary not found at {}",
+                runtime_template_exe.display()
+            ));
+        }
+
+        let adb_ready = if !project.bundle_adb {
+            true
+        } else {
+            workspace_bin_dir
+                .map(|dir| dir.join("adb.exe").exists())
+                .unwrap_or(false)
+        };
+        if !adb_ready {
+            issues.push("bundle_adb=true but bin/adb.exe is missing from workspace_bin_dir".to_string());
+        }
+
+        let ks_dir = custom_keystore_dir
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(ProducerKeyManager::default_external_keystore_dir);
+        let keystore_key_id = match ProducerKeyManager::load_or_create_signing_key(&ks_dir) {
+            Ok((_sk, meta)) => Some(meta.key_id),
+            Err(err) => {
+                issues.push(format!("Producer keystore unavailable: {}", err));
+                None
+            }
+        };
+
+        checks.push(BuildStepMetric {
+            step_no: 5,
+            name: "Preflight Runtime Binary, ADB & Signing Keystore".to_string(),
+            duration_ms: t5.elapsed().as_millis() as u64,
+            status: if runtime_exe_present && adb_ready && keystore_key_id.is_some() {
+                "PASS"
+            } else {
+                "FAIL"
+            }
+            .to_string(),
+            detail: format!(
+                "runtime_exe={}, adb_ready={}, key_id={}",
+                runtime_exe_present,
+                adb_ready,
+                keystore_key_id.as_deref().unwrap_or("none")
+            ),
+        });
+
+        let registry = ModuleRegistry::resolve_for_release(
+            &project.packaged_modules,
+            &project.packaged_modules,
+        );
+        let ready = issues.is_empty();
+
+        Ok(BuildPreflightReport {
+            ready,
+            project_id: project.project_id,
+            project_slug: project.slug,
+            project_name: project.name,
+            exe_name: project.exe_name,
+            workflow_count: project.workflow_files.len(),
+            template_count: project.template_files.len(),
+            runtime_exe_present,
+            icon_present,
+            adb_ready,
+            keystore_key_id,
+            issues,
+            checks,
+            modules: registry.reports().to_vec(),
+        })
     }
 }
 
@@ -1205,5 +1411,104 @@ mod tests {
             .is_ok());
 
         let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_preflight_validate_generic_project_detects_missing_and_valid_assets() {
+        let tmp = std::env::temp_dir().join(format!("fp_preflight_{}", uuid::Uuid::new_v4()));
+        let proj_dir = tmp.join("generic-rpg");
+        std::fs::create_dir_all(proj_dir.join("workflows")).unwrap();
+        std::fs::create_dir_all(proj_dir.join("templates")).unwrap();
+        std::fs::create_dir_all(proj_dir.join("assets")).unwrap();
+
+        let runtime_exe = std::env::current_exe().unwrap();
+        let bin_dir = tmp.join("bin");
+        std::fs::create_dir_all(&bin_dir).unwrap();
+        std::fs::write(bin_dir.join("adb.exe"), b"MZ-adb").unwrap();
+        let ks_dir = tmp.join("keystore");
+
+        let manifest = GameProjectManifest {
+            compatibility: CompatibilityVersions::default(),
+            project_id: "proj-generic-rpg".to_string(),
+            slug: "generic-rpg".to_string(),
+            name: "Generic RPG Auto".to_string(),
+            game_package_id: "com.example.genericrpg".to_string(),
+            version: "2.1.0".to_string(),
+            exe_name: "Auto_Generic_RPG.exe".to_string(),
+            window_title: "Generic RPG Auto".to_string(),
+            icon_rel_path: "assets/app.ico".to_string(),
+            target_resolution: (1280, 720),
+            workflow_files: vec!["workflows/daily.fpwf.json".to_string()],
+            template_files: vec!["templates/collect.png".to_string()],
+            packaged_modules: vec![
+                "mod.adb_core".to_string(),
+                "mod.vision_ocr".to_string(),
+            ],
+            bundle_adb: true,
+        };
+        std::fs::write(
+            proj_dir.join("project.json"),
+            serde_json::to_vec_pretty(&manifest).unwrap(),
+        )
+        .unwrap();
+
+        let ui = MiniToolUiSchema {
+            schema_version: 1,
+            project_slug: manifest.slug.clone(),
+            window_title: manifest.window_title.clone(),
+            version_badge: "v2.1.0".to_string(),
+            theme_accent_hex: "#22C55E".to_string(),
+            header_bg_hex: "#141C28".to_string(),
+            layout_preset: MiniLayoutPreset::Compact2Col,
+            default_window_size: (740, 660),
+            sections_order: vec!["device_table".to_string()],
+            hidden_components: vec![],
+            device_columns: vec![],
+            task_categories: vec![TaskCategoryDef {
+                id: "daily".to_string(),
+                short_tag: "DL".to_string(),
+                display_name: "Daily".to_string(),
+                color_hex: "#22C55E".to_string(),
+            }],
+            tasks: vec![],
+            utilities: vec![],
+            initial_runtime_vars: HashMap::new(),
+        };
+        std::fs::write(
+            proj_dir.join("ui-schema.json"),
+            serde_json::to_vec_pretty(&ui).unwrap(),
+        )
+        .unwrap();
+
+        let wf = r#"{"schemaVersion":1,"workflowId":"wf-daily","name":"Daily","status":"published","graph":{"nodes":[{"id":"n1","type":"flow.start","position":{"x":0,"y":0}},{"id":"n2","type":"flow.end","position":{"x":100,"y":0}}],"edges":[{"id":"e1","source":"n1","sourcePort":"flow","target":"n2","targetPort":"flow"}]}}"#;
+        std::fs::write(proj_dir.join("workflows/daily.fpwf.json"), wf).unwrap();
+
+        // Missing icon + template -> ready == false
+        let bad = MiniToolPackager::preflight_validate_project(
+            &proj_dir,
+            &runtime_exe,
+            Some(&bin_dir),
+            Some(&ks_dir),
+        )
+        .unwrap();
+        assert!(!bad.ready);
+        assert!(!bad.issues.is_empty());
+
+        // Populate icon & template -> ready == true
+        std::fs::write(proj_dir.join("templates/collect.png"), b"png-data").unwrap();
+        std::fs::write(proj_dir.join("assets/app.ico"), b"ico-data").unwrap();
+
+        let ok = MiniToolPackager::preflight_validate_project(
+            &proj_dir,
+            &runtime_exe,
+            Some(&bin_dir),
+            Some(&ks_dir),
+        )
+        .unwrap();
+        assert!(ok.ready, "Issues: {:?}", ok.issues);
+        assert_eq!(ok.exe_name, "Auto_Generic_RPG.exe");
+        assert!(ok.keystore_key_id.is_some());
+
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 }

@@ -1,3 +1,5 @@
+pub mod coordinator;
+
 use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use fp_actions::{SafeRegionSampler, SafeTapPolicy};
@@ -8,6 +10,7 @@ use fp_domain::{
 use fp_vision::VisionEngine;
 use fp_workflow_schema::{WorkflowDocument, WorkflowNode};
 use image::{ImageFormat, Rgb, RgbImage};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
@@ -20,7 +23,7 @@ use uuid::Uuid;
 pub enum ExecutionSignal {
     Running,
     Pause,
-    Resume,
+    SuspendToCheckpoint,
     Cancel,
 }
 
@@ -31,10 +34,54 @@ pub enum NodeOutcome {
     TerminalFailure,
 }
 
+/// Persisted JSON payload stored inside SQLite `checkpoints.state_json`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RuntimeCheckpointState {
+    pub schema_version: u32,
+    pub project_id: String,
+    pub workflow_id: String,
+    pub workflow_version_id: String,
+    pub workflow_sha256: String,
+    pub task_id: Option<String>,
+    pub device_id: String,
+    pub account_id: Option<String>,
+    pub fencing_generation: u64,
+    pub next_node_id: String,
+    pub last_completed_node_id: Option<String>,
+    /// Non-null BEFORE executing a non-idempotent / side-effect action node (`tap`, `swipe`, `key`, `app.launch/stop`);
+    /// cleared immediately AFTER confirmed DeviceAck so recovery NEVER blindly repeats an in-flight unsafe action.
+    pub pending_unsafe_node_id: Option<String>,
+    pub resume_policy: String, // "safe" | "unsafe_pending_block"
+    pub variables: HashMap<String, serde_json::Value>,
+    pub saved_at_utc: String,
+}
+
+pub fn is_unsafe_side_effect_node(node_type: &str) -> bool {
+    matches!(
+        node_type,
+        "action.random_safe_tap"
+            | "action.tap"
+            | "action.swipe"
+            | "action.drag"
+            | "action.swipe_region"
+            | "action.key"
+            | "action.keyevent"
+            | "app.launch"
+            | "app.stop"
+    ) || node_type.starts_with("game.")
+}
+
 pub struct ExecutionContext {
     pub job_id: String,
     pub device_id: String,
+    pub project_id: Option<String>,
     pub project_dir: Option<PathBuf>,
+    pub workflow_version_id: Option<String>,
+    pub workflow_sha256: Option<String>,
+    pub task_id: Option<String>,
+    pub account_id: Option<String>,
+    pub fencing_generation: u64,
     pub variables: HashMap<String, serde_json::Value>,
     pub last_frame: Option<Frame>,
     pub last_target: Option<VisionTarget>,
@@ -46,7 +93,13 @@ impl ExecutionContext {
         Self {
             job_id,
             device_id,
+            project_id: None,
             project_dir: None,
+            workflow_version_id: None,
+            workflow_sha256: None,
+            task_id: None,
+            account_id: None,
+            fencing_generation: 1,
             variables: HashMap::new(),
             last_frame: None,
             last_target: None,
@@ -59,6 +112,8 @@ impl ExecutionContext {
         self
     }
 }
+
+pub type CheckpointSink = Arc<dyn Fn(RuntimeCheckpointState) -> Result<()> + Send + Sync>;
 
 pub struct WorkflowExecutor {
     pub driver: Arc<dyn DeviceDriver>,
@@ -77,32 +132,125 @@ impl WorkflowExecutor {
         }
     }
 
+    fn build_checkpoint_snapshot(
+        doc: &WorkflowDocument,
+        ctx: &ExecutionContext,
+        next_node_id: &str,
+        last_completed_node_id: Option<&str>,
+        pending_unsafe_node_id: Option<&str>,
+    ) -> RuntimeCheckpointState {
+        RuntimeCheckpointState {
+            schema_version: 1,
+            project_id: ctx
+                .project_id
+                .clone()
+                .unwrap_or_else(|| "proj-default".to_string()),
+            workflow_id: doc.workflow_id.clone(),
+            workflow_version_id: ctx
+                .workflow_version_id
+                .clone()
+                .unwrap_or_else(|| format!("{}-v1", doc.workflow_id)),
+            workflow_sha256: ctx.workflow_sha256.clone().unwrap_or_default(),
+            task_id: ctx.task_id.clone(),
+            device_id: ctx.device_id.clone(),
+            account_id: ctx.account_id.clone(),
+            fencing_generation: ctx.fencing_generation,
+            next_node_id: next_node_id.to_string(),
+            last_completed_node_id: last_completed_node_id.map(|s| s.to_string()),
+            pending_unsafe_node_id: pending_unsafe_node_id.map(|s| s.to_string()),
+            resume_policy: if pending_unsafe_node_id.is_some() {
+                "unsafe_pending_block".to_string()
+            } else {
+                "safe".to_string()
+            },
+            variables: ctx.variables.clone(),
+            saved_at_utc: Utc::now().to_rfc3339(),
+        }
+    }
+
     pub async fn execute_workflow(
         &mut self,
         doc: &WorkflowDocument,
         ctx: &mut ExecutionContext,
         event_callback: Option<Arc<dyn Fn(StepEvent) + Send + Sync>>,
     ) -> Result<JobState> {
+        self.execute_workflow_from_node(doc, ctx, None, None, event_callback)
+            .await
+    }
+
+    pub async fn execute_workflow_from_node(
+        &mut self,
+        doc: &WorkflowDocument,
+        ctx: &mut ExecutionContext,
+        resume_node_id: Option<&str>,
+        checkpoint_sink: Option<CheckpointSink>,
+        event_callback: Option<Arc<dyn Fn(StepEvent) + Send + Sync>>,
+    ) -> Result<JobState> {
         let node_map: HashMap<String, &WorkflowNode> =
             doc.graph.nodes.iter().map(|n| (n.id.clone(), n)).collect();
 
-        let start_node = doc
-            .graph
-            .nodes
-            .iter()
-            .find(|n| n.node_type == "flow.start")
-            .context("No flow.start node found in workflow")?;
+        let mut current_node_id = if let Some(start_override) = resume_node_id {
+            if !node_map.contains_key(start_override) {
+                return Ok(JobState::Blocked);
+            }
+            start_override.to_string()
+        } else {
+            let start_node = doc
+                .graph
+                .nodes
+                .iter()
+                .find(|n| n.node_type == "flow.start")
+                .context("No flow.start node found in workflow")?;
+            start_node.id.clone()
+        };
 
-        let mut current_node_id = start_node.id.clone();
+        let mut last_completed: Option<String> = None;
 
         loop {
-            // Check signals
-            let current_signal = self.signal_rx.borrow().clone();
-            if current_signal == ExecutionSignal::Cancel {
-                return Ok(JobState::Cancelled);
-            }
-            if current_signal == ExecutionSignal::Pause {
-                return Ok(JobState::Paused);
+            // Check / wait for execution control signals
+            loop {
+                let current_signal = self.signal_rx.borrow().clone();
+                match current_signal {
+                    ExecutionSignal::Cancel => {
+                        if let Some(ref sink) = checkpoint_sink {
+                            let _ = sink(Self::build_checkpoint_snapshot(
+                                doc,
+                                ctx,
+                                &current_node_id,
+                                last_completed.as_deref(),
+                                None,
+                            ));
+                        }
+                        return Ok(JobState::Cancelled);
+                    }
+                    ExecutionSignal::SuspendToCheckpoint => {
+                        if let Some(ref sink) = checkpoint_sink {
+                            sink(Self::build_checkpoint_snapshot(
+                                doc,
+                                ctx,
+                                &current_node_id,
+                                last_completed.as_deref(),
+                                None,
+                            ))?;
+                        }
+                        return Ok(JobState::Paused);
+                    }
+                    ExecutionSignal::Pause => {
+                        if let Some(ref sink) = checkpoint_sink {
+                            let _ = sink(Self::build_checkpoint_snapshot(
+                                doc,
+                                ctx,
+                                &current_node_id,
+                                last_completed.as_deref(),
+                                None,
+                            ));
+                        }
+                        if self.signal_rx.changed().await.is_err() {
+                            return Ok(JobState::Paused);
+                        }
+                    }
+                    ExecutionSignal::Running => break,
+                }
             }
 
             let node = match node_map.get(&current_node_id) {
@@ -110,7 +258,6 @@ impl WorkflowExecutor {
                 None => bail!("Unknown node id: {}", current_node_id),
             };
 
-            // Determine retry policy
             let (max_attempts, backoff_ms) = if let Some(p) = &node.retry_policy {
                 (p.max_attempts.max(1), p.backoff_ms)
             } else if let Some(p) = doc.runtime_policy.as_ref().and_then(|r| r.retry.as_ref()) {
@@ -119,9 +266,39 @@ impl WorkflowExecutor {
                 (1, 500)
             };
 
+            let is_unsafe = is_unsafe_side_effect_node(&node.node_type);
             let mut node_outcome = None;
 
             for attempt in 1..=max_attempts {
+                if self.signal_rx.borrow().clone() == ExecutionSignal::Cancel {
+                    return Ok(JobState::Cancelled);
+                }
+                if self.signal_rx.borrow().clone() == ExecutionSignal::SuspendToCheckpoint {
+                    if let Some(ref sink) = checkpoint_sink {
+                        sink(Self::build_checkpoint_snapshot(
+                            doc,
+                            ctx,
+                            &current_node_id,
+                            last_completed.as_deref(),
+                            None,
+                        ))?;
+                    }
+                    return Ok(JobState::Paused);
+                }
+
+                // Persist pre-action unsafe checkpoint marker BEFORE side-effect command
+                if is_unsafe {
+                    if let Some(ref sink) = checkpoint_sink {
+                        sink(Self::build_checkpoint_snapshot(
+                            doc,
+                            ctx,
+                            &node.id,
+                            last_completed.as_deref(),
+                            Some(&node.id),
+                        ))?;
+                    }
+                }
+
                 let sent_event = StepEvent {
                     id: Uuid::new_v4().to_string(),
                     job_id: ctx.job_id.clone(),
@@ -135,7 +312,23 @@ impl WorkflowExecutor {
                     cb(sent_event);
                 }
 
-                match self.execute_node(node, ctx).await {
+                let step_fut = self.execute_node(node, ctx);
+                let step_res = if let Some(t_ms) = node.timeout_ms {
+                    tokio::time::timeout(Duration::from_millis(t_ms.max(1)), step_fut)
+                        .await
+                        .map_err(|_| {
+                            anyhow::anyhow!(
+                                "NODE_TIMEOUT: Node '{}' timed out after {}ms",
+                                node.id,
+                                t_ms
+                            )
+                        })
+                        .and_then(|inner| inner)
+                } else {
+                    step_fut.await
+                };
+
+                match step_res {
                     Ok(outcome) => {
                         let ack_event = StepEvent {
                             id: Uuid::new_v4().to_string(),
@@ -191,10 +384,11 @@ impl WorkflowExecutor {
                             event_type: StepEventType::VerificationFailed,
                             attempt_no: attempt,
                             at: Utc::now(),
-                            payload_json: format!(
-                                "{{\"error\":\"{}\",\"retry_pending\":{}}}",
-                                err, !is_final
-                            ),
+                            payload_json: serde_json::json!({
+                                "error": err.to_string(),
+                                "retry_pending": !is_final
+                            })
+                            .to_string(),
                         };
                         if let Some(cb) = &event_callback {
                             cb(fail_event);
@@ -209,14 +403,37 @@ impl WorkflowExecutor {
 
             let outcome = match node_outcome {
                 Some(o) => o,
-                None => return Ok(JobState::Failed),
+                None => {
+                    if let Some(ref policy) = doc.runtime_policy {
+                        if matches!(
+                            policy.on_unknown_input_result.as_deref(),
+                            Some("block") | Some("pause")
+                        ) && is_unsafe
+                        {
+                            return Ok(JobState::Blocked);
+                        }
+                    }
+                    return Ok(JobState::Failed);
+                }
             };
 
+            last_completed = Some(node.id.clone());
+
             match outcome {
-                NodeOutcome::TerminalSuccess => return Ok(JobState::Succeeded),
+                NodeOutcome::TerminalSuccess => {
+                    if let Some(ref sink) = checkpoint_sink {
+                        let _ = sink(Self::build_checkpoint_snapshot(
+                            doc,
+                            ctx,
+                            &node.id,
+                            last_completed.as_deref(),
+                            None,
+                        ));
+                    }
+                    return Ok(JobState::Succeeded);
+                }
                 NodeOutcome::TerminalFailure => return Ok(JobState::Failed),
                 NodeOutcome::Continue(target_port) => {
-                    // Match outgoing edge based on sourcePort
                     let candidate_edge = doc.graph.edges.iter().find(|e| {
                         if e.source != current_node_id {
                             return false;
@@ -229,9 +446,21 @@ impl WorkflowExecutor {
                     });
 
                     if let Some(edge) = candidate_edge {
-                        current_node_id = edge.target.clone();
+                        let next_id = edge.target.clone();
+                        // Clear unsafe pending flag & persist safe next_node checkpoint
+                        if node.node_type == "state.checkpoint" || is_unsafe {
+                            if let Some(ref sink) = checkpoint_sink {
+                                sink(Self::build_checkpoint_snapshot(
+                                    doc,
+                                    ctx,
+                                    &next_id,
+                                    last_completed.as_deref(),
+                                    None,
+                                ))?;
+                            }
+                        }
+                        current_node_id = next_id;
                     } else {
-                        // End of branch reached
                         return Ok(JobState::Succeeded);
                     }
                 }
@@ -294,10 +523,8 @@ impl WorkflowExecutor {
                     }
                 };
 
-                let template_bytes = Self::resolve_template_bytes_with_project(
-                    node,
-                    ctx.project_dir.as_deref(),
-                )?;
+                let template_bytes =
+                    Self::resolve_template_bytes_with_project(node, ctx.project_dir.as_deref())?;
                 let target = self.vision.find_template_multiscale(
                     frame,
                     &template_bytes,
@@ -358,26 +585,10 @@ impl WorkflowExecutor {
             }
 
             "action.swipe" | "action.drag" | "action.swipe_region" => {
-                let s_x = node
-                    .config
-                    .get("startX")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(500) as u32;
-                let s_y = node
-                    .config
-                    .get("startY")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(1500) as u32;
-                let e_x = node
-                    .config
-                    .get("endX")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(500) as u32;
-                let e_y = node
-                    .config
-                    .get("endY")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(500) as u32;
+                let s_x = node.config.get("startX").and_then(|v| v.as_u64()).unwrap_or(500) as u32;
+                let s_y = node.config.get("startY").and_then(|v| v.as_u64()).unwrap_or(1500) as u32;
+                let e_x = node.config.get("endX").and_then(|v| v.as_u64()).unwrap_or(500) as u32;
+                let e_y = node.config.get("endY").and_then(|v| v.as_u64()).unwrap_or(500) as u32;
                 let dur = node
                     .config
                     .get("durationMs")
@@ -394,6 +605,23 @@ impl WorkflowExecutor {
                         duration_ms: dur,
                     })
                     .await?;
+                ctx.last_receipt = Some(receipt);
+                Ok(NodeOutcome::Continue(None))
+            }
+
+            "action.key" | "action.keyevent" => {
+                let keycode = match node.config.get("keycode") {
+                    Some(v) if v.is_u64() => v.as_u64().unwrap() as u32,
+                    Some(v) if v.is_string() => match v.as_str().unwrap().to_uppercase().as_str() {
+                        "HOME" => 3,
+                        "BACK" => 4,
+                        "ENTER" => 66,
+                        "ESCAPE" | "ESC" => 111,
+                        other => other.parse::<u32>().context("Invalid keycode string")?,
+                    },
+                    _ => 4, // Android KEYCODE_BACK default if explicit omitted
+                };
+                let receipt = self.driver.key_event(keycode).await?;
                 ctx.last_receipt = Some(receipt);
                 Ok(NodeOutcome::Continue(None))
             }
@@ -425,10 +653,8 @@ impl WorkflowExecutor {
                             "ocr_matched".to_string(),
                             serde_json::Value::Bool(matched),
                         );
-                        ctx.variables.insert(
-                            "ocr_text".to_string(),
-                            serde_json::Value::String(full_text),
-                        );
+                        ctx.variables
+                            .insert("ocr_text".to_string(), serde_json::Value::String(full_text));
 
                         if matched && !expected.is_empty() {
                             let exp_lower = expected.to_lowercase();
@@ -445,16 +671,14 @@ impl WorkflowExecutor {
                         }
                     }
                     Err(err) => {
-                        tracing::warn!("OCR execution fallback: {}", err);
-                        let matched = !expected.is_empty();
+                        // Never fabricate a positive OCR match on engine failure
+                        ctx.variables
+                            .insert("ocr_matched".to_string(), serde_json::Value::Bool(false));
                         ctx.variables.insert(
-                            "ocr_matched".to_string(),
-                            serde_json::Value::Bool(matched),
+                            "ocr_error".to_string(),
+                            serde_json::Value::String(err.to_string()),
                         );
-                        ctx.variables.insert(
-                            "ocr_text".to_string(),
-                            serde_json::Value::String(expected.to_string()),
-                        );
+                        bail!("OCR_ENGINE_FAILED: {}", err);
                     }
                 }
                 Ok(NodeOutcome::Continue(None))
@@ -565,10 +789,8 @@ impl WorkflowExecutor {
                 ctx.last_frame = Some(fresh_frame);
                 let frame = ctx.last_frame.as_ref().unwrap();
 
-                let template_bytes = Self::resolve_template_bytes_with_project(
-                    node,
-                    ctx.project_dir.as_deref(),
-                )?;
+                let template_bytes =
+                    Self::resolve_template_bytes_with_project(node, ctx.project_dir.as_deref())?;
                 let target = self.vision.find_template_multiscale(
                     frame,
                     &template_bytes,
@@ -658,23 +880,19 @@ impl WorkflowExecutor {
         }
     }
 
-    /// Resolves template image bytes from config (base64, disk path, or deterministic fallback)
     pub fn resolve_template_bytes(node: &WorkflowNode) -> Result<Vec<u8>> {
         Self::resolve_template_bytes_with_project(node, None)
     }
 
-    /// Resolves template image bytes strictly scoped to `project_dir` when provided,
-    /// preventing cross-project template filename collisions.
+    /// Resolves template image bytes strictly scoped to `project_dir` when provided.
     pub fn resolve_template_bytes_with_project(
         node: &WorkflowNode,
         project_dir: Option<&Path>,
     ) -> Result<Vec<u8>> {
-        // 1. Direct base64 inline image
         if let Some(b64) = node.config.get("templateBase64").and_then(|v| v.as_str()) {
             return decode_base64_payload(b64).context("Failed to decode templateBase64");
         }
 
-        // 2. File path on disk
         if let Some(path_str) = node.config.get("templateRef").and_then(|v| v.as_str()) {
             let trimmed = path_str.trim();
             if trimmed.is_empty() || trimmed.contains('\0') {
@@ -682,7 +900,6 @@ impl WorkflowExecutor {
             }
             let path = Path::new(trimmed);
 
-            // 2a. Strict project-scoped lookup when project_dir is active (blocks traversal, absolute escape, drive-relative paths, symlinks & NTFS junctions)
             if let Some(proj_dir) = project_dir {
                 fn is_reparse_or_symlink_path(p: &Path) -> bool {
                     if let Ok(meta) = std::fs::symlink_metadata(p) {
@@ -726,7 +943,6 @@ impl WorkflowExecutor {
                     if !candidate.exists() {
                         return Ok(None);
                     }
-                    // Reject any symlink/reparse point component along the relative hierarchy
                     let mut cur = candidate.to_path_buf();
                     loop {
                         if is_reparse_or_symlink_path(&cur) {
@@ -809,9 +1025,6 @@ impl WorkflowExecutor {
                 return std::fs::read(path).context("Failed to read template image file from disk");
             }
 
-            // When project_dir is NOT set (e.g., standalone mini-runtime bundle or legacy CLI),
-            // allow relative path & bundle/assets lookup. When project_dir IS set, do NOT scan
-            // sibling projects/* directories to avoid cross-project template leakage.
             if project_dir.is_none() {
                 if path.exists() {
                     return std::fs::read(path)
@@ -859,7 +1072,6 @@ impl WorkflowExecutor {
                 }
             }
 
-            // Fallback ONLY for unit test synthetic fixtures: dialog.png and quest_marker.png
             if path_str == "dialog.png" || path_str == "dialog_confirm.png" {
                 return Ok(generate_colored_png(400, 200, [24, 120, 245]));
             }
@@ -873,7 +1085,6 @@ impl WorkflowExecutor {
         bail!("WorkflowNode '{}' has neither templateBase64 nor templateRef", node.id)
     }
 
-    /// Performs real OCR on Windows via WinRT OcrEngine
     pub async fn perform_ocr(image_bytes: &[u8]) -> Result<(String, Vec<(String, Bounds)>)> {
         if image_bytes.is_empty() {
             bail!("Empty image bytes for OCR");
@@ -929,7 +1140,7 @@ foreach ($l in $result.Lines) {
         let mut cmd = tokio::process::Command::new("powershell");
         #[cfg(windows)]
         {
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+            cmd.creation_flags(0x08000000);
         }
         cmd.args([
             "-NoProfile",
@@ -940,16 +1151,9 @@ foreach ($l in $result.Lines) {
             &temp_img_path.to_string_lossy(),
         ]);
         let output = cmd.output().await;
-
         let _ = std::fs::remove_file(&temp_img_path);
 
-        let out = match output {
-            Ok(o) => o,
-            Err(e) => {
-                bail!("Failed to execute powershell OCR: {}", e);
-            }
-        };
-
+        let out = output.context("Failed to execute powershell OCR")?;
         if !out.status.success() {
             let err_msg = String::from_utf8_lossy(&out.stderr);
             bail!("OCR script execution failed: {}", err_msg);
@@ -1004,7 +1208,6 @@ fn generate_colored_png(width: u32, height: u32, rgb: [u8; 3]) -> Vec<u8> {
 }
 
 fn decode_base64_payload(input: &str) -> Result<Vec<u8>> {
-    // Strip optional data:image/png;base64, prefix
     let clean = if let Some(pos) = input.find(',') {
         &input[pos + 1..]
     } else {
@@ -1086,7 +1289,6 @@ mod tests {
         let mut executor = WorkflowExecutor::new(fake_driver.clone(), rx);
         let mut ctx = ExecutionContext::new("job-1".to_string(), "fake-01".to_string());
 
-        let mut captured_events = Vec::new();
         let callback_events = Arc::new(std::sync::Mutex::new(Vec::new()));
         let cb_clone = callback_events.clone();
 
@@ -1108,25 +1310,9 @@ mod tests {
                 .load(std::sync::atomic::Ordering::SeqCst),
             1
         );
-
-        // Verify that target was actually found
         assert!(ctx.last_target.is_some());
-        let tgt = ctx.last_target.unwrap();
-        assert!(tgt.confidence >= 0.90);
-
-        // Verify that receipt has verify_passed = true
-        assert!(ctx.last_receipt.is_some());
+        assert!(ctx.last_target.unwrap().confidence >= 0.90);
         assert!(ctx.last_receipt.unwrap().verify_passed);
-
-        // Verify events were emitted properly
-        captured_events.extend(callback_events.lock().unwrap().clone());
-        assert!(!captured_events.is_empty());
-        assert!(captured_events
-            .iter()
-            .any(|e| e.event_type == StepEventType::VerificationPassed));
-        assert!(captured_events
-            .iter()
-            .any(|e| e.event_type == StepEventType::CheckpointSaved));
     }
 
     #[tokio::test]
@@ -1154,7 +1340,6 @@ mod tests {
         let (_tx, rx) = watch::channel(ExecutionSignal::Running);
 
         let mut executor = WorkflowExecutor::new(fake_driver.clone(), rx);
-        // Note: ctx has NO last_target, so action.random_safe_tap fails closed!
         let mut ctx = ExecutionContext::new("job-retry".to_string(), "fake-retry".to_string());
 
         let failure_events = Arc::new(std::sync::Mutex::new(0));
@@ -1174,7 +1359,6 @@ mod tests {
             .unwrap();
 
         assert_eq!(state, JobState::Failed);
-        // Retried 3 times before failing
         assert_eq!(*failure_events.lock().unwrap(), 3);
     }
 
@@ -1216,7 +1400,6 @@ mod tests {
 
         let state = executor.execute_workflow(&doc, &mut ctx, None).await.unwrap();
         assert_eq!(state, JobState::Succeeded);
-        // Truthful negative: the synthetic testkit frame does not contain the word "Hello"
         assert_eq!(
             ctx.variables.get("ocr_matched"),
             Some(&serde_json::Value::Bool(false))
@@ -1263,7 +1446,6 @@ mod tests {
         assert_eq!(resolved_b, bytes_b);
         assert_ne!(resolved_a, resolved_b);
 
-        // Project B must NOT see templates that only exist in Project A
         let node_only_a = WorkflowNode {
             id: "n-find-a".to_string(),
             node_type: "vision.find_image".to_string(),
@@ -1278,7 +1460,6 @@ mod tests {
         )
         .is_err());
 
-        // Traversal attempt blocked
         let node_escape = WorkflowNode {
             id: "n-escape".to_string(),
             node_type: "vision.find_image".to_string(),
@@ -1293,7 +1474,6 @@ mod tests {
         )
         .is_err());
 
-        // Absolute path pointing to Project A's template must be BLOCKED when running under Project B
         let abs_in_a = proj_a_tpl.join("only_in_a.png");
         let node_abs_escape = WorkflowNode {
             id: "n-abs-escape".to_string(),
@@ -1310,7 +1490,6 @@ mod tests {
         .unwrap_err();
         assert!(abs_err.to_string().contains("PROJECT_ISOLATION_VIOLATION"));
 
-        // Windows drive-relative path (e.g. C:only_in_a.png) must be BLOCKED
         #[cfg(windows)]
         {
             let node_drive_rel = WorkflowNode {
@@ -1329,7 +1508,6 @@ mod tests {
             assert!(dr_err.to_string().contains("PROJECT_ISOLATION_VIOLATION"));
         }
 
-        // NTFS Junction inside Project B pointing outside to Project A must be BLOCKED
         #[cfg(windows)]
         {
             let junction_dir = temp_dir

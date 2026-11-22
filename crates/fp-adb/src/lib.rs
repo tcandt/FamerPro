@@ -1,10 +1,52 @@
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use fp_domain::{
-    ActionReceipt, ConnectionState, DeviceDriver, DeviceSummary, Frame, ScreenGeometry, SwipePath,
+    ActionReceipt, ConnectionState, DeviceAdapterKind, DeviceDriver, DeviceHealthReport,
+    DevicePortMapping, DeviceSummary, Frame, ScreenGeometry, SwipePath,
 };
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::process::Command;
+
+pub fn validate_adb_token(label: &str, value: &str) -> Result<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        bail!("ADB_INVALID_ARG: {} cannot be empty", label);
+    }
+    if trimmed.contains('\0')
+        || trimmed.contains('\r')
+        || trimmed.contains('\n')
+        || trimmed.chars().any(|c| c.is_whitespace())
+        || trimmed.contains(';')
+        || trimmed.contains('&')
+        || trimmed.contains('|')
+        || trimmed.contains('`')
+    {
+        bail!(
+            "ADB_INVALID_ARG: Unsafe characters rejected in {}: '{}'",
+            label,
+            value
+        );
+    }
+    Ok(trimmed.to_string())
+}
+
+pub fn classify_device_adapter(serial: &str, model: Option<&str>) -> DeviceAdapterKind {
+    let s = serial.to_lowercase();
+    let m = model.unwrap_or("").to_lowercase();
+    if s.starts_with("fake") || s.starts_with("demo-fake") {
+        return DeviceAdapterKind::Synthetic;
+    }
+    if m.contains("nox") || s.contains("620") {
+        return DeviceAdapterKind::Nox;
+    }
+    if m.contains("bluestacks") || m.contains("bst") {
+        return DeviceAdapterKind::BlueStacks;
+    }
+    if s.starts_with("emulator-") || m.contains("ldplayer") || s.contains(":555") || s.contains(":556") {
+        return DeviceAdapterKind::LdPlayer;
+    }
+    DeviceAdapterKind::PhysicalAdb
+}
 
 #[derive(Debug, Clone)]
 pub struct AdbRunner {
@@ -84,6 +126,11 @@ impl AdbRunner {
         }
     }
 
+    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
     pub async fn run_args(&self, args: &[&str]) -> Result<String> {
         let mut cmd = Command::new(&self.adb_path);
         #[cfg(windows)]
@@ -94,15 +141,22 @@ impl AdbRunner {
 
         let output = tokio::time::timeout(self.timeout, cmd.output())
             .await
-            .context("ADB command timed out")?
-            .context("Failed to execute ADB command")?;
+            .map_err(|_| anyhow::anyhow!("ADB_TIMEOUT: ADB command {:?} timed out after {:?}", args, self.timeout))?
+            .context("ADB_EXEC_FAILED: Failed to execute ADB command")?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
+            let msg = stderr.trim();
+            if msg.contains("offline") || msg.contains("not found") {
+                bail!("ADB_DEVICE_OFFLINE: {}", msg);
+            }
+            if msg.contains("unauthorized") {
+                bail!("ADB_UNAUTHORIZED: {}", msg);
+            }
             bail!(
                 "ADB error (exit code {:?}): {}",
                 output.status.code(),
-                stderr.trim()
+                msg
             );
         }
 
@@ -161,6 +215,176 @@ impl AdbRunner {
             }
         }
         Ok(packages)
+    }
+
+    pub fn parse_port_mappings(output: &str, direction: &str, filter_serial: Option<&str>) -> Vec<DevicePortMapping> {
+        let mut list = Vec::new();
+        for line in output.lines() {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 3 {
+                let serial = parts[0].to_string();
+                if let Some(target) = filter_serial {
+                    if serial != target {
+                        continue;
+                    }
+                }
+                list.push(DevicePortMapping {
+                    direction: direction.to_string(),
+                    serial,
+                    local: parts[1].to_string(),
+                    remote: parts[2].to_string(),
+                });
+            }
+        }
+        list
+    }
+
+    pub async fn forward_add(&self, serial: &str, local: &str, remote: &str) -> Result<DevicePortMapping> {
+        let s = validate_adb_token("serial", serial)?;
+        let l = validate_adb_token("local_spec", local)?;
+        let r = validate_adb_token("remote_spec", remote)?;
+        self.run_args(&["-s", &s, "forward", &l, &r]).await?;
+        Ok(DevicePortMapping {
+            direction: "forward".to_string(),
+            serial: s,
+            local: l,
+            remote: r,
+        })
+    }
+
+    pub async fn forward_list(&self, serial: Option<&str>) -> Result<Vec<DevicePortMapping>> {
+        let out = self.run_args(&["forward", "--list"]).await?;
+        Ok(Self::parse_port_mappings(&out, "forward", serial))
+    }
+
+    pub async fn forward_remove(&self, serial: &str, local: &str) -> Result<()> {
+        let s = validate_adb_token("serial", serial)?;
+        let l = validate_adb_token("local_spec", local)?;
+        self.run_args(&["-s", &s, "forward", "--remove", &l]).await?;
+        Ok(())
+    }
+
+    pub async fn reverse_add(&self, serial: &str, remote: &str, local: &str) -> Result<DevicePortMapping> {
+        let s = validate_adb_token("serial", serial)?;
+        let r = validate_adb_token("remote_spec", remote)?;
+        let l = validate_adb_token("local_spec", local)?;
+        self.run_args(&["-s", &s, "reverse", &r, &l]).await?;
+        Ok(DevicePortMapping {
+            direction: "reverse".to_string(),
+            serial: s,
+            local: l,
+            remote: r,
+        })
+    }
+
+    pub async fn reverse_list(&self, serial: &str) -> Result<Vec<DevicePortMapping>> {
+        let s = validate_adb_token("serial", serial)?;
+        let out = self.run_args(&["-s", &s, "reverse", "--list"]).await?;
+        Ok(Self::parse_port_mappings(&out, "reverse", None))
+    }
+
+    pub async fn reverse_remove(&self, serial: &str, remote: &str) -> Result<()> {
+        let s = validate_adb_token("serial", serial)?;
+        let r = validate_adb_token("remote_spec", remote)?;
+        self.run_args(&["-s", &s, "reverse", "--remove", &r]).await?;
+        Ok(())
+    }
+
+    pub async fn probe_health(&self, serial: &str) -> DeviceHealthReport {
+        let start = Instant::now();
+        let s = match validate_adb_token("serial", serial) {
+            Ok(v) => v,
+            Err(e) => {
+                return DeviceHealthReport {
+                    serial: serial.to_string(),
+                    reachable: false,
+                    connection_state: ConnectionState::Blocked,
+                    width_px: 0,
+                    height_px: 0,
+                    rotation_deg: 0,
+                    latency_ms: 0,
+                    error: Some(e.to_string()),
+                };
+            }
+        };
+
+        let devices = match self.list_devices().await {
+            Ok(d) => d,
+            Err(e) => {
+                return DeviceHealthReport {
+                    serial: s,
+                    reachable: false,
+                    connection_state: ConnectionState::Disconnected,
+                    width_px: 0,
+                    height_px: 0,
+                    rotation_deg: 0,
+                    latency_ms: start.elapsed().as_millis() as u64,
+                    error: Some(e.to_string()),
+                };
+            }
+        };
+
+        let found = devices.into_iter().find(|d| d.adb_serial == s);
+        let Some(summary) = found else {
+            return DeviceHealthReport {
+                serial: s,
+                reachable: false,
+                connection_state: ConnectionState::Disconnected,
+                width_px: 0,
+                height_px: 0,
+                rotation_deg: 0,
+                latency_ms: start.elapsed().as_millis() as u64,
+                error: Some("ADB_DEVICE_NOT_ATTACHED".to_string()),
+            };
+        };
+
+        if summary.connection_state != ConnectionState::Ready {
+            return DeviceHealthReport {
+                serial: s,
+                reachable: false,
+                connection_state: summary.connection_state,
+                width_px: summary.width_px,
+                height_px: summary.height_px,
+                rotation_deg: summary.rotation_deg,
+                latency_ms: start.elapsed().as_millis() as u64,
+                error: Some("Device attached but not in ready 'device' state".to_string()),
+            };
+        }
+
+        let drv = AdbDeviceDriver::new(s.clone(), self.clone());
+        match drv.geometry().await {
+            Ok(geom) => DeviceHealthReport {
+                serial: s,
+                reachable: true,
+                connection_state: ConnectionState::Ready,
+                width_px: geom.width_px,
+                height_px: geom.height_px,
+                rotation_deg: geom.rotation_deg,
+                latency_ms: start.elapsed().as_millis() as u64,
+                error: None,
+            },
+            Err(e) => DeviceHealthReport {
+                serial: s,
+                reachable: false,
+                connection_state: ConnectionState::Recovering,
+                width_px: 0,
+                height_px: 0,
+                rotation_deg: 0,
+                latency_ms: start.elapsed().as_millis() as u64,
+                error: Some(e.to_string()),
+            },
+        }
+    }
+
+    pub async fn reconnect(&self, endpoint: &str) -> Result<DeviceHealthReport> {
+        let ep = validate_adb_token("endpoint", endpoint)?;
+        let _ = self.disconnect(&ep).await;
+        let conn_out = self.connect(&ep).await?;
+        let mut rep = self.probe_health(&ep).await;
+        if !rep.reachable && rep.error.is_none() {
+            rep.error = Some(conn_out);
+        }
+        Ok(rep)
     }
 
     pub fn parse_devices_output(output: &str) -> Result<Vec<DeviceSummary>> {
@@ -348,6 +572,22 @@ impl DeviceDriver for AdbDeviceDriver {
         })
     }
 
+    async fn key_event(&self, keycode: u32) -> Result<ActionReceipt> {
+        let start = std::time::Instant::now();
+        let code_str = keycode.to_string();
+        self.runner
+            .run_args(&["-s", &self.serial, "shell", "input", "keyevent", &code_str])
+            .await?;
+
+        Ok(ActionReceipt {
+            success: true,
+            duration_ms: start.elapsed().as_millis() as u64,
+            error: None,
+            point_tapped: None,
+            verify_passed: false,
+        })
+    }
+
     async fn launch_app(&self, package: &str) -> Result<ActionReceipt> {
         let start = std::time::Instant::now();
         let monkey_res = self
@@ -474,5 +714,28 @@ emulator-5554          device product:sdk_gphone64_x86_64 model:Pixel_6 device:e
     fn test_discover_adb_path() {
         let path = AdbRunner::discover_adb_path();
         assert!(!path.is_empty());
+    }
+
+    #[test]
+    fn test_parse_forward_reverse_and_validate_specs() {
+        let fwd = "emulator-5554 tcp:18080 tcp:8080\nemulator-5556 tcp:18081 localabstract:scrcpy\n";
+        let all = AdbRunner::parse_port_mappings(fwd, "forward", None);
+        assert_eq!(all.len(), 2);
+        let one = AdbRunner::parse_port_mappings(fwd, "forward", Some("emulator-5554"));
+        assert_eq!(one.len(), 1);
+        assert_eq!(one[0].local, "tcp:18080");
+        assert_eq!(one[0].remote, "tcp:8080");
+
+        assert!(validate_adb_token("local", "tcp:18080").is_ok());
+        assert!(validate_adb_token("local", "tcp:8080; calc.exe").is_err());
+        assert!(validate_adb_token("serial", "").is_err());
+        assert_eq!(
+            classify_device_adapter("emulator-5554", Some("LDPlayer")),
+            DeviceAdapterKind::LdPlayer
+        );
+        assert_eq!(
+            classify_device_adapter("127.0.0.1:62001", Some("Nox")),
+            DeviceAdapterKind::Nox
+        );
     }
 }

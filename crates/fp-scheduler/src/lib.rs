@@ -154,6 +154,77 @@ impl MultiDeviceScheduler {
         false
     }
 
+    /// Renews an active device lease heartbeat ONLY if owned by `job_id` at matching `generation`.
+    pub fn renew_device_lease(
+        &self,
+        device_id: &str,
+        job_id: &str,
+        generation: u64,
+        extend_by: Duration,
+    ) -> Result<DeviceLease> {
+        let mut leases = self.device_leases.lock().unwrap();
+        let now = Utc::now();
+        let Some(lease) = leases.get_mut(device_id) else {
+            bail!(
+                "LEASE_NOT_FOUND: No active lease on device '{}' for job '{}'",
+                device_id,
+                job_id
+            );
+        };
+        if lease.job_id != job_id {
+            bail!(
+                "LEASE_OWNERSHIP_CONFLICT: Device '{}' leased by '{}', not '{}'",
+                device_id,
+                lease.job_id,
+                job_id
+            );
+        }
+        if lease.generation != generation {
+            bail!(
+                "STALE_LEASE_GENERATION: Device '{}' generation {} != {}",
+                device_id,
+                generation,
+                lease.generation
+            );
+        }
+        if lease.expires_at <= now {
+            bail!(
+                "LEASE_EXPIRED: Device '{}' lease expired at {}",
+                device_id,
+                lease.expires_at
+            );
+        }
+        lease.expires_at = now + extend_by;
+        Ok(lease.clone())
+    }
+
+    pub fn verify_device_lease(&self, device_id: &str, job_id: &str, generation: u64) -> Result<()> {
+        let leases = self.device_leases.lock().unwrap();
+        let now = Utc::now();
+        let Some(lease) = leases.get(device_id) else {
+            bail!("LEASE_NOT_FOUND: No lease for device '{}'", device_id);
+        };
+        if lease.job_id != job_id || lease.generation != generation || lease.expires_at <= now {
+            bail!(
+                "LEASE_INVALID: device='{}', job='{}' (holder='{}'), gen={} (active={}), expired={}",
+                device_id,
+                job_id,
+                lease.job_id,
+                generation,
+                lease.generation,
+                lease.expires_at <= now
+            );
+        }
+        Ok(())
+    }
+
+    pub fn active_device_leases(&self) -> Vec<DeviceLease> {
+        let mut leases = self.device_leases.lock().unwrap();
+        let now = Utc::now();
+        leases.retain(|_, l| l.expires_at > now);
+        leases.values().cloned().collect()
+    }
+
     pub fn vision_semaphore(&self) -> Arc<Semaphore> {
         self.vision_workers_semaphore.clone()
     }
@@ -208,5 +279,30 @@ mod tests {
         assert_eq!(first.job_id, "high-prio");
         let second = queue.pop().unwrap();
         assert_eq!(second.job_id, "low-prio");
+    }
+
+    #[test]
+    fn test_lease_heartbeat_renewal_and_stale_gen_rejection() {
+        let scheduler = MultiDeviceScheduler::new(2);
+        let l1 = scheduler
+            .acquire_device_lease("dev-hb", "job-hb-1", Duration::seconds(10))
+            .unwrap();
+        assert!(scheduler
+            .verify_device_lease("dev-hb", "job-hb-1", l1.generation)
+            .is_ok());
+
+        let renewed = scheduler
+            .renew_device_lease("dev-hb", "job-hb-1", l1.generation, Duration::seconds(45))
+            .unwrap();
+        assert!(renewed.expires_at >= l1.expires_at);
+
+        // Wrong generation & wrong job rejected
+        assert!(scheduler
+            .renew_device_lease("dev-hb", "job-hb-1", l1.generation + 1, Duration::seconds(10))
+            .is_err());
+        assert!(scheduler
+            .renew_device_lease("dev-hb", "job-other", l1.generation, Duration::seconds(10))
+            .is_err());
+        assert_eq!(scheduler.active_device_leases().len(), 1);
     }
 }

@@ -21,6 +21,10 @@ fp-storage = { path = "../../../crates/fp-storage" }
 fp-security = { path = "../../../crates/fp-security" }
 fp-testkit = { path = "../../../crates/fp-testkit" }
 fp-bundle-contract = { path = "../../../crates/fp-bundle-contract" }
+fp-bundle-verify = { path = "../../../crates/fp-bundle-verify" }
+fp-builder = { path = "../../../crates/fp-builder" }
+fp-proxy = { path = "../../../crates/fp-proxy" }
+base64 = "0.21"
 tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true

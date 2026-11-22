@@ -1,3 +1,5 @@
+mod verify_p3;
+
 use anyhow::Context;
 use clap::{Parser, Subcommand};
 use fp_adb::AdbRunner;
@@ -97,6 +99,15 @@ enum Commands {
 
     /// Verify Hotfix I (Argon2id + AES-256-GCM), Hotfix II (6+ real OS TerminateProcess crash tests), and III.1 (wf-jx2-01-login migration) in sandbox
     VerifyHotfix {
+        #[arg(long)]
+        out_dir: Option<PathBuf>,
+    },
+
+    /// Execute end-to-end P3 backend services, runtime coordinator, vision/ROI, proxy, ADB & generic builder verification
+    VerifyP3 {
+        #[arg(long)]
+        repo_root: Option<PathBuf>,
+
         #[arg(long)]
         out_dir: Option<PathBuf>,
     },
@@ -288,6 +299,13 @@ async fn main() -> anyhow::Result<()> {
                 std::env::temp_dir().join(format!("fp_hotfix_cli_{}", uuid::Uuid::new_v4()))
             });
             let report = run_hotfix_verification(&root)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+
+        Commands::VerifyP3 { repo_root, out_dir } => {
+            let root = repo_root.unwrap_or_else(|| std::env::current_dir().unwrap());
+            let ev_dir = out_dir.unwrap_or_else(|| root.join("artifacts").join("p3_evidence"));
+            let report = verify_p3::run_p3_verification(&root, &ev_dir).await?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
 

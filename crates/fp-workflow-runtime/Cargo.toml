@@ -9,6 +9,9 @@ fp-domain = { path = "../fp-domain" }
 fp-workflow-schema = { path = "../fp-workflow-schema" }
 fp-vision = { path = "../fp-vision" }
 fp-actions = { path = "../fp-actions" }
+fp-adb = { path = "../fp-adb" }
+fp-device = { path = "../fp-device" }
+fp-scheduler = { path = "../fp-scheduler" }
 fp-storage = { path = "../fp-storage" }
 fp-security = { path = "../fp-security" }
 tokio.workspace = true

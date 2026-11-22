@@ -8,6 +8,7 @@ members = [
     "crates/fp-workflow-schema",
     "crates/fp-workflow-runtime",
     "crates/fp-scheduler",
+    "crates/fp-proxy",
     "crates/fp-storage",
     "crates/fp-security",
     "crates/fp-testkit",

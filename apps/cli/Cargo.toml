@@ -7,6 +7,9 @@ license.workspace = true
 [dependencies]
 fp-domain = { path = "../../crates/fp-domain" }
 fp-adb = { path = "../../crates/fp-adb" }
+fp-device = { path = "../../crates/fp-device" }
+fp-scheduler = { path = "../../crates/fp-scheduler" }
+fp-proxy = { path = "../../crates/fp-proxy" }
 fp-vision = { path = "../../crates/fp-vision" }
 fp-actions = { path = "../../crates/fp-actions" }
 fp-workflow-schema = { path = "../../crates/fp-workflow-schema" }
@@ -16,6 +19,8 @@ fp-security = { path = "../../crates/fp-security" }
 fp-testkit = { path = "../../crates/fp-testkit" }
 fp-builder = { path = "../../crates/fp-builder" }
 fp-bundle-contract = { path = "../../crates/fp-bundle-contract" }
+fp-bundle-verify = { path = "../../crates/fp-bundle-verify" }
+base64 = "0.21"
 clap.workspace = true
 tokio.workspace = true
 anyhow.workspace = true

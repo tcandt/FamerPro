@@ -2991,6 +2991,266 @@ impl StorageManager {
         Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
     }
 
+    /// Creates or updates a fully project-scoped job row including optional `account_id`,
+    /// scheduler `fencing_generation`, and `current_node_id`.
+    pub fn create_or_update_project_job(&self, input: ProjectJobInput) -> Result<ProjectJobRecord> {
+        if input.project_id.trim().is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
+        self.ensure_job_exists_with_project(
+            Some(&input.project_id),
+            &input.job_id,
+            &input.device_id,
+            &input.workflow_id,
+            &input.workflow_name,
+            &input.graph_json,
+        )?;
+        let conn = self.conn.lock().unwrap();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE jobs SET
+                account_id = ?1,
+                priority = ?2,
+                state = ?3,
+                fencing_generation = ?4,
+                current_node_id = ?5,
+                updated_at = ?6
+             WHERE id = ?7;",
+            params![
+                input.account_id,
+                input.priority,
+                input.state,
+                input.fencing_generation as i64,
+                input.current_node_id,
+                now,
+                input.job_id,
+            ],
+        )?;
+        Self::fetch_job_by_id_conn(&conn, &input.job_id)?
+            .context("Failed reloading created/updated project job")
+    }
+
+    fn fetch_job_by_id_conn(conn: &Connection, job_id: &str) -> Result<Option<ProjectJobRecord>> {
+        let mut stmt = conn.prepare(
+            "SELECT id, project_id, device_id, account_id, workflow_version_id, priority, state,
+                    fencing_generation, current_node_id, created_at, updated_at
+             FROM jobs WHERE id = ?1;",
+        )?;
+        let mut rows = stmt.query(params![job_id])?;
+        if let Some(r) = rows.next()? {
+            Ok(Some(ProjectJobRecord {
+                id: r.get(0)?,
+                project_id: r.get(1)?,
+                device_id: r.get(2)?,
+                account_id: r.get(3)?,
+                workflow_version_id: r.get(4)?,
+                priority: r.get(5)?,
+                state: r.get(6)?,
+                fencing_generation: r.get(7)?,
+                current_node_id: r.get(8)?,
+                created_at: r.get(9)?,
+                updated_at: r.get(10)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn get_job(&self, job_id: &str) -> Result<Option<ProjectJobRecord>> {
+        let conn = self.conn.lock().unwrap();
+        Self::fetch_job_by_id_conn(&conn, job_id)
+    }
+
+    pub fn update_job_progress(
+        &self,
+        job_id: &str,
+        state: &str,
+        fencing_generation: Option<u64>,
+        current_node_id: Option<&str>,
+    ) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE jobs SET
+                state = ?1,
+                fencing_generation = COALESCE(?2, fencing_generation),
+                current_node_id = COALESCE(?3, current_node_id),
+                updated_at = ?4
+             WHERE id = ?5;",
+            params![
+                state,
+                fencing_generation.map(|g| g as i64),
+                current_node_id,
+                now,
+                job_id,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn save_checkpoint(&self, input: CheckpointRecordInput) -> Result<CheckpointRecord> {
+        let conn = self.conn.lock().unwrap();
+        let id = input
+            .id
+            .unwrap_or_else(|| format!("cp-{}", uuid::Uuid::new_v4()));
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO checkpoints (id, job_id, node_id, state_json, evidence_ref, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6);",
+            params![
+                id,
+                input.job_id,
+                input.node_id,
+                input.state_json,
+                input.evidence_ref,
+                now
+            ],
+        )?;
+        conn.execute(
+            "UPDATE jobs SET current_node_id = ?1, updated_at = ?2 WHERE id = ?3;",
+            params![input.node_id, now, input.job_id],
+        )?;
+        Ok(CheckpointRecord {
+            id,
+            job_id: input.job_id,
+            node_id: input.node_id,
+            state_json: input.state_json,
+            evidence_ref: input.evidence_ref,
+            created_at: now,
+        })
+    }
+
+    pub fn get_latest_checkpoint(&self, job_id: &str) -> Result<Option<CheckpointRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, job_id, node_id, state_json, evidence_ref, created_at
+             FROM checkpoints WHERE job_id = ?1 ORDER BY rowid DESC LIMIT 1;",
+        )?;
+        let mut rows = stmt.query(params![job_id])?;
+        if let Some(r) = rows.next()? {
+            Ok(Some(CheckpointRecord {
+                id: r.get(0)?,
+                job_id: r.get(1)?,
+                node_id: r.get(2)?,
+                state_json: r.get(3)?,
+                evidence_ref: r.get(4)?,
+                created_at: r.get(5)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn list_job_checkpoints(&self, job_id: &str) -> Result<Vec<CheckpointRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, job_id, node_id, state_json, evidence_ref, created_at
+             FROM checkpoints WHERE job_id = ?1 ORDER BY rowid ASC;",
+        )?;
+        let rows = stmt.query_map(params![job_id], |r| {
+            Ok(CheckpointRecord {
+                id: r.get(0)?,
+                job_id: r.get(1)?,
+                node_id: r.get(2)?,
+                state_json: r.get(3)?,
+                evidence_ref: r.get(4)?,
+                created_at: r.get(5)?,
+            })
+        })?;
+        Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
+    }
+
+    pub fn load_job_resume_context(&self, job_id: &str) -> Result<Option<JobResumeContext>> {
+        let conn = self.conn.lock().unwrap();
+        let Some(job) = Self::fetch_job_by_id_conn(&conn, job_id)? else {
+            return Ok(None);
+        };
+        let pid = job
+            .project_id
+            .as_deref()
+            .context("PROJECT_ISOLATION_VIOLATION: Job lacks project ownership")?;
+        let project = Self::fetch_project_by_id_conn(&conn, pid)?
+            .with_context(|| format!("Project '{}' not found for job '{}'", pid, job_id))?;
+
+        let (workflow_id, workflow_version_no, workflow_graph_json, workflow_sha256): (
+            String,
+            i64,
+            String,
+            String,
+        ) = conn.query_row(
+            "SELECT workflow_id, version_no, graph_json, sha256
+             FROM workflow_versions WHERE id = ?1;",
+            params![job.workflow_version_id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )?;
+
+        let latest_checkpoint = {
+            let mut stmt = conn.prepare(
+                "SELECT id, job_id, node_id, state_json, evidence_ref, created_at
+                 FROM checkpoints WHERE job_id = ?1 ORDER BY rowid DESC LIMIT 1;",
+            )?;
+            let mut rows = stmt.query(params![job_id])?;
+            rows.next()?
+                .map(|r| {
+                    Ok::<_, rusqlite::Error>(CheckpointRecord {
+                        id: r.get(0)?,
+                        job_id: r.get(1)?,
+                        node_id: r.get(2)?,
+                        state_json: r.get(3)?,
+                        evidence_ref: r.get(4)?,
+                        created_at: r.get(5)?,
+                    })
+                })
+                .transpose()?
+        };
+
+        Ok(Some(JobResumeContext {
+            job,
+            project_dir_path: project.project_dir_path,
+            workflow_id,
+            workflow_version_no,
+            workflow_graph_json,
+            workflow_sha256,
+            latest_checkpoint,
+        }))
+    }
+
+    pub fn upsert_device_lease_record(
+        &self,
+        device_id: &str,
+        job_id: &str,
+        generation: u64,
+        expires_at: &str,
+    ) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO devices (id, adb_serial, alias, width_px, height_px, rotation_deg, connection_state, updated_at)
+             VALUES (?1, ?1, ?1, 1080, 1920, 0, 'busy', ?2)
+             ON CONFLICT(id) DO UPDATE SET updated_at = excluded.updated_at;",
+            params![device_id, now],
+        )?;
+        conn.execute(
+            "INSERT INTO device_leases (device_id, job_id, generation, expires_at)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(device_id) DO UPDATE SET
+                job_id = excluded.job_id,
+                generation = excluded.generation,
+                expires_at = excluded.expires_at;",
+            params![device_id, job_id, generation as i64, expires_at],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_device_lease_record(&self, device_id: &str, job_id: &str) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let rows = conn.execute(
+            "DELETE FROM device_leases WHERE device_id = ?1 AND job_id = ?2;",
+            params![device_id, job_id],
+        )?;
+        Ok(rows > 0)
+    }
+
     pub fn record_project_release(&self, release: ProjectReleaseRecord) -> Result<()> {
         if release.project_id.trim().is_empty() {
             bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");

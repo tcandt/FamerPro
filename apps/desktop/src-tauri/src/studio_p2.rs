@@ -506,12 +506,17 @@ mod tests {
             uuid::Uuid::new_v4()
         ));
         let projects_root = temp_dir.join("projects");
-        let storage = StorageManager::new_in_memory().unwrap();
+        let storage = Arc::new(StorageManager::new_in_memory().unwrap());
         let vault = CredentialVault::new();
+        let coordinator = fp_workflow_runtime::coordinator::RuntimeCoordinator::new(
+            Arc::clone(&storage),
+            PathBuf::from("adb"),
+        );
 
         let state = AppState {
             storage,
             adb_runner: AdbRunner::default(),
+            coordinator,
             vault,
             db_path: ":memory:".to_string(),
             projects_root: projects_root.clone(),

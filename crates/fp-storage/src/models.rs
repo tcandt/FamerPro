@@ -192,6 +192,55 @@ pub struct ProjectJobRecord {
     pub updated_at: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectJobInput {
+    pub project_id: String,
+    pub job_id: String,
+    pub device_id: String,
+    pub account_id: Option<String>,
+    pub workflow_id: String,
+    pub workflow_name: String,
+    pub graph_json: String,
+    pub priority: i32,
+    pub state: String,
+    pub fencing_generation: u64,
+    pub current_node_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckpointRecordInput {
+    pub id: Option<String>,
+    pub job_id: String,
+    pub node_id: String,
+    pub state_json: String,
+    pub evidence_ref: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckpointRecord {
+    pub id: String,
+    pub job_id: String,
+    pub node_id: String,
+    pub state_json: String,
+    pub evidence_ref: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JobResumeContext {
+    pub job: ProjectJobRecord,
+    pub project_dir_path: String,
+    pub workflow_id: String,
+    pub workflow_version_no: i64,
+    pub workflow_graph_json: String,
+    pub workflow_sha256: String,
+    pub latest_checkpoint: Option<CheckpointRecord>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectReleaseRecord {

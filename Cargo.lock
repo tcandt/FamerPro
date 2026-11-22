@@ -1077,12 +1077,16 @@ name = "farmerpro"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.21.7",
  "chrono",
  "fp-actions",
  "fp-adb",
+ "fp-builder",
  "fp-bundle-contract",
+ "fp-bundle-verify",
  "fp-device",
  "fp-domain",
+ "fp-proxy",
  "fp-scheduler",
  "fp-security",
  "fp-storage",
@@ -1281,13 +1285,18 @@ name = "fp-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.21.7",
  "chrono",
  "clap",
  "fp-actions",
  "fp-adb",
  "fp-builder",
  "fp-bundle-contract",
+ "fp-bundle-verify",
+ "fp-device",
  "fp-domain",
+ "fp-proxy",
+ "fp-scheduler",
  "fp-security",
  "fp-storage",
  "fp-testkit",
@@ -1353,6 +1362,18 @@ dependencies = [
  "tauri-build",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "fp-proxy"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.21.7",
+ "chrono",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -1439,7 +1460,10 @@ dependencies = [
  "anyhow",
  "chrono",
  "fp-actions",
+ "fp-adb",
+ "fp-device",
  "fp-domain",
+ "fp-scheduler",
  "fp-security",
  "fp-storage",
  "fp-testkit",

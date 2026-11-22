@@ -153,6 +153,38 @@ pub struct DeviceDetail {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+pub enum DeviceAdapterKind {
+    LdPlayer,
+    Nox,
+    BlueStacks,
+    PhysicalAdb,
+    Synthetic,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DevicePortMapping {
+    pub direction: String, // "forward" | "reverse"
+    pub serial: String,
+    pub local: String,
+    pub remote: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceHealthReport {
+    pub serial: String,
+    pub reachable: bool,
+    pub connection_state: ConnectionState,
+    pub width_px: u32,
+    pub height_px: u32,
+    pub rotation_deg: u16,
+    pub latency_ms: u64,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum JobState {
     Pending,
     Ready,
@@ -162,6 +194,7 @@ pub enum JobState {
     Succeeded,
     Failed,
     Paused,
+    Blocked,
     Unknown,
     Cancelled,
 }
@@ -194,6 +227,7 @@ pub trait DeviceDriver: Send + Sync {
     async fn geometry(&self) -> anyhow::Result<ScreenGeometry>;
     async fn tap(&self, x: u32, y: u32) -> anyhow::Result<ActionReceipt>;
     async fn swipe(&self, path: SwipePath) -> anyhow::Result<ActionReceipt>;
+    async fn key_event(&self, keycode: u32) -> anyhow::Result<ActionReceipt>;
     async fn launch_app(&self, package: &str) -> anyhow::Result<ActionReceipt>;
     async fn stop_app(&self, package: &str) -> anyhow::Result<ActionReceipt>;
 }

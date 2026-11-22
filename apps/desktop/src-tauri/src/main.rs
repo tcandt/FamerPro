@@ -2,13 +2,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod studio_p2;
+mod studio_p3;
 
 use fp_adb::AdbRunner;
 use fp_domain::{ConnectionState, DeviceDetail, DeviceDriver, DeviceSummary, StepEvent};
 use fp_security::CredentialVault;
 use fp_storage::StorageManager;
 use fp_testkit::FakeDeviceDriver;
-use fp_workflow_runtime::{ExecutionContext, ExecutionSignal, WorkflowExecutor};
+use fp_workflow_runtime::{
+    coordinator::RuntimeCoordinator, ExecutionContext, ExecutionSignal, WorkflowExecutor,
+};
 use fp_workflow_schema::{ValidationReport, WorkflowDocument, WorkflowNode, WorkflowValidator};
 use serde::{Deserialize, Serialize};
 use std::sync::{
@@ -73,8 +76,9 @@ pub struct ExecuteWorkflowResponse {
 }
 
 pub struct AppState {
-    pub storage: StorageManager,
+    pub storage: Arc<StorageManager>,
     pub adb_runner: AdbRunner,
+    pub coordinator: RuntimeCoordinator,
     pub vault: CredentialVault,
     pub db_path: String,
     pub projects_root: std::path::PathBuf,
@@ -1063,15 +1067,22 @@ fn main() {
     let db_path_str = db_path_buf.to_string_lossy().to_string();
     let projects_root = resolve_projects_root(&db_path_buf);
 
-    let storage = StorageManager::new(&db_path_buf)
-        .unwrap_or_else(|_| StorageManager::new_in_memory().expect("Failed to initialize storage"));
+    let storage = Arc::new(
+        StorageManager::new(&db_path_buf)
+            .unwrap_or_else(|_| StorageManager::new_in_memory().expect("Failed to initialize storage")),
+    );
     let _ = storage.reconcile_projects_storage(&projects_root);
     let adb_runner = AdbRunner::default();
+    let coordinator = RuntimeCoordinator::new(
+        Arc::clone(&storage),
+        std::path::PathBuf::from(&adb_runner.adb_path),
+    );
     let vault = CredentialVault::new();
 
     let app_state = Arc::new(Mutex::new(AppState {
         storage,
         adb_runner,
+        coordinator,
         vault,
         db_path: db_path_str,
         projects_root,
@@ -1135,7 +1146,32 @@ fn main() {
             studio_p2::studio_import_portable_producer_key,
             studio_p2::studio_backup_database,
             studio_p2::studio_check_db_integrity,
-            studio_p2::studio_migrate_legacy_jx2
+            studio_p2::studio_migrate_legacy_jx2,
+            studio_p3::studio_run_project_workflow,
+            studio_p3::studio_start_project_workflow,
+            studio_p3::studio_pause_job,
+            studio_p3::studio_resume_job,
+            studio_p3::studio_suspend_job_to_checkpoint,
+            studio_p3::studio_cancel_job,
+            studio_p3::studio_resume_job_from_checkpoint,
+            studio_p3::studio_list_project_jobs,
+            studio_p3::studio_get_job_resume_detail,
+            studio_p3::studio_list_active_device_leases,
+            studio_p3::studio_probe_device_health,
+            studio_p3::studio_reconnect_device,
+            studio_p3::studio_list_device_ports,
+            studio_p3::studio_add_device_forward,
+            studio_p3::studio_remove_device_forward,
+            studio_p3::studio_add_device_reverse,
+            studio_p3::studio_remove_device_reverse,
+            studio_p3::studio_crop_and_save_template,
+            studio_p3::studio_capture_and_crop_template,
+            studio_p3::studio_test_project_template_match,
+            studio_p3::studio_scale_roi_for_geometry,
+            studio_p3::studio_probe_project_proxy,
+            studio_p3::studio_builder_preflight,
+            studio_p3::studio_builder_export_release,
+            studio_p3::studio_list_project_releases
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
