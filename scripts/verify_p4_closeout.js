@@ -312,14 +312,15 @@ async function main() {
       };
     })()`);
 
-    // C. Select vars-compact (p1Id) in Header project selector, then test Builder Runtime Variable Picker
+    // C. Select vars-compact (p1Id) via React native setter in Header, then test Builder Runtime Variable Picker
     await evalJs(`(() => {
       const sel = Array.from(document.querySelectorAll('select')).find(s => Array.from(s.options).some(o => o.value === '${seeded.p1Id}'));
       if (!sel) throw new Error('Header project selector with p1 not found');
-      sel.value = '${seeded.p1Id}';
+      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;
+      nativeSetter.call(sel, '${seeded.p1Id}');
       sel.dispatchEvent(new Event('change', { bubbles: true }));
     })()`);
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 700));
 
     await evalJs(`(() => {
       const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent && b.textContent.includes('Mini Tool Builder'));
@@ -327,18 +328,24 @@ async function main() {
     })()`);
     await new Promise((r) => setTimeout(r, 700));
 
-    // Select Device ADB Table inside Component Tree
+    // Select Device ADB Table inside Component Tree & add a column if empty so the runtime var <select> renders
     await evalJs(`(() => {
       const rows = Array.from(document.querySelectorAll('div'));
       const row = rows.find(d => d.textContent && d.textContent.trim() === 'Device ADB Table' && d.querySelectorAll('button').length === 4);
       if (row) row.click();
     })()`);
-    await new Promise((r) => setTimeout(r, 250));
+    await new Promise((r) => setTimeout(r, 300));
+    await evalJs(`(() => {
+      const addColBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent && b.textContent.includes('Thêm cột'));
+      if (addColBtn) addColBtn.click();
+    })()`);
+    await new Promise((r) => setTimeout(r, 300));
 
     const builderVarOptions = await evalJs(`(() => {
       const selects = Array.from(document.querySelectorAll('select'));
       const allOpts = selects.flatMap(s => Array.from(s.options).map(o => ({ val: o.value, text: o.textContent })));
       return {
+        activeProjectBanner: document.body.innerText.includes('vars-compact'),
         hasResourceCountVar: allOpts.some(o => o.val === 'resource_count'),
         hasFarmZoneVar: allOpts.some(o => o.val === 'farm_zone'),
         hasTaskCompletedCountVar: allOpts.some(o => o.val === 'task_completed_count')
