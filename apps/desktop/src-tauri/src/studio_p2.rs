@@ -1,8 +1,8 @@
 use crate::AppState;
 use fp_bundle_contract::{MiniTaskDef, MiniToolUiSchema, TaskCategoryDef};
 use fp_security::{
-    CredentialMetadata, ProducerKeyBackupBundle, ProducerKeyMetadata, ProducerKeystore,
-    SecretNamespace,
+    CredentialMetadata, PortableProducerKeyRecoveryBundle, ProducerKeyBackupBundle,
+    ProducerKeyMetadata, ProducerKeystore, SecretNamespace,
 };
 use fp_storage::{
     BackupReport, CloneProjectRequest, CreateProjectRequest, GameProjectDetail, GameProjectRecord,
@@ -427,6 +427,34 @@ pub fn studio_restore_producer_key(backup_path: String) -> Result<ProducerKeyMet
 }
 
 #[tauri::command]
+pub fn studio_export_portable_producer_key(
+    backup_path: String,
+    passphrase: String,
+) -> Result<PortableProducerKeyRecoveryBundle, String> {
+    let ks_dir = ProducerKeystore::default_external_keystore_dir();
+    ProducerKeystore::export_portable_recovery_bundle(
+        &ks_dir,
+        PathBuf::from(backup_path).as_path(),
+        &passphrase,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn studio_import_portable_producer_key(
+    backup_path: String,
+    passphrase: String,
+) -> Result<ProducerKeyMetadata, String> {
+    let ks_dir = ProducerKeystore::default_external_keystore_dir();
+    ProducerKeystore::import_portable_recovery_bundle(
+        PathBuf::from(backup_path).as_path(),
+        &ks_dir,
+        &passphrase,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn studio_backup_database(
     dest_path: String,
     state: State<'_, Arc<Mutex<AppState>>>,
@@ -506,6 +534,8 @@ mod tests {
         .unwrap();
         let p1_upd = handle_update_project(&state, upd_req).unwrap();
         assert_eq!(p1_upd.version, "1.1.0");
+        let ui_synced = state.storage.get_ui_schema(&p1.id).unwrap().unwrap();
+        assert_eq!(ui_synced.version_badge, "v1.1.0");
 
         state
             .storage

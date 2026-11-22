@@ -7,7 +7,10 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-pub use keystore::{ProducerKeyBackupBundle, ProducerKeyMetadata, ProducerKeystore};
+pub use keystore::{
+    PortableProducerKeyRecoveryBundle, ProducerKeyBackupBundle, ProducerKeyMetadata,
+    ProducerKeystore,
+};
 pub use wincred::{
     parse_cred_uri_to_target, validate_segment, CredentialMetadata, SecretNamespace,
     CRED_MGR_URI_PREFIX,
@@ -506,6 +509,84 @@ mod tests {
         assert!(!upgraded_raw.contains(seed_hex));
         assert!(!upgraded_raw.contains("secretSeedHex"));
         assert!(upgraded_raw.contains("dpapiProtectedSeedB64"));
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_portable_passphrase_recovery_bundle_roundtrip_wrong_pass_and_tamper() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_portable_recovery_test_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let ks_machine_a = temp_dir.join("machine_a_ks");
+        let ks_machine_b = temp_dir.join("machine_b_ks");
+        let recovery_file = temp_dir.join("offline_recovery.json");
+
+        let (sk_a, meta_a) = ProducerKeystore::load_or_create_signing_key(&ks_machine_a).unwrap();
+        let seed_hex = keystore::hex_encode(&sk_a.to_bytes());
+
+        // Weak passphrase rejected
+        assert!(ProducerKeystore::export_portable_recovery_bundle(
+            &ks_machine_a,
+            &recovery_file,
+            "short"
+        )
+        .is_err());
+
+        // Export with strong passphrase
+        let bundle = ProducerKeystore::export_portable_recovery_bundle(
+            &ks_machine_a,
+            &recovery_file,
+            "FarmerPro-Offline-Recovery-2026!",
+        )
+        .unwrap();
+        assert_eq!(bundle.protection_scheme, "PASSPHRASE_PBKDF2_SHA256_ETM_V1");
+        assert_eq!(bundle.kdf_iterations, 200_000);
+        assert_eq!(bundle.key_id, meta_a.key_id);
+
+        // Ensure recovery bundle JSON contains ZERO plaintext seed
+        let raw_bundle = std::fs::read_to_string(&recovery_file).unwrap();
+        assert!(!raw_bundle.contains(&seed_hex));
+        assert!(!raw_bundle.contains("secretSeedHex"));
+
+        // Wrong passphrase must fail closed
+        let wrong_res = ProducerKeystore::import_portable_recovery_bundle(
+            &recovery_file,
+            &ks_machine_b,
+            "Wrong-Passphrase-999",
+        );
+        assert!(wrong_res.is_err());
+        assert!(wrong_res
+            .unwrap_err()
+            .to_string()
+            .contains("RECOVERY_AUTH_FAILED"));
+
+        // Tampered metadata/ciphertext must fail closed
+        let tampered_path = temp_dir.join("tampered_recovery.json");
+        let mut tampered = bundle.clone();
+        tampered.public_key_hex = "ff".repeat(32);
+        std::fs::write(&tampered_path, serde_json::to_vec_pretty(&tampered).unwrap()).unwrap();
+        assert!(ProducerKeystore::import_portable_recovery_bundle(
+            &tampered_path,
+            &ks_machine_b,
+            "FarmerPro-Offline-Recovery-2026!"
+        )
+        .is_err());
+
+        // Valid passphrase imports into Machine B's DPAPI keystore cleanly
+        let imported_meta = ProducerKeystore::import_portable_recovery_bundle(
+            &recovery_file,
+            &ks_machine_b,
+            "FarmerPro-Offline-Recovery-2026!",
+        )
+        .unwrap();
+        assert_eq!(imported_meta.key_id, meta_a.key_id);
+        assert_eq!(imported_meta.public_key_hex, meta_a.public_key_hex);
+        assert_eq!(imported_meta.protection_scheme, "WIN32_DPAPI_LOCAL_USER");
+
+        let (sk_b, _) = ProducerKeystore::load_or_create_signing_key(&ks_machine_b).unwrap();
+        assert_eq!(sk_a.to_bytes(), sk_b.to_bytes());
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }

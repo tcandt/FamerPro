@@ -149,7 +149,8 @@ CREATE TABLE IF NOT EXISTS task_definitions (
     estimate_sec INTEGER NOT NULL DEFAULT 60,
     default_enabled INTEGER NOT NULL DEFAULT 1,
     settings_schema_json TEXT NOT NULL DEFAULT '[]',
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (project_id, workflow_id) REFERENCES workflows(project_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS mini_tool_schemas (
@@ -178,11 +179,187 @@ CREATE TABLE IF NOT EXISTS project_releases (
 
 pub const MIGRATION_V2_INDEXES_SQL: &str = r#"
 CREATE INDEX IF NOT EXISTS idx_workflows_project ON workflows(project_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_workflows_project_id_pair ON workflows(project_id, id);
+CREATE INDEX IF NOT EXISTS idx_workflow_versions_workflow ON workflow_versions(workflow_id);
 CREATE INDEX IF NOT EXISTS idx_accounts_project ON accounts(project_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_project ON jobs(project_id);
+CREATE INDEX IF NOT EXISTS idx_checkpoints_job ON checkpoints(job_id);
 CREATE INDEX IF NOT EXISTS idx_templates_project ON vision_templates(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_project_priority ON task_definitions(project_id, priority ASC);
 CREATE INDEX IF NOT EXISTS idx_releases_project_time ON project_releases(project_id, built_at DESC);
+"#;
+
+pub const MIGRATION_V2_ISOLATION_TRIGGERS_SQL: &str = r#"
+CREATE TRIGGER IF NOT EXISTS trg_workflows_isolation_insert
+BEFORE INSERT ON workflows
+FOR EACH ROW
+WHEN NEW.project_id IS NULL
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: workflows.project_id cannot be NULL');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_workflows_isolation_update
+BEFORE UPDATE ON workflows
+FOR EACH ROW
+WHEN NEW.project_id IS NULL
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: workflows.project_id cannot be NULL');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_workflows_cross_move_guard
+BEFORE UPDATE OF project_id ON workflows
+FOR EACH ROW
+WHEN OLD.project_id IS NOT NULL AND NEW.project_id != OLD.project_id AND (
+    EXISTS (SELECT 1 FROM task_definitions t WHERE t.workflow_id = NEW.id)
+    OR EXISTS (SELECT 1 FROM jobs j JOIN workflow_versions wv ON wv.id = j.workflow_version_id WHERE wv.workflow_id = NEW.id)
+)
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: cannot reassign workflow referenced by tasks or jobs across projects');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_task_definitions_isolation_insert
+BEFORE INSERT ON task_definitions
+FOR EACH ROW
+WHEN NEW.project_id IS NULL OR NOT EXISTS (
+    SELECT 1 FROM workflows w WHERE w.id = NEW.workflow_id AND w.project_id = NEW.project_id
+)
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: task_definitions workflow_id must belong to same project_id');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_task_definitions_isolation_update
+BEFORE UPDATE ON task_definitions
+FOR EACH ROW
+WHEN NEW.project_id IS NULL OR NOT EXISTS (
+    SELECT 1 FROM workflows w WHERE w.id = NEW.workflow_id AND w.project_id = NEW.project_id
+)
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: task_definitions workflow_id must belong to same project_id');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_accounts_isolation_insert
+BEFORE INSERT ON accounts
+FOR EACH ROW
+WHEN NEW.project_id IS NULL
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: accounts.project_id cannot be NULL');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_accounts_isolation_update
+BEFORE UPDATE ON accounts
+FOR EACH ROW
+WHEN NEW.project_id IS NULL
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: accounts.project_id cannot be NULL');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_accounts_cross_move_guard
+BEFORE UPDATE OF project_id ON accounts
+FOR EACH ROW
+WHEN OLD.project_id IS NOT NULL AND NEW.project_id != OLD.project_id AND EXISTS (
+    SELECT 1 FROM jobs j WHERE j.account_id = NEW.id
+)
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: cannot reassign account referenced by jobs across projects');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_workflow_versions_isolation_insert
+BEFORE INSERT ON workflow_versions
+FOR EACH ROW
+WHEN NOT EXISTS (
+    SELECT 1 FROM workflows w WHERE w.id = NEW.workflow_id AND w.project_id IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: workflow_versions must reference a project-owned workflow');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_workflow_versions_isolation_update
+BEFORE UPDATE ON workflow_versions
+FOR EACH ROW
+WHEN NOT EXISTS (
+    SELECT 1 FROM workflows w WHERE w.id = NEW.workflow_id AND w.project_id IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: workflow_versions must reference a project-owned workflow');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_jobs_isolation_insert
+BEFORE INSERT ON jobs
+FOR EACH ROW
+WHEN NEW.project_id IS NULL
+    OR NOT EXISTS (
+        SELECT 1 FROM workflow_versions wv
+        JOIN workflows w ON w.id = wv.workflow_id
+        WHERE wv.id = NEW.workflow_version_id AND w.project_id = NEW.project_id
+    )
+    OR (
+        NEW.account_id IS NOT NULL
+        AND NOT EXISTS (
+            SELECT 1 FROM accounts a WHERE a.id = NEW.account_id AND a.project_id = NEW.project_id
+        )
+    )
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: job project_id must match workflow_version and account project_id');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_jobs_isolation_update
+BEFORE UPDATE ON jobs
+FOR EACH ROW
+WHEN NEW.project_id IS NULL
+    OR NOT EXISTS (
+        SELECT 1 FROM workflow_versions wv
+        JOIN workflows w ON w.id = wv.workflow_id
+        WHERE wv.id = NEW.workflow_version_id AND w.project_id = NEW.project_id
+    )
+    OR (
+        NEW.account_id IS NOT NULL
+        AND NOT EXISTS (
+            SELECT 1 FROM accounts a WHERE a.id = NEW.account_id AND a.project_id = NEW.project_id
+        )
+    )
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: job project_id must match workflow_version and account project_id');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_checkpoints_isolation_insert
+BEFORE INSERT ON checkpoints
+FOR EACH ROW
+WHEN NOT EXISTS (
+    SELECT 1 FROM jobs j WHERE j.id = NEW.job_id AND j.project_id IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: checkpoint job must belong to a valid project');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_checkpoints_isolation_update
+BEFORE UPDATE ON checkpoints
+FOR EACH ROW
+WHEN NOT EXISTS (
+    SELECT 1 FROM jobs j WHERE j.id = NEW.job_id AND j.project_id IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: checkpoint job must belong to a valid project');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_step_events_isolation_insert
+BEFORE INSERT ON step_events
+FOR EACH ROW
+WHEN NOT EXISTS (
+    SELECT 1 FROM jobs j WHERE j.id = NEW.job_id AND j.project_id IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: step_event job must belong to a valid project');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_step_events_isolation_update
+BEFORE UPDATE ON step_events
+FOR EACH ROW
+WHEN NOT EXISTS (
+    SELECT 1 FROM jobs j WHERE j.id = NEW.job_id AND j.project_id IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'PROJECT_ISOLATION_VIOLATION: step_event job must belong to a valid project');
+END;
 "#;
 
 fn table_has_column(conn: &Connection, table: &str, col_name: &str) -> Result<bool> {
@@ -337,10 +514,21 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
             );
         }
 
+        tx.execute_batch(MIGRATION_V2_ISOLATION_TRIGGERS_SQL)
+            .context("Failed creating v2 SQLite project isolation triggers")?;
+
         tx.execute(
             "INSERT INTO schema_migrations (version, applied_at) VALUES (2, ?1);",
             params![now],
         )?;
+        tx.commit()?;
+    } else {
+        // Ensure P2.1 SQLite-level project isolation indexes & triggers are present on existing v2 DBs
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        tx.execute_batch(MIGRATION_V2_INDEXES_SQL)
+            .context("Failed ensuring v2 isolation indexes")?;
+        tx.execute_batch(MIGRATION_V2_ISOLATION_TRIGGERS_SQL)
+            .context("Failed ensuring v2 SQLite project isolation triggers")?;
         tx.commit()?;
     }
 

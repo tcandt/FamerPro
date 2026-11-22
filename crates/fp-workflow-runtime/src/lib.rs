@@ -676,32 +676,87 @@ impl WorkflowExecutor {
 
         // 2. File path on disk
         if let Some(path_str) = node.config.get("templateRef").and_then(|v| v.as_str()) {
-            let path = Path::new(path_str);
+            let trimmed = path_str.trim();
+            if trimmed.is_empty() || trimmed.contains('\0') {
+                bail!("PROJECT_ISOLATION_VIOLATION: Invalid templateRef '{}'", path_str);
+            }
+            let path = Path::new(trimmed);
 
-            // 2a. Strict project-scoped lookup first (rejects traversal)
+            // 2a. Strict project-scoped lookup when project_dir is active (blocks traversal, absolute escape, symlinks & NTFS junctions)
             if let Some(proj_dir) = project_dir {
-                if path.is_relative() && !path_str.contains("..") {
-                    let scoped_rel = proj_dir.join(path);
-                    if scoped_rel.exists() {
-                        return std::fs::read(&scoped_rel).with_context(|| {
-                            format!(
-                                "Failed to read project template from {}",
-                                scoped_rel.display()
-                            )
-                        });
+                let canonical_proj = std::fs::canonicalize(proj_dir).with_context(|| {
+                    format!(
+                        "PROJECT_ISOLATION_VIOLATION: Project directory does not exist or cannot be resolved: {}",
+                        proj_dir.display()
+                    )
+                })?;
+
+                if trimmed.contains("..") {
+                    bail!(
+                        "PROJECT_ISOLATION_VIOLATION: Template path traversal '..' rejected: '{}'",
+                        path_str
+                    );
+                }
+
+                let read_contained = |candidate: &Path| -> Result<Option<Vec<u8>>> {
+                    if !candidate.exists() {
+                        return Ok(None);
                     }
-                    if let Some(file_name) = path.file_name() {
-                        let scoped_tpl = proj_dir.join("templates").join(file_name);
-                        if scoped_tpl.exists() {
-                            return std::fs::read(&scoped_tpl).with_context(|| {
-                                format!(
-                                    "Failed to read project template from {}",
-                                    scoped_tpl.display()
-                                )
-                            });
+                    // Reject any symlink/reparse point component along the relative hierarchy
+                    if let Ok(meta) = std::fs::symlink_metadata(candidate) {
+                        if meta.file_type().is_symlink() {
+                            bail!(
+                                "PROJECT_ISOLATION_VIOLATION: Symlink template path rejected: {}",
+                                candidate.display()
+                            );
                         }
                     }
+                    let canonical_cand = std::fs::canonicalize(candidate).with_context(|| {
+                        format!("Failed to canonicalize template path: {}", candidate.display())
+                    })?;
+                    if !canonical_cand.starts_with(&canonical_proj) {
+                        bail!(
+                            "PROJECT_ISOLATION_VIOLATION: Template path '{}' resolves outside project directory '{}'",
+                            canonical_cand.display(),
+                            canonical_proj.display()
+                        );
+                    }
+                    let bytes = std::fs::read(&canonical_cand).with_context(|| {
+                        format!(
+                            "Failed to read project template from {}",
+                            canonical_cand.display()
+                        )
+                    })?;
+                    Ok(Some(bytes))
+                };
+
+                if path.is_absolute() {
+                    if let Some(bytes) = read_contained(path)? {
+                        return Ok(bytes);
+                    }
+                    bail!(
+                        "PROJECT_ISOLATION_VIOLATION: Absolute templateRef '{}' is outside or missing from project '{}'",
+                        path_str,
+                        canonical_proj.display()
+                    );
                 }
+
+                let scoped_rel = proj_dir.join(path);
+                if let Some(bytes) = read_contained(&scoped_rel)? {
+                    return Ok(bytes);
+                }
+                if let Some(file_name) = path.file_name() {
+                    let scoped_tpl = proj_dir.join("templates").join(file_name);
+                    if let Some(bytes) = read_contained(&scoped_tpl)? {
+                        return Ok(bytes);
+                    }
+                }
+
+                bail!(
+                    "Template file not found inside project '{}': '{}'",
+                    canonical_proj.display(),
+                    path_str
+                );
             }
 
             if path.is_absolute() && path.exists() {
@@ -1191,6 +1246,61 @@ mod tests {
             Some(&temp_dir.join("projects").join("game-b")),
         )
         .is_err());
+
+        // Absolute path pointing to Project A's template must be BLOCKED when running under Project B
+        let abs_in_a = proj_a_tpl.join("only_in_a.png");
+        let node_abs_escape = WorkflowNode {
+            id: "n-abs-escape".to_string(),
+            node_type: "vision.find_image".to_string(),
+            position: fp_workflow_schema::NodePosition { x: 0.0, y: 0.0 },
+            config: serde_json::json!({ "templateRef": abs_in_a.to_string_lossy() }),
+            timeout_ms: None,
+            retry_policy: None,
+        };
+        let abs_err = WorkflowExecutor::resolve_template_bytes_with_project(
+            &node_abs_escape,
+            Some(&temp_dir.join("projects").join("game-b")),
+        )
+        .unwrap_err();
+        assert!(abs_err.to_string().contains("PROJECT_ISOLATION_VIOLATION"));
+
+        // NTFS Junction inside Project B pointing outside to Project A must be BLOCKED
+        #[cfg(windows)]
+        {
+            let junction_dir = temp_dir
+                .join("projects")
+                .join("game-b")
+                .join("templates")
+                .join("evil_junction");
+            let status = std::process::Command::new("cmd")
+                .args([
+                    "/C",
+                    "mklink",
+                    "/J",
+                    &junction_dir.to_string_lossy(),
+                    &proj_a_tpl.to_string_lossy(),
+                ])
+                .output();
+            if let Ok(out) = status {
+                if out.status.success() {
+                    let node_junc = WorkflowNode {
+                        id: "n-junc".to_string(),
+                        node_type: "vision.find_image".to_string(),
+                        position: fp_workflow_schema::NodePosition { x: 0.0, y: 0.0 },
+                        config: serde_json::json!({ "templateRef": "templates/evil_junction/only_in_a.png" }),
+                        timeout_ms: None,
+                        retry_policy: None,
+                    };
+                    let junc_err = WorkflowExecutor::resolve_template_bytes_with_project(
+                        &node_junc,
+                        Some(&temp_dir.join("projects").join("game-b")),
+                    )
+                    .unwrap_err();
+                    assert!(junc_err.to_string().contains("PROJECT_ISOLATION_VIOLATION"));
+                    let _ = std::fs::remove_dir(&junction_dir);
+                }
+            }
+        }
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }

@@ -1065,6 +1065,7 @@ fn main() {
 
     let storage = StorageManager::new(&db_path_buf)
         .unwrap_or_else(|_| StorageManager::new_in_memory().expect("Failed to initialize storage"));
+    let _ = storage.reconcile_projects_storage(&projects_root);
     let adb_runner = AdbRunner::default();
     let vault = CredentialVault::new();
 
@@ -1130,6 +1131,8 @@ fn main() {
             studio_p2::studio_rotate_producer_key,
             studio_p2::studio_backup_producer_key,
             studio_p2::studio_restore_producer_key,
+            studio_p2::studio_export_portable_producer_key,
+            studio_p2::studio_import_portable_producer_key,
             studio_p2::studio_backup_database,
             studio_p2::studio_check_db_integrity,
             studio_p2::studio_migrate_legacy_jx2

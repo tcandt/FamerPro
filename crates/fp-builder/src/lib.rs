@@ -1112,4 +1112,57 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
+
+    #[test]
+    fn test_old_minitool_continues_verifying_old_bundle_after_producer_key_rotation() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_minitool_rotation_compat_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let keystore_dir = temp_dir.join("keystore");
+        let old_bundle_dir = temp_dir.join("old_release_bundle");
+        let new_bundle_dir = temp_dir.join("new_release_bundle");
+        std::fs::create_dir_all(&old_bundle_dir).unwrap();
+        std::fs::create_dir_all(&new_bundle_dir).unwrap();
+
+        let current_pe = std::env::current_exe().unwrap();
+        let old_minitool_exe = temp_dir.join("Auto_Game_v1.exe");
+        let new_minitool_exe = temp_dir.join("Auto_Game_v2.exe");
+        std::fs::copy(&current_pe, &old_minitool_exe).unwrap();
+        std::fs::copy(&current_pe, &new_minitool_exe).unwrap();
+
+        // 1. Key1 signs v1 Mini Tool and embeds Key1 PubKey in RT_RCDATA #7777
+        let (sk1, meta1) = ProducerKeyManager::load_or_create_signing_key(&keystore_dir).unwrap();
+        inject_ed25519_pubkey_into_pe_exe(&old_minitool_exe, &meta1.public_key_hex).unwrap();
+
+        let m1 = b"{\"version\":\"1.0.0\"}";
+        std::fs::write(old_bundle_dir.join("manifest.fpbundle.json"), m1).unwrap();
+        let mut cs1 = BTreeMap::new();
+        cs1.insert("manifest.fpbundle.json".to_string(), sha256_hex(m1));
+        let env1 = ProducerKeyManager::sign_bundle_ed25519(&sk1, &meta1.key_id, sha256_hex(m1), cs1);
+
+        // 2. Producer rotates key -> Key2 becomes active, Key1 is archived
+        let (sk2, meta2) = ProducerKeyManager::rotate_producer_key(&keystore_dir, "scheduled_rotation").unwrap();
+        assert_ne!(meta1.key_id, meta2.key_id);
+        inject_ed25519_pubkey_into_pe_exe(&new_minitool_exe, &meta2.public_key_hex).unwrap();
+
+        let m2 = b"{\"version\":\"2.0.0\"}";
+        std::fs::write(new_bundle_dir.join("manifest.fpbundle.json"), m2).unwrap();
+        let mut cs2 = BTreeMap::new();
+        cs2.insert("manifest.fpbundle.json".to_string(), sha256_hex(m2));
+        let env2 = ProducerKeyManager::sign_bundle_ed25519(&sk2, &meta2.key_id, sha256_hex(m2), cs2);
+
+        // 3. Old Mini Tool v1 STILL verifies its old bundle using its embedded Key1 RT_RCDATA #7777!
+        let old_pe_pub = read_pe_embedded_pubkey_from_exe(&old_minitool_exe).unwrap();
+        assert_eq!(old_pe_pub, meta1.public_key_hex);
+        assert!(env1.verify_ed25519_with_public_key(&old_bundle_dir, &old_pe_pub).is_ok());
+
+        // 4. New Mini Tool v2 verifies new bundle using Key2, and rejects Key1 bundle (cross-version mismatch)
+        let new_pe_pub = read_pe_embedded_pubkey_from_exe(&new_minitool_exe).unwrap();
+        assert_eq!(new_pe_pub, meta2.public_key_hex);
+        assert!(env2.verify_ed25519_with_public_key(&new_bundle_dir, &new_pe_pub).is_ok());
+        assert!(env1.verify_ed25519_with_public_key(&old_bundle_dir, &new_pe_pub).is_err());
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
 }

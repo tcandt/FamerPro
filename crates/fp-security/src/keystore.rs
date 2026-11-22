@@ -1,5 +1,7 @@
 use crate::dpapi;
 use anyhow::{bail, Context, Result};
+use base64::engine::general_purpose::STANDARD as B64;
+use base64::Engine;
 use ed25519_dalek::{Signer, SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -7,6 +9,9 @@ use std::path::{Path, PathBuf};
 
 const PRODUCER_KEY_DPAPI_ENTROPY: &[u8] = b"FarmerPro.ProducerEd25519.Keystore.v2";
 const PRODUCER_KEY_BACKUP_ENTROPY: &[u8] = b"FarmerPro.ProducerEd25519.Backup.v2";
+const PORTABLE_RECOVERY_KDF_ITERATIONS: u32 = 200_000;
+const PORTABLE_RECOVERY_SCHEME: &str = "PASSPHRASE_PBKDF2_SHA256_ETM_V1";
+const PORTABLE_RECOVERY_DOMAIN: &[u8] = b"FarmerPro.ProducerEd25519.PortableRecovery.v1";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,6 +51,142 @@ pub struct ProducerKeyBackupBundle {
     pub backed_up_at_utc: String,
     pub dpapi_protected_seed_b64: String,
     pub payload_sha256: String,
+}
+
+/// Cross-machine / cross-Windows-user passphrase-encrypted offline recovery bundle.
+/// Uses PBKDF2-HMAC-SHA256 (200,000 iterations) + SHA-256-CTR + Encrypt-then-MAC (HMAC-SHA256).
+/// Never stores plaintext seed; imports into target machine's Windows DPAPI keystore.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PortableProducerKeyRecoveryBundle {
+    pub format_version: u32,
+    pub protection_scheme: String,
+    pub kdf_iterations: u32,
+    pub key_id: String,
+    pub public_key_hex: String,
+    pub created_at_utc: String,
+    pub backed_up_at_utc: String,
+    pub salt_b64: String,
+    pub nonce_b64: String,
+    pub ciphertext_b64: String,
+    pub hmac_sha256: String,
+}
+
+fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
+    const BLOCK_SIZE: usize = 64;
+    let mut key_block = [0u8; BLOCK_SIZE];
+    if key.len() > BLOCK_SIZE {
+        let mut h = Sha256::new();
+        h.update(key);
+        key_block[..32].copy_from_slice(&h.finalize());
+    } else {
+        key_block[..key.len()].copy_from_slice(key);
+    }
+
+    let mut ipad = [0x36u8; BLOCK_SIZE];
+    let mut opad = [0x5cu8; BLOCK_SIZE];
+    for i in 0..BLOCK_SIZE {
+        ipad[i] ^= key_block[i];
+        opad[i] ^= key_block[i];
+    }
+
+    let mut inner = Sha256::new();
+    inner.update(ipad);
+    inner.update(data);
+    let inner_digest = inner.finalize();
+
+    let mut outer = Sha256::new();
+    outer.update(opad);
+    outer.update(inner_digest);
+    let out = outer.finalize();
+
+    key_block.fill(0);
+    ipad.fill(0);
+    opad.fill(0);
+
+    let mut res = [0u8; 32];
+    res.copy_from_slice(&out);
+    res
+}
+
+fn pbkdf2_hmac_sha256(password: &[u8], salt: &[u8], iterations: u32, out: &mut [u8]) {
+    let mut block_index = 1u32;
+    let mut offset = 0usize;
+    while offset < out.len() {
+        let mut u_input = Vec::with_capacity(salt.len() + 4);
+        u_input.extend_from_slice(salt);
+        u_input.extend_from_slice(&block_index.to_be_bytes());
+        let mut u = hmac_sha256(password, &u_input);
+        let mut t = u;
+        for _ in 1..iterations {
+            u = hmac_sha256(password, &u);
+            for j in 0..32 {
+                t[j] ^= u[j];
+            }
+        }
+        let take = (out.len() - offset).min(32);
+        out[offset..offset + take].copy_from_slice(&t[..take]);
+        u.fill(0);
+        t.fill(0);
+        offset += take;
+        block_index += 1;
+    }
+}
+
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for (&x, &y) in a.iter().zip(b.iter()) {
+        diff |= x ^ y;
+    }
+    diff == 0
+}
+
+fn xor_sha256_ctr_stream(enc_key: &[u8; 32], nonce: &[u8; 16], input: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(input.len());
+    let mut counter = 0u32;
+    for chunk in input.chunks(32) {
+        let mut h = Sha256::new();
+        h.update(PORTABLE_RECOVERY_DOMAIN);
+        h.update(enc_key);
+        h.update(nonce);
+        h.update(counter.to_le_bytes());
+        let mut ks = h.finalize();
+        for (i, &byte) in chunk.iter().enumerate() {
+            out.push(byte ^ ks[i]);
+        }
+        ks.fill(0);
+        counter += 1;
+    }
+    out
+}
+
+fn compute_portable_mac(
+    mac_key: &[u8; 32],
+    key_id: &str,
+    public_key_hex: &str,
+    created_at_utc: &str,
+    backed_up_at_utc: &str,
+    kdf_iterations: u32,
+    salt_b64: &str,
+    nonce_b64: &str,
+    ciphertext_b64: &str,
+) -> String {
+    let canonical = format!(
+        "v1|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+        PORTABLE_RECOVERY_SCHEME,
+        kdf_iterations,
+        key_id,
+        public_key_hex,
+        created_at_utc,
+        backed_up_at_utc,
+        salt_b64,
+        nonce_b64,
+        ciphertext_b64
+    );
+    hex_encode(&hmac_sha256(mac_key, canonical.as_bytes()))
 }
 
 fn default_format_v1() -> u32 {
@@ -366,6 +507,200 @@ impl ProducerKeystore {
         let probe_sig = sk.sign(b"farmerpro-restore-probe");
         let vk = VerifyingKey::from_bytes(sk.verifying_key().as_bytes())?;
         vk.verify_strict(b"farmerpro-restore-probe", &probe_sig)?;
+
+        std::fs::create_dir_all(keystore_dir)?;
+        let key_file = keystore_dir.join("active_producer_ed25519.json");
+        if key_file.exists() {
+            let archive_name = format!(
+                "pre_restore_producer_ed25519_{}.json",
+                chrono::Utc::now().format("%Y%m%d_%H%M%S_%f")
+            );
+            std::fs::rename(&key_file, keystore_dir.join(archive_name))?;
+        }
+
+        Self::write_dpapi_key_file(
+            &key_file,
+            &bundle.key_id,
+            &seed,
+            &bundle.public_key_hex,
+            &bundle.created_at_utc,
+        )?;
+        seed.fill(0);
+
+        Ok(ProducerKeyMetadata {
+            format_version: 2,
+            protection_scheme: "WIN32_DPAPI_LOCAL_USER".to_string(),
+            key_id: bundle.key_id,
+            public_key_hex: bundle.public_key_hex,
+            created_at_utc: bundle.created_at_utc,
+            key_store_path: key_file.to_string_lossy().to_string(),
+        })
+    }
+
+    /// Exports a passphrase-encrypted offline recovery bundle portable across Windows users and machines.
+    /// Uses PBKDF2-HMAC-SHA256 (200,000 iterations) + SHA-256-CTR + Encrypt-then-MAC (HMAC-SHA256).
+    /// Never writes plaintext Ed25519 seed to disk or logs.
+    pub fn export_portable_recovery_bundle(
+        keystore_dir: &Path,
+        backup_file_path: &Path,
+        passphrase: &str,
+    ) -> Result<PortableProducerKeyRecoveryBundle> {
+        if passphrase.trim().len() < 8 {
+            bail!("RECOVERY_PASSPHRASE_WEAK: Recovery passphrase must be at least 8 characters");
+        }
+
+        let (signing_key, meta) = Self::load_or_create_signing_key(keystore_dir)?;
+        let mut seed_bytes = signing_key.to_bytes();
+        let backed_up_at_utc = chrono::Utc::now().to_rfc3339();
+
+        // uuid::Uuid::new_v4() uses OS CSPRNG (getrandom / BCryptGenRandom)
+        let salt = *uuid::Uuid::new_v4().as_bytes();
+        let nonce = *uuid::Uuid::new_v4().as_bytes();
+
+        let mut derived = [0u8; 64];
+        pbkdf2_hmac_sha256(
+            passphrase.as_bytes(),
+            &salt,
+            PORTABLE_RECOVERY_KDF_ITERATIONS,
+            &mut derived,
+        );
+        let mut enc_key = [0u8; 32];
+        let mut mac_key = [0u8; 32];
+        enc_key.copy_from_slice(&derived[..32]);
+        mac_key.copy_from_slice(&derived[32..64]);
+        derived.fill(0);
+
+        let ciphertext = xor_sha256_ctr_stream(&enc_key, &nonce, &seed_bytes);
+        seed_bytes.fill(0);
+        enc_key.fill(0);
+
+        let salt_b64 = B64.encode(salt);
+        let nonce_b64 = B64.encode(nonce);
+        let ciphertext_b64 = B64.encode(&ciphertext);
+        let hmac_sha256 = compute_portable_mac(
+            &mac_key,
+            &meta.key_id,
+            &meta.public_key_hex,
+            &meta.created_at_utc,
+            &backed_up_at_utc,
+            PORTABLE_RECOVERY_KDF_ITERATIONS,
+            &salt_b64,
+            &nonce_b64,
+            &ciphertext_b64,
+        );
+        mac_key.fill(0);
+
+        let bundle = PortableProducerKeyRecoveryBundle {
+            format_version: 2,
+            protection_scheme: PORTABLE_RECOVERY_SCHEME.to_string(),
+            kdf_iterations: PORTABLE_RECOVERY_KDF_ITERATIONS,
+            key_id: meta.key_id,
+            public_key_hex: meta.public_key_hex,
+            created_at_utc: meta.created_at_utc,
+            backed_up_at_utc,
+            salt_b64,
+            nonce_b64,
+            ciphertext_b64,
+            hmac_sha256,
+        };
+
+        if let Some(parent) = backup_file_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(backup_file_path, serde_json::to_vec_pretty(&bundle)?)?;
+        Ok(bundle)
+    }
+
+    /// Imports a passphrase-encrypted portable recovery bundle into the target machine/user's
+    /// Windows DPAPI keystore (`WIN32_DPAPI_LOCAL_USER`). Fails closed on wrong passphrase or tampering.
+    pub fn import_portable_recovery_bundle(
+        backup_file_path: &Path,
+        keystore_dir: &Path,
+        passphrase: &str,
+    ) -> Result<ProducerKeyMetadata> {
+        if passphrase.is_empty() {
+            bail!("RECOVERY_PASSPHRASE_EMPTY: Recovery passphrase is required");
+        }
+        let raw = std::fs::read(backup_file_path).with_context(|| {
+            format!(
+                "Failed to read portable key recovery bundle: {}",
+                backup_file_path.display()
+            )
+        })?;
+        let bundle: PortableProducerKeyRecoveryBundle = serde_json::from_slice(&raw)?;
+
+        if bundle.protection_scheme != PORTABLE_RECOVERY_SCHEME {
+            bail!(
+                "RECOVERY_UNSUPPORTED_SCHEME: Unsupported protection scheme '{}'",
+                bundle.protection_scheme
+            );
+        }
+        if bundle.kdf_iterations < 10_000 {
+            bail!("RECOVERY_WEAK_KDF: KDF iterations below minimum safety threshold");
+        }
+
+        let salt_vec = B64.decode(bundle.salt_b64.trim()).context("Invalid salt base64")?;
+        let nonce_vec = B64.decode(bundle.nonce_b64.trim()).context("Invalid nonce base64")?;
+        let ciphertext = B64
+            .decode(bundle.ciphertext_b64.trim())
+            .context("Invalid ciphertext base64")?;
+        if nonce_vec.len() != 16 || ciphertext.len() != 32 {
+            bail!("RECOVERY_MALFORMED_PAYLOAD: Unexpected nonce or ciphertext length");
+        }
+        let mut nonce = [0u8; 16];
+        nonce.copy_from_slice(&nonce_vec);
+
+        let mut derived = [0u8; 64];
+        pbkdf2_hmac_sha256(
+            passphrase.as_bytes(),
+            &salt_vec,
+            bundle.kdf_iterations,
+            &mut derived,
+        );
+        let mut enc_key = [0u8; 32];
+        let mut mac_key = [0u8; 32];
+        enc_key.copy_from_slice(&derived[..32]);
+        mac_key.copy_from_slice(&derived[32..64]);
+        derived.fill(0);
+
+        let expected_mac = compute_portable_mac(
+            &mac_key,
+            &bundle.key_id,
+            &bundle.public_key_hex,
+            &bundle.created_at_utc,
+            &bundle.backed_up_at_utc,
+            bundle.kdf_iterations,
+            &bundle.salt_b64,
+            &bundle.nonce_b64,
+            &bundle.ciphertext_b64,
+        );
+        mac_key.fill(0);
+
+        if !constant_time_eq(expected_mac.as_bytes(), bundle.hmac_sha256.as_bytes()) {
+            enc_key.fill(0);
+            bail!("RECOVERY_AUTH_FAILED: Wrong passphrase or tampered recovery bundle (HMAC mismatch)");
+        }
+
+        let mut plain_vec = xor_sha256_ctr_stream(&enc_key, &nonce, &ciphertext);
+        enc_key.fill(0);
+        if plain_vec.len() != 32 {
+            plain_vec.fill(0);
+            bail!("Invalid decrypted Ed25519 seed length");
+        }
+        let mut seed = [0u8; 32];
+        seed.copy_from_slice(&plain_vec);
+        plain_vec.fill(0);
+
+        let sk = SigningKey::from_bytes(&seed);
+        let derived_pub = hex_encode(sk.verifying_key().as_bytes());
+        if !derived_pub.eq_ignore_ascii_case(&bundle.public_key_hex) {
+            seed.fill(0);
+            bail!("Restored public key mismatch against portable recovery metadata");
+        }
+
+        let probe_sig = sk.sign(b"farmerpro-portable-recovery-probe");
+        let vk = VerifyingKey::from_bytes(sk.verifying_key().as_bytes())?;
+        vk.verify_strict(b"farmerpro-portable-recovery-probe", &probe_sig)?;
 
         std::fs::create_dir_all(keystore_dir)?;
         let key_file = keystore_dir.join("active_producer_ed25519.json");

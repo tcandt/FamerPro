@@ -1,3 +1,4 @@
+pub mod fs_atomic;
 pub mod jx2_seed;
 pub mod migrations;
 pub mod models;
@@ -9,10 +10,15 @@ use fp_bundle_contract::{
     TaskCategoryDef,
 };
 use fp_domain::{ConnectionState, DeviceSummary, StepEvent};
+use fs_atomic::{
+    atomic_write_bytes, copy_dir_files_safe, ensure_contained_project_dir, is_reparse_or_symlink,
+    reconcile_project_storage_orphans, validate_safe_rel_path, DeleteJournalEntry,
+    JOURNAL_DIR_NAME, STAGING_DIR_NAME, TRASH_DIR_NAME,
+};
 use rusqlite::{params, Connection};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, HashMap};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -65,19 +71,32 @@ fn default_exe_name_from_slug(slug: &str) -> String {
     format!("Auto_{}.exe", if pascal.is_empty() { "Tool" } else { &pascal })
 }
 
-fn copy_dir_files(src: &Path, dst: &Path) -> Result<()> {
-    if !src.exists() {
-        return Ok(());
+fn ensure_default_fallback_project_conn(conn: &Connection, now: &str) -> Result<String> {
+    let existing: Option<String> = {
+        let mut st = conn.prepare(
+            "SELECT id FROM projects WHERE id = ?1
+             UNION ALL
+             SELECT id FROM projects ORDER BY id ASC LIMIT 1;",
+        )?;
+        let mut rows = st.query(params![DEFAULT_LEGACY_PROJECT_ID])?;
+        rows.next()?.map(|r| r.get(0)).transpose()?
+    };
+    if let Some(pid) = existing {
+        return Ok(pid);
     }
-    std::fs::create_dir_all(dst)?;
-    for entry in std::fs::read_dir(src)? {
-        let entry = entry?;
-        let p = entry.path();
-        if p.is_file() {
-            std::fs::copy(&p, dst.join(entry.file_name()))?;
-        }
-    }
-    Ok(())
+    conn.execute(
+        "INSERT OR IGNORE INTO projects (
+            id, slug, name, game_package_id, version, exe_name, window_title,
+            icon_rel_path, target_width_px, target_height_px, bundle_adb,
+            project_dir_path, created_at, updated_at
+        ) VALUES (
+            ?1, ?2, 'Võ Hiệp Truyền Kỳ 2 Mobile', 'com.blackhole.jx2mobile', '1.0.0',
+            'Auto_JX2_Mobile.exe', 'Auto Võ Hiệp 2 Mobile v1.0.0', 'branding/icon.ico',
+            1920, 1080, 1, 'projects/jx2-mobile', ?3, ?3
+        );",
+        params![DEFAULT_LEGACY_PROJECT_ID, DEFAULT_LEGACY_PROJECT_SLUG, now],
+    )?;
+    Ok(DEFAULT_LEGACY_PROJECT_ID.to_string())
 }
 
 fn check_integrity_on_conn(conn: &Connection) -> Result<IntegrityReport> {
@@ -246,6 +265,104 @@ impl StorageManager {
         check_integrity_on_conn(&verify_target)
     }
 
+    /// Standardized WAL-safe Rollback Runbook execution:
+    /// 1. Checkpoints current WAL (`PRAGMA wal_checkpoint(TRUNCATE)`).
+    /// 2. Saves a verified pre-rollback safety snapshot via SQLite Online Backup API.
+    /// 3. Validates the target backup file (`PRAGMA integrity_check` + `PRAGMA foreign_key_check`).
+    /// 4. Restores backup onto `current_db_path` via Online Backup API & checkpoints WAL.
+    /// 5. Reopens `current_db_path` and verifies integrity, foreign keys, and schema versions.
+    pub fn rollback_database_from_backup<P: AsRef<Path>>(
+        current_db_path: P,
+        backup_path: P,
+        safety_snapshot_path: P,
+    ) -> Result<RollbackVerificationReport> {
+        let cur = current_db_path.as_ref();
+        let bk = backup_path.as_ref();
+        let snap = safety_snapshot_path.as_ref();
+        if !cur.exists() {
+            bail!("Current DB does not exist: {}", cur.display());
+        }
+        if !bk.exists() {
+            bail!("Backup DB does not exist: {}", bk.display());
+        }
+
+        let (pre_versions, pre_counts, wal_busy) = {
+            let cur_conn = Connection::open(cur)?;
+            let (busy, _log, _chk): (i64, i64, i64) =
+                cur_conn.query_row("PRAGMA wal_checkpoint(TRUNCATE);", [], |r| {
+                    Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+                })?;
+            let pre_rep = check_integrity_on_conn(&cur_conn)?;
+
+            if let Some(p) = snap.parent() {
+                if !p.as_os_str().is_empty() {
+                    std::fs::create_dir_all(p)?;
+                }
+            }
+            if snap.exists() {
+                std::fs::remove_file(snap)?;
+            }
+            let mut snap_conn = Connection::open(snap)?;
+            {
+                let bk_api = rusqlite::backup::Backup::new(&cur_conn, &mut snap_conn)?;
+                bk_api.run_to_completion(100, Duration::from_millis(5), None)?;
+            }
+            drop(snap_conn);
+            let snap_verify = Connection::open(snap)?;
+            let snap_integ = check_integrity_on_conn(&snap_verify)?;
+            if !snap_integ.is_healthy {
+                bail!("Pre-rollback safety snapshot failed integrity check");
+            }
+            (pre_rep.schema_versions, pre_rep.table_counts, busy)
+        };
+
+        let restored_integ = Self::restore_from_backup(bk, cur)?;
+
+        // Checkpoint WAL & reopen to prove DB is cleanly usable post-rollback
+        let (post_versions, post_integ) = {
+            let reopened = Connection::open(cur)?;
+            let _ = reopened.query_row("PRAGMA wal_checkpoint(TRUNCATE);", [], |r| {
+                Ok((
+                    r.get::<_, i64>(0)?,
+                    r.get::<_, i64>(1)?,
+                    r.get::<_, i64>(2)?,
+                ))
+            });
+            let rep = check_integrity_on_conn(&reopened)?;
+            if !rep.is_healthy {
+                bail!("Post-rollback reopened DB failed integrity check");
+            }
+            (rep.schema_versions.clone(), rep)
+        };
+
+        Ok(RollbackVerificationReport {
+            current_db_path: cur.to_string_lossy().to_string(),
+            backup_db_path: bk.to_string_lossy().to_string(),
+            safety_snapshot_path: snap.to_string_lossy().to_string(),
+            pre_rollback_versions: pre_versions,
+            post_rollback_versions: post_versions,
+            pre_rollback_table_counts: pre_counts,
+            post_rollback_integrity: if post_integ.is_healthy {
+                post_integ
+            } else {
+                restored_integ
+            },
+            wal_checkpoint_busy: wal_busy,
+            reopen_verified: true,
+        })
+    }
+
+    /// Reconciles orphan `.fp_staging`, `.fp_trash`, and `.fp_journal` entries under `projects_base_dir`
+    /// against committed rows in SQLite `projects`.
+    pub fn reconcile_projects_storage(&self, projects_base_dir: &Path) -> Result<usize> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id FROM projects;")?;
+        let active_ids: Vec<String> = stmt
+            .query_map([], |r| r.get::<_, String>(0))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        reconcile_project_storage_orphans(projects_base_dir, &active_ids)
+    }
+
     /// Migrates legacy 10 JX2 workflows & template PNGs into `proj-jx2-mobile-001` non-destructively.
     pub fn migrate_legacy_jx2_assets(
         &self,
@@ -333,21 +450,33 @@ impl StorageManager {
     pub fn save_workflow_draft(&self, id: &str, name: &str, draft_json: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let now = Utc::now().to_rfc3339();
+        let existing_owner: Option<Option<String>> = {
+            let mut st = conn.prepare("SELECT project_id FROM workflows WHERE id = ?1;")?;
+            let mut rows = st.query(params![id])?;
+            rows.next()?.map(|r| r.get(0)).transpose()?
+        };
+        let target_pid = match existing_owner {
+            Some(Some(owner)) => owner,
+            _ => ensure_default_fallback_project_conn(&conn, &now)?,
+        };
         conn.execute(
-            "INSERT INTO workflows (id, name, draft_json, draft_updated_at)
-             VALUES (?1, ?2, ?3, ?4)
+            "INSERT INTO workflows (id, project_id, name, draft_json, draft_updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)
              ON CONFLICT(id) DO UPDATE SET
+                project_id = excluded.project_id,
                 name = excluded.name,
                 draft_json = excluded.draft_json,
                 draft_updated_at = excluded.draft_updated_at;",
-            params![id, name, draft_json, now],
+            params![id, target_pid, name, draft_json, now],
         )?;
         Ok(())
     }
 
     pub fn get_workflow_draft(&self, id: &str) -> Result<Option<(String, String)>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT name, draft_json FROM workflows WHERE id = ?1")?;
+        let mut stmt = conn.prepare(
+            "SELECT name, draft_json FROM workflows WHERE id = ?1 AND project_id IS NOT NULL;",
+        )?;
         let mut rows = stmt.query(params![id])?;
         if let Some(row) = rows.next()? {
             Ok(Some((row.get(0)?, row.get(1)?)))
@@ -394,37 +523,39 @@ impl StorageManager {
             params![device_id, now],
         )?;
 
-        // 2. Ensure workflow exists (respecting project ownership if provided)
-        if let Some(pid) = project_id {
-            let existing_owner: Option<Option<String>> = {
-                let mut st = conn.prepare("SELECT project_id FROM workflows WHERE id = ?1")?;
-                let mut rows = st.query(params![workflow_id])?;
-                rows.next()?.map(|r| r.get(0)).transpose()?
-            };
-            if let Some(Some(owner)) = existing_owner {
-                if owner != pid {
-                    bail!(
-                        "PROJECT_ISOLATION_VIOLATION: Workflow '{}' belongs to project '{}', cannot run under '{}'",
-                        workflow_id,
-                        owner,
-                        pid
-                    );
+        // 2. Resolve non-null project ownership and verify strict project isolation
+        let existing_owner: Option<Option<String>> = {
+            let mut st = conn.prepare("SELECT project_id FROM workflows WHERE id = ?1")?;
+            let mut rows = st.query(params![workflow_id])?;
+            rows.next()?.map(|r| r.get(0)).transpose()?
+        };
+
+        let resolved_pid = match project_id {
+            Some(pid) => {
+                if let Some(Some(ref owner)) = existing_owner {
+                    if owner != pid {
+                        bail!(
+                            "PROJECT_ISOLATION_VIOLATION: Workflow '{}' belongs to project '{}', cannot run under '{}'",
+                            workflow_id,
+                            owner,
+                            pid
+                        );
+                    }
                 }
+                pid.to_string()
             }
-            conn.execute(
-                "INSERT INTO workflows (id, project_id, name, draft_json, draft_updated_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5)
-                 ON CONFLICT(id) DO NOTHING;",
-                params![workflow_id, pid, workflow_name, graph_json, now],
-            )?;
-        } else {
-            conn.execute(
-                "INSERT INTO workflows (id, name, draft_json, draft_updated_at)
-                 VALUES (?1, ?2, ?3, ?4)
-                 ON CONFLICT(id) DO NOTHING;",
-                params![workflow_id, workflow_name, graph_json, now],
-            )?;
-        }
+            None => match existing_owner {
+                Some(Some(owner)) => owner,
+                _ => ensure_default_fallback_project_conn(&conn, &now)?,
+            },
+        };
+
+        conn.execute(
+            "INSERT INTO workflows (id, project_id, name, draft_json, draft_updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(id) DO NOTHING;",
+            params![workflow_id, resolved_pid, workflow_name, graph_json, now],
+        )?;
 
         // 3. Ensure workflow version exists (reuse existing version ID if already created, e.g. legacy UUID)
         let version_id: String = {
@@ -446,12 +577,12 @@ impl StorageManager {
             }
         };
 
-        // 4. Ensure job exists
+        // 4. Ensure job exists (always non-null project_id matching workflow owner)
         conn.execute(
             "INSERT INTO jobs (id, project_id, device_id, workflow_version_id, priority, state, created_at, updated_at)
              VALUES (?1, ?2, ?3, ?4, 0, 'running', ?5, ?5)
              ON CONFLICT(id) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at;",
-            params![job_id, project_id, device_id, version_id, now],
+            params![job_id, resolved_pid, device_id, version_id, now],
         )?;
 
         Ok(())
@@ -596,6 +727,24 @@ impl StorageManager {
         req: CreateProjectRequest,
         projects_base_dir: &Path,
     ) -> Result<GameProjectRecord> {
+        self.create_project_with_fault(req, projects_base_dir, CrashFaultPoint::None)
+    }
+
+    pub fn create_project_with_fault(
+        &self,
+        req: CreateProjectRequest,
+        projects_base_dir: &Path,
+        fault: CrashFaultPoint,
+    ) -> Result<GameProjectRecord> {
+        struct StagingGuard(Option<PathBuf>);
+        impl Drop for StagingGuard {
+            fn drop(&mut self) {
+                if let Some(ref p) = self.0 {
+                    let _ = std::fs::remove_dir_all(p);
+                }
+            }
+        }
+
         let slug = validate_project_slug(&req.slug)?;
         let name = req.name.trim().to_string();
         if name.is_empty() {
@@ -623,6 +772,10 @@ impl StorageManager {
         let now = Utc::now().to_rfc3339();
 
         let proj_dir = projects_base_dir.join(&slug);
+        let _ = ensure_contained_project_dir(projects_base_dir, &proj_dir)?;
+        if proj_dir.exists() {
+            bail!("Project directory '{}' already exists", proj_dir.display());
+        }
         let proj_dir_str = proj_dir.to_string_lossy().to_string();
 
         let enabled_mods = req.enabled_modules.unwrap_or_else(|| {
@@ -634,6 +787,81 @@ impl StorageManager {
             ]
         });
 
+        // 1. Prepare staging directory outside active projects/ namespace
+        let staging_root = projects_base_dir.join(STAGING_DIR_NAME);
+        std::fs::create_dir_all(&staging_root)?;
+        let staging_dir = staging_root.join(format!("{}.{}", slug, &uuid::Uuid::new_v4().to_string()[..8]));
+        std::fs::create_dir_all(staging_dir.join("workflows"))?;
+        std::fs::create_dir_all(staging_dir.join("templates"))?;
+        std::fs::create_dir_all(staging_dir.join("branding"))?;
+        let mut staging_guard = StagingGuard(Some(staging_dir.clone()));
+
+        let all_mods = [
+            "mod.adb_core",
+            "mod.vision_ocr",
+            "mod.account_vault",
+            "mod.proxy_network",
+            "mod.adb_port_forward",
+            "mod.emulator_optimizer",
+        ];
+        let mut packaged_modules = Vec::new();
+        for m in all_mods {
+            let is_core = m == "mod.adb_core" || m == "mod.vision_ocr";
+            if is_core || enabled_mods.iter().any(|e| e == m) {
+                packaged_modules.push(m.to_string());
+            }
+        }
+
+        let default_ui = MiniToolUiSchema {
+            schema_version: 1,
+            project_slug: slug.clone(),
+            window_title: window_title.clone(),
+            version_badge: format!("v{}", version),
+            theme_accent_hex: "#1878F5".to_string(),
+            header_bg_hex: "#141C28".to_string(),
+            layout_preset: MiniLayoutPreset::Compact2Col,
+            default_window_size: (740, 660),
+            sections_order: vec![
+                "device_table".to_string(),
+                "task_and_log_split".to_string(),
+                "footer_controls".to_string(),
+            ],
+            hidden_components: vec![],
+            device_columns: vec![],
+            task_categories: vec![],
+            tasks: vec![],
+            utilities: vec![],
+            initial_runtime_vars: HashMap::new(),
+        };
+        let ui_json = serde_json::to_string_pretty(&default_ui)?;
+
+        let manifest = GameProjectManifest {
+            compatibility: CompatibilityVersions::default(),
+            project_id: project_id.clone(),
+            slug: slug.clone(),
+            name: name.clone(),
+            game_package_id: pkg.clone(),
+            version: version.clone(),
+            exe_name: exe_name.clone(),
+            window_title: window_title.clone(),
+            icon_rel_path: icon_rel_path.clone(),
+            target_resolution: (target_w, target_h),
+            packaged_modules: packaged_modules.clone(),
+            workflow_files: vec![],
+            template_files: vec![],
+            bundle_adb,
+        };
+
+        if fault == CrashFaultPoint::FailManifestWrite {
+            bail!("INJECTED_CRASH_FAULT: simulated manifest write failure during create_project");
+        }
+        atomic_write_bytes(
+            &staging_dir.join("project.json"),
+            &serde_json::to_vec_pretty(&manifest)?,
+        )?;
+        atomic_write_bytes(&staging_dir.join("ui-schema.json"), ui_json.as_bytes())?;
+
+        // 2. Execute SQLite transaction
         let mut conn = self.conn.lock().unwrap();
         let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
 
@@ -660,21 +888,8 @@ impl StorageManager {
             ],
         )?;
 
-        let all_mods = [
-            "mod.adb_core",
-            "mod.vision_ocr",
-            "mod.account_vault",
-            "mod.proxy_network",
-            "mod.adb_port_forward",
-            "mod.emulator_optimizer",
-        ];
-        let mut packaged_modules = Vec::new();
         for m in all_mods {
-            let is_core = m == "mod.adb_core" || m == "mod.vision_ocr";
-            let packaged = is_core || enabled_mods.iter().any(|e| e == m);
-            if packaged {
-                packaged_modules.push(m.to_string());
-            }
+            let packaged = packaged_modules.iter().any(|p| p == m);
             tx.execute(
                 "INSERT INTO project_modules (project_id, module_id, packaged_in_release, enabled_by_default, config_json, updated_at)
                  VALUES (?1, ?2, ?3, ?4, '{}', ?5);",
@@ -688,62 +903,30 @@ impl StorageManager {
             )?;
         }
 
-        let default_ui = MiniToolUiSchema {
-            schema_version: 1,
-            project_slug: slug.clone(),
-            window_title: window_title.clone(),
-            version_badge: format!("v{}", version),
-            theme_accent_hex: "#1878F5".to_string(),
-            header_bg_hex: "#141C28".to_string(),
-            layout_preset: MiniLayoutPreset::Compact2Col,
-            default_window_size: (740, 660),
-            sections_order: vec![
-                "device_table".to_string(),
-                "task_and_log_split".to_string(),
-                "footer_controls".to_string(),
-            ],
-            hidden_components: vec![],
-            device_columns: vec![],
-            task_categories: vec![],
-            tasks: vec![],
-            utilities: vec![],
-            initial_runtime_vars: HashMap::new(),
-        };
-        let ui_json = serde_json::to_string_pretty(&default_ui)?;
         tx.execute(
             "INSERT INTO mini_tool_schemas (project_id, schema_version, ui_schema_json, updated_at)
              VALUES (?1, 1, ?2, ?3);",
             params![project_id, ui_json, now],
         )?;
 
-        // Create workspace directories & manifest files only after DB constraints pass
-        std::fs::create_dir_all(proj_dir.join("workflows"))?;
-        std::fs::create_dir_all(proj_dir.join("templates"))?;
-        std::fs::create_dir_all(proj_dir.join("branding"))?;
+        if fault == CrashFaultPoint::FailBeforeDbCommit {
+            bail!("INJECTED_CRASH_FAULT: simulated crash before DB commit in create_project");
+        }
 
-        let manifest = GameProjectManifest {
-            compatibility: CompatibilityVersions::default(),
-            project_id: project_id.clone(),
-            slug: slug.clone(),
-            name: name.clone(),
-            game_package_id: pkg.clone(),
-            version: version.clone(),
-            exe_name: exe_name.clone(),
-            window_title: window_title.clone(),
-            icon_rel_path: icon_rel_path.clone(),
-            target_resolution: (target_w, target_h),
-            packaged_modules,
-            workflow_files: vec![],
-            template_files: vec![],
-            bundle_adb,
-        };
-        std::fs::write(
-            proj_dir.join("project.json"),
-            serde_json::to_vec_pretty(&manifest)?,
-        )?;
-        std::fs::write(proj_dir.join("ui-schema.json"), ui_json.as_bytes())?;
+        // 3. Atomic rename staging -> final project dir BEFORE commit
+        std::fs::rename(&staging_dir, &proj_dir).with_context(|| {
+            format!(
+                "Failed moving staging project '{}' to '{}'",
+                staging_dir.display(),
+                proj_dir.display()
+            )
+        })?;
+        staging_guard.0 = None;
 
-        tx.commit()?;
+        if let Err(e) = tx.commit() {
+            let _ = std::fs::remove_dir_all(&proj_dir);
+            return Err(e.into());
+        }
 
         Ok(GameProjectRecord {
             id: project_id,
@@ -843,7 +1026,15 @@ impl StorageManager {
     }
 
     pub fn update_project(&self, req: UpdateProjectRequest) -> Result<GameProjectRecord> {
-        let conn = self.conn.lock().unwrap();
+        self.update_project_with_fault(req, CrashFaultPoint::None)
+    }
+
+    pub fn update_project_with_fault(
+        &self,
+        req: UpdateProjectRequest,
+        fault: CrashFaultPoint,
+    ) -> Result<GameProjectRecord> {
+        let mut conn = self.conn.lock().unwrap();
         let existing = Self::fetch_project_by_id_conn(&conn, &req.id)?
             .with_context(|| format!("Project '{}' not found", req.id))?;
 
@@ -851,38 +1042,39 @@ impl StorageManager {
             .name
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
-            .unwrap_or(existing.name);
+            .unwrap_or_else(|| existing.name.clone());
         let game_package_id = req
             .game_package_id
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
-            .unwrap_or(existing.game_package_id);
+            .unwrap_or_else(|| existing.game_package_id.clone());
         let version = req
             .version
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
-            .unwrap_or(existing.version);
+            .unwrap_or_else(|| existing.version.clone());
         let exe_name = req
             .exe_name
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
-            .unwrap_or(existing.exe_name);
+            .unwrap_or_else(|| existing.exe_name.clone());
         let window_title = req
             .window_title
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
-            .unwrap_or(existing.window_title);
+            .unwrap_or_else(|| existing.window_title.clone());
         let icon_rel_path = req
             .icon_rel_path
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
-            .unwrap_or(existing.icon_rel_path);
+            .unwrap_or_else(|| existing.icon_rel_path.clone());
         let target_w = req.target_width_px.unwrap_or(existing.target_width_px);
         let target_h = req.target_height_px.unwrap_or(existing.target_height_px);
         let bundle_adb = req.bundle_adb.unwrap_or(existing.bundle_adb);
         let now = Utc::now().to_rfc3339();
 
-        conn.execute(
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        tx.execute(
             "UPDATE projects SET
                 name = ?1, game_package_id = ?2, version = ?3, exe_name = ?4,
                 window_title = ?5, icon_rel_path = ?6, target_width_px = ?7,
@@ -903,24 +1095,108 @@ impl StorageManager {
             ],
         )?;
 
-        // Sync project.json on disk if present
-        let manifest_path = Path::new(&existing.project_dir_path).join("project.json");
-        if manifest_path.exists() {
-            if let Ok(raw) = std::fs::read(&manifest_path) {
-                if let Ok(mut manifest) = serde_json::from_slice::<GameProjectManifest>(&raw) {
-                    manifest.name = name.clone();
-                    manifest.game_package_id = game_package_id.clone();
-                    manifest.version = version.clone();
-                    manifest.exe_name = exe_name.clone();
-                    manifest.window_title = window_title.clone();
-                    manifest.icon_rel_path = icon_rel_path.clone();
-                    manifest.target_resolution = (target_w, target_h);
-                    manifest.bundle_adb = bundle_adb;
-                    if let Ok(bytes) = serde_json::to_vec_pretty(&manifest) {
-                        let _ = std::fs::write(&manifest_path, bytes);
+        // Sync mini_tool_schemas (if matching old window_title or version badge, or explicit update)
+        let synced_ui_json: Option<String> = {
+            let ui_row: Option<(i64, String)> = {
+                let mut u_stmt = tx.prepare(
+                    "SELECT schema_version, ui_schema_json FROM mini_tool_schemas WHERE project_id = ?1;",
+                )?;
+                let mut rows = u_stmt.query(params![req.id])?;
+                rows.next()?
+                    .map(|r| Ok::<_, rusqlite::Error>((r.get(0)?, r.get(1)?)))
+                    .transpose()?
+            };
+            if let Some((ver, raw_ui)) = ui_row {
+                let updated_ui = if let Ok(mut parsed) = serde_json::from_str::<MiniToolUiSchema>(&raw_ui) {
+                    if parsed.window_title == existing.window_title || parsed.window_title != window_title && window_title != existing.window_title {
+                        parsed.window_title = window_title.clone();
                     }
+                    if parsed.version_badge == format!("v{}", existing.version) {
+                        parsed.version_badge = format!("v{}", version);
+                    }
+                    serde_json::to_string_pretty(&parsed)?
+                } else {
+                    raw_ui
+                };
+                tx.execute(
+                    "UPDATE mini_tool_schemas SET schema_version = ?1, ui_schema_json = ?2, updated_at = ?3
+                     WHERE project_id = ?4;",
+                    params![ver, updated_ui, now, req.id],
+                )?;
+                Some(updated_ui)
+            } else {
+                None
+            }
+        };
+
+        // Snapshot disk files for compensating rollback if TX fails
+        let proj_dir = Path::new(&existing.project_dir_path);
+        let manifest_path = proj_dir.join("project.json");
+        let ui_path = proj_dir.join("ui-schema.json");
+        let prev_manifest_bytes = if manifest_path.exists() {
+            Some(std::fs::read(&manifest_path)?)
+        } else {
+            None
+        };
+        let prev_ui_bytes = if ui_path.exists() {
+            Some(std::fs::read(&ui_path)?)
+        } else {
+            None
+        };
+
+        let restore_disk_files = || {
+            if let Some(ref b) = prev_manifest_bytes {
+                let _ = atomic_write_bytes(&manifest_path, b);
+            }
+            if let Some(ref b) = prev_ui_bytes {
+                let _ = atomic_write_bytes(&ui_path, b);
+            }
+        };
+
+        if proj_dir.exists() {
+            if is_reparse_or_symlink(proj_dir) {
+                bail!(
+                    "PROJECT_ISOLATION_VIOLATION: Refusing update on symlinked project dir '{}'",
+                    proj_dir.display()
+                );
+            }
+            if let Some(ref raw) = prev_manifest_bytes {
+                let mut manifest: GameProjectManifest = serde_json::from_slice(raw)
+                    .context("Corrupt project.json during update_project")?;
+                manifest.name = name.clone();
+                manifest.game_package_id = game_package_id.clone();
+                manifest.version = version.clone();
+                manifest.exe_name = exe_name.clone();
+                manifest.window_title = window_title.clone();
+                manifest.icon_rel_path = icon_rel_path.clone();
+                manifest.target_resolution = (target_w, target_h);
+                manifest.bundle_adb = bundle_adb;
+
+                if fault == CrashFaultPoint::FailManifestWrite {
+                    restore_disk_files();
+                    bail!("INJECTED_CRASH_FAULT: simulated manifest write failure during update_project");
+                }
+                if let Err(e) = atomic_write_bytes(&manifest_path, &serde_json::to_vec_pretty(&manifest)?) {
+                    restore_disk_files();
+                    return Err(e);
                 }
             }
+            if let Some(ref ui_json) = synced_ui_json {
+                if let Err(e) = atomic_write_bytes(&ui_path, ui_json.as_bytes()) {
+                    restore_disk_files();
+                    return Err(e);
+                }
+            }
+        }
+
+        if fault == CrashFaultPoint::FailBeforeDbCommit {
+            restore_disk_files();
+            bail!("INJECTED_CRASH_FAULT: simulated crash before DB commit in update_project");
+        }
+
+        if let Err(e) = tx.commit() {
+            restore_disk_files();
+            return Err(e.into());
         }
 
         Ok(GameProjectRecord {
@@ -946,6 +1222,24 @@ impl StorageManager {
         req: CloneProjectRequest,
         projects_base_dir: &Path,
     ) -> Result<GameProjectRecord> {
+        self.clone_project_with_fault(req, projects_base_dir, CrashFaultPoint::None)
+    }
+
+    pub fn clone_project_with_fault(
+        &self,
+        req: CloneProjectRequest,
+        projects_base_dir: &Path,
+        fault: CrashFaultPoint,
+    ) -> Result<GameProjectRecord> {
+        struct StagingGuard(Option<PathBuf>);
+        impl Drop for StagingGuard {
+            fn drop(&mut self) {
+                if let Some(ref p) = self.0 {
+                    let _ = std::fs::remove_dir_all(p);
+                }
+            }
+        }
+
         let new_slug = validate_project_slug(&req.new_slug)?;
         let new_name = req.new_name.trim().to_string();
         if new_name.is_empty() {
@@ -953,6 +1247,13 @@ impl StorageManager {
         }
 
         let new_proj_dir = projects_base_dir.join(&new_slug);
+        let _ = ensure_contained_project_dir(projects_base_dir, &new_proj_dir)?;
+        if new_proj_dir.exists() {
+            bail!(
+                "Target clone project directory '{}' already exists",
+                new_proj_dir.display()
+            );
+        }
         let new_proj_dir_str = new_proj_dir.to_string_lossy().to_string();
         let new_id = format!(
             "proj-{}-{}",
@@ -976,6 +1277,19 @@ impl StorageManager {
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| default_exe_name_from_slug(&new_slug));
         let new_window_title = format!("Auto {} v{}", new_name, src.version);
+
+        // Prepare isolated staging dir outside active projects/ namespace
+        let staging_root = projects_base_dir.join(STAGING_DIR_NAME);
+        std::fs::create_dir_all(&staging_root)?;
+        let staging_dir = staging_root.join(format!(
+            "{}.clone.{}",
+            new_slug,
+            &uuid::Uuid::new_v4().to_string()[..8]
+        ));
+        std::fs::create_dir_all(staging_dir.join("workflows"))?;
+        std::fs::create_dir_all(staging_dir.join("templates"))?;
+        std::fs::create_dir_all(staging_dir.join("branding"))?;
+        let mut staging_guard = StagingGuard(Some(staging_dir.clone()));
 
         let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
 
@@ -1002,13 +1316,12 @@ impl StorageManager {
             ],
         )?;
 
-        // Prepare disk folders & copy templates/branding ONLY after DB uniqueness check passes
+        if fault == CrashFaultPoint::FailTemplateCopy {
+            bail!("INJECTED_CRASH_FAULT: simulated template copy failure during clone_project");
+        }
         let src_dir = Path::new(&src.project_dir_path);
-        std::fs::create_dir_all(new_proj_dir.join("workflows"))?;
-        std::fs::create_dir_all(new_proj_dir.join("templates"))?;
-        std::fs::create_dir_all(new_proj_dir.join("branding"))?;
-        copy_dir_files(&src_dir.join("templates"), &new_proj_dir.join("templates"))?;
-        copy_dir_files(&src_dir.join("branding"), &new_proj_dir.join("branding"))?;
+        copy_dir_files_safe(&src_dir.join("templates"), &staging_dir.join("templates"))?;
+        copy_dir_files_safe(&src_dir.join("branding"), &staging_dir.join("branding"))?;
 
         // Clone project_modules
         let mut packaged_modules: Vec<String> = Vec::new();
@@ -1049,7 +1362,6 @@ impl StorageManager {
                 let new_wf_id = format!("wf-{}-{:02}", new_slug, idx + 1);
                 wf_id_map.insert(old_wf_id.clone(), new_wf_id.clone());
 
-                // Update workflowId inside JSON if parseable
                 let updated_json = match serde_json::from_str::<serde_json::Value>(&draft_json) {
                     Ok(mut v) => {
                         if let Some(obj) = v.as_object_mut() {
@@ -1074,7 +1386,7 @@ impl StorageManager {
                     params![format!("{}-v1", new_wf_id), new_wf_id, updated_json, sha, now],
                 )?;
                 let rel_wf = format!("workflows/{}.json", new_wf_id);
-                std::fs::write(new_proj_dir.join(&rel_wf), updated_json.as_bytes())?;
+                atomic_write_bytes(&staging_dir.join(&rel_wf), updated_json.as_bytes())?;
                 workflow_files.push(rel_wf);
             }
         }
@@ -1101,15 +1413,16 @@ impl StorageManager {
                 })?
                 .collect::<std::result::Result<Vec<_>, _>>()?;
             for (idx, (name, rel_path, w, h, cx, cy, conf, sha)) in tpls.into_iter().enumerate() {
+                let (clean_rel, _) = validate_safe_rel_path(&staging_dir, &rel_path)?;
                 let new_tpl_id = format!("tpl-{}-{:02}", new_slug, idx + 1);
                 tx.execute(
                     "INSERT INTO vision_templates (
                         id, project_id, name, rel_path, width_px, height_px,
                         source_crop_x, source_crop_y, default_confidence, sha256, created_at
                     ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);",
-                    params![new_tpl_id, new_id, name, rel_path, w, h, cx, cy, conf, sha, now],
+                    params![new_tpl_id, new_id, name, clean_rel, w, h, cx, cy, conf, sha, now],
                 )?;
-                template_files.push(rel_path);
+                template_files.push(clean_rel);
             }
         }
 
@@ -1196,10 +1509,14 @@ impl StorageManager {
                  VALUES (?1, ?2, ?3, ?4);",
                 params![new_id, ver, new_ui_json, now],
             )?;
-            std::fs::write(new_proj_dir.join("ui-schema.json"), new_ui_json.as_bytes())?;
+            atomic_write_bytes(&staging_dir.join("ui-schema.json"), new_ui_json.as_bytes())?;
         }
 
-        // Write cloned project.json manifest on disk
+        if fault == CrashFaultPoint::FailManifestWrite {
+            bail!("INJECTED_CRASH_FAULT: simulated manifest write failure during clone_project");
+        }
+
+        // Write cloned project.json manifest into staging dir
         let cloned_manifest = GameProjectManifest {
             compatibility: CompatibilityVersions::default(),
             project_id: new_id.clone(),
@@ -1216,12 +1533,29 @@ impl StorageManager {
             template_files,
             bundle_adb: src.bundle_adb,
         };
-        std::fs::write(
-            new_proj_dir.join("project.json"),
-            serde_json::to_vec_pretty(&cloned_manifest)?,
+        atomic_write_bytes(
+            &staging_dir.join("project.json"),
+            &serde_json::to_vec_pretty(&cloned_manifest)?,
         )?;
 
-        tx.commit()?;
+        if fault == CrashFaultPoint::FailBeforeDbCommit {
+            bail!("INJECTED_CRASH_FAULT: simulated crash before DB commit in clone_project");
+        }
+
+        // Atomic move staging -> final project directory BEFORE commit
+        std::fs::rename(&staging_dir, &new_proj_dir).with_context(|| {
+            format!(
+                "Failed moving cloned staging '{}' to '{}'",
+                staging_dir.display(),
+                new_proj_dir.display()
+            )
+        })?;
+        staging_guard.0 = None;
+
+        if let Err(e) = tx.commit() {
+            let _ = std::fs::remove_dir_all(&new_proj_dir);
+            return Err(e.into());
+        }
 
         Ok(GameProjectRecord {
             id: new_id,
@@ -1242,79 +1576,162 @@ impl StorageManager {
     }
 
     pub fn delete_project(&self, project_id: &str, remove_disk_dir: bool) -> Result<bool> {
+        self.delete_project_with_fault(project_id, remove_disk_dir, CrashFaultPoint::None)
+    }
+
+    pub fn delete_project_with_fault(
+        &self,
+        project_id: &str,
+        remove_disk_dir: bool,
+        fault: CrashFaultPoint,
+    ) -> Result<bool> {
         let mut conn = self.conn.lock().unwrap();
         let existing = match Self::fetch_project_by_id_conn(&conn, project_id)? {
             Some(p) => p,
             None => return Ok(false),
         };
 
-        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-        // Delete dependent records in FK order (including any jobs tied via workflow_versions)
-        tx.execute(
-            "DELETE FROM step_events WHERE job_id IN (
-                SELECT id FROM jobs WHERE project_id = ?1
-                OR workflow_version_id IN (SELECT id FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1))
-             );",
-            params![project_id],
-        )?;
-        tx.execute(
-            "DELETE FROM checkpoints WHERE job_id IN (
-                SELECT id FROM jobs WHERE project_id = ?1
-                OR workflow_version_id IN (SELECT id FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1))
-             );",
-            params![project_id],
-        )?;
-        tx.execute(
-            "DELETE FROM device_leases WHERE job_id IN (
-                SELECT id FROM jobs WHERE project_id = ?1
-                OR workflow_version_id IN (SELECT id FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1))
-             );",
-            params![project_id],
-        )?;
-        tx.execute(
-            "DELETE FROM jobs WHERE project_id = ?1
-             OR workflow_version_id IN (SELECT id FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1));",
-            params![project_id],
-        )?;
-        tx.execute(
-            "DELETE FROM task_definitions WHERE project_id = ?1;",
-            params![project_id],
-        )?;
-        tx.execute(
-            "DELETE FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1);",
-            params![project_id],
-        )?;
-        tx.execute(
-            "DELETE FROM workflows WHERE project_id = ?1;",
-            params![project_id],
-        )?;
-        tx.execute(
-            "DELETE FROM accounts WHERE project_id = ?1;",
-            params![project_id],
-        )?;
-        tx.execute(
-            "DELETE FROM project_modules WHERE project_id = ?1;",
-            params![project_id],
-        )?;
-        tx.execute(
-            "DELETE FROM vision_templates WHERE project_id = ?1;",
-            params![project_id],
-        )?;
-        tx.execute(
-            "DELETE FROM mini_tool_schemas WHERE project_id = ?1;",
-            params![project_id],
-        )?;
-        tx.execute(
-            "DELETE FROM project_releases WHERE project_id = ?1;",
-            params![project_id],
-        )?;
-        tx.execute("DELETE FROM projects WHERE id = ?1;", params![project_id])?;
-        tx.commit()?;
-
+        // Two-phase crash-safe directory removal:
+        // 1. Move project_dir -> .fp_trash/<slug>.<uuid> and write .fp_journal entry BEFORE DB commit
+        // 2. Commit DB deletion; if DB commit fails, move .fp_trash/<...> back to project_dir!
+        // 3. Purge .fp_trash/<...> & .fp_journal entry after DB commit succeeds.
+        let mut moved_to_trash: Option<(PathBuf, PathBuf, Option<PathBuf>)> = None;
         if remove_disk_dir {
-            let p = Path::new(&existing.project_dir_path);
-            if p.exists() {
-                let _ = std::fs::remove_dir_all(p);
+            let proj_dir = PathBuf::from(&existing.project_dir_path);
+            if proj_dir.exists() {
+                if is_reparse_or_symlink(&proj_dir) {
+                    bail!(
+                        "PROJECT_ISOLATION_VIOLATION: Refusing recursive delete on symlink/junction '{}'",
+                        proj_dir.display()
+                    );
+                }
+                if let Some(projects_root) = proj_dir.parent() {
+                    let _ = ensure_contained_project_dir(projects_root, &proj_dir)?;
+                    let trash_root = projects_root.join(TRASH_DIR_NAME);
+                    let journal_root = projects_root.join(JOURNAL_DIR_NAME);
+                    std::fs::create_dir_all(&trash_root)?;
+                    std::fs::create_dir_all(&journal_root)?;
+
+                    let tag = &uuid::Uuid::new_v4().to_string()[..8];
+                    let trash_dir = trash_root.join(format!("{}.{}", existing.slug, tag));
+                    let journal_path = journal_root.join(format!("delete_{}.json", existing.id));
+                    let entry = DeleteJournalEntry {
+                        project_id: existing.id.clone(),
+                        project_slug: existing.slug.clone(),
+                        original_dir: proj_dir.to_string_lossy().to_string(),
+                        trash_dir: trash_dir.to_string_lossy().to_string(),
+                        created_at: Utc::now().to_rfc3339(),
+                    };
+                    atomic_write_bytes(&journal_path, &serde_json::to_vec_pretty(&entry)?)?;
+                    if let Err(e) = std::fs::rename(&proj_dir, &trash_dir) {
+                        let _ = std::fs::remove_file(&journal_path);
+                        return Err(e).with_context(|| {
+                            format!(
+                                "Failed moving project dir '{}' to trash before DB delete",
+                                proj_dir.display()
+                            )
+                        });
+                    }
+                    moved_to_trash = Some((proj_dir, trash_dir, Some(journal_path)));
+                }
+            }
+        }
+
+        let restore_from_trash = |moved: &Option<(PathBuf, PathBuf, Option<PathBuf>)>| {
+            if let Some((orig, trash, journal)) = moved {
+                if trash.exists() && !orig.exists() {
+                    let _ = std::fs::rename(trash, orig);
+                }
+                if let Some(jp) = journal {
+                    let _ = std::fs::remove_file(jp);
+                }
+            }
+        };
+
+        let tx_res: Result<()> = (|| {
+            let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+            tx.execute(
+                "DELETE FROM step_events WHERE job_id IN (
+                    SELECT id FROM jobs WHERE project_id = ?1
+                    OR workflow_version_id IN (SELECT id FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1))
+                 );",
+                params![project_id],
+            )?;
+            tx.execute(
+                "DELETE FROM checkpoints WHERE job_id IN (
+                    SELECT id FROM jobs WHERE project_id = ?1
+                    OR workflow_version_id IN (SELECT id FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1))
+                 );",
+                params![project_id],
+            )?;
+            tx.execute(
+                "DELETE FROM device_leases WHERE job_id IN (
+                    SELECT id FROM jobs WHERE project_id = ?1
+                    OR workflow_version_id IN (SELECT id FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1))
+                 );",
+                params![project_id],
+            )?;
+            tx.execute(
+                "DELETE FROM jobs WHERE project_id = ?1
+                 OR workflow_version_id IN (SELECT id FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1));",
+                params![project_id],
+            )?;
+            tx.execute(
+                "DELETE FROM task_definitions WHERE project_id = ?1;",
+                params![project_id],
+            )?;
+            tx.execute(
+                "DELETE FROM workflow_versions WHERE workflow_id IN (SELECT id FROM workflows WHERE project_id = ?1);",
+                params![project_id],
+            )?;
+            tx.execute(
+                "DELETE FROM workflows WHERE project_id = ?1;",
+                params![project_id],
+            )?;
+            tx.execute(
+                "DELETE FROM accounts WHERE project_id = ?1;",
+                params![project_id],
+            )?;
+            tx.execute(
+                "DELETE FROM project_modules WHERE project_id = ?1;",
+                params![project_id],
+            )?;
+            tx.execute(
+                "DELETE FROM vision_templates WHERE project_id = ?1;",
+                params![project_id],
+            )?;
+            tx.execute(
+                "DELETE FROM mini_tool_schemas WHERE project_id = ?1;",
+                params![project_id],
+            )?;
+            tx.execute(
+                "DELETE FROM project_releases WHERE project_id = ?1;",
+                params![project_id],
+            )?;
+            tx.execute("DELETE FROM projects WHERE id = ?1;", params![project_id])?;
+
+            if fault == CrashFaultPoint::FailBeforeDbCommit {
+                bail!("INJECTED_CRASH_FAULT: simulated crash before DB commit in delete_project");
+            }
+            tx.commit()?;
+            Ok(())
+        })();
+
+        if let Err(e) = tx_res {
+            restore_from_trash(&moved_to_trash);
+            return Err(e);
+        }
+
+        if fault == CrashFaultPoint::FailAfterDbCommitTrashPurge {
+            bail!("INJECTED_CRASH_FAULT: simulated crash after DB commit before trash purge");
+        }
+
+        if let Some((_, trash, journal)) = moved_to_trash {
+            if trash.exists() {
+                let _ = std::fs::remove_dir_all(&trash);
+            }
+            if let Some(jp) = journal {
+                let _ = std::fs::remove_file(jp);
             }
         }
         Ok(true)
@@ -1387,13 +1804,16 @@ impl StorageManager {
     // -------------------------------------------------------------------------
 
     pub fn list_project_workflows(&self, project_id: &str) -> Result<Vec<ProjectWorkflowRecord>> {
+        if project_id.trim().is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT w.id, COALESCE(w.project_id, ''), w.name, w.category, w.draft_json,
+            "SELECT w.id, w.project_id, w.name, w.category, w.draft_json,
                     w.draft_updated_at, w.archived_at,
                     (SELECT MAX(version_no) FROM workflow_versions v WHERE v.workflow_id = w.id)
              FROM workflows w
-             WHERE w.project_id = ?1
+             WHERE w.project_id = ?1 AND w.project_id IS NOT NULL
              ORDER BY w.id ASC;",
         )?;
         let rows = stmt.query_map(params![project_id], |r| {
@@ -1419,17 +1839,45 @@ impl StorageManager {
         category: &str,
         draft_json: &str,
     ) -> Result<ProjectWorkflowRecord> {
+        self.save_project_workflow_with_fault(
+            project_id,
+            workflow_id,
+            name,
+            category,
+            draft_json,
+            CrashFaultPoint::None,
+        )
+    }
+
+    pub fn save_project_workflow_with_fault(
+        &self,
+        project_id: &str,
+        workflow_id: &str,
+        name: &str,
+        category: &str,
+        draft_json: &str,
+        fault: CrashFaultPoint,
+    ) -> Result<ProjectWorkflowRecord> {
+        let pid_clean = project_id.trim();
         let wf_id_clean = workflow_id.trim();
         let name_clean = name.trim();
-        if wf_id_clean.is_empty() {
-            bail!("Workflow ID cannot be empty");
+        if pid_clean.is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
+        if wf_id_clean.is_empty()
+            || wf_id_clean.contains('/')
+            || wf_id_clean.contains('\\')
+            || wf_id_clean.contains("..")
+        {
+            bail!("Invalid workflow ID '{}'", workflow_id);
         }
         if name_clean.is_empty() {
             bail!("Workflow name cannot be empty");
         }
+
         let mut conn = self.conn.lock().unwrap();
-        let _ = Self::fetch_project_by_id_conn(&conn, project_id)?
-            .with_context(|| format!("Project '{}' not found", project_id))?;
+        let project = Self::fetch_project_by_id_conn(&conn, pid_clean)?
+            .with_context(|| format!("Project '{}' not found", pid_clean))?;
 
         let existing_owner: Option<Option<String>> = {
             let mut st = conn.prepare("SELECT project_id FROM workflows WHERE id = ?1;")?;
@@ -1437,15 +1885,22 @@ impl StorageManager {
             rows.next()?.map(|r| r.get(0)).transpose()?
         };
 
-        if let Some(Some(owner)) = existing_owner {
-            if owner != project_id {
+        match existing_owner {
+            Some(Some(ref owner)) if owner != pid_clean => {
                 bail!(
                     "PROJECT_ISOLATION_VIOLATION: Workflow '{}' belongs to project '{}', cannot modify from project '{}'",
                     workflow_id,
                     owner,
-                    project_id
+                    pid_clean
                 );
             }
+            Some(None) => {
+                bail!(
+                    "PROJECT_ISOLATION_VIOLATION: Workflow '{}' has NULL project ownership",
+                    workflow_id
+                );
+            }
+            _ => {}
         }
 
         let now = Utc::now().to_rfc3339();
@@ -1459,28 +1914,124 @@ impl StorageManager {
                 category = excluded.category,
                 draft_json = excluded.draft_json,
                 draft_updated_at = excluded.draft_updated_at;",
-            params![workflow_id, project_id, name, category, draft_json, now],
+            params![wf_id_clean, pid_clean, name_clean, category, draft_json, now],
         )?;
 
         let max_ver: Option<i64> = tx.query_row(
             "SELECT MAX(version_no) FROM workflow_versions WHERE workflow_id = ?1;",
-            params![workflow_id],
+            params![wf_id_clean],
             |r| r.get(0),
         )?;
         let next_ver = max_ver.unwrap_or(0) + 1;
-        let ver_id = format!("{}-v{}", workflow_id, next_ver);
+        let ver_id = format!("{}-v{}", wf_id_clean, next_ver);
         let sha = sha256_hex(draft_json.as_bytes());
         tx.execute(
             "INSERT INTO workflow_versions (id, workflow_id, version_no, graph_json, sha256, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6);",
-            params![ver_id, workflow_id, next_ver, draft_json, sha, now],
+            params![ver_id, wf_id_clean, next_ver, draft_json, sha, now],
         )?;
-        tx.commit()?;
+
+        // Sync workflow JSON & project.json on disk atomically with snapshot rollback
+        let proj_dir = Path::new(&project.project_dir_path);
+        let rel_wf = format!("workflows/{}.json", wf_id_clean);
+        let mut disk_rollback: Option<(PathBuf, Option<Vec<u8>>, PathBuf, Option<Vec<u8>>)> = None;
+        if proj_dir.exists() {
+            if is_reparse_or_symlink(proj_dir) {
+                bail!(
+                    "PROJECT_ISOLATION_VIOLATION: Refusing workflow save on symlinked project dir '{}'",
+                    proj_dir.display()
+                );
+            }
+            let (norm_rel, wf_disk_path) = validate_safe_rel_path(proj_dir, &rel_wf)?;
+            let manifest_path = proj_dir.join("project.json");
+            let prev_wf_bytes = if wf_disk_path.exists() {
+                Some(std::fs::read(&wf_disk_path)?)
+            } else {
+                None
+            };
+            let prev_manifest_bytes = if manifest_path.exists() {
+                Some(std::fs::read(&manifest_path)?)
+            } else {
+                None
+            };
+
+            let restore_wf_disk = |wf_p: &Path, prev_wf: &Option<Vec<u8>>, mf_p: &Path, prev_mf: &Option<Vec<u8>>| {
+                match prev_wf {
+                    Some(b) => {
+                        let _ = atomic_write_bytes(wf_p, b);
+                    }
+                    None => {
+                        let _ = std::fs::remove_file(wf_p);
+                    }
+                }
+                if let Some(b) = prev_mf {
+                    let _ = atomic_write_bytes(mf_p, b);
+                }
+            };
+
+            if let Err(e) = atomic_write_bytes(&wf_disk_path, draft_json.as_bytes()) {
+                restore_wf_disk(&wf_disk_path, &prev_wf_bytes, &manifest_path, &prev_manifest_bytes);
+                return Err(e);
+            }
+
+            if fault == CrashFaultPoint::FailManifestWrite {
+                restore_wf_disk(&wf_disk_path, &prev_wf_bytes, &manifest_path, &prev_manifest_bytes);
+                bail!("INJECTED_CRASH_FAULT: simulated manifest write failure during save_project_workflow");
+            }
+
+            if let Some(ref raw_mf) = prev_manifest_bytes {
+                if let Ok(mut manifest) = serde_json::from_slice::<GameProjectManifest>(raw_mf) {
+                    if !manifest.workflow_files.iter().any(|f| f == &norm_rel) {
+                        manifest.workflow_files.push(norm_rel);
+                        manifest.workflow_files.sort();
+                        if let Err(e) = atomic_write_bytes(&manifest_path, &serde_json::to_vec_pretty(&manifest)?) {
+                            restore_wf_disk(&wf_disk_path, &prev_wf_bytes, &manifest_path, &prev_manifest_bytes);
+                            return Err(e);
+                        }
+                    }
+                }
+            }
+            disk_rollback = Some((wf_disk_path, prev_wf_bytes, manifest_path, prev_manifest_bytes));
+        }
+
+        if fault == CrashFaultPoint::FailBeforeDbCommit {
+            if let Some((wf_p, prev_wf, mf_p, prev_mf)) = disk_rollback {
+                match prev_wf {
+                    Some(b) => {
+                        let _ = atomic_write_bytes(&wf_p, &b);
+                    }
+                    None => {
+                        let _ = std::fs::remove_file(&wf_p);
+                    }
+                }
+                if let Some(b) = prev_mf {
+                    let _ = atomic_write_bytes(&mf_p, &b);
+                }
+            }
+            bail!("INJECTED_CRASH_FAULT: simulated crash before DB commit in save_project_workflow");
+        }
+
+        if let Err(e) = tx.commit() {
+            if let Some((wf_p, prev_wf, mf_p, prev_mf)) = disk_rollback {
+                match prev_wf {
+                    Some(b) => {
+                        let _ = atomic_write_bytes(&wf_p, &b);
+                    }
+                    None => {
+                        let _ = std::fs::remove_file(&wf_p);
+                    }
+                }
+                if let Some(b) = prev_mf {
+                    let _ = atomic_write_bytes(&mf_p, &b);
+                }
+            }
+            return Err(e.into());
+        }
 
         Ok(ProjectWorkflowRecord {
-            id: workflow_id.to_string(),
-            project_id: project_id.to_string(),
-            name: name.to_string(),
+            id: wf_id_clean.to_string(),
+            project_id: pid_clean.to_string(),
+            name: name_clean.to_string(),
             category: category.to_string(),
             draft_json: draft_json.to_string(),
             draft_updated_at: now,
@@ -1535,13 +2086,11 @@ impl StorageManager {
         input: VisionTemplateInput,
     ) -> Result<VisionTemplateRecord> {
         let conn = self.conn.lock().unwrap();
-        let _ = Self::fetch_project_by_id_conn(&conn, &input.project_id)?
+        let project = Self::fetch_project_by_id_conn(&conn, &input.project_id)?
             .with_context(|| format!("Project '{}' not found", input.project_id))?;
 
-        let rel_clean = input.rel_path.trim().replace('\\', "/");
-        if rel_clean.is_empty() || rel_clean.contains("..") || rel_clean.starts_with('/') {
-            bail!("Invalid relative template path '{}'", input.rel_path);
-        }
+        let (rel_clean, _) =
+            validate_safe_rel_path(Path::new(&project.project_dir_path), &input.rel_path)?;
 
         let id = input
             .id
@@ -1598,12 +2147,163 @@ impl StorageManager {
         })
     }
 
+    pub fn save_project_template_file(
+        &self,
+        input: VisionTemplateInput,
+        png_bytes: &[u8],
+    ) -> Result<VisionTemplateRecord> {
+        self.save_project_template_file_with_fault(input, png_bytes, CrashFaultPoint::None)
+    }
+
+    /// Crash-safe save of template image bytes + SQLite `vision_templates` + `project.json` manifest.
+    pub fn save_project_template_file_with_fault(
+        &self,
+        input: VisionTemplateInput,
+        png_bytes: &[u8],
+        fault: CrashFaultPoint,
+    ) -> Result<VisionTemplateRecord> {
+        if png_bytes.is_empty() {
+            bail!("Template image bytes cannot be empty");
+        }
+        let mut conn = self.conn.lock().unwrap();
+        let project = Self::fetch_project_by_id_conn(&conn, &input.project_id)?
+            .with_context(|| format!("Project '{}' not found", input.project_id))?;
+
+        let proj_dir = Path::new(&project.project_dir_path);
+        if is_reparse_or_symlink(proj_dir) {
+            bail!(
+                "PROJECT_ISOLATION_VIOLATION: Refusing template save on symlinked project dir '{}'",
+                proj_dir.display()
+            );
+        }
+        let (rel_clean, target_path) = validate_safe_rel_path(proj_dir, &input.rel_path)?;
+        let actual_sha = sha256_hex(png_bytes);
+        let id = input
+            .id
+            .unwrap_or_else(|| format!("tpl-{}", &uuid::Uuid::new_v4().to_string()[..8]));
+        let conf = input.default_confidence.unwrap_or(0.88);
+        let now = Utc::now().to_rfc3339();
+
+        let prev_tpl_bytes = if target_path.exists() {
+            Some(std::fs::read(&target_path)?)
+        } else {
+            None
+        };
+        let manifest_path = proj_dir.join("project.json");
+        let prev_manifest_bytes = if manifest_path.exists() {
+            Some(std::fs::read(&manifest_path)?)
+        } else {
+            None
+        };
+
+        let restore_tpl_disk = || {
+            match prev_tpl_bytes {
+                Some(ref b) => {
+                    let _ = atomic_write_bytes(&target_path, b);
+                }
+                None => {
+                    let _ = std::fs::remove_file(&target_path);
+                }
+            }
+            if let Some(ref b) = prev_manifest_bytes {
+                let _ = atomic_write_bytes(&manifest_path, b);
+            }
+        };
+
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        tx.execute(
+            "INSERT INTO vision_templates (
+                id, project_id, name, rel_path, width_px, height_px,
+                source_crop_x, source_crop_y, default_confidence, sha256, created_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+             ON CONFLICT(project_id, rel_path) DO UPDATE SET
+                name = excluded.name,
+                width_px = excluded.width_px,
+                height_px = excluded.height_px,
+                source_crop_x = excluded.source_crop_x,
+                source_crop_y = excluded.source_crop_y,
+                default_confidence = excluded.default_confidence,
+                sha256 = excluded.sha256;",
+            params![
+                id,
+                input.project_id,
+                input.name,
+                rel_clean,
+                input.width_px as i64,
+                input.height_px as i64,
+                input.source_crop_x,
+                input.source_crop_y,
+                conf,
+                actual_sha,
+                now
+            ],
+        )?;
+
+        if fault == CrashFaultPoint::FailTemplateCopy {
+            bail!("INJECTED_CRASH_FAULT: simulated template write failure during save_project_template_file");
+        }
+        if let Err(e) = atomic_write_bytes(&target_path, png_bytes) {
+            restore_tpl_disk();
+            return Err(e);
+        }
+
+        if fault == CrashFaultPoint::FailManifestWrite {
+            restore_tpl_disk();
+            bail!("INJECTED_CRASH_FAULT: simulated manifest write failure during save_project_template_file");
+        }
+        if let Some(ref raw_mf) = prev_manifest_bytes {
+            if let Ok(mut manifest) = serde_json::from_slice::<GameProjectManifest>(raw_mf) {
+                if !manifest.template_files.iter().any(|f| f == &rel_clean) {
+                    manifest.template_files.push(rel_clean.clone());
+                    manifest.template_files.sort();
+                    if let Err(e) = atomic_write_bytes(&manifest_path, &serde_json::to_vec_pretty(&manifest)?) {
+                        restore_tpl_disk();
+                        return Err(e);
+                    }
+                }
+            }
+        }
+
+        if fault == CrashFaultPoint::FailBeforeDbCommit {
+            restore_tpl_disk();
+            bail!("INJECTED_CRASH_FAULT: simulated crash before DB commit in save_project_template_file");
+        }
+
+        if let Err(e) = tx.commit() {
+            restore_tpl_disk();
+            return Err(e.into());
+        }
+
+        let actual_id: String = conn.query_row(
+            "SELECT id FROM vision_templates WHERE project_id = ?1 AND rel_path = ?2;",
+            params![input.project_id, rel_clean],
+            |r| r.get(0),
+        )?;
+
+        Ok(VisionTemplateRecord {
+            id: actual_id,
+            project_id: input.project_id,
+            name: input.name,
+            rel_path: rel_clean,
+            width_px: input.width_px,
+            height_px: input.height_px,
+            source_crop_x: input.source_crop_x,
+            source_crop_y: input.source_crop_y,
+            default_confidence: conf,
+            sha256: actual_sha,
+            created_at: now,
+        })
+    }
+
     pub fn list_vision_templates(&self, project_id: &str) -> Result<Vec<VisionTemplateRecord>> {
+        if project_id.trim().is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, project_id, name, rel_path, width_px, height_px,
                     source_crop_x, source_crop_y, default_confidence, sha256, created_at
-             FROM vision_templates WHERE project_id = ?1 ORDER BY rel_path ASC;",
+             FROM vision_templates WHERE project_id = ?1 AND project_id IS NOT NULL ORDER BY rel_path ASC;",
         )?;
         let rows = stmt.query_map(params![project_id], |r| {
             Ok(VisionTemplateRecord {
@@ -1637,12 +2337,15 @@ impl StorageManager {
     // -------------------------------------------------------------------------
 
     pub fn list_project_tasks(&self, project_id: &str) -> Result<Vec<ProjectTaskRecord>> {
+        if project_id.trim().is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, project_id, workflow_id, category_id, category_short_tag,
                     category_name, category_color_hex, title, priority, estimate_sec,
                     default_enabled, settings_schema_json, updated_at
-             FROM task_definitions WHERE project_id = ?1 ORDER BY priority ASC, id ASC;",
+             FROM task_definitions WHERE project_id = ?1 AND project_id IS NOT NULL ORDER BY priority ASC, id ASC;",
         )?;
         let rows = stmt.query_map(params![project_id], |r| {
             Ok(ProjectTaskRecord {
@@ -1797,7 +2500,7 @@ impl StorageManager {
     }
 
     pub fn save_ui_schema(&self, project_id: &str, schema: &MiniToolUiSchema) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let mut conn = self.conn.lock().unwrap();
         let project = Self::fetch_project_by_id_conn(&conn, project_id)?
             .with_context(|| format!("Project '{}' not found", project_id))?;
 
@@ -1812,7 +2515,8 @@ impl StorageManager {
 
         let json_str = serde_json::to_string_pretty(schema)?;
         let now = Utc::now().to_rfc3339();
-        conn.execute(
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        tx.execute(
             "INSERT INTO mini_tool_schemas (project_id, schema_version, ui_schema_json, updated_at)
              VALUES (?1, ?2, ?3, ?4)
              ON CONFLICT(project_id) DO UPDATE SET
@@ -1823,8 +2527,20 @@ impl StorageManager {
         )?;
 
         let disk_dir = Path::new(&project.project_dir_path);
+        let ui_path = disk_dir.join("ui-schema.json");
+        let prev_ui = if ui_path.exists() {
+            Some(std::fs::read(&ui_path)?)
+        } else {
+            None
+        };
         if disk_dir.exists() {
-            std::fs::write(disk_dir.join("ui-schema.json"), json_str.as_bytes())?;
+            atomic_write_bytes(&ui_path, json_str.as_bytes())?;
+        }
+        if let Err(e) = tx.commit() {
+            if let Some(b) = prev_ui {
+                let _ = atomic_write_bytes(&ui_path, &b);
+            }
+            return Err(e.into());
         }
         Ok(())
     }
@@ -1893,10 +2609,13 @@ impl StorageManager {
     }
 
     pub fn list_project_accounts(&self, project_id: &str) -> Result<Vec<ProjectAccountRecord>> {
+        if project_id.trim().is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, COALESCE(project_id, ''), alias, game_profile_id, secret_ref, state, updated_at
-             FROM accounts WHERE project_id = ?1 ORDER BY updated_at DESC;",
+            "SELECT id, project_id, alias, game_profile_id, secret_ref, state, updated_at
+             FROM accounts WHERE project_id = ?1 AND project_id IS NOT NULL ORDER BY updated_at DESC;",
         )?;
         let rows = stmt.query_map(params![project_id], |r| {
             Ok(ProjectAccountRecord {
@@ -1932,11 +2651,14 @@ impl StorageManager {
     }
 
     pub fn list_project_jobs(&self, project_id: &str) -> Result<Vec<ProjectJobRecord>> {
+        if project_id.trim().is_empty() {
+            bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
+        }
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, project_id, device_id, account_id, workflow_version_id, priority, state,
                     fencing_generation, current_node_id, created_at, updated_at
-             FROM jobs WHERE project_id = ?1 ORDER BY created_at DESC;",
+             FROM jobs WHERE project_id = ?1 AND project_id IS NOT NULL ORDER BY created_at DESC;",
         )?;
         let rows = stmt.query_map(params![project_id], |r| {
             Ok(ProjectJobRecord {
@@ -2675,6 +3397,632 @@ mod tests {
         assert!(storage.delete_project(&proj.id, true).unwrap());
         assert!(!Path::new(&proj.project_dir_path).exists());
 
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p2_1_direct_sql_project_isolation_blocks_cross_project_writes() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_p2_1_sql_iso_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let projects_root = temp_dir.join("projects");
+        let storage = StorageManager::new_in_memory().unwrap();
+
+        let proj_a = storage
+            .create_project(
+                CreateProjectRequest {
+                    slug: "sql-proj-a".to_string(),
+                    name: "SQL Project A".to_string(),
+                    game_package_id: "com.sql.a".to_string(),
+                    version: None,
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                    enabled_modules: None,
+                },
+                &projects_root,
+            )
+            .unwrap();
+        let proj_b = storage
+            .create_project(
+                CreateProjectRequest {
+                    slug: "sql-proj-b".to_string(),
+                    name: "SQL Project B".to_string(),
+                    game_package_id: "com.sql.b".to_string(),
+                    version: None,
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                    enabled_modules: None,
+                },
+                &projects_root,
+            )
+            .unwrap();
+
+        storage
+            .save_project_workflow(&proj_a.id, "wf-sql-a", "WF A", "NV", "{}")
+            .unwrap();
+        storage
+            .save_project_workflow(&proj_b.id, "wf-sql-b", "WF B", "NV", "{}")
+            .unwrap();
+        storage
+            .upsert_project_account(ProjectAccountInput {
+                id: Some("acc-sql-a".to_string()),
+                project_id: proj_a.id.clone(),
+                alias: "AccA".to_string(),
+                game_profile_id: None,
+                secret_ref: None,
+                state: "ready".to_string(),
+            })
+            .unwrap();
+        storage
+            .upsert_project_account(ProjectAccountInput {
+                id: Some("acc-sql-b".to_string()),
+                project_id: proj_b.id.clone(),
+                alias: "AccB".to_string(),
+                game_profile_id: None,
+                secret_ref: None,
+                state: "ready".to_string(),
+            })
+            .unwrap();
+
+        let conn = storage.conn.lock().unwrap();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO devices (id, adb_serial, alias, width_px, height_px, rotation_deg, connection_state, updated_at)
+             VALUES ('dev-sql-1', 'dev-sql-1', 'Dev1', 1080, 1920, 0, 'ready', ?1);",
+            params![now],
+        )
+        .unwrap();
+
+        // 1. Direct SQL INSERT into task_definitions linking Project B -> Project A's workflow MUST FAIL
+        let cross_task_ins = conn.execute(
+            "INSERT INTO task_definitions (
+                id, project_id, workflow_id, category_id, category_short_tag,
+                category_name, category_color_hex, title, priority, estimate_sec,
+                default_enabled, settings_schema_json, updated_at
+             ) VALUES ('task-sql-cross', ?1, 'wf-sql-a', 'c1', '[C]', 'Cat', '#fff', 'Bad', 1, 10, 1, '[]', ?2);",
+            params![proj_b.id, now],
+        );
+        assert!(cross_task_ins.is_err());
+
+        // 2. Valid same-project task insert works, then cross-project UPDATE MUST FAIL
+        conn.execute(
+            "INSERT INTO task_definitions (
+                id, project_id, workflow_id, category_id, category_short_tag,
+                category_name, category_color_hex, title, priority, estimate_sec,
+                default_enabled, settings_schema_json, updated_at
+             ) VALUES ('task-sql-b-ok', ?1, 'wf-sql-b', 'c1', '[C]', 'Cat', '#fff', 'Good', 1, 10, 1, '[]', ?2);",
+            params![proj_b.id, now],
+        )
+        .unwrap();
+        let cross_task_upd = conn.execute(
+            "UPDATE task_definitions SET workflow_id = 'wf-sql-a' WHERE id = 'task-sql-b-ok';",
+            [],
+        );
+        assert!(cross_task_upd.is_err());
+
+        // 3. Direct SQL NULL project_id inserts on workflows, accounts, jobs MUST FAIL
+        assert!(conn
+            .execute(
+                "INSERT INTO workflows (id, project_id, name, draft_json, draft_updated_at)
+                 VALUES ('wf-null', NULL, 'NullWF', '{}', ?1);",
+                params![now],
+            )
+            .is_err());
+        assert!(conn
+            .execute(
+                "INSERT INTO accounts (id, project_id, alias, state, updated_at)
+                 VALUES ('acc-null', NULL, 'NullAcc', 'ready', ?1);",
+                params![now],
+            )
+            .is_err());
+        assert!(conn
+            .execute(
+                "INSERT INTO jobs (id, project_id, device_id, workflow_version_id, priority, state, created_at, updated_at)
+                 VALUES ('job-null', NULL, 'dev-sql-1', 'wf-sql-a-v1', 0, 'queued', ?1, ?1);",
+                params![now],
+            )
+            .is_err());
+
+        // 4. Direct SQL cross-project job with Project B owning job but Project A's workflow_version_id MUST FAIL
+        let cross_job_wf = conn.execute(
+            "INSERT INTO jobs (id, project_id, device_id, account_id, workflow_version_id, priority, state, created_at, updated_at)
+             VALUES ('job-cross-wf', ?1, 'dev-sql-1', 'acc-sql-b', 'wf-sql-a-v1', 0, 'queued', ?2, ?2);",
+            params![proj_b.id, now],
+        );
+        assert!(cross_job_wf.is_err());
+
+        // 5. Direct SQL cross-project job with Project A owning job + wf_a_v1, but Project B's account MUST FAIL
+        let cross_job_acc = conn.execute(
+            "INSERT INTO jobs (id, project_id, device_id, account_id, workflow_version_id, priority, state, created_at, updated_at)
+             VALUES ('job-cross-acc', ?1, 'dev-sql-1', 'acc-sql-b', 'wf-sql-a-v1', 0, 'queued', ?2, ?2);",
+            params![proj_a.id, now],
+        );
+        assert!(cross_job_acc.is_err());
+
+        // 6. Valid same-project job + checkpoint + step_event succeed, and reassigning referenced workflow/account across projects MUST FAIL
+        conn.execute(
+            "INSERT INTO jobs (id, project_id, device_id, account_id, workflow_version_id, priority, state, created_at, updated_at)
+             VALUES ('job-sql-a-ok', ?1, 'dev-sql-1', 'acc-sql-a', 'wf-sql-a-v1', 0, 'running', ?2, ?2);",
+            params![proj_a.id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO checkpoints (id, job_id, node_id, state_json, created_at)
+             VALUES ('cp-sql-a-ok', 'job-sql-a-ok', 'n1', '{}', ?1);",
+            params![now],
+        )
+        .unwrap();
+        assert!(conn
+            .execute(
+                "UPDATE workflows SET project_id = ?1 WHERE id = 'wf-sql-a';",
+                params![proj_b.id],
+            )
+            .is_err());
+        assert!(conn
+            .execute(
+                "UPDATE accounts SET project_id = ?1 WHERE id = 'acc-sql-a';",
+                params![proj_b.id],
+            )
+            .is_err());
+
+        let rep = check_integrity_on_conn(&conn).unwrap();
+        assert!(rep.is_healthy);
+        assert_eq!(rep.foreign_key_violations, 0);
+
+        drop(conn);
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p2_1_crash_consistency_create_clone_update_delete_workflow_template() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_p2_1_crash_test_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let projects_root = temp_dir.join("projects");
+        let storage = StorageManager::new_in_memory().unwrap();
+
+        // 1. Create fault before DB commit -> zero DB rows, zero orphan folders
+        let bad_create = storage.create_project_with_fault(
+            CreateProjectRequest {
+                slug: "crashed-create".to_string(),
+                name: "Crashed Create".to_string(),
+                game_package_id: "com.crash.create".to_string(),
+                version: None,
+                exe_name: None,
+                window_title: None,
+                icon_rel_path: None,
+                target_width_px: None,
+                target_height_px: None,
+                bundle_adb: None,
+                enabled_modules: None,
+            },
+            &projects_root,
+            CrashFaultPoint::FailBeforeDbCommit,
+        );
+        assert!(bad_create.is_err());
+        assert!(storage.get_project_by_slug("crashed-create").unwrap().is_none());
+        assert!(!projects_root.join("crashed-create").exists());
+        assert_eq!(
+            std::fs::read_dir(projects_root.join(STAGING_DIR_NAME))
+                .unwrap()
+                .count(),
+            0
+        );
+
+        // 2. Create a valid base project and add workflow + template file
+        let src = storage
+            .create_project(
+                CreateProjectRequest {
+                    slug: "solid-base".to_string(),
+                    name: "Solid Base".to_string(),
+                    game_package_id: "com.solid.base".to_string(),
+                    version: Some("1.0.0".to_string()),
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                    enabled_modules: None,
+                },
+                &projects_root,
+            )
+            .unwrap();
+        let src_dir = PathBuf::from(&src.project_dir_path);
+
+        storage
+            .save_project_workflow(&src.id, "wf-solid-1", "Solid WF", "NV", "{\"v\":1}")
+            .unwrap();
+        assert!(src_dir.join("workflows").join("wf-solid-1.json").exists());
+
+        storage
+            .save_project_template_file(
+                VisionTemplateInput {
+                    id: Some("tpl-solid-1".to_string()),
+                    project_id: src.id.clone(),
+                    name: "btn_solid".to_string(),
+                    rel_path: "templates/btn_solid.png".to_string(),
+                    width_px: 16,
+                    height_px: 16,
+                    source_crop_x: None,
+                    source_crop_y: None,
+                    default_confidence: Some(0.9),
+                    sha256: String::new(),
+                },
+                b"fake-png-v1",
+            )
+            .unwrap();
+        assert!(src_dir.join("templates").join("btn_solid.png").exists());
+
+        // 3. Fault during save_project_workflow -> rolls back BOTH DB and disk workflow/manifest
+        let wf_fault = storage.save_project_workflow_with_fault(
+            &src.id,
+            "wf-solid-1",
+            "Corrupted WF",
+            "NV",
+            "{\"v\":999}",
+            CrashFaultPoint::FailBeforeDbCommit,
+        );
+        assert!(wf_fault.is_err());
+        let wf_on_disk =
+            std::fs::read_to_string(src_dir.join("workflows").join("wf-solid-1.json")).unwrap();
+        assert_eq!(wf_on_disk, "{\"v\":1}");
+        assert_eq!(storage.list_project_workflows(&src.id).unwrap()[0].draft_json, "{\"v\":1}");
+
+        // 4. Fault during save_project_template_file -> rolls back BOTH DB and disk PNG/manifest
+        let tpl_fault = storage.save_project_template_file_with_fault(
+            VisionTemplateInput {
+                id: Some("tpl-solid-1".to_string()),
+                project_id: src.id.clone(),
+                name: "btn_solid_bad".to_string(),
+                rel_path: "templates/btn_solid.png".to_string(),
+                width_px: 32,
+                height_px: 32,
+                source_crop_x: None,
+                source_crop_y: None,
+                default_confidence: Some(0.9),
+                sha256: String::new(),
+            },
+            b"corrupted-png-v999",
+            CrashFaultPoint::FailBeforeDbCommit,
+        );
+        assert!(tpl_fault.is_err());
+        assert_eq!(
+            std::fs::read(src_dir.join("templates").join("btn_solid.png")).unwrap(),
+            b"fake-png-v1"
+        );
+        assert_eq!(storage.list_vision_templates(&src.id).unwrap()[0].name, "btn_solid");
+
+        // 5. Fault during update_project -> rolls back DB, project.json, AND ui-schema.json
+        let upd_fault = storage.update_project_with_fault(
+            UpdateProjectRequest {
+                id: src.id.clone(),
+                name: Some("Broken Rename".to_string()),
+                game_package_id: None,
+                version: Some("9.9.9".to_string()),
+                exe_name: None,
+                window_title: Some("Broken Window".to_string()),
+                icon_rel_path: None,
+                target_width_px: None,
+                target_height_px: None,
+                bundle_adb: None,
+            },
+            CrashFaultPoint::FailBeforeDbCommit,
+        );
+        assert!(upd_fault.is_err());
+        let reloaded_src = storage.get_project(&src.id).unwrap().unwrap();
+        assert_eq!(reloaded_src.name, "Solid Base");
+        assert_eq!(reloaded_src.version, "1.0.0");
+        let manifest_disk: GameProjectManifest =
+            serde_json::from_slice(&std::fs::read(src_dir.join("project.json")).unwrap()).unwrap();
+        assert_eq!(manifest_disk.name, "Solid Base");
+        let ui_disk: MiniToolUiSchema =
+            serde_json::from_slice(&std::fs::read(src_dir.join("ui-schema.json")).unwrap()).unwrap();
+        assert_eq!(ui_disk.window_title, src.window_title);
+
+        // 6. Fault during clone_project (template copy & before commit) -> 0 orphan dirs, 0 DB clone rows
+        for fault in [
+            CrashFaultPoint::FailTemplateCopy,
+            CrashFaultPoint::FailManifestWrite,
+            CrashFaultPoint::FailBeforeDbCommit,
+        ] {
+            let clone_err = storage.clone_project_with_fault(
+                CloneProjectRequest {
+                    source_project_id: src.id.clone(),
+                    new_slug: "crashed-clone".to_string(),
+                    new_name: "Crashed Clone".to_string(),
+                    new_game_package_id: None,
+                    new_exe_name: None,
+                },
+                &projects_root,
+                fault,
+            );
+            assert!(clone_err.is_err());
+            assert!(storage.get_project_by_slug("crashed-clone").unwrap().is_none());
+            assert!(!projects_root.join("crashed-clone").exists());
+        }
+
+        // 7. Fault during delete_project BEFORE DB commit -> project directory MUST be restored intact from .fp_trash!
+        let del_rollback =
+            storage.delete_project_with_fault(&src.id, true, CrashFaultPoint::FailBeforeDbCommit);
+        assert!(del_rollback.is_err());
+        assert!(storage.get_project(&src.id).unwrap().is_some());
+        assert!(src_dir.join("project.json").exists());
+        assert!(src_dir.join("templates").join("btn_solid.png").exists());
+
+        // 8. Fault during delete_project AFTER DB commit (trash purge interrupted) -> DB gone, dir gone, reconcile cleans trash!
+        let del_orphan = storage.delete_project_with_fault(
+            &src.id,
+            true,
+            CrashFaultPoint::FailAfterDbCommitTrashPurge,
+        );
+        assert!(del_orphan.is_err());
+        assert!(storage.get_project(&src.id).unwrap().is_none());
+        assert!(!src_dir.exists());
+        let cleaned = storage.reconcile_projects_storage(&projects_root).unwrap();
+        assert!(cleaned >= 1);
+        assert_eq!(
+            std::fs::read_dir(projects_root.join(TRASH_DIR_NAME))
+                .unwrap()
+                .count(),
+            0
+        );
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p2_1_template_path_and_project_dir_containment() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_p2_1_path_guard_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let projects_root = temp_dir.join("projects");
+        let outside_dir = temp_dir.join("outside_secret");
+        std::fs::create_dir_all(&outside_dir).unwrap();
+        std::fs::write(outside_dir.join("leak.png"), b"secret-bytes").unwrap();
+
+        let storage = StorageManager::new_in_memory().unwrap();
+        let proj = storage
+            .create_project(
+                CreateProjectRequest {
+                    slug: "safe-proj".to_string(),
+                    name: "Safe Proj".to_string(),
+                    game_package_id: "com.safe.proj".to_string(),
+                    version: None,
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                    enabled_modules: None,
+                },
+                &projects_root,
+            )
+            .unwrap();
+
+        // Reject traversal, absolute paths, and Windows drive prefixes
+        for bad_rel in [
+            "../outside_secret/leak.png",
+            "templates/../../outside_secret/leak.png",
+            "/etc/passwd",
+            "C:\\Windows\\System32\\cmd.exe",
+            "templates\\..\\..\\leak.png",
+        ] {
+            assert!(storage
+                .register_vision_template(VisionTemplateInput {
+                    id: None,
+                    project_id: proj.id.clone(),
+                    name: "bad".to_string(),
+                    rel_path: bad_rel.to_string(),
+                    width_px: 10,
+                    height_px: 10,
+                    source_crop_x: None,
+                    source_crop_y: None,
+                    default_confidence: None,
+                    sha256: "a".repeat(64),
+                })
+                .is_err());
+        }
+
+        // Reject NTFS junction inside project templates/ pointing outside
+        #[cfg(windows)]
+        {
+            let junction_dir = PathBuf::from(&proj.project_dir_path)
+                .join("templates")
+                .join("junc_out");
+            let out = std::process::Command::new("cmd")
+                .args([
+                    "/C",
+                    "mklink",
+                    "/J",
+                    &junction_dir.to_string_lossy(),
+                    &outside_dir.to_string_lossy(),
+                ])
+                .output();
+            if let Ok(o) = out {
+                if o.status.success() {
+                    let res = storage.register_vision_template(VisionTemplateInput {
+                        id: None,
+                        project_id: proj.id.clone(),
+                        name: "junc".to_string(),
+                        rel_path: "templates/junc_out/leak.png".to_string(),
+                        width_px: 10,
+                        height_px: 10,
+                        source_crop_x: None,
+                        source_crop_y: None,
+                        default_confidence: None,
+                        sha256: "a".repeat(64),
+                    });
+                    assert!(res.is_err());
+                    assert!(res
+                        .unwrap_err()
+                        .to_string()
+                        .contains("PROJECT_ISOLATION_VIOLATION"));
+                    let _ = std::fs::remove_dir(&junction_dir);
+                }
+            }
+        }
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p2_1_jx2_migration_preserves_user_edits_and_emits_mapping() {
+        let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let repo_root = manifest_dir.parent().unwrap().parent().unwrap();
+        let legacy_jx2_dir = repo_root.join("games").join("jx2mobile");
+
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_p2_1_jx2_preserve_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let db_file = temp_dir.join("jx2_user_custom.db");
+        let projects_dir = temp_dir.join("projects");
+
+        let storage = StorageManager::new(&db_file).unwrap();
+        // First migration on clean DB -> 10 INSERTs
+        let sum1 = storage
+            .migrate_legacy_jx2_assets(&legacy_jx2_dir, &projects_dir)
+            .unwrap();
+        assert_eq!(sum1.workflow_migrations.len(), 10);
+        assert!(sum1.workflow_migrations.iter().all(|m| m.action == "INSERT"));
+
+        // User edits `wf-jx2-02-char` graph in Studio
+        let user_custom_json = r#"{"schemaVersion":1,"workflowId":"wf-jx2-02-char","name":"Custom User Char","status":"draft","graph":{"nodes":[{"id":"custom-start","type":"flow.start","position":{"x":0,"y":0}},{"id":"custom-end","type":"flow.end","position":{"x":100,"y":0}}],"edges":[{"id":"ce1","source":"custom-start","sourcePort":"flow","target":"custom-end","targetPort":"flow"}]}}"#;
+        storage
+            .save_project_workflow(
+                DEFAULT_LEGACY_PROJECT_ID,
+                "wf-jx2-02-char",
+                "Custom User Char",
+                "Tạo nhân vật",
+                user_custom_json,
+            )
+            .unwrap();
+
+        // Re-running JX2 migration MUST SKIP `wf-jx2-02-char` (preserving user graph) and mark others ALREADY_EXISTS
+        let sum2 = storage
+            .migrate_legacy_jx2_assets(&legacy_jx2_dir, &projects_dir)
+            .unwrap();
+        assert_eq!(sum2.workflow_migrations.len(), 10);
+        let skipped = sum2
+            .workflow_migrations
+            .iter()
+            .find(|m| m.dest_workflow_id == "wf-jx2-02-char")
+            .unwrap();
+        assert_eq!(skipped.action, "SKIP");
+        assert_eq!(skipped.content_comparison, "PRESERVED_USER_CUSTOMIZED_WORKFLOW");
+
+        let wfs = storage
+            .list_project_workflows(DEFAULT_LEGACY_PROJECT_ID)
+            .unwrap();
+        let char_wf = wfs.iter().find(|w| w.id == "wf-jx2-02-char").unwrap();
+        assert_eq!(char_wf.name, "Custom User Char");
+        assert!(char_wf.draft_json.contains("custom-start"));
+
+        drop(storage);
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p2_1_wal_rollback_runbook_roundtrip() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_p2_1_rollback_runbook_{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let live_db = temp_dir.join("live.db");
+        let pre_v2_backup = temp_dir.join("pre_v2_backup.db");
+        let safety_snap = temp_dir.join("pre_rollback_safety.db");
+        let projects_root = temp_dir.join("projects");
+
+        // 1. Seed a v1 DB and capture verified pre-v2 backup
+        {
+            let conn = Connection::open(&live_db).unwrap();
+            conn.execute_batch("PRAGMA journal_mode = WAL;").unwrap();
+            conn.execute_batch(migrations::MIGRATION_V1_SQL).unwrap();
+            let now = Utc::now().to_rfc3339();
+            conn.execute(
+                "INSERT INTO workflows (id, name, draft_json, draft_updated_at)
+                 VALUES ('wf-v1-only', 'V1 Original', '{}', ?1);",
+                params![now],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO workflow_versions (id, workflow_id, version_no, graph_json, sha256, created_at)
+                 VALUES ('wf-v1-only-v1', 'wf-v1-only', 1, '{}', 'abc', ?1);",
+                params![now],
+            )
+            .unwrap();
+            let _ = conn.query_row("PRAGMA wal_checkpoint(TRUNCATE);", [], |r| r.get::<_, i64>(0));
+            let mut bk_conn = Connection::open(&pre_v2_backup).unwrap();
+            let bk = rusqlite::backup::Backup::new(&conn, &mut bk_conn).unwrap();
+            bk.run_to_completion(100, Duration::from_millis(5), None)
+                .unwrap();
+        }
+
+        // 2. Upgrade live DB to v2 and write v2 project data
+        {
+            let storage = StorageManager::new(&live_db).unwrap();
+            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2]);
+            let _ = storage
+                .create_project(
+                    CreateProjectRequest {
+                        slug: "v2-extra".to_string(),
+                        name: "V2 Extra".to_string(),
+                        game_package_id: "com.v2.extra".to_string(),
+                        version: None,
+                        exe_name: None,
+                        window_title: None,
+                        icon_rel_path: None,
+                        target_width_px: None,
+                        target_height_px: None,
+                        bundle_adb: None,
+                        enabled_modules: None,
+                    },
+                    &projects_root,
+                )
+                .unwrap();
+        }
+
+        // 3. Execute standardized WAL rollback runbook (all connections closed -> checkpoint -> safety snap -> restore -> verify -> reopen)
+        let report =
+            StorageManager::rollback_database_from_backup(&live_db, &pre_v2_backup, &safety_snap)
+                .unwrap();
+        assert_eq!(report.pre_rollback_versions, vec![1, 2]);
+        assert!(report.post_rollback_versions.is_empty());
+        assert!(report.post_rollback_integrity.is_healthy);
+        assert_eq!(report.post_rollback_integrity.foreign_key_violations, 0);
+        assert!(report.reopen_verified);
+        assert!(safety_snap.exists());
+
+        // 4. Verify v1 workflow is intact and v2 tables are gone
+        let reopened = Connection::open(&live_db).unwrap();
+        let wf_cnt: i64 = reopened
+            .query_row("SELECT COUNT(*) FROM workflows;", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(wf_cnt, 1);
+        let proj_tbl_cnt: i64 = reopened
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='projects';",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(proj_tbl_cnt, 0);
+
+        drop(reopened);
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }

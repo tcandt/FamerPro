@@ -82,6 +82,18 @@ enum Commands {
         #[arg(long)]
         projects_dir: PathBuf,
     },
+
+    /// Execute and verify the standardized WAL-safe Rollback Runbook on a sandbox copy (never mutates live DB)
+    VerifyRollbackRunbook {
+        #[arg(long)]
+        live_db: PathBuf,
+
+        #[arg(long)]
+        backup_db: PathBuf,
+
+        #[arg(long)]
+        out_dir: PathBuf,
+    },
 }
 
 #[tokio::main]
@@ -237,6 +249,15 @@ async fn main() -> anyhow::Result<()> {
             projects_dir,
         } => {
             let report = run_p2_guarded_migration(&db_path, &backup_path, &jx2_dir, &projects_dir)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+
+        Commands::VerifyRollbackRunbook {
+            live_db,
+            backup_db,
+            out_dir,
+        } => {
+            let report = run_rollback_runbook_verification(&live_db, &backup_db, &out_dir)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
     }
@@ -465,7 +486,155 @@ fn run_p2_sandbox_verification(
         )
         .is_err();
 
+    // 6b. Direct SQL isolation probes (bypassing application handlers on an independent connection!)
+    let direct_sql_isolation = {
+        let raw_conn = rusqlite::Connection::open(&migrated_db_path)?;
+        raw_conn.execute_batch("PRAGMA foreign_keys = ON;")?;
+        let now_sql = chrono::Utc::now().to_rfc3339();
+        let cross_task_blocked = raw_conn
+            .execute(
+                "INSERT INTO task_definitions (
+                    id, project_id, workflow_id, category_id, category_short_tag,
+                    category_name, category_color_hex, title, priority, estimate_sec,
+                    default_enabled, settings_schema_json, updated_at
+                 ) VALUES ('task-cli-cross', ?1, 'wf-slg-harvest-01', 'c1', '[C]', 'Cat', '#fff', 'Cross', 1, 10, 1, '[]', ?2);",
+                rusqlite::params![DEFAULT_LEGACY_PROJECT_ID, now_sql],
+            )
+            .is_err();
+        let null_wf_blocked = raw_conn
+            .execute(
+                "INSERT INTO workflows (id, project_id, name, draft_json, draft_updated_at)
+                 VALUES ('wf-cli-null', NULL, 'NullWF', '{}', ?1);",
+                rusqlite::params![now_sql],
+            )
+            .is_err();
+        let null_acc_blocked = raw_conn
+            .execute(
+                "INSERT INTO accounts (id, project_id, alias, state, updated_at)
+                 VALUES ('acc-cli-null', NULL, 'NullAcc', 'ready', ?1);",
+                rusqlite::params![now_sql],
+            )
+            .is_err();
+        let cross_job_acc_blocked = raw_conn
+            .execute(
+                "INSERT INTO jobs (id, project_id, device_id, account_id, workflow_version_id, priority, state, created_at, updated_at)
+                 VALUES ('job-cli-cross', ?1, 'emulator-5554', 'acc-slg-01', 'wf-jx2-01-login-v1', 0, 'queued', ?2, ?2);",
+                rusqlite::params![DEFAULT_LEGACY_PROJECT_ID, now_sql],
+            )
+            .is_err();
+        serde_json::json!({
+            "crossProjectTaskInsertBlockedBySqlite": cross_task_blocked,
+            "nullProjectWorkflowInsertBlockedBySqlite": null_wf_blocked,
+            "nullProjectAccountInsertBlockedBySqlite": null_acc_blocked,
+            "crossProjectJobAccountBlockedBySqlite": cross_job_acc_blocked,
+            "allDirectSqlProbesBlocked": cross_task_blocked && null_wf_blocked && null_acc_blocked && cross_job_acc_blocked,
+        })
+    };
+
+    // 6c. Crash Consistency probes (fault injection + staging/trash/journal reconciliation)
+    let crash_consistency = {
+        use fp_storage::CrashFaultPoint;
+        let create_fault_err = storage
+            .create_project_with_fault(
+                CreateProjectRequest {
+                    slug: "cli-crash-create".to_string(),
+                    name: "CLI Crash Create".to_string(),
+                    game_package_id: "com.crash.cli".to_string(),
+                    version: None,
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                    enabled_modules: None,
+                },
+                &sandbox_projects,
+                CrashFaultPoint::FailBeforeDbCommit,
+            )
+            .is_err();
+        let create_clean = storage.get_project_by_slug("cli-crash-create")?.is_none()
+            && !sandbox_projects.join("cli-crash-create").exists();
+
+        let clone_fault_err = storage
+            .clone_project_with_fault(
+                CloneProjectRequest {
+                    source_project_id: proj_slg.id.clone(),
+                    new_slug: "cli-crash-clone".to_string(),
+                    new_name: "CLI Crash Clone".to_string(),
+                    new_game_package_id: None,
+                    new_exe_name: None,
+                },
+                &sandbox_projects,
+                CrashFaultPoint::FailTemplateCopy,
+            )
+            .is_err();
+        let clone_clean = storage.get_project_by_slug("cli-crash-clone")?.is_none()
+            && !sandbox_projects.join("cli-crash-clone").exists();
+
+        let update_fault_err = storage
+            .update_project_with_fault(
+                UpdateProjectRequest {
+                    id: proj_slg.id.clone(),
+                    name: Some("Broken Name".to_string()),
+                    game_package_id: None,
+                    version: Some("9.9.9".to_string()),
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                },
+                CrashFaultPoint::FailBeforeDbCommit,
+            )
+            .is_err();
+        let update_clean = storage
+            .get_project(&proj_slg.id)?
+            .map(|p| p.version == "1.2.1")
+            .unwrap_or(false);
+
+        let delete_pre_fault_err = storage
+            .delete_project_with_fault(&cloned_slg.id, true, CrashFaultPoint::FailBeforeDbCommit)
+            .is_err();
+        let delete_pre_restored = storage.get_project(&cloned_slg.id)?.is_some()
+            && PathBuf::from(&cloned_slg.project_dir_path)
+                .join("project.json")
+                .exists();
+
+        let delete_post_fault_err = storage
+            .delete_project_with_fault(
+                &cloned_slg.id,
+                true,
+                CrashFaultPoint::FailAfterDbCommitTrashPurge,
+            )
+            .is_err();
+        let reconciled_orphans = storage.reconcile_projects_storage(&sandbox_projects)?;
+        let delete_post_clean = storage.get_project(&cloned_slg.id)?.is_none()
+            && !PathBuf::from(&cloned_slg.project_dir_path).exists();
+
+        serde_json::json!({
+            "createFaultRolledBackCleanly": create_fault_err && create_clean,
+            "cloneFaultRolledBackCleanly": clone_fault_err && clone_clean,
+            "updateFaultRolledBackCleanly": update_fault_err && update_clean,
+            "deletePreCommitRestoredFromTrash": delete_pre_fault_err && delete_pre_restored,
+            "deletePostCommitTrashReconciled": delete_post_fault_err && delete_post_clean,
+            "reconciledOrphanEntries": reconciled_orphans,
+        })
+    };
+
     let projects_list = storage.list_projects()?;
+
+    // 6d. WAL-safe Rollback Runbook verification on an isolated sandbox copy of migrated_db_path
+    let rollback_runbook_target = sandbox_dir.join("06_rollback_runbook_target.db");
+    let rollback_safety_snap = sandbox_dir.join("07_pre_rollback_safety_snapshot.db");
+    drop(storage);
+    std::fs::copy(&migrated_db_path, &rollback_runbook_target)?;
+    let wal_rollback_report = StorageManager::rollback_database_from_backup(
+        &rollback_runbook_target,
+        &online_bk_path,
+        &rollback_safety_snap,
+    )?;
 
     // 7. Windows Credential Manager + DPAPI Keystore Verification
     let vault = CredentialVault::new();
@@ -486,12 +655,32 @@ fn run_p2_sandbox_verification(
     let _ = vault.delete_secret_namespaced(&ns_b, "api_secret");
     let _ = vault.delete_secret_namespaced(&ns_tool, "proxy_auth");
 
-    // DPAPI Keystore test in sandbox
+    // DPAPI Keystore + Portable Passphrase Recovery test in sandbox
     let ks_dir = sandbox_dir.join("keystore");
+    let ks_machine_b = sandbox_dir.join("keystore_machine_b");
     let ks_backup = sandbox_dir.join("keystore_backup.json");
+    let ks_portable = sandbox_dir.join("keystore_portable_recovery.json");
     let (sk1, meta1) = ProducerKeystore::load_or_create_signing_key(&ks_dir)?;
     let ks_raw = std::fs::read_to_string(&meta1.key_store_path)?;
     let backup_bundle = ProducerKeystore::backup_signing_key(&ks_dir, &ks_backup)?;
+    let portable_bundle = ProducerKeystore::export_portable_recovery_bundle(
+        &ks_dir,
+        &ks_portable,
+        "FarmerPro-P2-1-Offline-Recovery!",
+    )?;
+    let portable_raw = std::fs::read_to_string(&ks_portable)?;
+    let wrong_pass_rejected = ProducerKeystore::import_portable_recovery_bundle(
+        &ks_portable,
+        &ks_machine_b,
+        "Wrong-Passphrase-123",
+    )
+    .is_err();
+    let imported_b_meta = ProducerKeystore::import_portable_recovery_bundle(
+        &ks_portable,
+        &ks_machine_b,
+        "FarmerPro-P2-1-Offline-Recovery!",
+    )?;
+    let (sk_machine_b, _) = ProducerKeystore::load_or_create_signing_key(&ks_machine_b)?;
     let (_sk2, meta2) = ProducerKeystore::rotate_producer_key(&ks_dir, "cli_p2_verify")?;
     let restored_meta = ProducerKeystore::restore_signing_key(&ks_backup, &ks_dir)?;
     let (sk_restored, _) = ProducerKeystore::load_or_create_signing_key(&ks_dir)?;
@@ -521,12 +710,15 @@ fn run_p2_sandbox_verification(
             "onlineBackup": v2_backup_report,
             "restoredIntegrity": v2_restore_integrity,
         },
+        "walRollbackRunbookTest": wal_rollback_report,
         "projectCrudAndIsolation": {
             "projectsCount": projects_list.len(),
             "projects": projects_list,
             "updatedSlgVersion": updated_slg.version,
             "clonedSlgSlug": cloned_slg.slug,
             "crossProjectOverwriteBlocked": cross_overwrite_blocked,
+            "directSqlIsolation": direct_sql_isolation,
+            "crashConsistency": crash_consistency,
         },
         "credentialVaultAndDpapi": {
             "vaultBackend": vault.backend_label(),
@@ -538,14 +730,70 @@ fn run_p2_sandbox_verification(
                 && cross_vault_isolated,
             "dpapiKeystore": {
                 "protectionScheme": meta1.protection_scheme,
+                "backupProtectionScheme": backup_bundle.protection_scheme,
                 "noPlaintextSeedOnDisk": !ks_raw.contains("secretSeedHex") && ks_raw.contains("dpapiProtectedSeedB64"),
                 "initialKeyId": meta1.key_id,
                 "rotatedKeyId": meta2.key_id,
                 "backupSha256": backup_bundle.payload_sha256,
                 "restoredKeyId": restored_meta.key_id,
                 "seedMatchesAfterRestore": sk1.to_bytes() == sk_restored.to_bytes(),
+                "portableRecovery": {
+                    "protectionScheme": portable_bundle.protection_scheme,
+                    "kdfIterations": portable_bundle.kdf_iterations,
+                    "noPlaintextSeedInBundle": !portable_raw.contains("secretSeedHex"),
+                    "wrongPassphraseRejected": wrong_pass_rejected,
+                    "importedKeyId": imported_b_meta.key_id,
+                    "seedMatchesAfterPortableImport": sk1.to_bytes() == sk_machine_b.to_bytes(),
+                }
             }
         }
+    }))
+}
+
+fn run_rollback_runbook_verification(
+    live_db: &std::path::Path,
+    backup_db: &std::path::Path,
+    out_dir: &std::path::Path,
+) -> anyhow::Result<serde_json::Value> {
+    use fp_storage::StorageManager;
+
+    if !live_db.exists() {
+        anyhow::bail!("Source live DB not found: {}", live_db.display());
+    }
+    if !backup_db.exists() {
+        anyhow::bail!("Verified backup DB not found: {}", backup_db.display());
+    }
+    if out_dir.exists() {
+        let _ = std::fs::remove_dir_all(out_dir);
+    }
+    std::fs::create_dir_all(out_dir)?;
+
+    let sandbox_target = out_dir.join("target_db_copy.db");
+    let safety_snap = out_dir.join("pre_rollback_safety_snapshot.db");
+    let backup_copy = out_dir.join("verified_backup_copy.db");
+
+    // Copy live_db via Online Backup API so WAL frames are safely captured into sandbox copy
+    {
+        let src_conn = rusqlite::Connection::open(live_db)?;
+        let mut dst_conn = rusqlite::Connection::open(&sandbox_target)?;
+        let bk = rusqlite::backup::Backup::new(&src_conn, &mut dst_conn)?;
+        bk.run_to_completion(100, std::time::Duration::from_millis(5), None)?;
+    }
+    std::fs::copy(backup_db, &backup_copy)?;
+
+    let report = StorageManager::rollback_database_from_backup(
+        &sandbox_target,
+        &backup_copy,
+        &safety_snap,
+    )?;
+
+    Ok(serde_json::json!({
+        "command": "verify-rollback-runbook",
+        "executedAtUtc": chrono::Utc::now().to_rfc3339(),
+        "sourceLiveDb": live_db.to_string_lossy(),
+        "sourceBackupDb": backup_db.to_string_lossy(),
+        "productionDbUntouched": true,
+        "rollbackReport": report,
     }))
 }
 

@@ -246,6 +246,20 @@ pub struct BackupReport {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct Jx2WorkflowMigrationItem {
+    pub source_file: String,
+    pub source_workflow_id: String,
+    pub dest_workflow_id: String,
+    pub dest_version_id: String,
+    pub source_sha256: String,
+    pub action: String,
+    pub version_before: Option<i64>,
+    pub version_after: i64,
+    pub content_comparison: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Jx2MigrationSummary {
     pub project_id: String,
     pub project_slug: String,
@@ -256,4 +270,30 @@ pub struct Jx2MigrationSummary {
     pub tasks_seeded: usize,
     pub modules_seeded: usize,
     pub original_source_preserved: bool,
+    #[serde(default)]
+    pub workflow_migrations: Vec<Jx2WorkflowMigrationItem>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum CrashFaultPoint {
+    None,
+    FailTemplateCopy,
+    FailManifestWrite,
+    FailBeforeDbCommit,
+    FailAfterDbCommitTrashPurge,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RollbackVerificationReport {
+    pub current_db_path: String,
+    pub backup_db_path: String,
+    pub safety_snapshot_path: String,
+    pub pre_rollback_versions: Vec<i64>,
+    pub post_rollback_versions: Vec<i64>,
+    pub pre_rollback_table_counts: BTreeMap<String, i64>,
+    pub post_rollback_integrity: IntegrityReport,
+    pub wal_checkpoint_busy: i64,
+    pub reopen_verified: bool,
 }

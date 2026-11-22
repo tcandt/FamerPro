@@ -13,7 +13,7 @@ use ed25519_dalek::{Signer, SigningKey};
 use fp_bundle_verify::{
     canonical_signing_message, hex_encode, sha256_hex, SignedBundleEnvelope,
 };
-use fp_security::{ProducerKeyBackupBundle, ProducerKeystore};
+use fp_security::{PortableProducerKeyRecoveryBundle, ProducerKeyBackupBundle, ProducerKeystore};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -57,6 +57,24 @@ impl ProducerKeyManager {
         keystore_dir: &Path,
     ) -> Result<ProducerKeyMetadata> {
         ProducerKeystore::restore_signing_key(backup_file_path, keystore_dir)
+    }
+
+    /// Exports a passphrase-encrypted portable recovery bundle for cross-machine/cross-user recovery.
+    pub fn export_portable_recovery_bundle(
+        keystore_dir: &Path,
+        backup_file_path: &Path,
+        passphrase: &str,
+    ) -> Result<PortableProducerKeyRecoveryBundle> {
+        ProducerKeystore::export_portable_recovery_bundle(keystore_dir, backup_file_path, passphrase)
+    }
+
+    /// Imports a passphrase-encrypted portable recovery bundle into the local Windows DPAPI keystore.
+    pub fn import_portable_recovery_bundle(
+        backup_file_path: &Path,
+        keystore_dir: &Path,
+        passphrase: &str,
+    ) -> Result<ProducerKeyMetadata> {
+        ProducerKeystore::import_portable_recovery_bundle(backup_file_path, keystore_dir, passphrase)
     }
 
     /// Signs a bundle's manifest SHA-256 and file checksums table using RFC 8032 Ed25519 (`ed25519-dalek`)

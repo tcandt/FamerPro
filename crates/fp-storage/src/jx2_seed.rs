@@ -1,5 +1,7 @@
+use crate::fs_atomic::{atomic_write_bytes, ensure_contained_project_dir};
 use crate::models::{
-    Jx2MigrationSummary, DEFAULT_LEGACY_PROJECT_ID, DEFAULT_LEGACY_PROJECT_SLUG,
+    Jx2MigrationSummary, Jx2WorkflowMigrationItem, DEFAULT_LEGACY_PROJECT_ID,
+    DEFAULT_LEGACY_PROJECT_SLUG,
 };
 use anyhow::{bail, Context, Result};
 use chrono::Utc;
@@ -53,6 +55,7 @@ pub fn migrate_legacy_jx2_assets(
     }
 
     let proj_dir = projects_base_dir.join(DEFAULT_LEGACY_PROJECT_SLUG);
+    let _ = ensure_contained_project_dir(projects_base_dir, &proj_dir)?;
     let proj_wf_dir = proj_dir.join("workflows");
     let proj_tpl_dir = proj_dir.join("templates");
     let proj_brand_dir = proj_dir.join("branding");
@@ -61,7 +64,7 @@ pub fn migrate_legacy_jx2_assets(
     std::fs::create_dir_all(&proj_brand_dir)?;
 
     // Collect and validate the 10 JX2 workflow JSON files
-    let mut wf_entries: Vec<(String, String, String, String)> = Vec::new();
+    let mut wf_entries: Vec<(String, String, String, String, String)> = Vec::new();
     let mut wf_rel_files: Vec<String> = Vec::new();
     let mut dir_items: Vec<_> = std::fs::read_dir(legacy_jx2_dir)?
         .filter_map(|e| e.ok())
@@ -84,12 +87,12 @@ pub fn migrate_legacy_jx2_assets(
         let doc = WorkflowValidator::parse_and_validate(&content)
             .with_context(|| format!("Invalid JX2 workflow JSON: {}", src_path.display()))?;
 
-        // Copy non-destructively to projects/jx2-mobile/workflows/
-        std::fs::copy(&src_path, proj_wf_dir.join(&file_name))?;
+        // Copy non-destructively to projects/jx2-mobile/workflows/ via atomic write
+        atomic_write_bytes(&proj_wf_dir.join(&file_name), content.as_bytes())?;
         wf_rel_files.push(format!("workflows/{}", file_name));
 
         let category = jx2_workflow_category(&doc.workflow_id).to_string();
-        wf_entries.push((doc.workflow_id, doc.name, category, content));
+        wf_entries.push((file_name, doc.workflow_id, doc.name, category, content));
     }
 
     // Collect and inspect template PNGs in games/jx2mobile/templates/
@@ -118,7 +121,7 @@ pub fn migrate_legacy_jx2_assets(
             let (w, h) = image::image_dimensions(&src_path).unwrap_or((64, 64));
 
             // Non-destructive copy into project templates directory
-            std::fs::copy(&src_path, proj_tpl_dir.join(&file_name))?;
+            atomic_write_bytes(&proj_tpl_dir.join(&file_name), &bytes)?;
             let rel_path = format!("templates/{}", file_name);
             tpl_rel_files.push(rel_path.clone());
             let name = file_name.trim_end_matches(".png").to_string();
@@ -175,35 +178,157 @@ pub fn migrate_legacy_jx2_assets(
         |r| r.get(0),
     )?;
 
-    // 3. Upsert the 10 JX2 workflows & initial version 1 (preserving existing versions if already present)
+    // 3. Upsert the 10 JX2 workflows safely (INSERT new, UPDATE only if graph matches & metadata upgraded, SKIP if user modified graph, ALREADY_EXISTS if identical)
     let mut workflows_imported = 0usize;
-    for (wf_id, wf_name, category, wf_json) in &wf_entries {
+    let mut workflow_migrations = Vec::with_capacity(wf_entries.len());
+    for (src_file, wf_id, wf_name, category, wf_json) in &wf_entries {
         let wf_sha = sha256_hex(wf_json.as_bytes());
-        tx.execute(
-            "INSERT INTO workflows (id, project_id, name, category, draft_json, draft_updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-             ON CONFLICT(id) DO UPDATE SET
-                project_id = COALESCE(workflows.project_id, excluded.project_id),
-                name = excluded.name,
-                category = excluded.category,
-                draft_json = excluded.draft_json,
-                draft_updated_at = excluded.draft_updated_at;",
-            params![
-                wf_id,
-                DEFAULT_LEGACY_PROJECT_ID,
-                wf_name,
-                category,
-                wf_json,
-                now
-            ],
-        )?;
-        let version_id = format!("{}-v1", wf_id);
-        tx.execute(
-            "INSERT OR IGNORE INTO workflow_versions (id, workflow_id, version_no, graph_json, sha256, created_at)
-             VALUES (?1, ?2, 1, ?3, ?4, ?5);",
-            params![version_id, wf_id, wf_json, wf_sha, now],
-        )?;
-        workflows_imported += 1;
+        let existing_row: Option<(Option<String>, String)> = {
+            let mut st = tx.prepare("SELECT project_id, draft_json FROM workflows WHERE id = ?1;")?;
+            let mut rows = st.query(params![wf_id])?;
+            rows.next()?
+                .map(|r| Ok::<_, rusqlite::Error>((r.get(0)?, r.get(1)?)))
+                .transpose()?
+        };
+
+        let existing_ver: Option<(i64, String, String)> = {
+            let mut st = tx.prepare(
+                "SELECT version_no, id, sha256 FROM workflow_versions WHERE workflow_id = ?1 ORDER BY version_no DESC LIMIT 1;",
+            )?;
+            let mut rows = st.query(params![wf_id])?;
+            rows.next()?
+                .map(|r| Ok::<_, rusqlite::Error>((r.get(0)?, r.get(1)?, r.get(2)?)))
+                .transpose()?
+        };
+
+        match existing_row {
+            None => {
+                tx.execute(
+                    "INSERT INTO workflows (id, project_id, name, category, draft_json, draft_updated_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6);",
+                    params![
+                        wf_id,
+                        DEFAULT_LEGACY_PROJECT_ID,
+                        wf_name,
+                        category,
+                        wf_json,
+                        now
+                    ],
+                )?;
+                let version_id = format!("{}-v1", wf_id);
+                tx.execute(
+                    "INSERT INTO workflow_versions (id, workflow_id, version_no, graph_json, sha256, created_at)
+                     VALUES (?1, ?2, 1, ?3, ?4, ?5);",
+                    params![version_id, wf_id, wf_json, wf_sha, now],
+                )?;
+                workflows_imported += 1;
+                workflow_migrations.push(Jx2WorkflowMigrationItem {
+                    source_file: src_file.clone(),
+                    source_workflow_id: wf_id.clone(),
+                    dest_workflow_id: wf_id.clone(),
+                    dest_version_id: version_id,
+                    source_sha256: wf_sha,
+                    action: "INSERT".to_string(),
+                    version_before: None,
+                    version_after: 1,
+                    content_comparison: "NEW_WORKFLOW_IMPORTED".to_string(),
+                });
+            }
+            Some((owner_opt, existing_draft)) => {
+                let ver_before = existing_ver.as_ref().map(|v| v.0);
+                let cur_ver_no = ver_before.unwrap_or(1);
+                let cur_ver_id = existing_ver
+                    .as_ref()
+                    .map(|v| v.1.clone())
+                    .unwrap_or_else(|| format!("{}-v1", wf_id));
+
+                if owner_opt.as_deref() != Some(DEFAULT_LEGACY_PROJECT_ID) {
+                    workflow_migrations.push(Jx2WorkflowMigrationItem {
+                        source_file: src_file.clone(),
+                        source_workflow_id: wf_id.clone(),
+                        dest_workflow_id: wf_id.clone(),
+                        dest_version_id: cur_ver_id,
+                        source_sha256: wf_sha,
+                        action: "SKIP".to_string(),
+                        version_before: ver_before,
+                        version_after: cur_ver_no,
+                        content_comparison: "SKIPPED_OWNED_BY_OTHER_PROJECT".to_string(),
+                    });
+                    continue;
+                }
+
+                let existing_sha = sha256_hex(existing_draft.as_bytes());
+                if existing_sha == wf_sha {
+                    workflows_imported += 1;
+                    workflow_migrations.push(Jx2WorkflowMigrationItem {
+                        source_file: src_file.clone(),
+                        source_workflow_id: wf_id.clone(),
+                        dest_workflow_id: wf_id.clone(),
+                        dest_version_id: cur_ver_id,
+                        source_sha256: wf_sha,
+                        action: "ALREADY_EXISTS".to_string(),
+                        version_before: ver_before,
+                        version_after: cur_ver_no,
+                        content_comparison: "EXACT_SHA256_MATCH".to_string(),
+                    });
+                } else {
+                    // Check semantic graph equality: only upgrade if graph (nodes & edges) is identical
+                    let existing_val = serde_json::from_str::<serde_json::Value>(&existing_draft).ok();
+                    let source_val = serde_json::from_str::<serde_json::Value>(wf_json).ok();
+                    let graphs_match = match (&existing_val, &source_val) {
+                        (Some(e), Some(s)) => e.get("graph") == s.get("graph") && e.get("graph").is_some(),
+                        _ => false,
+                    };
+
+                    if graphs_match {
+                        tx.execute(
+                            "UPDATE workflows SET name = ?1, category = ?2, draft_json = ?3, draft_updated_at = ?4
+                             WHERE id = ?5 AND project_id = ?6;",
+                            params![
+                                wf_name,
+                                category,
+                                wf_json,
+                                now,
+                                wf_id,
+                                DEFAULT_LEGACY_PROJECT_ID
+                            ],
+                        )?;
+                        let next_ver = cur_ver_no + 1;
+                        let next_ver_id = format!("{}-v{}", wf_id, next_ver);
+                        tx.execute(
+                            "INSERT INTO workflow_versions (id, workflow_id, version_no, graph_json, sha256, created_at)
+                             VALUES (?1, ?2, ?3, ?4, ?5, ?6);",
+                            params![next_ver_id, wf_id, next_ver, wf_json, wf_sha, now],
+                        )?;
+                        workflows_imported += 1;
+                        workflow_migrations.push(Jx2WorkflowMigrationItem {
+                            source_file: src_file.clone(),
+                            source_workflow_id: wf_id.clone(),
+                            dest_workflow_id: wf_id.clone(),
+                            dest_version_id: next_ver_id,
+                            source_sha256: wf_sha,
+                            action: "UPDATE".to_string(),
+                            version_before: ver_before,
+                            version_after: next_ver,
+                            content_comparison: "IDENTICAL_GRAPH_UPGRADED_TO_PUBLISHED_POLICY".to_string(),
+                        });
+                    } else {
+                        // Preserve user-modified workflow without overwriting!
+                        workflow_migrations.push(Jx2WorkflowMigrationItem {
+                            source_file: src_file.clone(),
+                            source_workflow_id: wf_id.clone(),
+                            dest_workflow_id: wf_id.clone(),
+                            dest_version_id: cur_ver_id,
+                            source_sha256: wf_sha,
+                            action: "SKIP".to_string(),
+                            version_before: ver_before,
+                            version_after: cur_ver_no,
+                            content_comparison: "PRESERVED_USER_CUSTOMIZED_WORKFLOW".to_string(),
+                        });
+                    }
+                }
+            }
+        }
     }
 
     // 4. Upsert vision templates
@@ -333,11 +458,11 @@ pub fn migrate_legacy_jx2_assets(
     };
     let manifest_path = proj_dir.join("project.json");
     if !manifest_path.exists() {
-        std::fs::write(&manifest_path, serde_json::to_vec_pretty(&manifest)?)?;
+        atomic_write_bytes(&manifest_path, &serde_json::to_vec_pretty(&manifest)?)?;
     }
     let ui_path = proj_dir.join("ui-schema.json");
     if !ui_path.exists() {
-        std::fs::write(&ui_path, ui_schema_json.as_bytes())?;
+        atomic_write_bytes(&ui_path, ui_schema_json.as_bytes())?;
     }
 
     Ok(Jx2MigrationSummary {
@@ -350,6 +475,7 @@ pub fn migrate_legacy_jx2_assets(
         tasks_seeded,
         modules_seeded,
         original_source_preserved: legacy_jx2_dir.exists(),
+        workflow_migrations,
     })
 }
 
