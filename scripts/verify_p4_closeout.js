@@ -312,12 +312,20 @@ async function main() {
       };
     })()`);
 
-    // C. Test Builder Runtime Variable Picker discovered real workflow vars (farm_zone, resource_count)!
+    // C. Select vars-compact (p1Id) in Header project selector, then test Builder Runtime Variable Picker
+    await evalJs(`(() => {
+      const sel = Array.from(document.querySelectorAll('select')).find(s => Array.from(s.options).some(o => o.value === '${seeded.p1Id}'));
+      if (!sel) throw new Error('Header project selector with p1 not found');
+      sel.value = '${seeded.p1Id}';
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    })()`);
+    await new Promise((r) => setTimeout(r, 600));
+
     await evalJs(`(() => {
       const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent && b.textContent.includes('Mini Tool Builder'));
       btn.click();
     })()`);
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 700));
 
     // Select Device ADB Table inside Component Tree
     await evalJs(`(() => {
