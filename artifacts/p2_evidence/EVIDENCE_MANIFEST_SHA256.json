@@ -1,7 +1,23 @@
 {
+  "FARMERPRO_P2_1_ACCEPTANCE_REPORT.pdf": {
+    "bytes": 478283,
+    "sha256": "451be0538607b6cf68e2103439e357b3d0facf98b6c7cbbbc747efc52d409ac8"
+  },
   "FARMERPRO_P2_ACCEPTANCE_REPORT.pdf": {
     "bytes": 555074,
     "sha256": "520352143e9119f203e9f682ce8c7d423b5458a488b63520baae41da124e34c3"
+  },
+  "P2_1_ROLLBACK_RUNBOOK_AND_DPAPI_POLICY.md": {
+    "bytes": 6296,
+    "sha256": "3f5567213e33011e37913e1818fcf24e1879cc2e9c6955c9e16603d3012ef09a"
+  },
+  "cargo_build_p2_1.log": {
+    "bytes": 145,
+    "sha256": "8e1e2dba66701ea8abda65de2dd736d46d820f90dfe593980b1fd9808d3f6e02"
+  },
+  "cargo_test_workspace_p2_1_clean.log": {
+    "bytes": 8976,
+    "sha256": "8a3b8bb850ae596f89e18d88907f9325f6267199e7b8aa9adbad91888cc3f050"
   },
   "cargo_test_workspace_p2_clean.log": {
     "bytes": 13042,
@@ -15,9 +31,29 @@
     "bytes": 2791,
     "sha256": "14264aa8b755157be98d7e854a06b11212e382a2310bd05502e550bc08459435"
   },
+  "git_diff_summary_p2_1.txt": {
+    "bytes": 2856,
+    "sha256": "d62b9bb0aba48960ef29091016f64b02dd1267edefdec8a018e141c5d4ceafbc"
+  },
   "git_log_p2.txt": {
     "bytes": 514,
     "sha256": "7ec2f28aadf247c08c5583f8d0444df28673fbd14f71a40ec828f9f11b564167"
+  },
+  "git_log_p2_1.txt": {
+    "bytes": 1102,
+    "sha256": "06bb42e36ef8519762b92e61981ba2ccacf29a1f5d2572150e1103d303a64209"
+  },
+  "p2_1_pdf_qa_report.json": {
+    "bytes": 340,
+    "sha256": "04853119ca9fd688a7ec54b23f3de543deda0afac71ef073082fe10aa50d03e4"
+  },
+  "p2_1_rollback_runbook_verification.json": {
+    "bytes": 1609,
+    "sha256": "08819ab780dcf09620c3696d6dced224af40a40a4e52ee7c1516ef2e2e7b33f9"
+  },
+  "p2_1_verify_pre_v2_sandbox.json": {
+    "bytes": 14321,
+    "sha256": "2afef6709f795cb6c4c23965876c145152e6937d80601796c9797ca852dfc2d2"
   },
   "p2_dist_portable_migration_report.json": {
     "bytes": 1450,
@@ -28,16 +64,16 @@
     "sha256": "24597d59ba374690ba6d14c5d6bffc704ca3c792b4068f61dcc6e25bb2b24301"
   },
   "p2_verify_dist_portable_sandbox.json": {
-    "bytes": 9044,
-    "sha256": "bfda62c73d49d576cd3a1c05a5ca927655bcbe50b176a105420b3102ee9629db"
+    "bytes": 14758,
+    "sha256": "9c334f11017339da1d21b82dec8a353e19cd0d86249056002e42a9e6d0059ded"
   },
   "p2_verify_root_db_sandbox.json": {
-    "bytes": 8785,
-    "sha256": "d18a0a5f3757da4ab2206eca9d4de21ab227f84a507f806aa686cd740e852b57"
+    "bytes": 14253,
+    "sha256": "8c8c80517ddb4a9e6fbf11b1209734d830e06ad82fb7c74230d3d5dd3eb0ce84"
   },
   "sqlite_v1_v2_migration.sql": {
-    "bytes": 6475,
-    "sha256": "1c41fa956e58127db94b6df3615961d03b4c5fcec2b7b8999d817eb0f27520b9"
+    "bytes": 12070,
+    "sha256": "1b4b02ab46fcd2b00dabc86acac854e45998eca847131f08b57240781be84555"
   },
   "diagrams/01_p2_rust_crates_map.mmd": {
     "bytes": 1238,
@@ -70,6 +106,42 @@
   "diagrams/04_p2_wincred_dpapi_isolation.svg": {
     "bytes": 4866,
     "sha256": "09dd0c68e2f21495b84ea067f3e660e2c0f5444ff209c48b4975112d4789f766"
+  },
+  "diagrams/05_p2_1_crash_safe_and_hardening.svg": {
+    "bytes": 4024,
+    "sha256": "5d23e8100e915f499dc79bd7256ebaaaceaf0fe11d9c590ca5eee47fb9c445cc"
+  },
+  "pdf_p2_1_rendered_pages/p2_1_page_01.png": {
+    "bytes": 288412,
+    "sha256": "85c5a939da9dc4ef091eb922517e87332c09d0598b56bef4c1b7c8acaaedf708"
+  },
+  "pdf_p2_1_rendered_pages/p2_1_page_02.png": {
+    "bytes": 281508,
+    "sha256": "6bff9d40dd3bf77f754ad2c778d17dc525d78bc372673179a2438dc09733d1cb"
+  },
+  "pdf_p2_1_rendered_pages/p2_1_page_03.png": {
+    "bytes": 216685,
+    "sha256": "77b5b10784161bdfaa4c8bb9dac9f83b594c98fdf5c366928b300651da6fac11"
+  },
+  "pdf_p2_1_rendered_pages/p2_1_page_04.png": {
+    "bytes": 192127,
+    "sha256": "17d4de2c962a52fb589c6bd6d3a987e1592b9874d15d79045e599f17dc8c6178"
+  },
+  "pdf_p2_1_rendered_pages/p2_1_page_05.png": {
+    "bytes": 176658,
+    "sha256": "f503fcd09f05f703754cd800258b52e21ce9d68f5cdc9fb14b37a198422f0476"
+  },
+  "pdf_p2_1_rendered_pages/p2_1_page_06.png": {
+    "bytes": 194080,
+    "sha256": "1128f5d5c1dce99990d1f1d1244f841f75ea159c25b557627666c87657198852"
+  },
+  "pdf_p2_1_rendered_pages/p2_1_page_07.png": {
+    "bytes": 249409,
+    "sha256": "545f215a693bd9762df745515708f4be67d1e0c69713ed78ba4b0841027da63c"
+  },
+  "pdf_p2_1_rendered_pages/p2_1_page_08.png": {
+    "bytes": 222742,
+    "sha256": "aa01dd641d4e99a503c80758de922950fdd748c9038bb1953d33390c8d8e0348"
   },
   "pdf_rendered_pages/p2_page_01.png": {
     "bytes": 265481,

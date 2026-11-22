@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 340" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="1120" height="340" rx="10" fill="#0F172A"/>
+  <text x="560" y="30" text-anchor="middle" fill="#F8FAFC" font-size="16.5" font-weight="700">P2.1 CRASH-SAFE ATOMICITY (SQLITE TRANSACTION &lt;-&gt; STAGING / TRASH / JOURNAL)</text>
+
+  <rect x="24" y="52" width="340" height="130" rx="8" fill="#172554" stroke="#3B82F6" stroke-width="1.8"/>
+  <text x="194" y="75" text-anchor="middle" fill="#93C5FD" font-size="13.5" font-weight="700">CREATE / CLONE PROJECT</text>
+  <text x="38" y="98" fill="#E2E8F0" font-size="12">1. Chuẩn bị .fp_staging/&lt;slug&gt;.&lt;uuid&gt;</text>
+  <text x="38" y="117" fill="#E2E8F0" font-size="12">2. Copy templates + atomic_write manifest</text>
+  <text x="38" y="136" fill="#E2E8F0" font-size="12">3. BEGIN IMMEDIATE TX -&gt; rename -&gt; COMMIT</text>
+  <text x="38" y="156" fill="#6EE7B7" font-size="12.5">Lỗi trước commit: Rollback TX + Drop xóa staging</text>
+  <text x="38" y="173" fill="#6EE7B7" font-size="12.5">Crash giữa chừng: Startup reconcile dọn staging</text>
+
+  <rect x="390" y="52" width="340" height="130" rx="8" fill="#132D24" stroke="#10B981" stroke-width="1.8"/>
+  <text x="560" y="75" text-anchor="middle" fill="#6EE7B7" font-size="13.5" font-weight="700">UPDATE / SAVE WORKFLOW &amp; TEMPLATE</text>
+  <text x="404" y="98" fill="#E2E8F0" font-size="12.2">1. Snapshot bytes cũ (project.json, ui-schema)</text>
+  <text x="404" y="117" fill="#E2E8F0" font-size="12.2">2. Kiểm tra anti-symlink / NTFS junction</text>
+  <text x="404" y="136" fill="#E2E8F0" font-size="12.2">3. atomic_write_bytes (tmp + sync_all + rename)</text>
+  <text x="404" y="156" fill="#6EE7B7" font-size="12.5">4. TX Commit; nếu lỗi -&gt; hoàn trả snapshot cũ</text>
+  <text x="404" y="173" fill="#6EE7B7" font-size="12.5">Đồng bộ 100% SQLite &lt;-&gt; manifest trên đĩa</text>
+
+  <rect x="756" y="52" width="340" height="130" rx="8" fill="#3B1219" stroke="#F43F5E" stroke-width="1.8"/>
+  <text x="926" y="75" text-anchor="middle" fill="#FDA4AF" font-size="13.5" font-weight="700">TWO-PHASE DELETE PROJECT</text>
+  <text x="770" y="98" fill="#E2E8F0" font-size="12.2">1. Ghi .fp_journal/delete_&lt;id&gt;.json</text>
+  <text x="770" y="117" fill="#E2E8F0" font-size="12.2">2. Rename thư mục -&gt; .fp_trash/&lt;slug&gt;.&lt;uuid&gt;</text>
+  <text x="770" y="136" fill="#E2E8F0" font-size="12.2">3. BEGIN IMMEDIATE DELETE TX -&gt; COMMIT</text>
+  <text x="770" y="156" fill="#FDE68A" font-size="12.5">DB lỗi: Đưa .fp_trash về vị trí cũ (0 mất data)</text>
+  <text x="770" y="173" fill="#6EE7B7" font-size="12.5">DB xong: Xóa .fp_trash; crash -&gt; reconcile dọn</text>
+
+  <rect x="24" y="202" width="1072" height="118" rx="8" fill="#1E293B" stroke="#475569" stroke-width="1.6"/>
+  <text x="42" y="227" fill="#FBBF24" font-size="13.5" font-weight="700">CHỨNG CỨ KIỂM THỬ CRASH CONSISTENCY &amp; SQLITE ISOLATION HARDENING (THỰC THI TRÊN SANDBOX &amp; CARGO TEST)</text>
+  <text x="42" y="250" fill="#E2E8F0" font-size="12.5">• SQLite Triggers (16 triggers) + Composite FK (project_id, workflow_id): Chặn 100% lệnh SQL trực tiếp conn.execute() chéo project hoặc project_id IS NULL.</text>
+  <text x="42" y="271" fill="#E2E8F0" font-size="12.5">• Template Containment: Canonicalize + check FILE_ATTRIBUTE_REPARSE_POINT chặn đường dẫn tuyệt đối ngoài project, '..', và NTFS Junction (mklink /J).</text>
+  <text x="42" y="292" fill="#6EE7B7" font-size="12.5">• Portable Key Recovery: PBKDF2-HMAC-SHA256 (200,000 vòng) + SHA-256-CTR + Encrypt-then-MAC (HMAC-SHA256) giải quyết chuyển máy/user ngoài DPAPI.</text>
+  <text x="42" y="311" fill="#93C5FD" font-size="12.5">• Tổng kết kiểm thử: 53/53 workspace tests PASS | verify-p2 (pre-v2, dist-portable, root) PASS | verify-rollback-runbook PASS | apps/desktop/src = 0 dòng sửa.</text>
+</svg>

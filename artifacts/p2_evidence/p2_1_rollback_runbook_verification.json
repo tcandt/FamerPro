@@ -1,0 +1,54 @@
+{
+  "command": "verify-rollback-runbook",
+  "executedAtUtc": "2026-11-22T01:22:44.024462400+00:00",
+  "productionDbUntouched": true,
+  "rollbackReport": {
+    "backupDbPath": "artifacts\\p2_evidence\\rollback_runbook_sandbox\\verified_backup_copy.db",
+    "currentDbPath": "artifacts\\p2_evidence\\rollback_runbook_sandbox\\target_db_copy.db",
+    "postRollbackIntegrity": {
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "isHealthy": true,
+      "journalMode": "wal",
+      "schemaVersions": [],
+      "tableCounts": {
+        "accounts": 0,
+        "checkpoints": 0,
+        "device_leases": 0,
+        "devices": 2,
+        "jobs": 2,
+        "schema_migrations": 0,
+        "step_events": 31,
+        "workflow_versions": 2,
+        "workflows": 2
+      }
+    },
+    "postRollbackVersions": [],
+    "preRollbackTableCounts": {
+      "accounts": 0,
+      "checkpoints": 0,
+      "device_leases": 0,
+      "devices": 2,
+      "jobs": 2,
+      "mini_tool_schemas": 1,
+      "project_modules": 6,
+      "project_releases": 0,
+      "projects": 1,
+      "schema_migrations": 2,
+      "step_events": 31,
+      "task_definitions": 3,
+      "vision_templates": 8,
+      "workflow_versions": 11,
+      "workflows": 11
+    },
+    "preRollbackVersions": [
+      1,
+      2
+    ],
+    "reopenVerified": true,
+    "safetySnapshotPath": "artifacts\\p2_evidence\\rollback_runbook_sandbox\\pre_rollback_safety_snapshot.db",
+    "walCheckpointBusy": 0
+  },
+  "sourceBackupDb": "backups\\p2_verified_backup\\dist_portable_pre_v2.db",
+  "sourceLiveDb": "dist-portable\\FarmerPro\\data\\farmerpro.db"
+}

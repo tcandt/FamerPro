@@ -1,0 +1,5 @@
+7c856e72725d23a4489566c20470ac8578eae8ad 2026-11-22 08:21:03 +0700 feat(p2.1): harden SQLite isolation triggers, crash-safe atomic project ops, WAL rollback runbook, JX2 non-overwrite mapping, and portable key recovery
+72f78d6f90e554b0a8769c2fc66f31d511f66b4c 2026-11-22 07:56:31 +0700 docs(p2-acceptance): regenerate 12-page P2 acceptance PDF (29 IPC commands, 46/46 tests) and verified SHA-256 evidence manifest
+e77fe7c147fdaafaac2be8904063dba6f3d46e86 2026-11-22 07:55:33 +0700 fix(p2): sync project.json on clone/update, scope runtime template lookup by project_dir, expand IPC handler tests, and fix P2 report/evidence metrics
+e7a0c9bd761b8c34a50d5a16031a007f7197cc51 2026-11-22 07:45:39 +0700 docs(p2-acceptance): publish 12-page P2 acceptance PDF report, 4 vector diagrams, SQL migration, sandbox & production migration proofs, and SHA-256 evidence manifest
+9bd0e45eaa76f931a9ff85becadc14128f7784f5 2026-11-22 07:40:33 +0700 feat(p2): implement multi-project SQLite v2 schema, guarded migration/rollback, JX2 preservation, Windows Credential Manager, DPAPI keystore, and Studio Project CRUD IPC
