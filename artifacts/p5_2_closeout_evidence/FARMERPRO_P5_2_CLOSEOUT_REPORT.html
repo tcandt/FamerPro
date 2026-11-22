@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>FarmerPro P5.2 Closeout Supplemental Verification Report</title>
+<style>
+  @page { size: A4 landscape; margin: 7.5mm 9.5mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: #0F172A; background: #FFFFFF; font-size: 8.1pt; line-height: 1.28; }
+  .page { page-break-after: always; position: relative; min-height: 188mm; display: flex; flex-direction: column; }
+  .page:last-child { page-break-after: auto; }
+  .hdr { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #0F172A; padding-bottom: 4px; margin-bottom: 6px; }
+  .hdr-title { font-size: 12.6pt; font-weight: 800; color: #0F172A; }
+  .hdr-sub { font-size: 8pt; color: #475569; margin-top: 1px; }
+  .hdr-meta { text-align: right; font-size: 7.7pt; color: #334155; }
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-bottom: 6px; }
+  .kpi { border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px 8px; background: #F8FAFC; }
+  .kpi-lbl { font-size: 7.5pt; text-transform: uppercase; color: #475569; font-weight: 700; }
+  .kpi-val { font-size: 10.4pt; font-weight: 800; color: #0F172A; margin-top: 1px; }
+  .kpi-ok .kpi-val { color: #047857; }
+  .kpi-warn .kpi-val { color: #B45309; }
+  .sec-h { font-size: 9pt; font-weight: 800; color: #0F172A; margin: 5px 0 3px 0; border-left: 3.5px solid #1878F5; padding-left: 6px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 7.6pt; }
+  th, td { border: 1px solid #CBD5E1; padding: 2.8px 5px; text-align: left; vertical-align: top; }
+  th { background: #F1F5F9; font-weight: 700; color: #0F172A; }
+  .mono { font-family: Consolas, monospace; font-size: 7.5pt; }
+  .b-pass { display: inline-block; padding: 1px 5px; border-radius: 4px; background: #D1FAE5; color: #065F46; font-weight: 800; font-size: 7.5pt; }
+  .b-blk { display: inline-block; padding: 1px 5px; border-radius: 4px; background: #FEF3C7; color: #92400E; font-weight: 800; font-size: 7.5pt; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; }
+  pre { background: #0F172A; color: #E2E8F0; padding: 7px 9px; border-radius: 6px; font-family: Consolas, monospace; font-size: 7.5pt; line-height: 1.32; white-space: pre-wrap; margin: 0 0 6px 0; }
+  .callout { border: 1px solid #059669; background: #ECFDF5; border-radius: 6px; padding: 6px 10px; font-size: 7.9pt; color: #064E3B; margin-top: 4px; }
+  .ftr { margin-top: auto; border-top: 1px solid #CBD5E1; padding-top: 3px; display: flex; justify-content: space-between; font-size: 7.5pt; color: #475569; }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: CLOSEOUT FIXES & SECURITY VERIFICATION MATRIX -->
+<div class="page">
+  <div class="hdr">
+    <div>
+      <div class="hdr-title">FARMERPRO P5.2 CLOSEOUT — SECURITY ROOT OF TRUST, ROLLBACK &amp; CONCURRENCY AUDIT</div>
+      <div class="hdr-sub">Supplemental Verification on Commit <code>7c7999f825f0ca0e889c6a05facea91dc6f23d8e</code> (Chuan hoa ket qua: 10 PASS / 1 BLOCKED trong 11 tieu chi P5.2)</div>
+    </div>
+    <div class="hdr-meta">
+      <div>Branch: <code>feat/p5-2-updater-releases</code> · Verified HEAD: <code>7c7999f825f0</code></div>
+      <div>Closeout Diff: <code>12 files changed, 1534 insertions(+), 81 deletions(-)</code></div>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi kpi-ok"><div class="kpi-lbl">Cargo Tests (Post-Fix)</div><div class="kpi-val">89 / 89 PASS</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-lbl">P5.2 E2E Summary</div><div class="kpi-val">10 PASS / 1 BLOCKED</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-lbl">Root of Trust Fix</div><div class="kpi-val">Installed EXE Anchor</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-lbl">P5.1 WAL Long Stress</div><div class="kpi-val">3000 Ev / 0 Lost</div></div>
+    <div class="kpi kpi-warn"><div class="kpi-lbl">Live Hardware ADB</div><div class="kpi-val">BLOCKED (0 ADB)</div></div>
+  </div>
+
+  <div class="sec-h">I. Bang Kiem chung Bo sung P5.2 Closeout (Phan loai TestKit / GUI Integration / Windows OS / Live Hardware)</div>
+  <table>
+    <thead><tr><th>Hang muc Closeout</th><th>Lo hong / Rui ro da xac dinh</th><th>Sua loi &amp; Kiem chung thuc te tren Windows OS / Binary</th><th>Phan loai &amp; Trang thai</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>I. Update Root of Trust</strong></td>
+        <td>Truoc day <code>upgrade_from_release</code> doc PE <code>RT_RCDATA #7777</code> tu chinh EXE ung vien moi -> de bi tu ky lai bang rogue keypair.</td>
+        <td>Sua sang doc anchor tu <strong>EXE da cai dat truoc</strong> (<code>versions/v&lt;active&gt;/</code>) + doi chieu <code>trustedPubkeyHex</code>. Test tan cong doi EXE + doi pubkey + ky lai SHA-256 bi chan: <code>UPDATE_ROOT_OF_TRUST_UNTRUSTED</code>. Bo sung <code>KeyRotationDelegation</code> cho P5.3.</td>
+        <td><span class="b-pass">PASS (Windows OS)</span></td>
+      </tr>
+      <tr>
+        <td><strong>II. Rollback Binary vs DB Restore</strong></td>
+        <td>Studio/API mac dinh bat <code>restore_backup=true</code> co the ghi de mat du lieu B tao tren v1.1.0.</td>
+        <td>Tach biet: mac dinh <code>restore_backup=false</code> (Binary Rollback). Test tao Data A (v1.0) -&gt; upgrade v1.1 -&gt; tao Data B (<code>acc-data-B</code>, <code>88888</code>) -&gt; Rollback v1.0 giu nguyen Data A + B. Schema v99 chan ha cap (<code>SQLITE_DOWNGRADE_INCOMPATIBLE</code>), va DB restore tu luu <code>pre_rollback_safety</code> truoc khi phuc hoi.</td>
+        <td><span class="b-pass">PASS (GUI + OS)</span></td>
+      </tr>
+      <tr>
+        <td><strong>IIIa. Active Pointer Atomicity &amp; Repair</strong></td>
+        <td>Thieu test lock file dich va phuc hoi khi <code>active_version.json</code> bi hong/xoa.</td>
+        <td>Dung Win32 <code>MoveFileExW(REPLACE_EXISTING | WRITE_THROUGH)</code> + shadow <code>active_version.bak.json</code>. Lock doc quyen tra <code>ACTIVE_POINTER_LOCKED</code> giu nguyen file cu; xoa/hong JSON duoc <code>reconcile</code> tu phuc hoi (<code>RECOVERED_POINTER</code>).</td>
+        <td><span class="b-pass">PASS (Windows OS)</span></td>
+      </tr>
+      <tr>
+        <td><strong>IIIb. Concurrent Dual Updater Lock</strong></td>
+        <td>Chua co exclusive lock ngan 2 tien trinh <code>fp-updater.exe</code> chay song song tren cung tool.</td>
+        <td>Bo sung Win32 <code>UpdaterLockGuard</code> (<code>dwShareMode=0</code> tren <code>updater.lock</code>). Spawn 2 tien trinh <code>fp-updater.exe</code> dong thoi -> tien trinh thu 2 bi chan ngay: <code>CONCURRENT_UPDATER_LOCKED</code>.</td>
+        <td><span class="b-pass">PASS (Windows OS)</span></td>
+      </tr>
+      <tr>
+        <td><strong>IV. Path Traversal &amp; NTFS Junction</strong></td>
+        <td>Can chan traversal trong manifest, goi ghi de <code>data/</code>, va NTFS Junction tro ra ngoai.</td>
+        <td>Chot <code>validate_single_filename</code> + <code>validate_safe_relative_path</code> + cam top-level <code>data/</code> &amp; <code>.updater/</code> (<code>RELEASE_FORBIDS_USER_DATA_OVERWRITE</code>) + check Win32 <code>FILE_ATTRIBUTE_REPARSE_POINT</code> (test <code>mklink /J</code> bi chan: <code>REPARSE_POINT_OR_JUNCTION_FORBIDDEN</code>).</td>
+        <td><span class="b-pass">PASS (Windows OS)</span></td>
+      </tr>
+      <tr>
+        <td><strong>V. Live Hardware ADB (Stage-Gate)</strong></td>
+        <td>Khong gia lap thiet bi that bang TestKit.</td>
+        <td><code>adb.exe devices -l</code> rong (<code>List of devices attached</code>) | <code>LDPlayer14 vm0 = stop</code>. Ket qua tong hop P5.2 giu chuan <strong>10 PASS / 1 BLOCKED</strong>.</td>
+        <td><span class="b-blk">BLOCKED</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="sec-h">II. Thiet ke Key Rotation Co Chuyen Tiep Cho P5.3</div>
+  <div style="background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;padding:5px 8px;font-size:7.7pt;">
+    Trong <code>fp-updater</code> da dinh nghia contract <code>KeyRotationDelegation(old_pubkey_hex, new_pubkey_hex, issued_at_utc, expires_at_utc, signature_by_old_key_hex)</code>. Sang P5.3, khi nha phat hanh muon doi cap khoa ky, ban cap nhat phai kem chung thu chuyen tiep duoc ky bang <strong>private key cu dang tin cay</strong> va con han; hien tai o P5.2 bat ky thay doi khoa nao khong co uy quyen se bi tu choi fail-closed (<code>UPDATE_ROOT_OF_TRUST_UNTRUSTED</code>).
+  </div>
+  <div class="ftr"><span>FarmerPro P5.2 Closeout Verification (Commit 7c7999f825f0)</span><span>Trang 1 / 2</span></div>
+</div>
+
+<!-- PAGE 2: RAW SIGKILL AFTER-ACTIVATE LOGS, P5.1 STRESS BENCHMARK & STAGE-GATE -->
+<div class="page">
+  <div class="hdr">
+    <div>
+      <div class="hdr-title">RAW EVIDENCE: FORCED-KILL AFTER_ACTIVATE &amp; P5.1 LONG-RUN WAL STRESS (3,000 EVENTS)</div>
+      <div class="hdr-sub">Bang chung tho trich truc tiep tu log tren commit <code>7c7999f825f0ca0e889c6a05facea91dc6f23d8e</code></div>
+    </div>
+    <div class="hdr-meta"><div>Branch: <code>feat/p5-2-updater-releases</code></div></div>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <div class="sec-h">III. Raw Output OS SIGKILL tai AfterActivate + Reconcile</div>
+      <pre>{
+  "status": "RECOVERED_ROLL_FORWARD",
+  "actionTaken": "VERIFIED_ACTIVATED_RELEASE",
+  "recoveredFromStage": "activated",
+  "activeVersion": "1.1.0",
+  "dbIntegrityOk": true,
+  "journalPath": "C:\\Users\\TINH-N~1\\AppData\\Local\\Temp\\fp_forced_kill_p52_e0ba102f-38e8-4e1d-afeb-e71a3b09a670\\install_AfterActivate\\.updater\\update-journal.json",
+  "detail": "Crash happened after atomic activation; verified target release and completed journal."
+}</pre>
+      <div class="sec-h">IV. Thong so Tai Nang &amp; Do tre P5.1 Long-Run Stress (4 Workers x 750 = 3,000 Events)</div>
+      <table>
+        <thead><tr><th>Chi so do duoc (Windows 11)</th><th>Gia tri thuc te</th><th>Ghi chu</th></tr></thead>
+        <tbody>
+          <tr><td>Tong su kien &amp; Luong</td><td><code>3000</code> events · <code>4</code> writers + 1 reader + compactor</td><td>0 su kien that lac; seq 1..3000 lien tuc</td></tr>
+          <tr><td>Do tre ghi P50 / P95 / P99</td><td><strong>2.46 ms</strong> / <strong>6.53 ms</strong> / <strong>14.68 ms</strong></td><td>Max spike: 4206.7 ms; Wall time: 9649 ms</td></tr>
+          <tr><td>CPU &amp; Working Set RAM</td><td>CPU time: <code>9719 ms</code> · WS: 7484KB -&gt; Peak 12956KB -&gt; 11504KB</td><td>Do bang Win32 <code>GetProcessTimes</code> &amp; <code>K32GetProcessMemoryInfo</code></td></tr>
+          <tr><td>WAL Compaction &amp; Polls</td><td>Mid-flight: <code>2700</code> rows · Final: <code>200</code> rows · WAL peak: 0 B</td><td>Reader polls: 3767 (busy retries: 0)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <div class="sec-h">V. Tom tat E2E &amp; Raw Workspace Regression Log</div>
+      <pre>Verified Commit   : 7c7999f825f0ca0e889c6a05facea91dc6f23d8e
+Cargo Workspace   : 89 passed; 0 failed (0 ignored)
+Closeout Diff     : 12 files changed, 1534 insertions(+), 81 deletions(-)
+E2E Check (Win)   : 10 PASS / 1 BLOCKED (of 11 P5.2 criteria)
+  - TestKit Scope : Alpha v1.0.0 -&gt; v1.1.0 preserve Sector-B7, 250, ***REDACTED***
+  - Binary Rollback: preserves new post-upgrade v1.1.0 Data B; incompatible DB guarded
+  - Windows OS Tests: SIGKILL (AfterBackup/Stage/Activate), Dual-Updater Lock, Junction
+  - Live Hardware : BLOCKED (adb devices -l empty; LDPlayer14 vm0 = stop)
+Console Errors    : Studio=0, AlphaV1=0, AlphaV11=0</pre>
+      <div class="callout">
+        <strong>DE XUAT DONG STAGE-GATE P5.2 -> MO KHOA P5.3:</strong> Toan bo 5 dieu kien Closeout (Update Root of Trust co dinh vao EXE da cai, Rollback Binary tach khoi DB Restore giu du lieu moi, Pointer atomicity + phuc hoi JSON hong/xoa + Dual Updater Lock, Path traversal &amp; NTFS Junction blocking, va P5.1 3.000-event 4-worker WAL stress benchmark) da PASS 100% sau commit cuoi cung (<code>7c7999f825f0</code>). Live ADB duoc giu trung thuc <code>BLOCKED</code>. Xin phe duyet mo khoa <strong>P5.3 — Authenticode, Publisher Profile &amp; VERSIONINFO</strong>.
+      </div>
+    </div>
+  </div>
+  <div class="ftr"><span>FarmerPro P5.2 Closeout Verification (Commit 7c7999f825f0)</span><span>Trang 2 / 2</span></div>
+</div>
+
+</body>
+</html>
