@@ -21,7 +21,7 @@
   ```
 - **Phương án B (Revert toàn bộ chuỗi commits P2..HEAD trên nhánh hiện tại):**
   ```powershell
-  git revert 9bd0e45^..HEAD --no-commit
+  git revert fab1a1a..HEAD --no-commit
   git commit -m "revert(p2): rollback P2 & P2.1 back to fab1a1a baseline"
   ```
 

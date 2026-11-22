@@ -1,10 +1,10 @@
-{
+﻿{
   "backupAndRestoreV2": {
     "onlineBackup": {
-      "backedUpAtUtc": "2026-11-22T01:22:33.091181100+00:00",
-      "backupPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\04_online_backup_v2.db",
-      "backupSha256": "42a51f526a882618f5139a62e52d339f084ec763aa8196e3c12b5bcd7eb114f1",
-      "backupSizeBytes": 282624,
+      "backedUpAtUtc": "2026-11-22T01:34:14.208511500+00:00",
+      "backupPath": ".\\artifacts\\p2_evidence\\sandbox_run\\04_online_backup_v2.db",
+      "backupSha256": "c107d39aec5622bc70706bff3e8514304a01a95ffd82a332a9cd5aa03463769a",
+      "backupSizeBytes": 286720,
       "integrity": {
         "foreignKeyViolations": 0,
         "integrityCheck": "ok",
@@ -65,11 +65,11 @@
   "credentialVaultAndDpapi": {
     "dpapiKeystore": {
       "backupProtectionScheme": "WIN32_DPAPI_LOCAL_USER_BACKUP",
-      "backupSha256": "ff247b4c0996580cc81b9d3df11e9b9baa3490e3a117c2db0b2ad83b5a1afc26",
-      "initialKeyId": "fp-ed25519-d9719edde54d",
+      "backupSha256": "ac6ab07e1f4999efa7f42e99763e21ba24a4edeb3e1e3702ea4dae8e1ff70652",
+      "initialKeyId": "fp-ed25519-24d19010ddd7",
       "noPlaintextSeedOnDisk": true,
       "portableRecovery": {
-        "importedKeyId": "fp-ed25519-d9719edde54d",
+        "importedKeyId": "fp-ed25519-24d19010ddd7",
         "kdfIterations": 200000,
         "noPlaintextSeedInBundle": true,
         "protectionScheme": "PASSPHRASE_PBKDF2_SHA256_ETM_V1",
@@ -77,22 +77,22 @@
         "wrongPassphraseRejected": true
       },
       "protectionScheme": "WIN32_DPAPI_LOCAL_USER",
-      "restoredKeyId": "fp-ed25519-d9719edde54d",
-      "rotatedKeyId": "fp-ed25519-9f7d471a1d3e",
+      "restoredKeyId": "fp-ed25519-24d19010ddd7",
+      "rotatedKeyId": "fp-ed25519-1dfa4c894203",
       "seedMatchesAfterRestore": true
     },
     "isolatedValuesVerified": true,
-    "uriA": "CRED_MGR://FarmerPro/project/jx2-p2-5f93c962/api_secret",
-    "uriB": "CRED_MGR://FarmerPro/project/slg-p2-5f93c962/api_secret",
-    "uriTool": "CRED_MGR://FarmerPro/minitool/auto-slg-5f93c962/proxy_auth",
+    "uriA": "CRED_MGR://FarmerPro/project/jx2-p2-64499192/api_secret",
+    "uriB": "CRED_MGR://FarmerPro/project/slg-p2-64499192/api_secret",
+    "uriTool": "CRED_MGR://FarmerPro/minitool/auto-slg-64499192/proxy_auth",
     "vaultBackend": "WindowsCredentialManager"
   },
-  "executedAtUtc": "2026-11-22T01:22:43.978149+00:00",
+  "executedAtUtc": "2026-11-22T01:34:26.509802300+00:00",
   "jx2Migration": {
     "legacyWorkflowsPreserved": 0,
     "modulesSeeded": 6,
     "originalSourcePreserved": true,
-    "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\projects\\jx2-mobile",
+    "projectDirPath": ".\\artifacts\\p2_evidence\\sandbox_run\\projects\\jx2-mobile",
     "projectId": "proj-jx2-mobile-001",
     "projectSlug": "jx2-mobile",
     "tasksSeeded": 3,
@@ -326,6 +326,8 @@
       "allDirectSqlProbesBlocked": true,
       "crossProjectJobAccountBlockedBySqlite": true,
       "crossProjectTaskInsertBlockedBySqlite": true,
+      "crossProjectWorkflowMoveBlockedBySqlite": true,
+      "crossProjectWorkflowVersionMoveBlockedBySqlite": true,
       "nullProjectAccountInsertBlockedBySqlite": true,
       "nullProjectWorkflowInsertBlockedBySqlite": true
     },
@@ -338,17 +340,17 @@
         "modulesCount": 5,
         "project": {
           "bundleAdb": true,
-          "createdAt": "2026-11-22T01:22:33.073394600+00:00",
+          "createdAt": "2026-11-22T01:34:14.187116+00:00",
           "exeName": "Auto_JX2_Mobile.exe",
           "gamePackageId": "com.blackhole.jx2mobile",
           "iconRelPath": "branding/icon.ico",
           "id": "proj-jx2-mobile-001",
           "name": "Võ Hiệp Truyền Kỳ 2 Mobile",
-          "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\projects\\jx2-mobile",
+          "projectDirPath": ".\\artifacts\\p2_evidence\\sandbox_run\\projects\\jx2-mobile",
           "slug": "jx2-mobile",
           "targetHeightPx": 1080,
           "targetWidthPx": 1920,
-          "updatedAt": "2026-11-22T01:22:33.073394600+00:00",
+          "updatedAt": "2026-11-22T01:34:14.187116+00:00",
           "version": "1.0.0",
           "windowTitle": "Auto Võ Hiệp 2 Mobile v1.0.0"
         },
@@ -365,17 +367,17 @@
         "modulesCount": 3,
         "project": {
           "bundleAdb": true,
-          "createdAt": "2026-11-22T01:22:33.101692100+00:00",
+          "createdAt": "2026-11-22T01:34:14.219743+00:00",
           "exeName": "Auto_Kingdom_SLG.exe",
           "gamePackageId": "com.kingdom.rise.slg",
           "iconRelPath": "branding/icon.ico",
-          "id": "proj-kingdom-slg-p2-f5866f44",
+          "id": "proj-kingdom-slg-p2-d4ef91f0",
           "name": "Kingdom Rise: Tactics SLG (Verified)",
-          "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\projects\\kingdom-slg-p2",
+          "projectDirPath": ".\\artifacts\\p2_evidence\\sandbox_run\\projects\\kingdom-slg-p2",
           "slug": "kingdom-slg-p2",
           "targetHeightPx": 720,
           "targetWidthPx": 1280,
-          "updatedAt": "2026-11-22T01:22:33.106633500+00:00",
+          "updatedAt": "2026-11-22T01:34:14.225819800+00:00",
           "version": "1.2.1",
           "windowTitle": "Auto Kingdom Rise: Tactics SLG v1.2.0"
         },
@@ -390,8 +392,8 @@
   },
   "sourceProductionDb": "farmerpro.db",
   "walRollbackRunbookTest": {
-    "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\02_online_backup_v1.db",
-    "currentDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\06_rollback_runbook_target.db",
+    "backupDbPath": ".\\artifacts\\p2_evidence\\sandbox_run\\02_online_backup_v1.db",
+    "currentDbPath": ".\\artifacts\\p2_evidence\\sandbox_run\\06_rollback_runbook_target.db",
     "postRollbackIntegrity": {
       "foreignKeyViolations": 0,
       "integrityCheck": "ok",
@@ -433,7 +435,7 @@
       2
     ],
     "reopenVerified": true,
-    "safetySnapshotPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\07_pre_rollback_safety_snapshot.db",
+    "safetySnapshotPath": ".\\artifacts\\p2_evidence\\sandbox_run\\07_pre_rollback_safety_snapshot.db",
     "walCheckpointBusy": 0
   }
 }

@@ -1,3 +1,5 @@
+﻿bd09e3152fef2c112a20ed06767ace1cebb5e32b 2026-11-22 08:34:58 +0700 fix(p2.1): close SQLite update triggers, fallback project resolution, trash-journal recovery, recursive clone, and runtime path guards
+aaca38f48776817e5bed8f3b6ea39108fee5d68d 2026-11-22 08:25:15 +0700 docs(p2.1-acceptance): publish 8-page P2.1 acceptance PDF, rollback runbook, DPAPI recovery policy, and verified SHA-256 evidence pack (code commit 7c856e7)
 7c856e72725d23a4489566c20470ac8578eae8ad 2026-11-22 08:21:03 +0700 feat(p2.1): harden SQLite isolation triggers, crash-safe atomic project ops, WAL rollback runbook, JX2 non-overwrite mapping, and portable key recovery
 72f78d6f90e554b0a8769c2fc66f31d511f66b4c 2026-11-22 07:56:31 +0700 docs(p2-acceptance): regenerate 12-page P2 acceptance PDF (29 IPC commands, 46/46 tests) and verified SHA-256 evidence manifest
 e77fe7c147fdaafaac2be8904063dba6f3d46e86 2026-11-22 07:55:33 +0700 fix(p2): sync project.json on clone/update, scope runtime template lookup by project_dir, expand IPC handler tests, and fix P2 report/evidence metrics

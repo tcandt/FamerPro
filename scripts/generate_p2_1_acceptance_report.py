@@ -51,11 +51,13 @@ dist_rep = json.loads(open(os.path.join(EV_DIR, "p2_verify_dist_portable_sandbox
 root_rep = json.loads(open(os.path.join(EV_DIR, "p2_verify_root_db_sandbox.json"), encoding="utf-8-sig").read())
 rb_rep = json.loads(open(os.path.join(EV_DIR, "p2_1_rollback_runbook_verification.json"), encoding="utf-8-sig").read())
 prod_mig_rep = json.loads(open(os.path.join(EV_DIR, "p2_dist_portable_migration_report.json"), encoding="utf-8-sig").read())
-test_log = open(os.path.join(EV_DIR, "cargo_test_workspace_p2_1_clean.log"), encoding="utf-8", errors="replace").read()
-git_log_txt = open(os.path.join(EV_DIR, "git_log_p2_1.txt"), encoding="utf-8").read().strip()
-git_diff_txt = open(os.path.join(EV_DIR, "git_diff_summary_p2_1.txt"), encoding="utf-8").read().strip()
+test_log = open(os.path.join(EV_DIR, "cargo_test_workspace_p2_1_clean.log"), encoding="utf-8-sig", errors="replace").read()
+git_log_txt = open(os.path.join(EV_DIR, "git_log_p2_1.txt"), encoding="utf-8-sig").read().strip()
+git_diff_txt = open(os.path.join(EV_DIR, "git_diff_summary_p2_1.txt"), encoding="utf-8-sig").read().strip()
 git_diff_p2_1_only = subprocess.check_output(["git", "diff", "--stat", "72f78d6..HEAD"], cwd=ROOT).decode("utf-8").strip()
 code_commit_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT).decode("utf-8").strip()
+total_diff_summary_line = git_diff_txt.splitlines()[-1].strip() if git_diff_txt else ""
+trigger_count = len(re.findall(r"CREATE TRIGGER\s+(?:IF NOT EXISTS\s+)?([a-zA-Z0-9_]+)", mig_rs))
 desktop_ui_diff = subprocess.check_output(["git", "diff", "fab1a1a..HEAD", "--", "apps/desktop/src"], cwd=ROOT).decode("utf-8").strip()
 assert desktop_ui_diff == "", f"apps/desktop/src modified! {desktop_ui_diff}"
 
@@ -90,7 +92,7 @@ crash_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 340" fo
 
   <rect x="24" y="202" width="1072" height="118" rx="8" fill="#1E293B" stroke="#475569" stroke-width="1.6"/>
   <text x="42" y="227" fill="#FBBF24" font-size="13.5" font-weight="700">CHỨNG CỨ KIỂM THỬ CRASH CONSISTENCY &amp; SQLITE ISOLATION HARDENING (THỰC THI TRÊN SANDBOX &amp; CARGO TEST)</text>
-  <text x="42" y="250" fill="#E2E8F0" font-size="12.5">• SQLite Triggers (16 triggers) + Composite FK (project_id, workflow_id): Chặn 100% lệnh SQL trực tiếp conn.execute() chéo project hoặc project_id IS NULL.</text>
+  <text x="42" y="250" fill="#E2E8F0" font-size="12.5">• SQLite Triggers ({trigger_count} triggers) + Composite FK (project_id, workflow_id): Chặn 100% lệnh SQL trực tiếp conn.execute() chéo project hoặc project_id IS NULL.</text>
   <text x="42" y="271" fill="#E2E8F0" font-size="12.5">• Template Containment: Canonicalize + check FILE_ATTRIBUTE_REPARSE_POINT chặn đường dẫn tuyệt đối ngoài project, '..', và NTFS Junction (mklink /J).</text>
   <text x="42" y="292" fill="#6EE7B7" font-size="12.5">• Portable Key Recovery: PBKDF2-HMAC-SHA256 (200,000 vòng) + SHA-256-CTR + Encrypt-then-MAC (HMAC-SHA256) giải quyết chuyển máy/user ngoài DPAPI.</text>
   <text x="42" y="311" fill="#93C5FD" font-size="12.5">• Tổng kết kiểm thử: 53/53 workspace tests PASS | verify-p2 (pre-v2, dist-portable, root) PASS | verify-rollback-runbook PASS | apps/desktop/src = 0 dòng sửa.</text>
@@ -157,7 +159,7 @@ pages.append(page_wrap(1, "NGHIỆM THU P2.1", "Tóm tắt Khắc phục P2.1, P
     </div>
     <h1 style="margin:1.2mm 0 0.8mm 0; font-size:12.2pt;">FARMERPRO P2.1 — BÁO CÁO NGHIỆM THU BỔ SUNG TRƯỚC MỞ KHÓA GIAI ĐOẠN P3</h1>
     <p class="hero-sub" style="font-size:8.6pt;">
-      Hoàn tất toàn bộ 6 yêu cầu P2.1 từ kiểm định P2: (1) Đối chiếu 10 JX2 workflows giải thích rõ <code>2 + 10 = 11</code>; (2) Cứng hóa Project Isolation bằng <b>Composite FK + 16 SQLite Triggers</b> &amp; chống NTFS Junction/Absolute path escape; (3) Crash-safe Project Ops (<code>.fp_staging</code> / <code>.fp_trash</code> / <code>.fp_journal</code>); (4) Rollback Runbook WAL mode kiểm chứng thực tế; (5) Đồng bộ Git commit &amp; SHA-256 manifest; (6) Bổ sung <b>Portable Passphrase Recovery</b> (PBKDF2 200k + ETM) khắc phục giới hạn DPAPI CurrentUser.
+      Hoàn tất toàn bộ 6 yêu cầu P2.1 từ kiểm định P2: (1) Đối chiếu 10 JX2 workflows giải thích rõ <code>2 + 10 = 11</code>; (2) Cứng hóa Project Isolation bằng <b>Composite FK + {trigger_count} SQLite Triggers</b> &amp; chống NTFS Junction/Absolute path escape; (3) Crash-safe Project Ops (<code>.fp_staging</code> / <code>.fp_trash</code> / <code>.fp_journal</code>); (4) Rollback Runbook WAL mode kiểm chứng thực tế; (5) Đồng bộ Git commit &amp; SHA-256 manifest; (6) Bổ sung <b>Portable Passphrase Recovery</b> (PBKDF2 200k + ETM) khắc phục giới hạn DPAPI CurrentUser.
     </p>
   </div>
 
@@ -211,7 +213,7 @@ pages.append(page_wrap(2, "HẠNG MỤC 1 · JX2 MAPPING", "Đối chiếu 10 Wo
 """))
 
 # PAGE 3: REQUIREMENT II - SQLITE ISOLATION & PATH CONTAINMENT
-pages.append(page_wrap(3, "HẠNG MỤC 2 · SQLITE ISOLATION", "Cứng hóa Project Isolation ở Tầng SQLite (Composite FK + 16 Triggers) & Template Containment", f"""
+pages.append(page_wrap(3, "HẠNG MỤC 2 · SQLITE ISOLATION", f"Cứng hóa Project Isolation ở Tầng SQLite (Composite FK + {trigger_count} Triggers) & Template Containment", f"""
   <div class="grid-2">
     <div class="card" style="padding:2.2mm 2.8mm;">
       <div class="card-h" style="margin-bottom:1.2mm;">1. RÀNG BUỘC SQLITE LEVEL (CHẶN GHI TRỰC TIẾP BỎ QUA API)</div>
@@ -242,7 +244,7 @@ pages.append(page_wrap(3, "HẠNG MỤC 2 · SQLITE ISOLATION", "Cứng hóa Pro
     <p style="font-size:8.3pt;">
       • Mọi hàm truy vấn <code>list_project_*</code> đều từ chối <code>project_id</code> rỗng và lọc rõ <code>WHERE project_id = ?1 AND project_id IS NOT NULL</code>.<br/>
       • Các API v1 tương thích ngược (<code>save_workflow_draft</code>, <code>ensure_job_exists</code>) tự động phân giải sang project chủ sở hữu hoặc <code>DEFAULT_LEGACY_PROJECT_ID</code> để <b>0 bản ghi nào</b> tồn tại với <code>project_id IS NULL</code>.<br/>
-      • Các DB v2 đã migrate trước đó (như <code>dist-portable</code>) khi mở lại tự động nhận đủ <code>idx_workflows_project_id_pair</code> và 16 triggers idempotent trong <code>apply_migrations()</code>.
+      • Các DB v2 đã migrate trước đó (như <code>dist-portable</code>) khi mở lại tự động nhận đủ <code>idx_workflows_project_id_pair</code> và {trigger_count} triggers idempotent trong <code>apply_migrations()</code>.
     </p>
   </div>
 """))
@@ -287,8 +289,8 @@ pages.append(page_wrap(5, "HẠNG MỤC 4 · ROLLBACK RUNBOOK", "Chuẩn hóa Ba
       <p style="font-size:8.3pt; margin-bottom:1.5mm;"><b>A. Rollback Git nhiều commits P2/P2.1 (KHÔNG dùng <code>git revert 9bd0e45</code> đơn lẻ):</b></p>
       <pre class="code-box" style="font-size:7.6pt; padding:1.8mm 2.4mm;"># Cách 1 (Khuyến nghị): Quay về baseline P1.2 đã nghiệm thu
 git checkout master   # tại fab1a1a
-# Cách 2: Revert toàn bộ chuỗi commit P2..HEAD
-git revert 9bd0e45^..HEAD --no-commit &amp;&amp; git commit -m "revert(p2): back to fab1a1a"</pre>
+# Cách 2: Revert toàn bộ chuỗi commit P2..HEAD (an toàn trên Windows cmd/PowerShell, tránh ký tự '^')
+git revert fab1a1a..HEAD --no-commit &amp;&amp; git commit -m "revert(p2): back to fab1a1a"</pre>
       <p style="font-size:8.3pt; margin:1.8mm 0 1mm 0;"><b>B. Rollback Runbook SQLite WAL Mode (5 bước an toàn):</b></p>
       <ol style="margin:0 0 0 4.2mm; padding:0; font-size:8.2pt; line-height:1.35;">
         <li>Dừng toàn bộ tiến trình ghi (<code>FarmerPro.exe</code>, <code>fp-cli</code>, <code>fp-mini-runtime</code>).</li>
@@ -344,15 +346,15 @@ pages.append(page_wrap(6, "HẠNG MỤC 6 · BẢO MẬT PRODUCER KEY", "Đánh 
 """))
 
 # PAGE 7: REQUIREMENT V, VII, IX - GIT SHAs, DIFF, CARGO TEST LOGS
-pages.append(page_wrap(7, "HẠNG MỤC 5, 7, 9 · GIT & TESTS", "Đồng bộ Git SHAs (fab1a1a..7c856e7), Diff & Raw Log 53/53 Workspace Tests", f"""
+pages.append(page_wrap(7, "HẠNG MỤC 5, 7, 9 · GIT & TESTS", f"Đồng bộ Git SHAs (fab1a1a..{code_commit_sha[:7]}), Diff & Raw Log 53/53 Workspace Tests", f"""
   <div class="grid-2">
     <div class="card" style="padding:2.2mm 2.8mm;">
       <div class="card-h" style="margin-bottom:1.2mm;">1. LỊCH SỬ COMMIT ĐẦY ĐỦ TRÊN NHÁNH (ĐẾN CODE COMMIT P2.1)</div>
       <pre class="code-box" style="font-size:7.6pt; line-height:1.28; padding:1.8mm 2.2mm;">{git_log_txt}</pre>
       <p style="margin-top:1.5mm; font-size:8pt; color:#334155;">
         <b>Quy ước tách Commit (Khắc phục triệt để lệch SHA trong PDF):</b><br/>
-        • <b>Codebase P2.1 Commit:</b> <code>{code_commit_sha}</code> (13 tệp Rust, toàn bộ test/CLI chạy trên commit này).<br/>
-        • <b>Evidence &amp; PDF Commit:</b> Commit kế tiếp ngay sau <code>7c856e7</code>, chỉ chứa PDF, script tạo báo cáo và Evidence Pack + SHA-256 manifest.
+        • <b>Codebase P2.1 Commit:</b> <code>{code_commit_sha}</code> (toàn bộ test/CLI/build chạy trên commit này).<br/>
+        • <b>Evidence &amp; PDF Commit:</b> Commit kế tiếp ngay sau <code>{code_commit_sha[:7]}</code>, chỉ chứa PDF, script tạo báo cáo và Evidence Pack + SHA-256 manifest.
       </p>
       <div class="card-h" style="margin:1.8mm 0 1mm 0;">2. KIỂM TRA STAGE-GATE &amp; BUILD</div>
       <p style="font-size:8.1pt;">
@@ -385,7 +387,7 @@ pages.append(page_wrap(8, "HẠNG MỤC 8 & 10 · KẾT LUẬN", "Bảng PASS/FA
       <table class="tbl-tight">
         <tr><th style="width:42%;">Hạng mục Kiểm định P2.1</th><th style="width:16%;">Trạng thái</th><th style="width:42%;">Ghi chú Trung thực</th></tr>
         <tr><td>Đối chiếu 10 JX2 Workflows (<code>2+10=11</code>)</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Đã giải thích trùng <code>wf-jx2-01-login</code> + xuất bảng mapping 10 tệp</td></tr>
-        <tr><td>SQLite Composite FK &amp; 16 Isolation Triggers</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Chứng minh qua raw <code>conn.execute(...)</code> trong unit test &amp; <code>verify-p2</code></td></tr>
+        <tr><td>SQLite Composite FK &amp; {trigger_count} Isolation Triggers</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Chứng minh qua raw <code>conn.execute(...)</code> trong unit test &amp; <code>verify-p2</code></td></tr>
         <tr><td>Template Path &amp; NTFS Junction Containment</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Test thực với <code>mklink /J</code> &amp; absolute path escape</td></tr>
         <tr><td>Crash-Safe Project Ops + Reconcile</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Giả lập lỗi Create/Clone/Update/Delete/Save (<code>CrashFaultPoint</code>)</td></tr>
         <tr><td>WAL Rollback Runbook trên bản sao DB</td><td><span class="tag-pass">PASS (TESTED)</span></td><td><code>verify-rollback-runbook</code> PASS (<code>integrity=ok</code>, <code>fk=0</code>)</td></tr>
@@ -395,10 +397,10 @@ pages.append(page_wrap(8, "HẠNG MỤC 8 & 10 · KẾT LUẬN", "Bảng PASS/FA
       </table>
     </div>
     <div class="card" style="padding:2.2mm 2.8mm;">
-      <div class="card-h" style="margin-bottom:1.2mm;">2. THAY ĐỔI SOURCE P2.1 (<code>git diff --stat 72f78d6..7c856e7</code>) &amp; EVIDENCE PACK</div>
+      <div class="card-h" style="margin-bottom:1.2mm;">2. THAY ĐỔI SOURCE P2.1 (<code>git diff --stat 72f78d6..{code_commit_sha[:7]}</code>) &amp; EVIDENCE PACK</div>
       <pre class="code-box" style="font-size:7.6pt; line-height:1.26; padding:1.8mm 2.2mm;">{git_diff_p2_1_only}</pre>
       <p style="margin:1.5mm 0 0 0; font-size:7.8pt; color:#334155;">
-        <b>Tổng cộng từ P1.2 (<code>fab1a1a..7c856e7</code>):</b> 44 tệp thay đổi (+12,553 / -362 dòng), ghi nhận đầy đủ tại <code>artifacts/p2_evidence/git_diff_summary_p2_1.txt</code> và <code>EVIDENCE_MANIFEST_SHA256.json</code> (0 missing / 0 mismatch).
+        <b>Tổng cộng từ P1.2 (<code>fab1a1a..{code_commit_sha[:7]}</code>):</b> {total_diff_summary_line}, ghi nhận đầy đủ tại <code>artifacts/p2_evidence/git_diff_summary_p2_1.txt</code> và <code>EVIDENCE_MANIFEST_SHA256.json</code> (0 missing / 0 mismatch).
       </p>
       <div class="gate-note" style="margin-top:2mm; font-size:8.2pt; padding:1.8mm 2.5mm;">
         <b>KIẾN NGHỊ NGHIỆM THU P2.1:</b> Toàn bộ 10/10 hạng mục P2.1 đã được sửa trực tiếp trong Rust, kiểm chứng bằng test tự động &amp; sandbox CLI, không chạm <code>apps/desktop/src</code> và không làm hỏng DB thật. <b>Đủ điều kiện đóng P2.1 và mở khóa triển khai Giai đoạn P3.</b>

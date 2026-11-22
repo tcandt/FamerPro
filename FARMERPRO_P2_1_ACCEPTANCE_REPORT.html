@@ -49,7 +49,7 @@
           <span class="pt-badge">NGHIỆM THU P2.1</span>
           <span class="pt-title">Tóm tắt Khắc phục P2.1, Phân biệt 4 DB & Kiến trúc Hardening</span>
         </div>
-        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT 7c856e7 · 2026-11-22</div>
+        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT bd09e31 · 2026-11-22</div>
       </div>
       <div class="page-content">
   <div class="hero-box" style="padding:2.8mm 4mm;">
@@ -60,12 +60,12 @@
     </div>
     <h1 style="margin:1.2mm 0 0.8mm 0; font-size:12.2pt;">FARMERPRO P2.1 — BÁO CÁO NGHIỆM THU BỔ SUNG TRƯỚC MỞ KHÓA GIAI ĐOẠN P3</h1>
     <p class="hero-sub" style="font-size:8.6pt;">
-      Hoàn tất toàn bộ 6 yêu cầu P2.1 từ kiểm định P2: (1) Đối chiếu 10 JX2 workflows giải thích rõ <code>2 + 10 = 11</code>; (2) Cứng hóa Project Isolation bằng <b>Composite FK + 16 SQLite Triggers</b> &amp; chống NTFS Junction/Absolute path escape; (3) Crash-safe Project Ops (<code>.fp_staging</code> / <code>.fp_trash</code> / <code>.fp_journal</code>); (4) Rollback Runbook WAL mode kiểm chứng thực tế; (5) Đồng bộ Git commit &amp; SHA-256 manifest; (6) Bổ sung <b>Portable Passphrase Recovery</b> (PBKDF2 200k + ETM) khắc phục giới hạn DPAPI CurrentUser.
+      Hoàn tất toàn bộ 6 yêu cầu P2.1 từ kiểm định P2: (1) Đối chiếu 10 JX2 workflows giải thích rõ <code>2 + 10 = 11</code>; (2) Cứng hóa Project Isolation bằng <b>Composite FK + 20 SQLite Triggers</b> &amp; chống NTFS Junction/Absolute path escape; (3) Crash-safe Project Ops (<code>.fp_staging</code> / <code>.fp_trash</code> / <code>.fp_journal</code>); (4) Rollback Runbook WAL mode kiểm chứng thực tế; (5) Đồng bộ Git commit &amp; SHA-256 manifest; (6) Bổ sung <b>Portable Passphrase Recovery</b> (PBKDF2 200k + ETM) khắc phục giới hạn DPAPI CurrentUser.
     </p>
   </div>
 
   <div class="diag-wrap" style="margin-top:2.2mm;">
-    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTIwIDM0MCIgZm9udC1mYW1pbHk9IlNlZ29lIFVJLCBBcmlhbCwgc2Fucy1zZXJpZiI+CiAgPHJlY3Qgd2lkdGg9IjExMjAiIGhlaWdodD0iMzQwIiByeD0iMTAiIGZpbGw9IiMwRjE3MkEiLz4KICA8dGV4dCB4PSI1NjAiIHk9IjMwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRjhGQUZDIiBmb250LXNpemU9IjE2LjUiIGZvbnQtd2VpZ2h0PSI3MDAiPlAyLjEgQ1JBU0gtU0FGRSBBVE9NSUNJVFkgKFNRTElURSBUUkFOU0FDVElPTiAmbHQ7LSZndDsgU1RBR0lORyAvIFRSQVNIIC8gSk9VUk5BTCk8L3RleHQ+CgogIDxyZWN0IHg9IjI0IiB5PSI1MiIgd2lkdGg9IjM0MCIgaGVpZ2h0PSIxMzAiIHJ4PSI4IiBmaWxsPSIjMTcyNTU0IiBzdHJva2U9IiMzQjgyRjYiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgPHRleHQgeD0iMTk0IiB5PSI3NSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzkzQzVGRCIgZm9udC1zaXplPSIxMy41IiBmb250LXdlaWdodD0iNzAwIj5DUkVBVEUgLyBDTE9ORSBQUk9KRUNUPC90ZXh0PgogIDx0ZXh0IHg9IjM4IiB5PSI5OCIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMiI+MS4gQ2h14bqpbiBi4buLIC5mcF9zdGFnaW5nLyZsdDtzbHVnJmd0Oy4mbHQ7dXVpZCZndDs8L3RleHQ+CiAgPHRleHQgeD0iMzgiIHk9IjExNyIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMiI+Mi4gQ29weSB0ZW1wbGF0ZXMgKyBhdG9taWNfd3JpdGUgbWFuaWZlc3Q8L3RleHQ+CiAgPHRleHQgeD0iMzgiIHk9IjEzNiIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMiI+My4gQkVHSU4gSU1NRURJQVRFIFRYIC0mZ3Q7IHJlbmFtZSAtJmd0OyBDT01NSVQ8L3RleHQ+CiAgPHRleHQgeD0iMzgiIHk9IjE1NiIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMi41Ij5M4buXaSB0csaw4bubYyBjb21taXQ6IFJvbGxiYWNrIFRYICsgRHJvcCB4w7NhIHN0YWdpbmc8L3RleHQ+CiAgPHRleHQgeD0iMzgiIHk9IjE3MyIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMi41Ij5DcmFzaCBnaeG7r2EgY2jhu6tuZzogU3RhcnR1cCByZWNvbmNpbGUgZOG7jW4gc3RhZ2luZzwvdGV4dD4KCiAgPHJlY3QgeD0iMzkwIiB5PSI1MiIgd2lkdGg9IjM0MCIgaGVpZ2h0PSIxMzAiIHJ4PSI4IiBmaWxsPSIjMTMyRDI0IiBzdHJva2U9IiMxMEI5ODEiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgPHRleHQgeD0iNTYwIiB5PSI3NSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMy41IiBmb250LXdlaWdodD0iNzAwIj5VUERBVEUgLyBTQVZFIFdPUktGTE9XICZhbXA7IFRFTVBMQVRFPC90ZXh0PgogIDx0ZXh0IHg9IjQwNCIgeT0iOTgiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuMiI+MS4gU25hcHNob3QgYnl0ZXMgY8WpIChwcm9qZWN0Lmpzb24sIHVpLXNjaGVtYSk8L3RleHQ+CiAgPHRleHQgeD0iNDA0IiB5PSIxMTciIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuMiI+Mi4gS2nhu4NtIHRyYSBhbnRpLXN5bWxpbmsgLyBOVEZTIGp1bmN0aW9uPC90ZXh0PgogIDx0ZXh0IHg9IjQwNCIgeT0iMTM2IiBmaWxsPSIjRTJFOEYwIiBmb250LXNpemU9IjEyLjIiPjMuIGF0b21pY193cml0ZV9ieXRlcyAodG1wICsgc3luY19hbGwgKyByZW5hbWUpPC90ZXh0PgogIDx0ZXh0IHg9IjQwNCIgeT0iMTU2IiBmaWxsPSIjNkVFN0I3IiBmb250LXNpemU9IjEyLjUiPjQuIFRYIENvbW1pdDsgbuG6v3UgbOG7l2kgLSZndDsgaG/DoG4gdHLhuqMgc25hcHNob3QgY8WpPC90ZXh0PgogIDx0ZXh0IHg9IjQwNCIgeT0iMTczIiBmaWxsPSIjNkVFN0I3IiBmb250LXNpemU9IjEyLjUiPsSQ4buTbmcgYuG7mSAxMDAlIFNRTGl0ZSAmbHQ7LSZndDsgbWFuaWZlc3QgdHLDqm4gxJHEqWE8L3RleHQ+CgogIDxyZWN0IHg9Ijc1NiIgeT0iNTIiIHdpZHRoPSIzNDAiIGhlaWdodD0iMTMwIiByeD0iOCIgZmlsbD0iIzNCMTIxOSIgc3Ryb2tlPSIjRjQzRjVFIiBzdHJva2Utd2lkdGg9IjEuOCIvPgogIDx0ZXh0IHg9IjkyNiIgeT0iNzUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNGREE0QUYiIGZvbnQtc2l6ZT0iMTMuNSIgZm9udC13ZWlnaHQ9IjcwMCI+VFdPLVBIQVNFIERFTEVURSBQUk9KRUNUPC90ZXh0PgogIDx0ZXh0IHg9Ijc3MCIgeT0iOTgiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuMiI+MS4gR2hpIC5mcF9qb3VybmFsL2RlbGV0ZV8mbHQ7aWQmZ3Q7Lmpzb248L3RleHQ+CiAgPHRleHQgeD0iNzcwIiB5PSIxMTciIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuMiI+Mi4gUmVuYW1lIHRoxrAgbeG7pWMgLSZndDsgLmZwX3RyYXNoLyZsdDtzbHVnJmd0Oy4mbHQ7dXVpZCZndDs8L3RleHQ+CiAgPHRleHQgeD0iNzcwIiB5PSIxMzYiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuMiI+My4gQkVHSU4gSU1NRURJQVRFIERFTEVURSBUWCAtJmd0OyBDT01NSVQ8L3RleHQ+CiAgPHRleHQgeD0iNzcwIiB5PSIxNTYiIGZpbGw9IiNGREU2OEEiIGZvbnQtc2l6ZT0iMTIuNSI+REIgbOG7l2k6IMSQxrBhIC5mcF90cmFzaCB24buBIHbhu4sgdHLDrSBjxakgKDAgbeG6pXQgZGF0YSk8L3RleHQ+CiAgPHRleHQgeD0iNzcwIiB5PSIxNzMiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTIuNSI+REIgeG9uZzogWMOzYSAuZnBfdHJhc2g7IGNyYXNoIC0mZ3Q7IHJlY29uY2lsZSBk4buNbjwvdGV4dD4KCiAgPHJlY3QgeD0iMjQiIHk9IjIwMiIgd2lkdGg9IjEwNzIiIGhlaWdodD0iMTE4IiByeD0iOCIgZmlsbD0iIzFFMjkzQiIgc3Ryb2tlPSIjNDc1NTY5IiBzdHJva2Utd2lkdGg9IjEuNiIvPgogIDx0ZXh0IHg9IjQyIiB5PSIyMjciIGZpbGw9IiNGQkJGMjQiIGZvbnQtc2l6ZT0iMTMuNSIgZm9udC13ZWlnaHQ9IjcwMCI+Q0jhu6hORyBD4buoIEtJ4buCTSBUSOG7rCBDUkFTSCBDT05TSVNURU5DWSAmYW1wOyBTUUxJVEUgSVNPTEFUSU9OIEhBUkRFTklORyAoVEjhu7BDIFRISSBUUsOKTiBTQU5EQk9YICZhbXA7IENBUkdPIFRFU1QpPC90ZXh0PgogIDx0ZXh0IHg9IjQyIiB5PSIyNTAiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuNSI+4oCiIFNRTGl0ZSBUcmlnZ2VycyAoMTYgdHJpZ2dlcnMpICsgQ29tcG9zaXRlIEZLIChwcm9qZWN0X2lkLCB3b3JrZmxvd19pZCk6IENo4bq3biAxMDAlIGzhu4duaCBTUUwgdHLhu7FjIHRp4bq/cCBjb25uLmV4ZWN1dGUoKSBjaMOpbyBwcm9qZWN0IGhv4bq3YyBwcm9qZWN0X2lkIElTIE5VTEwuPC90ZXh0PgogIDx0ZXh0IHg9IjQyIiB5PSIyNzEiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuNSI+4oCiIFRlbXBsYXRlIENvbnRhaW5tZW50OiBDYW5vbmljYWxpemUgKyBjaGVjayBGSUxFX0FUVFJJQlVURV9SRVBBUlNFX1BPSU5UIGNo4bq3biDEkcaw4budbmcgZOG6q24gdHV54buHdCDEkeG7kWkgbmdvw6BpIHByb2plY3QsICcuLicsIHbDoCBOVEZTIEp1bmN0aW9uIChta2xpbmsgL0opLjwvdGV4dD4KICA8dGV4dCB4PSI0MiIgeT0iMjkyIiBmaWxsPSIjNkVFN0I3IiBmb250LXNpemU9IjEyLjUiPuKAoiBQb3J0YWJsZSBLZXkgUmVjb3Zlcnk6IFBCS0RGMi1ITUFDLVNIQTI1NiAoMjAwLDAwMCB2w7JuZykgKyBTSEEtMjU2LUNUUiArIEVuY3J5cHQtdGhlbi1NQUMgKEhNQUMtU0hBMjU2KSBnaeG6o2kgcXV54bq/dCBjaHV54buDbiBtw6F5L3VzZXIgbmdvw6BpIERQQVBJLjwvdGV4dD4KICA8dGV4dCB4PSI0MiIgeT0iMzExIiBmaWxsPSIjOTNDNUZEIiBmb250LXNpemU9IjEyLjUiPuKAoiBU4buVbmcga+G6v3Qga2nhu4NtIHRo4butOiA1My81MyB3b3Jrc3BhY2UgdGVzdHMgUEFTUyB8IHZlcmlmeS1wMiAocHJlLXYyLCBkaXN0LXBvcnRhYmxlLCByb290KSBQQVNTIHwgdmVyaWZ5LXJvbGxiYWNrLXJ1bmJvb2sgUEFTUyB8IGFwcHMvZGVza3RvcC9zcmMgPSAwIGTDsm5nIHPhu61hLjwvdGV4dD4KPC9zdmc+" class="diag-img" style="max-height:76mm;"/>
+    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTIwIDM0MCIgZm9udC1mYW1pbHk9IlNlZ29lIFVJLCBBcmlhbCwgc2Fucy1zZXJpZiI+CiAgPHJlY3Qgd2lkdGg9IjExMjAiIGhlaWdodD0iMzQwIiByeD0iMTAiIGZpbGw9IiMwRjE3MkEiLz4KICA8dGV4dCB4PSI1NjAiIHk9IjMwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRjhGQUZDIiBmb250LXNpemU9IjE2LjUiIGZvbnQtd2VpZ2h0PSI3MDAiPlAyLjEgQ1JBU0gtU0FGRSBBVE9NSUNJVFkgKFNRTElURSBUUkFOU0FDVElPTiAmbHQ7LSZndDsgU1RBR0lORyAvIFRSQVNIIC8gSk9VUk5BTCk8L3RleHQ+CgogIDxyZWN0IHg9IjI0IiB5PSI1MiIgd2lkdGg9IjM0MCIgaGVpZ2h0PSIxMzAiIHJ4PSI4IiBmaWxsPSIjMTcyNTU0IiBzdHJva2U9IiMzQjgyRjYiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgPHRleHQgeD0iMTk0IiB5PSI3NSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzkzQzVGRCIgZm9udC1zaXplPSIxMy41IiBmb250LXdlaWdodD0iNzAwIj5DUkVBVEUgLyBDTE9ORSBQUk9KRUNUPC90ZXh0PgogIDx0ZXh0IHg9IjM4IiB5PSI5OCIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMiI+MS4gQ2h14bqpbiBi4buLIC5mcF9zdGFnaW5nLyZsdDtzbHVnJmd0Oy4mbHQ7dXVpZCZndDs8L3RleHQ+CiAgPHRleHQgeD0iMzgiIHk9IjExNyIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMiI+Mi4gQ29weSB0ZW1wbGF0ZXMgKyBhdG9taWNfd3JpdGUgbWFuaWZlc3Q8L3RleHQ+CiAgPHRleHQgeD0iMzgiIHk9IjEzNiIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMiI+My4gQkVHSU4gSU1NRURJQVRFIFRYIC0mZ3Q7IHJlbmFtZSAtJmd0OyBDT01NSVQ8L3RleHQ+CiAgPHRleHQgeD0iMzgiIHk9IjE1NiIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMi41Ij5M4buXaSB0csaw4bubYyBjb21taXQ6IFJvbGxiYWNrIFRYICsgRHJvcCB4w7NhIHN0YWdpbmc8L3RleHQ+CiAgPHRleHQgeD0iMzgiIHk9IjE3MyIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMi41Ij5DcmFzaCBnaeG7r2EgY2jhu6tuZzogU3RhcnR1cCByZWNvbmNpbGUgZOG7jW4gc3RhZ2luZzwvdGV4dD4KCiAgPHJlY3QgeD0iMzkwIiB5PSI1MiIgd2lkdGg9IjM0MCIgaGVpZ2h0PSIxMzAiIHJ4PSI4IiBmaWxsPSIjMTMyRDI0IiBzdHJva2U9IiMxMEI5ODEiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgPHRleHQgeD0iNTYwIiB5PSI3NSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMy41IiBmb250LXdlaWdodD0iNzAwIj5VUERBVEUgLyBTQVZFIFdPUktGTE9XICZhbXA7IFRFTVBMQVRFPC90ZXh0PgogIDx0ZXh0IHg9IjQwNCIgeT0iOTgiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuMiI+MS4gU25hcHNob3QgYnl0ZXMgY8WpIChwcm9qZWN0Lmpzb24sIHVpLXNjaGVtYSk8L3RleHQ+CiAgPHRleHQgeD0iNDA0IiB5PSIxMTciIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuMiI+Mi4gS2nhu4NtIHRyYSBhbnRpLXN5bWxpbmsgLyBOVEZTIGp1bmN0aW9uPC90ZXh0PgogIDx0ZXh0IHg9IjQwNCIgeT0iMTM2IiBmaWxsPSIjRTJFOEYwIiBmb250LXNpemU9IjEyLjIiPjMuIGF0b21pY193cml0ZV9ieXRlcyAodG1wICsgc3luY19hbGwgKyByZW5hbWUpPC90ZXh0PgogIDx0ZXh0IHg9IjQwNCIgeT0iMTU2IiBmaWxsPSIjNkVFN0I3IiBmb250LXNpemU9IjEyLjUiPjQuIFRYIENvbW1pdDsgbuG6v3UgbOG7l2kgLSZndDsgaG/DoG4gdHLhuqMgc25hcHNob3QgY8WpPC90ZXh0PgogIDx0ZXh0IHg9IjQwNCIgeT0iMTczIiBmaWxsPSIjNkVFN0I3IiBmb250LXNpemU9IjEyLjUiPsSQ4buTbmcgYuG7mSAxMDAlIFNRTGl0ZSAmbHQ7LSZndDsgbWFuaWZlc3QgdHLDqm4gxJHEqWE8L3RleHQ+CgogIDxyZWN0IHg9Ijc1NiIgeT0iNTIiIHdpZHRoPSIzNDAiIGhlaWdodD0iMTMwIiByeD0iOCIgZmlsbD0iIzNCMTIxOSIgc3Ryb2tlPSIjRjQzRjVFIiBzdHJva2Utd2lkdGg9IjEuOCIvPgogIDx0ZXh0IHg9IjkyNiIgeT0iNzUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNGREE0QUYiIGZvbnQtc2l6ZT0iMTMuNSIgZm9udC13ZWlnaHQ9IjcwMCI+VFdPLVBIQVNFIERFTEVURSBQUk9KRUNUPC90ZXh0PgogIDx0ZXh0IHg9Ijc3MCIgeT0iOTgiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuMiI+MS4gR2hpIC5mcF9qb3VybmFsL2RlbGV0ZV8mbHQ7aWQmZ3Q7Lmpzb248L3RleHQ+CiAgPHRleHQgeD0iNzcwIiB5PSIxMTciIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuMiI+Mi4gUmVuYW1lIHRoxrAgbeG7pWMgLSZndDsgLmZwX3RyYXNoLyZsdDtzbHVnJmd0Oy4mbHQ7dXVpZCZndDs8L3RleHQ+CiAgPHRleHQgeD0iNzcwIiB5PSIxMzYiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuMiI+My4gQkVHSU4gSU1NRURJQVRFIERFTEVURSBUWCAtJmd0OyBDT01NSVQ8L3RleHQ+CiAgPHRleHQgeD0iNzcwIiB5PSIxNTYiIGZpbGw9IiNGREU2OEEiIGZvbnQtc2l6ZT0iMTIuNSI+REIgbOG7l2k6IMSQxrBhIC5mcF90cmFzaCB24buBIHbhu4sgdHLDrSBjxakgKDAgbeG6pXQgZGF0YSk8L3RleHQ+CiAgPHRleHQgeD0iNzcwIiB5PSIxNzMiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTIuNSI+REIgeG9uZzogWMOzYSAuZnBfdHJhc2g7IGNyYXNoIC0mZ3Q7IHJlY29uY2lsZSBk4buNbjwvdGV4dD4KCiAgPHJlY3QgeD0iMjQiIHk9IjIwMiIgd2lkdGg9IjEwNzIiIGhlaWdodD0iMTE4IiByeD0iOCIgZmlsbD0iIzFFMjkzQiIgc3Ryb2tlPSIjNDc1NTY5IiBzdHJva2Utd2lkdGg9IjEuNiIvPgogIDx0ZXh0IHg9IjQyIiB5PSIyMjciIGZpbGw9IiNGQkJGMjQiIGZvbnQtc2l6ZT0iMTMuNSIgZm9udC13ZWlnaHQ9IjcwMCI+Q0jhu6hORyBD4buoIEtJ4buCTSBUSOG7rCBDUkFTSCBDT05TSVNURU5DWSAmYW1wOyBTUUxJVEUgSVNPTEFUSU9OIEhBUkRFTklORyAoVEjhu7BDIFRISSBUUsOKTiBTQU5EQk9YICZhbXA7IENBUkdPIFRFU1QpPC90ZXh0PgogIDx0ZXh0IHg9IjQyIiB5PSIyNTAiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuNSI+4oCiIFNRTGl0ZSBUcmlnZ2VycyAoe3RyaWdnZXJfY291bnR9IHRyaWdnZXJzKSArIENvbXBvc2l0ZSBGSyAocHJvamVjdF9pZCwgd29ya2Zsb3dfaWQpOiBDaOG6t24gMTAwJSBs4buHbmggU1FMIHRy4buxYyB0aeG6v3AgY29ubi5leGVjdXRlKCkgY2jDqW8gcHJvamVjdCBob+G6t2MgcHJvamVjdF9pZCBJUyBOVUxMLjwvdGV4dD4KICA8dGV4dCB4PSI0MiIgeT0iMjcxIiBmaWxsPSIjRTJFOEYwIiBmb250LXNpemU9IjEyLjUiPuKAoiBUZW1wbGF0ZSBDb250YWlubWVudDogQ2Fub25pY2FsaXplICsgY2hlY2sgRklMRV9BVFRSSUJVVEVfUkVQQVJTRV9QT0lOVCBjaOG6t24gxJHGsOG7nW5nIGThuqtuIHR1eeG7h3QgxJHhu5FpIG5nb8OgaSBwcm9qZWN0LCAnLi4nLCB2w6AgTlRGUyBKdW5jdGlvbiAobWtsaW5rIC9KKS48L3RleHQ+CiAgPHRleHQgeD0iNDIiIHk9IjI5MiIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMi41Ij7igKIgUG9ydGFibGUgS2V5IFJlY292ZXJ5OiBQQktERjItSE1BQy1TSEEyNTYgKDIwMCwwMDAgdsOybmcpICsgU0hBLTI1Ni1DVFIgKyBFbmNyeXB0LXRoZW4tTUFDIChITUFDLVNIQTI1NikgZ2nhuqNpIHF1eeG6v3QgY2h1eeG7g24gbcOheS91c2VyIG5nb8OgaSBEUEFQSS48L3RleHQ+CiAgPHRleHQgeD0iNDIiIHk9IjMxMSIgZmlsbD0iIzkzQzVGRCIgZm9udC1zaXplPSIxMi41Ij7igKIgVOG7lW5nIGvhur90IGtp4buDbSB0aOG7rTogNTMvNTMgd29ya3NwYWNlIHRlc3RzIFBBU1MgfCB2ZXJpZnktcDIgKHByZS12MiwgZGlzdC1wb3J0YWJsZSwgcm9vdCkgUEFTUyB8IHZlcmlmeS1yb2xsYmFjay1ydW5ib29rIFBBU1MgfCBhcHBzL2Rlc2t0b3Avc3JjID0gMCBkw7JuZyBz4butYS48L3RleHQ+Cjwvc3ZnPg==" class="diag-img" style="max-height:76mm;"/>
   </div>
 
   <div class="card" style="margin-top:2.2mm; padding:2mm 2.8mm;">
@@ -81,7 +81,7 @@
 </div>
       <div class="page-bottom-bar">
         <span>Hồ sơ nghiệm thu P2.1: JX2 Workflow Mapping, SQLite Triggers, Crash Consistency, WAL Rollback Runbook &amp; DPAPI Portable Recovery</span>
-        <span>Code SHA: 7c856e72725d (từ fab1a1a)</span>
+        <span>Code SHA: bd09e3152fef (từ fab1a1a)</span>
         <span class="pg-num">Trang 01 / 08</span>
       </div>
     </section>
@@ -92,7 +92,7 @@
           <span class="pt-badge">HẠNG MỤC 1 · JX2 MAPPING</span>
           <span class="pt-title">Đối chiếu 10 Workflows JX2 & Giải thích chính xác (2 cũ + 10 JX2 = 11)</span>
         </div>
-        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT 7c856e7 · 2026-11-22</div>
+        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT bd09e31 · 2026-11-22</div>
       </div>
       <div class="page-content">
   <div class="card" style="padding:2mm 2.8mm; margin-bottom:2.2mm;">
@@ -127,7 +127,7 @@
 </div>
       <div class="page-bottom-bar">
         <span>Hồ sơ nghiệm thu P2.1: JX2 Workflow Mapping, SQLite Triggers, Crash Consistency, WAL Rollback Runbook &amp; DPAPI Portable Recovery</span>
-        <span>Code SHA: 7c856e72725d (từ fab1a1a)</span>
+        <span>Code SHA: bd09e3152fef (từ fab1a1a)</span>
         <span class="pg-num">Trang 02 / 08</span>
       </div>
     </section>
@@ -136,9 +136,9 @@
       <div class="page-top-bar">
         <div class="pt-left">
           <span class="pt-badge">HẠNG MỤC 2 · SQLITE ISOLATION</span>
-          <span class="pt-title">Cứng hóa Project Isolation ở Tầng SQLite (Composite FK + 16 Triggers) & Template Containment</span>
+          <span class="pt-title">Cứng hóa Project Isolation ở Tầng SQLite (Composite FK + 20 Triggers) & Template Containment</span>
         </div>
-        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT 7c856e7 · 2026-11-22</div>
+        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT bd09e31 · 2026-11-22</div>
       </div>
       <div class="page-content">
   <div class="grid-2">
@@ -171,13 +171,13 @@
     <p style="font-size:8.3pt;">
       • Mọi hàm truy vấn <code>list_project_*</code> đều từ chối <code>project_id</code> rỗng và lọc rõ <code>WHERE project_id = ?1 AND project_id IS NOT NULL</code>.<br/>
       • Các API v1 tương thích ngược (<code>save_workflow_draft</code>, <code>ensure_job_exists</code>) tự động phân giải sang project chủ sở hữu hoặc <code>DEFAULT_LEGACY_PROJECT_ID</code> để <b>0 bản ghi nào</b> tồn tại với <code>project_id IS NULL</code>.<br/>
-      • Các DB v2 đã migrate trước đó (như <code>dist-portable</code>) khi mở lại tự động nhận đủ <code>idx_workflows_project_id_pair</code> và 16 triggers idempotent trong <code>apply_migrations()</code>.
+      • Các DB v2 đã migrate trước đó (như <code>dist-portable</code>) khi mở lại tự động nhận đủ <code>idx_workflows_project_id_pair</code> và 20 triggers idempotent trong <code>apply_migrations()</code>.
     </p>
   </div>
 </div>
       <div class="page-bottom-bar">
         <span>Hồ sơ nghiệm thu P2.1: JX2 Workflow Mapping, SQLite Triggers, Crash Consistency, WAL Rollback Runbook &amp; DPAPI Portable Recovery</span>
-        <span>Code SHA: 7c856e72725d (từ fab1a1a)</span>
+        <span>Code SHA: bd09e3152fef (từ fab1a1a)</span>
         <span class="pg-num">Trang 03 / 08</span>
       </div>
     </section>
@@ -188,7 +188,7 @@
           <span class="pt-badge">HẠNG MỤC 3 · CRASH CONSISTENCY</span>
           <span class="pt-title">Crash-Safe Project Operations (SQLite <-> Filesystem Atomicity) & Fault Injection Tests</span>
         </div>
-        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT 7c856e7 · 2026-11-22</div>
+        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT bd09e31 · 2026-11-22</div>
       </div>
       <div class="page-content">
   <div class="grid-2">
@@ -222,7 +222,7 @@
 </div>
       <div class="page-bottom-bar">
         <span>Hồ sơ nghiệm thu P2.1: JX2 Workflow Mapping, SQLite Triggers, Crash Consistency, WAL Rollback Runbook &amp; DPAPI Portable Recovery</span>
-        <span>Code SHA: 7c856e72725d (từ fab1a1a)</span>
+        <span>Code SHA: bd09e3152fef (từ fab1a1a)</span>
         <span class="pg-num">Trang 04 / 08</span>
       </div>
     </section>
@@ -233,7 +233,7 @@
           <span class="pt-badge">HẠNG MỤC 4 · ROLLBACK RUNBOOK</span>
           <span class="pt-title">Chuẩn hóa Backup, Rollback Git Multi-Commit & Rollback Runbook SQLite WAL Mode</span>
         </div>
-        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT 7c856e7 · 2026-11-22</div>
+        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT bd09e31 · 2026-11-22</div>
       </div>
       <div class="page-content">
   <div class="grid-2">
@@ -242,8 +242,8 @@
       <p style="font-size:8.3pt; margin-bottom:1.5mm;"><b>A. Rollback Git nhiều commits P2/P2.1 (KHÔNG dùng <code>git revert 9bd0e45</code> đơn lẻ):</b></p>
       <pre class="code-box" style="font-size:7.6pt; padding:1.8mm 2.4mm;"># Cách 1 (Khuyến nghị): Quay về baseline P1.2 đã nghiệm thu
 git checkout master   # tại fab1a1a
-# Cách 2: Revert toàn bộ chuỗi commit P2..HEAD
-git revert 9bd0e45^..HEAD --no-commit &amp;&amp; git commit -m "revert(p2): back to fab1a1a"</pre>
+# Cách 2: Revert toàn bộ chuỗi commit P2..HEAD (an toàn trên Windows cmd/PowerShell, tránh ký tự '^')
+git revert fab1a1a..HEAD --no-commit &amp;&amp; git commit -m "revert(p2): back to fab1a1a"</pre>
       <p style="font-size:8.3pt; margin:1.8mm 0 1mm 0;"><b>B. Rollback Runbook SQLite WAL Mode (5 bước an toàn):</b></p>
       <ol style="margin:0 0 0 4.2mm; padding:0; font-size:8.2pt; line-height:1.35;">
         <li>Dừng toàn bộ tiến trình ghi (<code>FarmerPro.exe</code>, <code>fp-cli</code>, <code>fp-mini-runtime</code>).</li>
@@ -271,7 +271,7 @@ git revert 9bd0e45^..HEAD --no-commit &amp;&amp; git commit -m "revert(p2): back
 </div>
       <div class="page-bottom-bar">
         <span>Hồ sơ nghiệm thu P2.1: JX2 Workflow Mapping, SQLite Triggers, Crash Consistency, WAL Rollback Runbook &amp; DPAPI Portable Recovery</span>
-        <span>Code SHA: 7c856e72725d (từ fab1a1a)</span>
+        <span>Code SHA: bd09e3152fef (từ fab1a1a)</span>
         <span class="pg-num">Trang 05 / 08</span>
       </div>
     </section>
@@ -282,7 +282,7 @@ git revert 9bd0e45^..HEAD --no-commit &amp;&amp; git commit -m "revert(p2): back
           <span class="pt-badge">HẠNG MỤC 6 · BẢO MẬT PRODUCER KEY</span>
           <span class="pt-title">Đánh giá Giới hạn DPAPI CurrentUser, Portable Passphrase Recovery & Mini Tool Verification</span>
         </div>
-        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT 7c856e7 · 2026-11-22</div>
+        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT bd09e31 · 2026-11-22</div>
       </div>
       <div class="page-content">
   <div class="grid-2">
@@ -312,7 +312,7 @@ git revert 9bd0e45^..HEAD --no-commit &amp;&amp; git commit -m "revert(p2): back
 </div>
       <div class="page-bottom-bar">
         <span>Hồ sơ nghiệm thu P2.1: JX2 Workflow Mapping, SQLite Triggers, Crash Consistency, WAL Rollback Runbook &amp; DPAPI Portable Recovery</span>
-        <span>Code SHA: 7c856e72725d (từ fab1a1a)</span>
+        <span>Code SHA: bd09e3152fef (từ fab1a1a)</span>
         <span class="pg-num">Trang 06 / 08</span>
       </div>
     </section>
@@ -321,23 +321,25 @@ git revert 9bd0e45^..HEAD --no-commit &amp;&amp; git commit -m "revert(p2): back
       <div class="page-top-bar">
         <div class="pt-left">
           <span class="pt-badge">HẠNG MỤC 5, 7, 9 · GIT & TESTS</span>
-          <span class="pt-title">Đồng bộ Git SHAs (fab1a1a..7c856e7), Diff & Raw Log 53/53 Workspace Tests</span>
+          <span class="pt-title">Đồng bộ Git SHAs (fab1a1a..bd09e31), Diff & Raw Log 53/53 Workspace Tests</span>
         </div>
-        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT 7c856e7 · 2026-11-22</div>
+        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT bd09e31 · 2026-11-22</div>
       </div>
       <div class="page-content">
   <div class="grid-2">
     <div class="card" style="padding:2.2mm 2.8mm;">
       <div class="card-h" style="margin-bottom:1.2mm;">1. LỊCH SỬ COMMIT ĐẦY ĐỦ TRÊN NHÁNH (ĐẾN CODE COMMIT P2.1)</div>
-      <pre class="code-box" style="font-size:7.6pt; line-height:1.28; padding:1.8mm 2.2mm;">7c856e72725d23a4489566c20470ac8578eae8ad 2026-11-22 08:21:03 +0700 feat(p2.1): harden SQLite isolation triggers, crash-safe atomic project ops, WAL rollback runbook, JX2 non-overwrite mapping, and portable key recovery
+      <pre class="code-box" style="font-size:7.6pt; line-height:1.28; padding:1.8mm 2.2mm;">bd09e3152fef2c112a20ed06767ace1cebb5e32b 2026-11-22 08:34:58 +0700 fix(p2.1): close SQLite update triggers, fallback project resolution, trash-journal recovery, recursive clone, and runtime path guards
+aaca38f48776817e5bed8f3b6ea39108fee5d68d 2026-11-22 08:25:15 +0700 docs(p2.1-acceptance): publish 8-page P2.1 acceptance PDF, rollback runbook, DPAPI recovery policy, and verified SHA-256 evidence pack (code commit 7c856e7)
+7c856e72725d23a4489566c20470ac8578eae8ad 2026-11-22 08:21:03 +0700 feat(p2.1): harden SQLite isolation triggers, crash-safe atomic project ops, WAL rollback runbook, JX2 non-overwrite mapping, and portable key recovery
 72f78d6f90e554b0a8769c2fc66f31d511f66b4c 2026-11-22 07:56:31 +0700 docs(p2-acceptance): regenerate 12-page P2 acceptance PDF (29 IPC commands, 46/46 tests) and verified SHA-256 evidence manifest
 e77fe7c147fdaafaac2be8904063dba6f3d46e86 2026-11-22 07:55:33 +0700 fix(p2): sync project.json on clone/update, scope runtime template lookup by project_dir, expand IPC handler tests, and fix P2 report/evidence metrics
 e7a0c9bd761b8c34a50d5a16031a007f7197cc51 2026-11-22 07:45:39 +0700 docs(p2-acceptance): publish 12-page P2 acceptance PDF report, 4 vector diagrams, SQL migration, sandbox & production migration proofs, and SHA-256 evidence manifest
 9bd0e45eaa76f931a9ff85becadc14128f7784f5 2026-11-22 07:40:33 +0700 feat(p2): implement multi-project SQLite v2 schema, guarded migration/rollback, JX2 preservation, Windows Credential Manager, DPAPI keystore, and Studio Project CRUD IPC</pre>
       <p style="margin-top:1.5mm; font-size:8pt; color:#334155;">
         <b>Quy ước tách Commit (Khắc phục triệt để lệch SHA trong PDF):</b><br/>
-        • <b>Codebase P2.1 Commit:</b> <code>7c856e72725d23a4489566c20470ac8578eae8ad</code> (13 tệp Rust, toàn bộ test/CLI chạy trên commit này).<br/>
-        • <b>Evidence &amp; PDF Commit:</b> Commit kế tiếp ngay sau <code>7c856e7</code>, chỉ chứa PDF, script tạo báo cáo và Evidence Pack + SHA-256 manifest.
+        • <b>Codebase P2.1 Commit:</b> <code>bd09e3152fef2c112a20ed06767ace1cebb5e32b</code> (toàn bộ test/CLI/build chạy trên commit này).<br/>
+        • <b>Evidence &amp; PDF Commit:</b> Commit kế tiếp ngay sau <code>bd09e31</code>, chỉ chứa PDF, script tạo báo cáo và Evidence Pack + SHA-256 manifest.
       </p>
       <div class="card-h" style="margin:1.8mm 0 1mm 0;">2. KIỂM TRA STAGE-GATE &amp; BUILD</div>
       <p style="font-size:8.1pt;">
@@ -363,7 +365,7 @@ e7a0c9bd761b8c34a50d5a16031a007f7197cc51 2026-11-22 07:45:39 +0700 docs(p2-accep
 </div>
       <div class="page-bottom-bar">
         <span>Hồ sơ nghiệm thu P2.1: JX2 Workflow Mapping, SQLite Triggers, Crash Consistency, WAL Rollback Runbook &amp; DPAPI Portable Recovery</span>
-        <span>Code SHA: 7c856e72725d (từ fab1a1a)</span>
+        <span>Code SHA: bd09e3152fef (từ fab1a1a)</span>
         <span class="pg-num">Trang 07 / 08</span>
       </div>
     </section>
@@ -374,7 +376,7 @@ e7a0c9bd761b8c34a50d5a16031a007f7197cc51 2026-11-22 07:45:39 +0700 docs(p2-accep
           <span class="pt-badge">HẠNG MỤC 8 & 10 · KẾT LUẬN</span>
           <span class="pt-title">Bảng PASS/FAIL/BLOCKED Trung thực, Thay đổi Source & Đề xuất Mở khóa P3</span>
         </div>
-        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT 7c856e7 · 2026-11-22</div>
+        <div class="pt-right">FARMERPRO P2.1 ACCEPTANCE · CODE COMMIT bd09e31 · 2026-11-22</div>
       </div>
       <div class="page-content">
   <div class="grid-2">
@@ -383,7 +385,7 @@ e7a0c9bd761b8c34a50d5a16031a007f7197cc51 2026-11-22 07:45:39 +0700 docs(p2-accep
       <table class="tbl-tight">
         <tr><th style="width:42%;">Hạng mục Kiểm định P2.1</th><th style="width:16%;">Trạng thái</th><th style="width:42%;">Ghi chú Trung thực</th></tr>
         <tr><td>Đối chiếu 10 JX2 Workflows (<code>2+10=11</code>)</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Đã giải thích trùng <code>wf-jx2-01-login</code> + xuất bảng mapping 10 tệp</td></tr>
-        <tr><td>SQLite Composite FK &amp; 16 Isolation Triggers</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Chứng minh qua raw <code>conn.execute(...)</code> trong unit test &amp; <code>verify-p2</code></td></tr>
+        <tr><td>SQLite Composite FK &amp; 20 Isolation Triggers</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Chứng minh qua raw <code>conn.execute(...)</code> trong unit test &amp; <code>verify-p2</code></td></tr>
         <tr><td>Template Path &amp; NTFS Junction Containment</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Test thực với <code>mklink /J</code> &amp; absolute path escape</td></tr>
         <tr><td>Crash-Safe Project Ops + Reconcile</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Giả lập lỗi Create/Clone/Update/Delete/Save (<code>CrashFaultPoint</code>)</td></tr>
         <tr><td>WAL Rollback Runbook trên bản sao DB</td><td><span class="tag-pass">PASS (TESTED)</span></td><td><code>verify-rollback-runbook</code> PASS (<code>integrity=ok</code>, <code>fk=0</code>)</td></tr>
@@ -393,23 +395,46 @@ e7a0c9bd761b8c34a50d5a16031a007f7197cc51 2026-11-22 07:45:39 +0700 docs(p2-accep
       </table>
     </div>
     <div class="card" style="padding:2.2mm 2.8mm;">
-      <div class="card-h" style="margin-bottom:1.2mm;">2. THAY ĐỔI SOURCE P2.1 (<code>git diff --stat 72f78d6..7c856e7</code>) &amp; EVIDENCE PACK</div>
-      <pre class="code-box" style="font-size:7.6pt; line-height:1.26; padding:1.8mm 2.2mm;">apps/cli/src/main.rs                    |  250 ++++-
- apps/desktop/src-tauri/src/main.rs      |    3 +
- apps/desktop/src-tauri/src/studio_p2.rs |   34 +-
- crates/fp-builder/src/lib.rs            |   53 +
- crates/fp-builder/src/security.rs       |   20 +-
- crates/fp-security/src/keystore.rs      |  335 ++++++
- crates/fp-security/src/lib.rs           |   83 +-
- crates/fp-storage/src/fs_atomic.rs      |  309 ++++++
- crates/fp-storage/src/jx2_seed.rs       |  196 +++-
- crates/fp-storage/src/lib.rs            | 1822 +++++++++++++++++++++++++++----
- crates/fp-storage/src/migrations.rs     |  190 +++-
- crates/fp-storage/src/models.rs         |   40 +
- crates/fp-workflow-runtime/src/lib.rs   |  150 ++-
- 13 files changed, 3187 insertions(+), 298 deletions(-)</pre>
+      <div class="card-h" style="margin-bottom:1.2mm;">2. THAY ĐỔI SOURCE P2.1 (<code>git diff --stat 72f78d6..bd09e31</code>) &amp; EVIDENCE PACK</div>
+      <pre class="code-box" style="font-size:7.6pt; line-height:1.26; padding:1.8mm 2.2mm;">FARMERPRO_P2_1_ACCEPTANCE_REPORT.html              |  428 ++++
+ FARMERPRO_P2_1_ACCEPTANCE_REPORT.pdf               |  Bin 0 -> 478283 bytes
+ apps/cli/src/main.rs                               |  264 ++-
+ apps/desktop/src-tauri/src/main.rs                 |    3 +
+ apps/desktop/src-tauri/src/studio_p2.rs            |   64 +-
+ .../p2_evidence/EVIDENCE_MANIFEST_SHA256.json      |   84 +-
+ .../FARMERPRO_P2_1_ACCEPTANCE_REPORT.pdf           |  Bin 0 -> 478283 bytes
+ .../P2_1_ROLLBACK_RUNBOOK_AND_DPAPI_POLICY.md      |   59 +
+ .../diagrams/05_p2_1_crash_safe_and_hardening.svg  |   35 +
+ artifacts/p2_evidence/git_diff_summary_p2_1.txt    |   45 +
+ artifacts/p2_evidence/git_log_p2_1.txt             |    5 +
+ artifacts/p2_evidence/p2_1_pdf_qa_report.json      |   12 +
+ .../p2_1_rollback_runbook_verification.json        |   54 +
+ .../p2_evidence/p2_1_verify_pre_v2_sandbox.json    |  439 +++++
+ .../p2_verify_dist_portable_sandbox.json           |  258 ++-
+ .../p2_evidence/p2_verify_root_db_sandbox.json     |  248 ++-
+ .../pdf_p2_1_rendered_pages/p2_1_page_01.png       |  Bin 0 -> 288412 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_02.png       |  Bin 0 -> 281508 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_03.png       |  Bin 0 -> 216685 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_04.png       |  Bin 0 -> 192127 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_05.png       |  Bin 0 -> 176658 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_06.png       |  Bin 0 -> 194080 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_07.png       |  Bin 0 -> 249409 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_08.png       |  Bin 0 -> 222742 bytes
+ artifacts/p2_evidence/sqlite_v1_v2_migration.sql   |  186 +-
+ crates/fp-builder/src/lib.rs                       |   53 +
+ crates/fp-builder/src/security.rs                  |   20 +-
+ crates/fp-security/src/keystore.rs                 |  335 ++++
+ crates/fp-security/src/lib.rs                      |   83 +-
+ crates/fp-storage/src/fs_atomic.rs                 |  369 ++++
+ crates/fp-storage/src/jx2_seed.rs                  |  196 +-
+ crates/fp-storage/src/lib.rs                       | 2049 +++++++++++++++++---
+ crates/fp-storage/src/migrations.rs                |  231 ++-
+ crates/fp-storage/src/models.rs                    |   40 +
+ crates/fp-workflow-runtime/src/lib.rs              |  215 +-
+ scripts/generate_p2_1_acceptance_report.py         |  569 ++++++
+ 36 files changed, 5940 insertions(+), 404 deletions(-)</pre>
       <p style="margin:1.5mm 0 0 0; font-size:7.8pt; color:#334155;">
-        <b>Tổng cộng từ P1.2 (<code>fab1a1a..7c856e7</code>):</b> 44 tệp thay đổi (+12,553 / -362 dòng), ghi nhận đầy đủ tại <code>artifacts/p2_evidence/git_diff_summary_p2_1.txt</code> và <code>EVIDENCE_MANIFEST_SHA256.json</code> (0 missing / 0 mismatch).
+        <b>Tổng cộng từ P1.2 (<code>fab1a1a..bd09e31</code>):</b> 75 files changed, 15204 insertions(+), 366 deletions(-), ghi nhận đầy đủ tại <code>artifacts/p2_evidence/git_diff_summary_p2_1.txt</code> và <code>EVIDENCE_MANIFEST_SHA256.json</code> (0 missing / 0 mismatch).
       </p>
       <div class="gate-note" style="margin-top:2mm; font-size:8.2pt; padding:1.8mm 2.5mm;">
         <b>KIẾN NGHỊ NGHIỆM THU P2.1:</b> Toàn bộ 10/10 hạng mục P2.1 đã được sửa trực tiếp trong Rust, kiểm chứng bằng test tự động &amp; sandbox CLI, không chạm <code>apps/desktop/src</code> và không làm hỏng DB thật. <b>Đủ điều kiện đóng P2.1 và mở khóa triển khai Giai đoạn P3.</b>
@@ -419,7 +444,7 @@ e7a0c9bd761b8c34a50d5a16031a007f7197cc51 2026-11-22 07:45:39 +0700 docs(p2-accep
 </div>
       <div class="page-bottom-bar">
         <span>Hồ sơ nghiệm thu P2.1: JX2 Workflow Mapping, SQLite Triggers, Crash Consistency, WAL Rollback Runbook &amp; DPAPI Portable Recovery</span>
-        <span>Code SHA: 7c856e72725d (từ fab1a1a)</span>
+        <span>Code SHA: bd09e3152fef (từ fab1a1a)</span>
         <span class="pg-num">Trang 08 / 08</span>
       </div>
     </section>

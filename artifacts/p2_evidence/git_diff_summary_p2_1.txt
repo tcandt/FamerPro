@@ -1,15 +1,19 @@
- Cargo.lock                                         |   14 +
+﻿ Cargo.lock                                         |   14 +
  Cargo.toml                                         |    2 +-
+ FARMERPRO_P2_1_ACCEPTANCE_REPORT.html              |  428 ++
+ FARMERPRO_P2_1_ACCEPTANCE_REPORT.pdf               |  Bin 0 -> 478283 bytes
  FARMERPRO_P2_ACCEPTANCE_REPORT.html                |  896 +++++
  FARMERPRO_P2_ACCEPTANCE_REPORT.pdf                 |  Bin 0 -> 555074 bytes
  apps/cli/Cargo.toml                                |    4 +
- apps/cli/src/main.rs                               |  671 ++++
+ apps/cli/src/main.rs                               |  685 ++++
  apps/desktop/src-tauri/Cargo.toml                  |    1 +
  apps/desktop/src-tauri/src/main.rs                 |   61 +-
- apps/desktop/src-tauri/src/studio_p2.rs            |  580 +++
+ apps/desktop/src-tauri/src/studio_p2.rs            |  610 +++
  .../FARMERPRO_P1_2_STUDIO_BLUEPRINT.md             |    6 +-
- .../p2_evidence/EVIDENCE_MANIFEST_SHA256.json      |  122 +
+ .../p2_evidence/EVIDENCE_MANIFEST_SHA256.json      |  194 +
+ .../FARMERPRO_P2_1_ACCEPTANCE_REPORT.pdf           |  Bin 0 -> 478283 bytes
  .../p2_evidence/FARMERPRO_P2_ACCEPTANCE_REPORT.pdf |  Bin 0 -> 555074 bytes
+ .../P2_1_ROLLBACK_RUNBOOK_AND_DPAPI_POLICY.md      |   59 +
  .../p2_evidence/cargo_test_workspace_p2_clean.log  |  Bin 0 -> 13042 bytes
  artifacts/p2_evidence/cargo_tree_workspace_p2.txt  |  Bin 0 -> 10732 bytes
  .../p2_evidence/diagrams/01_p2_rust_crates_map.mmd |   21 +
@@ -20,13 +24,39 @@
  .../03_p2_migration_backup_rollback_flow.svg       |   69 +
  .../diagrams/04_p2_wincred_dpapi_isolation.mmd     |   12 +
  .../diagrams/04_p2_wincred_dpapi_isolation.svg     |   52 +
+ .../diagrams/05_p2_1_crash_safe_and_hardening.svg  |   35 +
  artifacts/p2_evidence/git_diff_summary_p2.txt      |   43 +
+ artifacts/p2_evidence/git_diff_summary_p2_1.txt    |   45 +
  artifacts/p2_evidence/git_log_p2.txt               |    3 +
+ artifacts/p2_evidence/git_log_p2_1.txt             |    5 +
+ artifacts/p2_evidence/p2_1_pdf_qa_report.json      |   12 +
+ .../p2_1_rollback_runbook_verification.json        |   54 +
+ .../p2_evidence/p2_1_verify_pre_v2_sandbox.json    |  439 ++
  .../p2_dist_portable_migration_report.json         |   54 +
  artifacts/p2_evidence/p2_pdf_qa_report.json        |   12 +
- .../p2_verify_dist_portable_sandbox.json           |  292 ++
- .../p2_evidence/p2_verify_root_db_sandbox.json     |  283 ++
- artifacts/p2_evidence/sqlite_v1_v2_migration.sql   |  187 +
+ .../p2_verify_dist_portable_sandbox.json           |  460 +++
+ .../p2_evidence/p2_verify_root_db_sandbox.json     |  439 ++
+ .../pdf_p2_1_rendered_pages/p2_1_page_01.png       |  Bin 0 -> 288412 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_02.png       |  Bin 0 -> 281508 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_03.png       |  Bin 0 -> 216685 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_04.png       |  Bin 0 -> 192127 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_05.png       |  Bin 0 -> 176658 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_06.png       |  Bin 0 -> 194080 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_07.png       |  Bin 0 -> 249409 bytes
+ .../pdf_p2_1_rendered_pages/p2_1_page_08.png       |  Bin 0 -> 222742 bytes
+ .../p2_evidence/pdf_rendered_pages/p2_page_01.png  |  Bin 0 -> 265481 bytes
+ .../p2_evidence/pdf_rendered_pages/p2_page_02.png  |  Bin 0 -> 269833 bytes
+ .../p2_evidence/pdf_rendered_pages/p2_page_03.png  |  Bin 0 -> 242530 bytes
+ .../p2_evidence/pdf_rendered_pages/p2_page_04.png  |  Bin 0 -> 265187 bytes
+ .../p2_evidence/pdf_rendered_pages/p2_page_05.png  |  Bin 0 -> 210784 bytes
+ .../p2_evidence/pdf_rendered_pages/p2_page_06.png  |  Bin 0 -> 212605 bytes
+ .../p2_evidence/pdf_rendered_pages/p2_page_07.png  |  Bin 0 -> 203086 bytes
+ .../p2_evidence/pdf_rendered_pages/p2_page_08.png  |  Bin 0 -> 216238 bytes
+ .../p2_evidence/pdf_rendered_pages/p2_page_09.png  |  Bin 0 -> 193679 bytes
+ .../p2_evidence/pdf_rendered_pages/p2_page_10.png  |  Bin 0 -> 213565 bytes
+ .../p2_evidence/pdf_rendered_pages/p2_page_11.png  |  Bin 0 -> 308989 bytes
+ .../p2_evidence/pdf_rendered_pages/p2_page_12.png  |  Bin 0 -> 224061 bytes
+ artifacts/p2_evidence/sqlite_v1_v2_migration.sql   |  357 ++
  crates/fp-builder/src/lib.rs                       |   53 +
  crates/fp-builder/src/security.rs                  |  146 +-
  crates/fp-security/Cargo.toml                      |    6 +
@@ -35,11 +65,12 @@
  crates/fp-security/src/lib.rs                      |  539 ++-
  crates/fp-security/src/wincred.rs                  |  327 ++
  crates/fp-storage/Cargo.toml                       |    3 +
- crates/fp-storage/src/fs_atomic.rs                 |  309 ++
+ crates/fp-storage/src/fs_atomic.rs                 |  369 ++
  crates/fp-storage/src/jx2_seed.rs                  |  604 +++
- crates/fp-storage/src/lib.rs                       | 3982 ++++++++++++++++++--
- crates/fp-storage/src/migrations.rs                |  558 +++
+ crates/fp-storage/src/lib.rs                       | 4215 ++++++++++++++++++--
+ crates/fp-storage/src/migrations.rs                |  599 +++
  crates/fp-storage/src/models.rs                    |  299 ++
- crates/fp-workflow-runtime/src/lib.rs              |  303 +-
- scripts/generate_p2_acceptance_report.py           | 1276 +++++++
- 44 files changed, 12553 insertions(+), 362 deletions(-)
+ crates/fp-workflow-runtime/src/lib.rs              |  368 +-
+ scripts/generate_p2_1_acceptance_report.py         |  569 +++
+ scripts/generate_p2_acceptance_report.py           | 1276 ++++++
+ 75 files changed, 15204 insertions(+), 366 deletions(-)

@@ -1,10 +1,10 @@
-{
+﻿{
   "command": "verify-rollback-runbook",
-  "executedAtUtc": "2026-11-22T01:22:44.024462400+00:00",
+  "executedAtUtc": "2026-11-22T01:34:26.572955900+00:00",
   "productionDbUntouched": true,
   "rollbackReport": {
-    "backupDbPath": "artifacts\\p2_evidence\\rollback_runbook_sandbox\\verified_backup_copy.db",
-    "currentDbPath": "artifacts\\p2_evidence\\rollback_runbook_sandbox\\target_db_copy.db",
+    "backupDbPath": "artifacts/p2_evidence/rollback_runbook_sandbox\\verified_backup_copy.db",
+    "currentDbPath": "artifacts/p2_evidence/rollback_runbook_sandbox\\target_db_copy.db",
     "postRollbackIntegrity": {
       "foreignKeyViolations": 0,
       "integrityCheck": "ok",
@@ -46,9 +46,9 @@
       2
     ],
     "reopenVerified": true,
-    "safetySnapshotPath": "artifacts\\p2_evidence\\rollback_runbook_sandbox\\pre_rollback_safety_snapshot.db",
+    "safetySnapshotPath": "artifacts/p2_evidence/rollback_runbook_sandbox\\pre_rollback_safety_snapshot.db",
     "walCheckpointBusy": 0
   },
-  "sourceBackupDb": "backups\\p2_verified_backup\\dist_portable_pre_v2.db",
-  "sourceLiveDb": "dist-portable\\FarmerPro\\data\\farmerpro.db"
+  "sourceBackupDb": "backups/p2_verified_backup/dist_portable_pre_v2.db",
+  "sourceLiveDb": "dist-portable/FarmerPro/data/farmerpro.db"
 }
