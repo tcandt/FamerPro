@@ -8,8 +8,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 pub use keystore::{
-    PortableProducerKeyRecoveryBundle, ProducerKeyBackupBundle, ProducerKeyMetadata,
-    ProducerKeystore,
+    Argon2idKdfParams, PortableProducerKeyRecoveryBundle, ProducerKeyBackupBundle,
+    ProducerKeyMetadata, ProducerKeystore, PORTABLE_RECOVERY_AEAD, PORTABLE_RECOVERY_FORMAT_VERSION,
+    PORTABLE_RECOVERY_RETIRED_EXPERIMENTAL_SCHEME, PORTABLE_RECOVERY_SCHEME,
 };
 pub use wincred::{
     parse_cred_uri_to_target, validate_segment, CredentialMetadata, SecretNamespace,
@@ -514,14 +515,15 @@ mod tests {
     }
 
     #[test]
-    fn test_portable_passphrase_recovery_bundle_roundtrip_wrong_pass_and_tamper() {
+    fn test_portable_passphrase_recovery_bundle_aead_roundtrip_wrong_pass_tamper_and_nonce_uniqueness() {
         let temp_dir = std::env::temp_dir().join(format!(
             "fp_portable_recovery_test_{}",
             uuid::Uuid::new_v4()
         ));
         let ks_machine_a = temp_dir.join("machine_a_ks");
         let ks_machine_b = temp_dir.join("machine_b_ks");
-        let recovery_file = temp_dir.join("offline_recovery.json");
+        let recovery_file_1 = temp_dir.join("offline_recovery_1.json");
+        let recovery_file_2 = temp_dir.join("offline_recovery_2.json");
 
         let (sk_a, meta_a) = ProducerKeystore::load_or_create_signing_key(&ks_machine_a).unwrap();
         let seed_hex = keystore::hex_encode(&sk_a.to_bytes());
@@ -529,30 +531,47 @@ mod tests {
         // Weak passphrase rejected
         assert!(ProducerKeystore::export_portable_recovery_bundle(
             &ks_machine_a,
-            &recovery_file,
+            &recovery_file_1,
             "short"
         )
         .is_err());
 
-        // Export with strong passphrase
+        // Two exports of the SAME key + passphrase must generate distinct 16-byte salts & 12-byte nonces
         let bundle = ProducerKeystore::export_portable_recovery_bundle(
             &ks_machine_a,
-            &recovery_file,
+            &recovery_file_1,
             "FarmerPro-Offline-Recovery-2026!",
         )
         .unwrap();
-        assert_eq!(bundle.protection_scheme, "PASSPHRASE_PBKDF2_SHA256_ETM_V1");
-        assert_eq!(bundle.kdf_iterations, 200_000);
+        let bundle2 = ProducerKeystore::export_portable_recovery_bundle(
+            &ks_machine_a,
+            &recovery_file_2,
+            "FarmerPro-Offline-Recovery-2026!",
+        )
+        .unwrap();
+        assert_eq!(bundle.format_version, PORTABLE_RECOVERY_FORMAT_VERSION);
+        assert_eq!(bundle.protection_scheme, PORTABLE_RECOVERY_SCHEME);
+        assert_eq!(bundle.aead_algorithm, PORTABLE_RECOVERY_AEAD);
+        assert_eq!(bundle.kdf_params.algorithm, "argon2id");
+        assert_eq!(bundle.kdf_params.version, "0x13");
+        assert_eq!(bundle.kdf_params.memory_kib, 65_536);
+        assert_eq!(bundle.kdf_params.iterations, 3);
+        assert_eq!(bundle.kdf_params.parallelism, 1);
+        assert_eq!(bundle.kdf_params.output_len_bytes, 32);
         assert_eq!(bundle.key_id, meta_a.key_id);
+        assert_ne!(bundle.salt_b64, bundle2.salt_b64);
+        assert_ne!(bundle.nonce_b64, bundle2.nonce_b64);
+        assert_ne!(bundle.ciphertext_b64, bundle2.ciphertext_b64);
 
-        // Ensure recovery bundle JSON contains ZERO plaintext seed
-        let raw_bundle = std::fs::read_to_string(&recovery_file).unwrap();
+        // Ensure recovery bundle JSON contains ZERO plaintext seed or legacy SHA-256-CTR markers
+        let raw_bundle = std::fs::read_to_string(&recovery_file_1).unwrap();
         assert!(!raw_bundle.contains(&seed_hex));
         assert!(!raw_bundle.contains("secretSeedHex"));
+        assert!(!raw_bundle.contains("PASSPHRASE_PBKDF2_SHA256_ETM_V1"));
 
         // Wrong passphrase must fail closed
         let wrong_res = ProducerKeystore::import_portable_recovery_bundle(
-            &recovery_file,
+            &recovery_file_1,
             &ks_machine_b,
             "Wrong-Passphrase-999",
         );
@@ -562,21 +581,91 @@ mod tests {
             .to_string()
             .contains("RECOVERY_AUTH_FAILED"));
 
-        // Tampered metadata/ciphertext must fail closed
-        let tampered_path = temp_dir.join("tampered_recovery.json");
-        let mut tampered = bundle.clone();
-        tampered.public_key_hex = "ff".repeat(32);
-        std::fs::write(&tampered_path, serde_json::to_vec_pretty(&tampered).unwrap()).unwrap();
+        // Tampered AAD metadata (`publicKeyHex`, `keyId`, `kdfParams`) must fail AEAD auth
+        let tampered_meta_path = temp_dir.join("tampered_meta.json");
+        let mut tampered_meta = bundle.clone();
+        tampered_meta.public_key_hex = "ff".repeat(32);
+        std::fs::write(
+            &tampered_meta_path,
+            serde_json::to_vec_pretty(&tampered_meta).unwrap(),
+        )
+        .unwrap();
         assert!(ProducerKeystore::import_portable_recovery_bundle(
-            &tampered_path,
+            &tampered_meta_path,
+            &ks_machine_b,
+            "FarmerPro-Offline-Recovery-2026!"
+        )
+        .unwrap_err()
+        .to_string()
+        .contains("RECOVERY_AUTH_FAILED"));
+
+        // Tampered ciphertext byte must fail AEAD auth
+        let tampered_ct_path = temp_dir.join("tampered_ct.json");
+        let mut tampered_ct = bundle.clone();
+        let mut ct_bytes = base64::Engine::decode(
+            &base64::engine::general_purpose::STANDARD,
+            &tampered_ct.ciphertext_b64,
+        )
+        .unwrap();
+        ct_bytes[0] ^= 0x01;
+        tampered_ct.ciphertext_b64 =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &ct_bytes);
+        std::fs::write(
+            &tampered_ct_path,
+            serde_json::to_vec_pretty(&tampered_ct).unwrap(),
+        )
+        .unwrap();
+        assert!(ProducerKeystore::import_portable_recovery_bundle(
+            &tampered_ct_path,
             &ks_machine_b,
             "FarmerPro-Offline-Recovery-2026!"
         )
         .is_err());
 
+        // Invalid KDF / AEAD / nonce length metadata must fail closed BEFORE decryption
+        let bad_aead_path = temp_dir.join("bad_aead.json");
+        let mut bad_aead = bundle.clone();
+        bad_aead.aead_algorithm = "SHA-256-CTR".to_string();
+        std::fs::write(&bad_aead_path, serde_json::to_vec_pretty(&bad_aead).unwrap()).unwrap();
+        assert!(ProducerKeystore::import_portable_recovery_bundle(
+            &bad_aead_path,
+            &ks_machine_b,
+            "FarmerPro-Offline-Recovery-2026!"
+        )
+        .unwrap_err()
+        .to_string()
+        .contains("RECOVERY_INVALID_METADATA"));
+
+        let bad_kdf_path = temp_dir.join("bad_kdf.json");
+        let mut bad_kdf = bundle.clone();
+        bad_kdf.kdf_params.memory_kib = 1024;
+        std::fs::write(&bad_kdf_path, serde_json::to_vec_pretty(&bad_kdf).unwrap()).unwrap();
+        assert!(ProducerKeystore::import_portable_recovery_bundle(
+            &bad_kdf_path,
+            &ks_machine_b,
+            "FarmerPro-Offline-Recovery-2026!"
+        )
+        .unwrap_err()
+        .to_string()
+        .contains("RECOVERY_INVALID_METADATA"));
+
+        let bad_nonce_path = temp_dir.join("bad_nonce.json");
+        let mut bad_nonce = bundle.clone();
+        bad_nonce.nonce_b64 =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, [1u8; 16]);
+        std::fs::write(&bad_nonce_path, serde_json::to_vec_pretty(&bad_nonce).unwrap()).unwrap();
+        assert!(ProducerKeystore::import_portable_recovery_bundle(
+            &bad_nonce_path,
+            &ks_machine_b,
+            "FarmerPro-Offline-Recovery-2026!"
+        )
+        .unwrap_err()
+        .to_string()
+        .contains("RECOVERY_MALFORMED_PAYLOAD"));
+
         // Valid passphrase imports into Machine B's DPAPI keystore cleanly
         let imported_meta = ProducerKeystore::import_portable_recovery_bundle(
-            &recovery_file,
+            &recovery_file_1,
             &ks_machine_b,
             "FarmerPro-Offline-Recovery-2026!",
         )
@@ -587,6 +676,57 @@ mod tests {
 
         let (sk_b, _) = ProducerKeystore::load_or_create_signing_key(&ks_machine_b).unwrap();
         assert_eq!(sk_a.to_bytes(), sk_b.to_bytes());
+
+        // Rotate Machine A to a brand-new key, then restore Machine A back to key_a via V3 recovery bundle
+        let (_sk_rotated, meta_rot) =
+            ProducerKeystore::rotate_producer_key(&ks_machine_a, "hotfix_test_rotate").unwrap();
+        assert_ne!(meta_rot.key_id, meta_a.key_id);
+        let restored_meta = ProducerKeystore::import_portable_recovery_bundle(
+            &recovery_file_2,
+            &ks_machine_a,
+            "FarmerPro-Offline-Recovery-2026!",
+        )
+        .unwrap();
+        assert_eq!(restored_meta.key_id, meta_a.key_id);
+        let (sk_a_restored, _) = ProducerKeystore::load_or_create_signing_key(&ks_machine_a).unwrap();
+        assert_eq!(sk_a.to_bytes(), sk_a_restored.to_bytes());
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_legacy_sha256_ctr_v1_bundle_is_rejected_as_retired_experimental() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_retired_v1_bundle_{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let legacy_path = temp_dir.join("retired_v1_bundle.json");
+        let ks_dir = temp_dir.join("ks");
+
+        let legacy_payload = serde_json::json!({
+            "formatVersion": 2,
+            "protectionScheme": PORTABLE_RECOVERY_RETIRED_EXPERIMENTAL_SCHEME,
+            "kdfIterations": 200000,
+            "keyId": "fp-ed25519-000000000000",
+            "publicKeyHex": "00".repeat(32),
+            "createdAtUtc": "2026-11-22T00:00:00Z",
+            "backedUpAtUtc": "2026-11-22T00:00:00Z",
+            "saltB64": "AAAAAAAAAAAAAAAAAAAAAA==",
+            "nonceB64": "AAAAAAAAAAAAAAAAAAAAAA==",
+            "ciphertextB64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            "hmacSha256": "00".repeat(32)
+        });
+        std::fs::write(&legacy_path, serde_json::to_vec_pretty(&legacy_payload).unwrap()).unwrap();
+
+        let err = ProducerKeystore::import_portable_recovery_bundle(
+            &legacy_path,
+            &ks_dir,
+            "Any-Passphrase-2026",
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(err.contains("RECOVERY_RETIRED_EXPERIMENTAL_FORMAT"));
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }

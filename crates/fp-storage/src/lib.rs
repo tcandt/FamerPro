@@ -12,8 +12,9 @@ use fp_bundle_contract::{
 use fp_domain::{ConnectionState, DeviceSummary, StepEvent};
 use fs_atomic::{
     atomic_write_bytes, copy_dir_files_safe, ensure_contained_project_dir, is_reparse_or_symlink,
-    reconcile_project_storage_orphans, validate_safe_rel_path, DeleteJournalEntry,
-    JOURNAL_DIR_NAME, STAGING_DIR_NAME, TRASH_DIR_NAME,
+    reconcile_project_storage_with_witness, validate_safe_rel_path, CommitWitness,
+    CreateJournalEntry, DeleteJournalEntry, FileBackupEntry, MutationCommitWitness,
+    MutationJournalEntry, JOURNAL_DIR_NAME, STAGING_DIR_NAME, TRASH_DIR_NAME,
 };
 use rusqlite::{params, Connection};
 use sha2::{Digest, Sha256};
@@ -133,9 +134,140 @@ fn check_integrity_on_conn(conn: &Connection) -> Result<IntegrityReport> {
     })
 }
 
+struct SqliteCommitWitness<'a>(&'a Connection);
+
+impl CommitWitness for SqliteCommitWitness<'_> {
+    fn has_project(&self, project_id: &str) -> Result<bool> {
+        let count: i64 = self.0.query_row(
+            "SELECT COUNT(*) FROM projects WHERE id = ?1;",
+            params![project_id],
+            |r| r.get(0),
+        )?;
+        Ok(count > 0)
+    }
+
+    fn active_project_dirs(&self) -> Result<Vec<PathBuf>> {
+        let mut stmt = self.0.prepare("SELECT project_dir_path FROM projects;")?;
+        let dirs = stmt
+            .query_map([], |r| Ok(PathBuf::from(r.get::<_, String>(0)?)))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(dirs)
+    }
+
+    fn matches_mutation_witness(&self, witness: &MutationCommitWitness) -> Result<bool> {
+        match witness {
+            MutationCommitWitness::ProjectUpdatedAt {
+                project_id,
+                expected_updated_at,
+            } => {
+                let count: i64 = self.0.query_row(
+                    "SELECT COUNT(*) FROM projects WHERE id = ?1 AND updated_at = ?2;",
+                    params![project_id, expected_updated_at],
+                    |r| r.get(0),
+                )?;
+                Ok(count > 0)
+            }
+            MutationCommitWitness::WorkflowVersionExists {
+                project_id,
+                workflow_id,
+                version_id,
+                expected_sha256,
+            } => {
+                let count: i64 = self.0.query_row(
+                    "SELECT COUNT(*) FROM workflow_versions wv
+                     JOIN workflows w ON w.id = wv.workflow_id
+                     WHERE w.project_id = ?1 AND wv.workflow_id = ?2 AND wv.id = ?3 AND wv.sha256 = ?4;",
+                    params![project_id, workflow_id, version_id, expected_sha256],
+                    |r| r.get(0),
+                )?;
+                Ok(count > 0)
+            }
+            MutationCommitWitness::VisionTemplateExists {
+                project_id,
+                rel_path,
+                expected_sha256,
+            } => {
+                let count: i64 = self.0.query_row(
+                    "SELECT COUNT(*) FROM vision_templates
+                     WHERE project_id = ?1 AND rel_path = ?2 AND sha256 = ?3;",
+                    params![project_id, rel_path, expected_sha256],
+                    |r| r.get(0),
+                )?;
+                Ok(count > 0)
+            }
+        }
+    }
+}
+
+fn begin_mutation_journal(
+    proj_dir: &Path,
+    project_id: &str,
+    live_targets: &[&Path],
+    commit_witness: MutationCommitWitness,
+    created_at: &str,
+) -> Result<Option<(PathBuf, PathBuf)>> {
+    let Some(projects_root) = proj_dir.parent() else {
+        return Ok(None);
+    };
+    if !proj_dir.exists() {
+        return Ok(None);
+    }
+    let _ = ensure_contained_project_dir(projects_root, proj_dir)?;
+
+    let journal_id = uuid::Uuid::new_v4().to_string();
+    let staging_root = projects_root.join(STAGING_DIR_NAME);
+    let journal_root = projects_root.join(JOURNAL_DIR_NAME);
+    let backup_dir = staging_root.join(format!("bak_{}", &journal_id[..8]));
+    std::fs::create_dir_all(&backup_dir)?;
+    std::fs::create_dir_all(&journal_root)?;
+
+    let mut files = Vec::with_capacity(live_targets.len());
+    for (idx, live_path) in live_targets.iter().enumerate() {
+        let existed_before = live_path.exists();
+        let backup_path = if existed_before {
+            let bytes = std::fs::read(live_path)?;
+            let bp = backup_dir.join(format!("file_{}.bak", idx));
+            atomic_write_bytes(&bp, &bytes)?;
+            Some(bp.to_string_lossy().to_string())
+        } else {
+            None
+        };
+        files.push(FileBackupEntry {
+            live_path: live_path.to_string_lossy().to_string(),
+            existed_before,
+            backup_path,
+        });
+    }
+
+    let entry = MutationJournalEntry {
+        op: "mutation".to_string(),
+        journal_id: journal_id.clone(),
+        project_id: project_id.to_string(),
+        backup_dir: backup_dir.to_string_lossy().to_string(),
+        files,
+        commit_witness,
+        created_at: created_at.to_string(),
+    };
+    let journal_path = journal_root.join(format!("mutation_{}.json", journal_id));
+    atomic_write_bytes(&journal_path, &serde_json::to_vec_pretty(&entry)?)?;
+    Ok(Some((journal_path, backup_dir)))
+}
+
+fn cleanup_mutation_journal(guard: Option<(PathBuf, PathBuf)>) {
+    if let Some((journal_path, backup_dir)) = guard {
+        if backup_dir.exists() {
+            let _ = std::fs::remove_dir_all(&backup_dir);
+        }
+        if journal_path.exists() {
+            let _ = std::fs::remove_file(&journal_path);
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct StorageManager {
     conn: Arc<Mutex<Connection>>,
+    crash_hook: Arc<Mutex<Option<Arc<dyn Fn(&str) + Send + Sync>>>>,
 }
 
 impl StorageManager {
@@ -143,6 +275,7 @@ impl StorageManager {
         let conn = Connection::open_in_memory()?;
         let sm = Self {
             conn: Arc::new(Mutex::new(conn)),
+            crash_hook: Arc::new(Mutex::new(None)),
         };
         sm.run_migrations()?;
         Ok(sm)
@@ -157,9 +290,35 @@ impl StorageManager {
         let conn = Connection::open(db_path)?;
         let sm = Self {
             conn: Arc::new(Mutex::new(conn)),
+            crash_hook: Arc::new(Mutex::new(None)),
         };
         sm.run_migrations()?;
         Ok(sm)
+    }
+
+    pub fn open_and_reconcile<P: AsRef<Path>>(
+        db_path: P,
+        projects_base_dir: &Path,
+    ) -> Result<(Self, ReconcileReport)> {
+        let sm = Self::new(db_path)?;
+        let report = sm.reconcile_projects_storage_detailed(projects_base_dir)?;
+        Ok((sm, report))
+    }
+
+    /// Registers an optional diagnostic hook invoked at specific crash-window stages (used in forced-kill tests).
+    pub fn set_crash_stage_hook<F>(&self, hook: Option<F>)
+    where
+        F: Fn(&str) + Send + Sync + 'static,
+    {
+        let mut g = self.crash_hook.lock().unwrap();
+        *g = hook.map(|f| Arc::new(f) as Arc<dyn Fn(&str) + Send + Sync>);
+    }
+
+    fn emit_crash_stage(&self, stage: &str) {
+        let hook_opt = self.crash_hook.lock().unwrap().clone();
+        if let Some(hook) = hook_opt {
+            hook(stage);
+        }
     }
 
     pub fn run_migrations(&self) -> Result<()> {
@@ -348,15 +507,22 @@ impl StorageManager {
         })
     }
 
+    /// Reconciles orphan `.fp_staging`, `.fp_trash`, `.fp_journal`, and `.tmp` entries under `projects_base_dir`
+    /// against committed rows in SQLite and returns the structured audit report.
+    pub fn reconcile_projects_storage_detailed(
+        &self,
+        projects_base_dir: &Path,
+    ) -> Result<ReconcileReport> {
+        let conn = self.conn.lock().unwrap();
+        reconcile_project_storage_with_witness(projects_base_dir, &SqliteCommitWitness(&conn))
+    }
+
     /// Reconciles orphan `.fp_staging`, `.fp_trash`, and `.fp_journal` entries under `projects_base_dir`
     /// against committed rows in SQLite `projects`.
     pub fn reconcile_projects_storage(&self, projects_base_dir: &Path) -> Result<usize> {
-        let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id FROM projects;")?;
-        let active_ids: Vec<String> = stmt
-            .query_map([], |r| r.get::<_, String>(0))?
-            .collect::<std::result::Result<Vec<_>, _>>()?;
-        reconcile_project_storage_orphans(projects_base_dir, &active_ids)
+        Ok(self
+            .reconcile_projects_storage_detailed(projects_base_dir)?
+            .total_resolved)
     }
 
     /// Migrates legacy 10 JX2 workflows & template PNGs into `proj-jx2-mobile-001` non-destructively.
@@ -872,6 +1038,22 @@ impl StorageManager {
         )?;
         atomic_write_bytes(&staging_dir.join("ui-schema.json"), ui_json.as_bytes())?;
 
+        // Write intent journal BEFORE moving out of staging
+        let journal_root = projects_base_dir.join(JOURNAL_DIR_NAME);
+        std::fs::create_dir_all(&journal_root)?;
+        let create_journal_path = journal_root.join(format!("create_{}.json", project_id));
+        let create_entry = CreateJournalEntry {
+            op: "create".to_string(),
+            project_id: project_id.clone(),
+            project_slug: slug.clone(),
+            staging_dir: staging_dir.to_string_lossy().to_string(),
+            target_dir: proj_dir.to_string_lossy().to_string(),
+            created_at: now.clone(),
+        };
+        atomic_write_bytes(&create_journal_path, &serde_json::to_vec_pretty(&create_entry)?)?;
+
+        self.emit_crash_stage("create:after_staging_before_rename");
+
         // 2. Execute SQLite transaction
         let mut conn = self.conn.lock().unwrap();
         let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
@@ -921,6 +1103,7 @@ impl StorageManager {
         )?;
 
         if fault == CrashFaultPoint::FailBeforeDbCommit {
+            let _ = std::fs::remove_file(&create_journal_path);
             bail!("INJECTED_CRASH_FAULT: simulated crash before DB commit in create_project");
         }
 
@@ -934,10 +1117,16 @@ impl StorageManager {
         })?;
         staging_guard.0 = None;
 
+        self.emit_crash_stage("create:after_rename_before_db_commit");
+
         if let Err(e) = tx.commit() {
             let _ = std::fs::remove_dir_all(&proj_dir);
+            let _ = std::fs::remove_file(&create_journal_path);
             return Err(e.into());
         }
+
+        self.emit_crash_stage("create:after_db_commit_before_cleanup");
+        let _ = std::fs::remove_file(&create_journal_path);
 
         Ok(GameProjectRecord {
             id: project_id,
@@ -1164,6 +1353,7 @@ impl StorageManager {
             }
         };
 
+        let mut mutation_journal: Option<(PathBuf, PathBuf)> = None;
         if proj_dir.exists() {
             if is_reparse_or_symlink(proj_dir) {
                 bail!(
@@ -1171,6 +1361,16 @@ impl StorageManager {
                     proj_dir.display()
                 );
             }
+            mutation_journal = begin_mutation_journal(
+                proj_dir,
+                &req.id,
+                &[manifest_path.as_path(), ui_path.as_path()],
+                MutationCommitWitness::ProjectUpdatedAt {
+                    project_id: req.id.clone(),
+                    expected_updated_at: now.clone(),
+                },
+                &now,
+            )?;
             if let Some(ref raw) = prev_manifest_bytes {
                 let mut manifest: GameProjectManifest = serde_json::from_slice(raw)
                     .context("Corrupt project.json during update_project")?;
@@ -1185,30 +1385,40 @@ impl StorageManager {
 
                 if fault == CrashFaultPoint::FailManifestWrite {
                     restore_disk_files();
+                    cleanup_mutation_journal(mutation_journal);
                     bail!("INJECTED_CRASH_FAULT: simulated manifest write failure during update_project");
                 }
                 if let Err(e) = atomic_write_bytes(&manifest_path, &serde_json::to_vec_pretty(&manifest)?) {
                     restore_disk_files();
+                    cleanup_mutation_journal(mutation_journal);
                     return Err(e);
                 }
             }
             if let Some(ref ui_json) = synced_ui_json {
                 if let Err(e) = atomic_write_bytes(&ui_path, ui_json.as_bytes()) {
                     restore_disk_files();
+                    cleanup_mutation_journal(mutation_journal);
                     return Err(e);
                 }
             }
         }
 
+        self.emit_crash_stage("update:after_disk_writes_before_db_commit");
+
         if fault == CrashFaultPoint::FailBeforeDbCommit {
             restore_disk_files();
+            cleanup_mutation_journal(mutation_journal);
             bail!("INJECTED_CRASH_FAULT: simulated crash before DB commit in update_project");
         }
 
         if let Err(e) = tx.commit() {
             restore_disk_files();
+            cleanup_mutation_journal(mutation_journal);
             return Err(e.into());
         }
+
+        self.emit_crash_stage("update:after_db_commit_before_cleanup");
+        cleanup_mutation_journal(mutation_journal);
 
         Ok(GameProjectRecord {
             id: existing.id,
@@ -1549,7 +1759,23 @@ impl StorageManager {
             &serde_json::to_vec_pretty(&cloned_manifest)?,
         )?;
 
+        let journal_root = projects_base_dir.join(JOURNAL_DIR_NAME);
+        std::fs::create_dir_all(&journal_root)?;
+        let clone_journal_path = journal_root.join(format!("create_{}.json", new_id));
+        let clone_entry = CreateJournalEntry {
+            op: "clone".to_string(),
+            project_id: new_id.clone(),
+            project_slug: new_slug.clone(),
+            staging_dir: staging_dir.to_string_lossy().to_string(),
+            target_dir: new_proj_dir.to_string_lossy().to_string(),
+            created_at: now.clone(),
+        };
+        atomic_write_bytes(&clone_journal_path, &serde_json::to_vec_pretty(&clone_entry)?)?;
+
+        self.emit_crash_stage("clone:after_staging_before_rename");
+
         if fault == CrashFaultPoint::FailBeforeDbCommit {
+            let _ = std::fs::remove_file(&clone_journal_path);
             bail!("INJECTED_CRASH_FAULT: simulated crash before DB commit in clone_project");
         }
 
@@ -1563,10 +1789,16 @@ impl StorageManager {
         })?;
         staging_guard.0 = None;
 
+        self.emit_crash_stage("clone:after_rename_before_db_commit");
+
         if let Err(e) = tx.commit() {
             let _ = std::fs::remove_dir_all(&new_proj_dir);
+            let _ = std::fs::remove_file(&clone_journal_path);
             return Err(e.into());
         }
+
+        self.emit_crash_stage("clone:after_db_commit_before_cleanup");
+        let _ = std::fs::remove_file(&clone_journal_path);
 
         Ok(GameProjectRecord {
             id: new_id,
@@ -1644,6 +1876,7 @@ impl StorageManager {
                         });
                     }
                     moved_to_trash = Some((proj_dir, trash_dir, Some(journal_path)));
+                    self.emit_crash_stage("delete:after_move_to_trash_before_commit");
                 }
             }
         }
@@ -1732,6 +1965,8 @@ impl StorageManager {
             restore_from_trash(&moved_to_trash);
             return Err(e);
         }
+
+        self.emit_crash_stage("delete:after_db_commit_before_cleanup");
 
         if fault == CrashFaultPoint::FailAfterDbCommitTrashPurge {
             bail!("INJECTED_CRASH_FAULT: simulated crash after DB commit before trash purge");
@@ -1945,10 +2180,11 @@ impl StorageManager {
             params![ver_id, wf_id_clean, next_ver, draft_json, sha, now],
         )?;
 
-        // Sync workflow JSON & project.json on disk atomically with snapshot rollback
+        // Sync workflow JSON & project.json on disk atomically with pre-image intent journal + rollback
         let proj_dir = Path::new(&project.project_dir_path);
         let rel_wf = format!("workflows/{}.json", wf_id_clean);
         let mut disk_rollback: Option<(PathBuf, Option<Vec<u8>>, PathBuf, Option<Vec<u8>>)> = None;
+        let mut mutation_journal: Option<(PathBuf, PathBuf)> = None;
         if proj_dir.exists() {
             if is_reparse_or_symlink(proj_dir) {
                 bail!(
@@ -1969,6 +2205,19 @@ impl StorageManager {
                 None
             };
 
+            mutation_journal = begin_mutation_journal(
+                proj_dir,
+                pid_clean,
+                &[wf_disk_path.as_path(), manifest_path.as_path()],
+                MutationCommitWitness::WorkflowVersionExists {
+                    project_id: pid_clean.to_string(),
+                    workflow_id: wf_id_clean.to_string(),
+                    version_id: ver_id.clone(),
+                    expected_sha256: sha.clone(),
+                },
+                &now,
+            )?;
+
             let restore_wf_disk = |wf_p: &Path, prev_wf: &Option<Vec<u8>>, mf_p: &Path, prev_mf: &Option<Vec<u8>>| {
                 match prev_wf {
                     Some(b) => {
@@ -1985,11 +2234,15 @@ impl StorageManager {
 
             if let Err(e) = atomic_write_bytes(&wf_disk_path, draft_json.as_bytes()) {
                 restore_wf_disk(&wf_disk_path, &prev_wf_bytes, &manifest_path, &prev_manifest_bytes);
+                cleanup_mutation_journal(mutation_journal);
                 return Err(e);
             }
 
+            self.emit_crash_stage("workflow:after_wf_write_before_manifest");
+
             if fault == CrashFaultPoint::FailManifestWrite {
                 restore_wf_disk(&wf_disk_path, &prev_wf_bytes, &manifest_path, &prev_manifest_bytes);
+                cleanup_mutation_journal(mutation_journal);
                 bail!("INJECTED_CRASH_FAULT: simulated manifest write failure during save_project_workflow");
             }
 
@@ -2000,6 +2253,7 @@ impl StorageManager {
                         manifest.workflow_files.sort();
                         if let Err(e) = atomic_write_bytes(&manifest_path, &serde_json::to_vec_pretty(&manifest)?) {
                             restore_wf_disk(&wf_disk_path, &prev_wf_bytes, &manifest_path, &prev_manifest_bytes);
+                            cleanup_mutation_journal(mutation_journal);
                             return Err(e);
                         }
                     }
@@ -2007,6 +2261,8 @@ impl StorageManager {
             }
             disk_rollback = Some((wf_disk_path, prev_wf_bytes, manifest_path, prev_manifest_bytes));
         }
+
+        self.emit_crash_stage("workflow:after_disk_writes_before_db_commit");
 
         if fault == CrashFaultPoint::FailBeforeDbCommit {
             if let Some((wf_p, prev_wf, mf_p, prev_mf)) = disk_rollback {
@@ -2022,6 +2278,7 @@ impl StorageManager {
                     let _ = atomic_write_bytes(&mf_p, &b);
                 }
             }
+            cleanup_mutation_journal(mutation_journal);
             bail!("INJECTED_CRASH_FAULT: simulated crash before DB commit in save_project_workflow");
         }
 
@@ -2039,8 +2296,12 @@ impl StorageManager {
                     let _ = atomic_write_bytes(&mf_p, &b);
                 }
             }
+            cleanup_mutation_journal(mutation_journal);
             return Err(e.into());
         }
+
+        self.emit_crash_stage("workflow:after_db_commit_before_cleanup");
+        cleanup_mutation_journal(mutation_journal);
 
         Ok(ProjectWorkflowRecord {
             id: wf_id_clean.to_string(),
@@ -2233,6 +2494,18 @@ impl StorageManager {
             }
         };
 
+        let mutation_journal = begin_mutation_journal(
+            proj_dir,
+            &input.project_id,
+            &[target_path.as_path(), manifest_path.as_path()],
+            MutationCommitWitness::VisionTemplateExists {
+                project_id: input.project_id.clone(),
+                rel_path: rel_clean.clone(),
+                expected_sha256: actual_sha.clone(),
+            },
+            &now,
+        )?;
+
         let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
         tx.execute(
             "INSERT INTO vision_templates (
@@ -2263,15 +2536,18 @@ impl StorageManager {
         )?;
 
         if fault == CrashFaultPoint::FailTemplateCopy {
+            cleanup_mutation_journal(mutation_journal);
             bail!("INJECTED_CRASH_FAULT: simulated template write failure during save_project_template_file");
         }
         if let Err(e) = atomic_write_bytes(&target_path, png_bytes) {
             restore_tpl_disk();
+            cleanup_mutation_journal(mutation_journal);
             return Err(e);
         }
 
         if fault == CrashFaultPoint::FailManifestWrite {
             restore_tpl_disk();
+            cleanup_mutation_journal(mutation_journal);
             bail!("INJECTED_CRASH_FAULT: simulated manifest write failure during save_project_template_file");
         }
         if let Some(ref raw_mf) = prev_manifest_bytes {
@@ -2281,21 +2557,29 @@ impl StorageManager {
                     manifest.template_files.sort();
                     if let Err(e) = atomic_write_bytes(&manifest_path, &serde_json::to_vec_pretty(&manifest)?) {
                         restore_tpl_disk();
+                        cleanup_mutation_journal(mutation_journal);
                         return Err(e);
                     }
                 }
             }
         }
 
+        self.emit_crash_stage("template:after_disk_writes_before_db_commit");
+
         if fault == CrashFaultPoint::FailBeforeDbCommit {
             restore_tpl_disk();
+            cleanup_mutation_journal(mutation_journal);
             bail!("INJECTED_CRASH_FAULT: simulated crash before DB commit in save_project_template_file");
         }
 
         if let Err(e) = tx.commit() {
             restore_tpl_disk();
+            cleanup_mutation_journal(mutation_journal);
             return Err(e.into());
         }
+
+        self.emit_crash_stage("template:after_db_commit_before_cleanup");
+        cleanup_mutation_journal(mutation_journal);
 
         let actual_id: String = conn.query_row(
             "SELECT id FROM vision_templates WHERE project_id = ?1 AND rel_path = ?2;",
@@ -4248,6 +4532,149 @@ mod tests {
         assert_eq!(proj_tbl_cnt, 0);
 
         drop(reopened);
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p2_hotfix_wf_jx2_01_login_draft_to_published_does_not_auto_enable_unapproved_tasks() {
+        let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let repo_root = manifest_dir.parent().unwrap().parent().unwrap();
+        let legacy_jx2_dir = repo_root.join("games").join("jx2mobile");
+
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_p2_hotfix_wf_upgrade_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let db_file = temp_dir.join("jx2_draft_upgrade.db");
+        let projects_dir = temp_dir.join("projects");
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        // 1. Seed a v1 DB containing `wf-jx2-01-login` as `"status":"draft"` with the exact same graph as `01_start_and_login.json`
+        let published_src = std::fs::read_to_string(legacy_jx2_dir.join("01_start_and_login.json")).unwrap();
+        let mut draft_val: serde_json::Value = serde_json::from_str(&published_src).unwrap();
+        draft_val
+            .as_object_mut()
+            .unwrap()
+            .insert("status".to_string(), serde_json::json!("draft"));
+        let draft_json = serde_json::to_string_pretty(&draft_val).unwrap();
+        let now = Utc::now().to_rfc3339();
+
+        {
+            let conn = Connection::open(&db_file).unwrap();
+            conn.execute_batch("PRAGMA journal_mode = WAL;").unwrap();
+            conn.execute_batch(migrations::MIGRATION_V1_SQL).unwrap();
+            conn.execute(
+                "INSERT INTO workflows (id, name, draft_json, draft_updated_at) VALUES (?1, ?2, ?3, ?4);",
+                params!["wf-jx2-01-login", "01. Khởi động và Đăng nhập (Draft)", draft_json, now],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO workflow_versions (id, workflow_id, version_no, graph_json, sha256, created_at)
+                 VALUES ('wf-jx2-01-login-v1', 'wf-jx2-01-login', 1, ?1, 'sha256-placeholder', ?2);",
+                params![draft_json, now],
+            )
+            .unwrap();
+        }
+
+        // 2. Open with v2 StorageManager, seed an unapproved task (`default_enabled = 0`) bound to `wf-jx2-01-login`
+        let storage = StorageManager::new(&db_file).unwrap();
+        {
+            let conn = storage.conn.lock().unwrap();
+            conn.execute(
+                "INSERT INTO projects (
+                    id, slug, name, game_package_id, version, exe_name, window_title,
+                    icon_rel_path, target_width_px, target_height_px, bundle_adb,
+                    project_dir_path, created_at, updated_at
+                 ) VALUES (
+                    ?1, ?2, 'Võ Hiệp Truyền Kỳ 2 Mobile', 'com.blackhole.jx2mobile', '1.0.0',
+                    'Auto_JX2_Mobile.exe', 'Auto Võ Hiệp 2 Mobile v1.0.0', 'branding/icon.ico',
+                    1920, 1080, 1, ?3, ?4, ?4
+                 ) ON CONFLICT(id) DO NOTHING;",
+                params![
+                    DEFAULT_LEGACY_PROJECT_ID,
+                    DEFAULT_LEGACY_PROJECT_SLUG,
+                    projects_dir.join(DEFAULT_LEGACY_PROJECT_SLUG).to_string_lossy().to_string(),
+                    now
+                ],
+            )
+            .unwrap();
+            conn.execute(
+                "UPDATE workflows SET project_id = ?1 WHERE id = 'wf-jx2-01-login';",
+                params![DEFAULT_LEGACY_PROJECT_ID],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO task_definitions (
+                    id, project_id, workflow_id, category_id, category_short_tag,
+                    category_name, category_color_hex, title, priority, estimate_sec,
+                    default_enabled, settings_schema_json, updated_at
+                 ) VALUES (
+                    'task-unapproved-login', ?1, 'wf-jx2-01-login', 'cat-nv', '[NV]',
+                    'Nhiệm vụ Ngày', '#38BDF8', 'Auto Đăng nhập Chưa Phê Duyệt', 1, 25,
+                    0, '[]', ?2
+                 );",
+                params![DEFAULT_LEGACY_PROJECT_ID, now],
+            )
+            .unwrap();
+        }
+
+        // 3. Upgrade via migrate_legacy_jx2_assets (`wf-jx2-01-login` draft -> published v2)
+        let summary = storage
+            .migrate_legacy_jx2_assets(&legacy_jx2_dir, &projects_dir)
+            .unwrap();
+        let wf1_mig = summary
+            .workflow_migrations
+            .iter()
+            .find(|m| m.dest_workflow_id == "wf-jx2-01-login")
+            .unwrap();
+        assert_eq!(wf1_mig.action, "UPDATE");
+        assert_eq!(wf1_mig.version_after, 2);
+
+        let wf1 = storage
+            .list_project_workflows(DEFAULT_LEGACY_PROJECT_ID)
+            .unwrap()
+            .into_iter()
+            .find(|w| w.id == "wf-jx2-01-login")
+            .unwrap();
+        let wf1_val: serde_json::Value = serde_json::from_str(&wf1.draft_json).unwrap();
+        assert_eq!(wf1_val.get("status").and_then(|v| v.as_str()), Some("published"));
+
+        // CRITICAL CHECK: Unapproved task MUST remain disabled (default_enabled = false), and ZERO jobs auto-queued!
+        let tasks = storage.list_project_tasks(DEFAULT_LEGACY_PROJECT_ID).unwrap();
+        let unapproved = tasks
+            .iter()
+            .find(|t| t.id == "task-unapproved-login")
+            .expect("Unapproved task preserved");
+        assert!(!unapproved.default_enabled);
+
+        let jobs_count: i64 = {
+            let conn = storage.conn.lock().unwrap();
+            conn.query_row("SELECT COUNT(*) FROM jobs;", [], |r| r.get(0)).unwrap()
+        };
+        assert_eq!(jobs_count, 0);
+
+        // 4. Also verify direct `save_project_workflow` upgrade draft -> published leaves tasks & jobs untouched
+        let mut custom_draft = wf1_val.clone();
+        custom_draft
+            .as_object_mut()
+            .unwrap()
+            .insert("status".to_string(), serde_json::json!("published"));
+        storage
+            .save_project_workflow(
+                DEFAULT_LEGACY_PROJECT_ID,
+                "wf-jx2-01-login",
+                "01. Khởi động và Đăng nhập (Published)",
+                "Khởi động & Đăng nhập",
+                &serde_json::to_string_pretty(&custom_draft).unwrap(),
+            )
+            .unwrap();
+        let tasks_after = storage.list_project_tasks(DEFAULT_LEGACY_PROJECT_ID).unwrap();
+        assert!(!tasks_after
+            .iter()
+            .find(|t| t.id == "task-unapproved-login")
+            .unwrap()
+            .default_enabled);
+
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }

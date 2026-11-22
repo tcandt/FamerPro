@@ -1163,6 +1163,47 @@ mod tests {
         assert!(env2.verify_ed25519_with_public_key(&new_bundle_dir, &new_pe_pub).is_ok());
         assert!(env1.verify_ed25519_with_public_key(&old_bundle_dir, &new_pe_pub).is_err());
 
+        // 5. Export V3 Argon2id+AES-256-GCM recovery bundle before rotation OR import restored Key1 after rotation:
+        // Simulate restoring archived Key1 via V3 portable recovery from a second producer workstation
+        let ks_workstation2 = temp_dir.join("keystore_ws2");
+        // First create Key1 backup on ks_ws2 using archive or export before rotate on ks_orig; here export from a keystore holding Key2,
+        // wait: export Key2 V3 before rotating again, rotate to Key3, then restore Key2 via V3 recovery and verify v2 Mini Tool accepts re-signed bundle!
+        let recovery_v3_path = temp_dir.join("key2_recovery_v3.json");
+        let bundle_v3 = ProducerKeyManager::export_portable_recovery_bundle(
+            &keystore_dir,
+            &recovery_v3_path,
+            "Builder-V3-Restore-Check-2026!",
+        )
+        .unwrap();
+        assert_eq!(bundle_v3.protection_scheme, "ARGON2ID_AES_256_GCM_V3");
+
+        let (_sk3, meta3) =
+            ProducerKeyManager::rotate_producer_key(&keystore_dir, "rotate_before_v3_restore")
+                .unwrap();
+        assert_ne!(meta3.key_id, meta2.key_id);
+
+        let restored_meta2 = ProducerKeyManager::import_portable_recovery_bundle(
+            &recovery_v3_path,
+            &ks_workstation2,
+            "Builder-V3-Restore-Check-2026!",
+        )
+        .unwrap();
+        assert_eq!(restored_meta2.key_id, meta2.key_id);
+        let (sk2_restored, _) = ProducerKeyManager::load_or_create_signing_key(&ks_workstation2).unwrap();
+        let env2_resigned =
+            ProducerKeyManager::sign_bundle_ed25519(&sk2_restored, &restored_meta2.key_id, sha256_hex(m2), {
+                let mut m = BTreeMap::new();
+                m.insert("manifest.fpbundle.json".to_string(), sha256_hex(m2));
+                m
+            });
+        // v2 Mini Tool continues verifying bundle signed by restored Key2, while v1 Mini Tool still verifies old Key1 bundle!
+        assert!(env2_resigned
+            .verify_ed25519_with_public_key(&new_bundle_dir, &new_pe_pub)
+            .is_ok());
+        assert!(env1
+            .verify_ed25519_with_public_key(&old_bundle_dir, &old_pe_pub)
+            .is_ok());
+
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }

@@ -1,17 +1,30 @@
 use crate::dpapi;
+use aes_gcm::aead::{Aead, KeyInit, Payload};
+use aes_gcm::{Aes256Gcm, Nonce};
 use anyhow::{bail, Context, Result};
+use argon2::{Algorithm, Argon2, Params, Version};
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use ed25519_dalek::{Signer, SigningKey, VerifyingKey};
+use rand::rngs::OsRng;
+use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
+use zeroize::{Zeroize, Zeroizing};
 
 const PRODUCER_KEY_DPAPI_ENTROPY: &[u8] = b"FarmerPro.ProducerEd25519.Keystore.v2";
 const PRODUCER_KEY_BACKUP_ENTROPY: &[u8] = b"FarmerPro.ProducerEd25519.Backup.v2";
-const PORTABLE_RECOVERY_KDF_ITERATIONS: u32 = 200_000;
-const PORTABLE_RECOVERY_SCHEME: &str = "PASSPHRASE_PBKDF2_SHA256_ETM_V1";
-const PORTABLE_RECOVERY_DOMAIN: &[u8] = b"FarmerPro.ProducerEd25519.PortableRecovery.v1";
+
+pub const PORTABLE_RECOVERY_FORMAT_VERSION: u32 = 3;
+pub const PORTABLE_RECOVERY_SCHEME: &str = "ARGON2ID_AES_256_GCM_V3";
+pub const PORTABLE_RECOVERY_AEAD: &str = "AES-256-GCM";
+pub const PORTABLE_RECOVERY_ARGON2_ALG: &str = "argon2id";
+pub const PORTABLE_RECOVERY_ARGON2_VER: &str = "0x13";
+pub const PORTABLE_RECOVERY_ARGON2_MEM_KIB: u32 = 65_536; // 64 MiB
+pub const PORTABLE_RECOVERY_ARGON2_ITERS: u32 = 3;
+pub const PORTABLE_RECOVERY_ARGON2_PARALLELISM: u32 = 1;
+pub const PORTABLE_RECOVERY_RETIRED_EXPERIMENTAL_SCHEME: &str = "PASSPHRASE_PBKDF2_SHA256_ETM_V1";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -53,15 +66,41 @@ pub struct ProducerKeyBackupBundle {
     pub payload_sha256: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Argon2idKdfParams {
+    pub algorithm: String,
+    pub version: String,
+    pub memory_kib: u32,
+    pub iterations: u32,
+    pub parallelism: u32,
+    pub output_len_bytes: u32,
+}
+
+impl Default for Argon2idKdfParams {
+    fn default() -> Self {
+        Self {
+            algorithm: PORTABLE_RECOVERY_ARGON2_ALG.to_string(),
+            version: PORTABLE_RECOVERY_ARGON2_VER.to_string(),
+            memory_kib: PORTABLE_RECOVERY_ARGON2_MEM_KIB,
+            iterations: PORTABLE_RECOVERY_ARGON2_ITERS,
+            parallelism: PORTABLE_RECOVERY_ARGON2_PARALLELISM,
+            output_len_bytes: 32,
+        }
+    }
+}
+
 /// Cross-machine / cross-Windows-user passphrase-encrypted offline recovery bundle.
-/// Uses PBKDF2-HMAC-SHA256 (200,000 iterations) + SHA-256-CTR + Encrypt-then-MAC (HMAC-SHA256).
-/// Never stores plaintext seed; imports into target machine's Windows DPAPI keystore.
+/// Uses standard Argon2id (`v=0x13`, 64 MiB, 3 iterations, p=1) + AES-256-GCM AEAD (96-bit CSPRNG nonce)
+/// with full metadata bound as Authenticated Additional Data (AAD).
+/// Never stores plaintext seed; imports into target machine/user's Windows DPAPI keystore.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PortableProducerKeyRecoveryBundle {
     pub format_version: u32,
     pub protection_scheme: String,
-    pub kdf_iterations: u32,
+    pub aead_algorithm: String,
+    pub kdf_params: Argon2idKdfParams,
     pub key_id: String,
     pub public_key_hex: String,
     pub created_at_utc: String,
@@ -69,124 +108,57 @@ pub struct PortableProducerKeyRecoveryBundle {
     pub salt_b64: String,
     pub nonce_b64: String,
     pub ciphertext_b64: String,
-    pub hmac_sha256: String,
 }
 
-fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
-    const BLOCK_SIZE: usize = 64;
-    let mut key_block = [0u8; BLOCK_SIZE];
-    if key.len() > BLOCK_SIZE {
-        let mut h = Sha256::new();
-        h.update(key);
-        key_block[..32].copy_from_slice(&h.finalize());
-    } else {
-        key_block[..key.len()].copy_from_slice(key);
-    }
-
-    let mut ipad = [0x36u8; BLOCK_SIZE];
-    let mut opad = [0x5cu8; BLOCK_SIZE];
-    for i in 0..BLOCK_SIZE {
-        ipad[i] ^= key_block[i];
-        opad[i] ^= key_block[i];
-    }
-
-    let mut inner = Sha256::new();
-    inner.update(ipad);
-    inner.update(data);
-    let inner_digest = inner.finalize();
-
-    let mut outer = Sha256::new();
-    outer.update(opad);
-    outer.update(inner_digest);
-    let out = outer.finalize();
-
-    key_block.fill(0);
-    ipad.fill(0);
-    opad.fill(0);
-
-    let mut res = [0u8; 32];
-    res.copy_from_slice(&out);
-    res
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PortableRecoveryAad<'a> {
+    format_version: u32,
+    protection_scheme: &'a str,
+    aead_algorithm: &'a str,
+    kdf_params: &'a Argon2idKdfParams,
+    key_id: &'a str,
+    public_key_hex: &'a str,
+    created_at_utc: &'a str,
+    backed_up_at_utc: &'a str,
+    salt_b64: &'a str,
+    nonce_b64: &'a str,
 }
 
-fn pbkdf2_hmac_sha256(password: &[u8], salt: &[u8], iterations: u32, out: &mut [u8]) {
-    let mut block_index = 1u32;
-    let mut offset = 0usize;
-    while offset < out.len() {
-        let mut u_input = Vec::with_capacity(salt.len() + 4);
-        u_input.extend_from_slice(salt);
-        u_input.extend_from_slice(&block_index.to_be_bytes());
-        let mut u = hmac_sha256(password, &u_input);
-        let mut t = u;
-        for _ in 1..iterations {
-            u = hmac_sha256(password, &u);
-            for j in 0..32 {
-                t[j] ^= u[j];
-            }
-        }
-        let take = (out.len() - offset).min(32);
-        out[offset..offset + take].copy_from_slice(&t[..take]);
-        u.fill(0);
-        t.fill(0);
-        offset += take;
-        block_index += 1;
-    }
+fn build_portable_recovery_aad(bundle: &PortableProducerKeyRecoveryBundle) -> Result<Vec<u8>> {
+    let aad = PortableRecoveryAad {
+        format_version: bundle.format_version,
+        protection_scheme: &bundle.protection_scheme,
+        aead_algorithm: &bundle.aead_algorithm,
+        kdf_params: &bundle.kdf_params,
+        key_id: &bundle.key_id,
+        public_key_hex: &bundle.public_key_hex,
+        created_at_utc: &bundle.created_at_utc,
+        backed_up_at_utc: &bundle.backed_up_at_utc,
+        salt_b64: &bundle.salt_b64,
+        nonce_b64: &bundle.nonce_b64,
+    };
+    serde_json::to_vec(&aad).context("Failed serializing recovery AEAD associated data")
 }
 
-fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    let mut diff = 0u8;
-    for (&x, &y) in a.iter().zip(b.iter()) {
-        diff |= x ^ y;
-    }
-    diff == 0
-}
-
-fn xor_sha256_ctr_stream(enc_key: &[u8; 32], nonce: &[u8; 16], input: &[u8]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(input.len());
-    let mut counter = 0u32;
-    for chunk in input.chunks(32) {
-        let mut h = Sha256::new();
-        h.update(PORTABLE_RECOVERY_DOMAIN);
-        h.update(enc_key);
-        h.update(nonce);
-        h.update(counter.to_le_bytes());
-        let mut ks = h.finalize();
-        for (i, &byte) in chunk.iter().enumerate() {
-            out.push(byte ^ ks[i]);
-        }
-        ks.fill(0);
-        counter += 1;
-    }
-    out
-}
-
-fn compute_portable_mac(
-    mac_key: &[u8; 32],
-    key_id: &str,
-    public_key_hex: &str,
-    created_at_utc: &str,
-    backed_up_at_utc: &str,
-    kdf_iterations: u32,
-    salt_b64: &str,
-    nonce_b64: &str,
-    ciphertext_b64: &str,
-) -> String {
-    let canonical = format!(
-        "v1|{}|{}|{}|{}|{}|{}|{}|{}|{}",
-        PORTABLE_RECOVERY_SCHEME,
-        kdf_iterations,
-        key_id,
-        public_key_hex,
-        created_at_utc,
-        backed_up_at_utc,
-        salt_b64,
-        nonce_b64,
-        ciphertext_b64
-    );
-    hex_encode(&hmac_sha256(mac_key, canonical.as_bytes()))
+fn derive_argon2id_aes_key(
+    passphrase: &str,
+    salt: &[u8],
+    kdf: &Argon2idKdfParams,
+) -> Result<Zeroizing<[u8; 32]>> {
+    let params = Params::new(
+        kdf.memory_kib,
+        kdf.iterations,
+        kdf.parallelism,
+        Some(kdf.output_len_bytes as usize),
+    )
+    .map_err(|e| anyhow::anyhow!("RECOVERY_INVALID_METADATA: Invalid Argon2id params: {}", e))?;
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let mut key = Zeroizing::new([0u8; 32]);
+    argon2
+        .hash_password_into(passphrase.as_bytes(), salt, &mut *key)
+        .map_err(|e| anyhow::anyhow!("Argon2id key derivation failed: {}", e))?;
+    Ok(key)
 }
 
 fn default_format_v1() -> u32 {
@@ -250,21 +222,9 @@ impl ProducerKeystore {
         base.join("FarmerPro").join("ProducerKeys")
     }
 
-    fn generate_fresh_seed(salt_label: &str) -> [u8; 32] {
-        let mut hasher = Sha256::new();
-        hasher.update(uuid::Uuid::new_v4().as_bytes());
-        hasher.update(uuid::Uuid::new_v4().as_bytes());
-        hasher.update(
-            chrono::Utc::now()
-                .timestamp_nanos_opt()
-                .unwrap_or(0)
-                .to_le_bytes(),
-        );
-        hasher.update(std::process::id().to_le_bytes());
-        hasher.update(salt_label.as_bytes());
-        let digest = hasher.finalize();
-        let mut seed = [0u8; 32];
-        seed.copy_from_slice(&digest);
+    fn generate_fresh_seed(_label: &str) -> Zeroizing<[u8; 32]> {
+        let mut seed = Zeroizing::new([0u8; 32]);
+        OsRng.fill_bytes(&mut *seed);
         seed
     }
 
@@ -408,7 +368,7 @@ impl ProducerKeystore {
         let now = chrono::Utc::now().to_rfc3339();
 
         Self::write_dpapi_key_file(&key_file, &key_id, &seed, &pub_hex, &now)?;
-        seed.fill(0);
+        seed.zeroize();
 
         let meta = ProducerKeyMetadata {
             format_version: 2,
@@ -538,8 +498,9 @@ impl ProducerKeystore {
     }
 
     /// Exports a passphrase-encrypted offline recovery bundle portable across Windows users and machines.
-    /// Uses PBKDF2-HMAC-SHA256 (200,000 iterations) + SHA-256-CTR + Encrypt-then-MAC (HMAC-SHA256).
-    /// Never writes plaintext Ed25519 seed to disk or logs.
+    /// Uses Argon2id (v=0x13, 64 MiB, t=3, p=1) + standard AES-256-GCM AEAD (96-bit OsRng nonce)
+    /// with all bundle metadata authenticated as AEAD Associated Data (AAD).
+    /// Never writes plaintext Ed25519 seed to disk, JSON, or logs.
     pub fn export_portable_recovery_bundle(
         keystore_dir: &Path,
         backup_file_path: &Path,
@@ -550,59 +511,48 @@ impl ProducerKeystore {
         }
 
         let (signing_key, meta) = Self::load_or_create_signing_key(keystore_dir)?;
-        let mut seed_bytes = signing_key.to_bytes();
+        let mut seed_bytes = Zeroizing::new(signing_key.to_bytes());
         let backed_up_at_utc = chrono::Utc::now().to_rfc3339();
 
-        // uuid::Uuid::new_v4() uses OS CSPRNG (getrandom / BCryptGenRandom)
-        let salt = *uuid::Uuid::new_v4().as_bytes();
-        let nonce = *uuid::Uuid::new_v4().as_bytes();
+        let mut salt = [0u8; 16];
+        let mut nonce_bytes = [0u8; 12];
+        OsRng.fill_bytes(&mut salt);
+        OsRng.fill_bytes(&mut nonce_bytes);
 
-        let mut derived = [0u8; 64];
-        pbkdf2_hmac_sha256(
-            passphrase.as_bytes(),
-            &salt,
-            PORTABLE_RECOVERY_KDF_ITERATIONS,
-            &mut derived,
-        );
-        let mut enc_key = [0u8; 32];
-        let mut mac_key = [0u8; 32];
-        enc_key.copy_from_slice(&derived[..32]);
-        mac_key.copy_from_slice(&derived[32..64]);
-        derived.fill(0);
-
-        let ciphertext = xor_sha256_ctr_stream(&enc_key, &nonce, &seed_bytes);
-        seed_bytes.fill(0);
-        enc_key.fill(0);
+        let kdf_params = Argon2idKdfParams::default();
+        let aes_key = derive_argon2id_aes_key(passphrase, &salt, &kdf_params)?;
 
         let salt_b64 = B64.encode(salt);
-        let nonce_b64 = B64.encode(nonce);
-        let ciphertext_b64 = B64.encode(&ciphertext);
-        let hmac_sha256 = compute_portable_mac(
-            &mac_key,
-            &meta.key_id,
-            &meta.public_key_hex,
-            &meta.created_at_utc,
-            &backed_up_at_utc,
-            PORTABLE_RECOVERY_KDF_ITERATIONS,
-            &salt_b64,
-            &nonce_b64,
-            &ciphertext_b64,
-        );
-        mac_key.fill(0);
+        let nonce_b64 = B64.encode(nonce_bytes);
 
-        let bundle = PortableProducerKeyRecoveryBundle {
-            format_version: 2,
+        let mut bundle = PortableProducerKeyRecoveryBundle {
+            format_version: PORTABLE_RECOVERY_FORMAT_VERSION,
             protection_scheme: PORTABLE_RECOVERY_SCHEME.to_string(),
-            kdf_iterations: PORTABLE_RECOVERY_KDF_ITERATIONS,
+            aead_algorithm: PORTABLE_RECOVERY_AEAD.to_string(),
+            kdf_params,
             key_id: meta.key_id,
             public_key_hex: meta.public_key_hex,
             created_at_utc: meta.created_at_utc,
             backed_up_at_utc,
             salt_b64,
             nonce_b64,
-            ciphertext_b64,
-            hmac_sha256,
+            ciphertext_b64: String::new(),
         };
+
+        let aad = build_portable_recovery_aad(&bundle)?;
+        let cipher = Aes256Gcm::new((&*aes_key).into());
+        let ciphertext = cipher
+            .encrypt(
+                Nonce::from_slice(&nonce_bytes),
+                Payload {
+                    msg: &*seed_bytes,
+                    aad: &aad,
+                },
+            )
+            .map_err(|_| anyhow::anyhow!("AES-256-GCM encryption failed"))?;
+        seed_bytes.zeroize();
+
+        bundle.ciphertext_b64 = B64.encode(&ciphertext);
 
         if let Some(parent) = backup_file_path.parent() {
             std::fs::create_dir_all(parent)?;
@@ -611,8 +561,9 @@ impl ProducerKeystore {
         Ok(bundle)
     }
 
-    /// Imports a passphrase-encrypted portable recovery bundle into the target machine/user's
-    /// Windows DPAPI keystore (`WIN32_DPAPI_LOCAL_USER`). Fails closed on wrong passphrase or tampering.
+    /// Imports an Argon2id + AES-256-GCM portable recovery bundle into the target machine/user's
+    /// Windows DPAPI keystore (`WIN32_DPAPI_LOCAL_USER`). Fails closed on wrong passphrase, tampered
+    /// metadata/ciphertext, invalid parameters, or retired experimental formats.
     pub fn import_portable_recovery_bundle(
         backup_file_path: &Path,
         keystore_dir: &Path,
@@ -627,74 +578,109 @@ impl ProducerKeystore {
                 backup_file_path.display()
             )
         })?;
-        let bundle: PortableProducerKeyRecoveryBundle = serde_json::from_slice(&raw)?;
 
-        if bundle.protection_scheme != PORTABLE_RECOVERY_SCHEME {
+        let raw_val: serde_json::Value = serde_json::from_slice(&raw)
+            .context("RECOVERY_INVALID_METADATA: Recovery bundle is not valid JSON")?;
+        if let Some(scheme) = raw_val.get("protectionScheme").and_then(|v| v.as_str()) {
+            if scheme == PORTABLE_RECOVERY_RETIRED_EXPERIMENTAL_SCHEME {
+                bail!(
+                    "RECOVERY_RETIRED_EXPERIMENTAL_FORMAT: Experimental format '{}' (SHA-256-CTR) is retired and blocked in production; re-export using {}",
+                    scheme,
+                    PORTABLE_RECOVERY_SCHEME
+                );
+            }
+        }
+
+        let bundle: PortableProducerKeyRecoveryBundle = serde_json::from_value(raw_val)
+            .context("RECOVERY_INVALID_METADATA: Missing or malformed V3 recovery bundle fields")?;
+
+        if bundle.format_version != PORTABLE_RECOVERY_FORMAT_VERSION
+            || bundle.protection_scheme != PORTABLE_RECOVERY_SCHEME
+        {
             bail!(
-                "RECOVERY_UNSUPPORTED_SCHEME: Unsupported protection scheme '{}'",
+                "RECOVERY_UNSUPPORTED_SCHEME: Expected format v{} / '{}', got v{} / '{}'",
+                PORTABLE_RECOVERY_FORMAT_VERSION,
+                PORTABLE_RECOVERY_SCHEME,
+                bundle.format_version,
                 bundle.protection_scheme
             );
         }
-        if bundle.kdf_iterations < 10_000 {
-            bail!("RECOVERY_WEAK_KDF: KDF iterations below minimum safety threshold");
+        if bundle.aead_algorithm != PORTABLE_RECOVERY_AEAD {
+            bail!(
+                "RECOVERY_INVALID_METADATA: Unsupported AEAD algorithm '{}', expected '{}'",
+                bundle.aead_algorithm,
+                PORTABLE_RECOVERY_AEAD
+            );
+        }
+        if bundle.kdf_params.algorithm != PORTABLE_RECOVERY_ARGON2_ALG
+            || bundle.kdf_params.version != PORTABLE_RECOVERY_ARGON2_VER
+            || bundle.kdf_params.output_len_bytes != 32
+        {
+            bail!(
+                "RECOVERY_INVALID_METADATA: Unsupported KDF algorithm/version/output_len ({} / {} / {})",
+                bundle.kdf_params.algorithm,
+                bundle.kdf_params.version,
+                bundle.kdf_params.output_len_bytes
+            );
+        }
+        if bundle.kdf_params.memory_kib < 19_456
+            || bundle.kdf_params.memory_kib > 524_288
+            || bundle.kdf_params.iterations < 2
+            || bundle.kdf_params.iterations > 20
+            || bundle.kdf_params.parallelism < 1
+            || bundle.kdf_params.parallelism > 16
+        {
+            bail!("RECOVERY_INVALID_METADATA: Argon2id parameters outside safe policy bounds");
+        }
+        if bundle.key_id.trim().is_empty() || hex_decode(&bundle.public_key_hex)?.len() != 32 {
+            bail!("RECOVERY_INVALID_METADATA: Invalid keyId or publicKeyHex metadata");
         }
 
-        let salt_vec = B64.decode(bundle.salt_b64.trim()).context("Invalid salt base64")?;
-        let nonce_vec = B64.decode(bundle.nonce_b64.trim()).context("Invalid nonce base64")?;
+        let salt_vec = B64
+            .decode(bundle.salt_b64.trim())
+            .context("RECOVERY_INVALID_METADATA: Invalid salt base64")?;
+        let nonce_vec = B64
+            .decode(bundle.nonce_b64.trim())
+            .context("RECOVERY_INVALID_METADATA: Invalid nonce base64")?;
         let ciphertext = B64
             .decode(bundle.ciphertext_b64.trim())
-            .context("Invalid ciphertext base64")?;
-        if salt_vec.len() < 16 || nonce_vec.len() != 16 || ciphertext.len() != 32 {
-            bail!("RECOVERY_MALFORMED_PAYLOAD: Unexpected salt, nonce, or ciphertext length");
-        }
-        let mut nonce = [0u8; 16];
-        nonce.copy_from_slice(&nonce_vec);
-
-        let mut derived = [0u8; 64];
-        pbkdf2_hmac_sha256(
-            passphrase.as_bytes(),
-            &salt_vec,
-            bundle.kdf_iterations,
-            &mut derived,
-        );
-        let mut enc_key = [0u8; 32];
-        let mut mac_key = [0u8; 32];
-        enc_key.copy_from_slice(&derived[..32]);
-        mac_key.copy_from_slice(&derived[32..64]);
-        derived.fill(0);
-
-        let expected_mac = compute_portable_mac(
-            &mac_key,
-            &bundle.key_id,
-            &bundle.public_key_hex,
-            &bundle.created_at_utc,
-            &bundle.backed_up_at_utc,
-            bundle.kdf_iterations,
-            &bundle.salt_b64,
-            &bundle.nonce_b64,
-            &bundle.ciphertext_b64,
-        );
-        mac_key.fill(0);
-
-        if !constant_time_eq(expected_mac.as_bytes(), bundle.hmac_sha256.as_bytes()) {
-            enc_key.fill(0);
-            bail!("RECOVERY_AUTH_FAILED: Wrong passphrase or tampered recovery bundle (HMAC mismatch)");
+            .context("RECOVERY_INVALID_METADATA: Invalid ciphertext base64")?;
+        if salt_vec.len() < 16
+            || salt_vec.len() > 64
+            || nonce_vec.len() != 12
+            || ciphertext.len() != 48
+        {
+            bail!("RECOVERY_MALFORMED_PAYLOAD: Unexpected salt, 96-bit nonce, or AES-GCM ciphertext+tag length");
         }
 
-        let mut plain_vec = xor_sha256_ctr_stream(&enc_key, &nonce, &ciphertext);
-        enc_key.fill(0);
+        let aes_key = derive_argon2id_aes_key(passphrase, &salt_vec, &bundle.kdf_params)?;
+        let aad = build_portable_recovery_aad(&bundle)?;
+        let cipher = Aes256Gcm::new((&*aes_key).into());
+        let plain_vec = Zeroizing::new(
+            cipher
+                .decrypt(
+                    Nonce::from_slice(&nonce_vec),
+                    Payload {
+                        msg: &ciphertext,
+                        aad: &aad,
+                    },
+                )
+                .map_err(|_| {
+                    anyhow::anyhow!(
+                        "RECOVERY_AUTH_FAILED: Wrong passphrase, tampered ciphertext, or tampered metadata (AES-256-GCM auth failed)"
+                    )
+                })?,
+        );
+
         if plain_vec.len() != 32 {
-            plain_vec.fill(0);
             bail!("Invalid decrypted Ed25519 seed length");
         }
-        let mut seed = [0u8; 32];
+        let mut seed = Zeroizing::new([0u8; 32]);
         seed.copy_from_slice(&plain_vec);
-        plain_vec.fill(0);
 
         let sk = SigningKey::from_bytes(&seed);
         let derived_pub = hex_encode(sk.verifying_key().as_bytes());
         if !derived_pub.eq_ignore_ascii_case(&bundle.public_key_hex) {
-            seed.fill(0);
             bail!("Restored public key mismatch against portable recovery metadata");
         }
 
@@ -719,7 +705,7 @@ impl ProducerKeystore {
             &bundle.public_key_hex,
             &bundle.created_at_utc,
         )?;
-        seed.fill(0);
+        seed.zeroize();
 
         Ok(ProducerKeyMetadata {
             format_version: 2,

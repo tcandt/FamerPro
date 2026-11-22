@@ -1,5 +1,7 @@
+use crate::models::ReconcileReport;
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
@@ -15,6 +17,67 @@ pub struct DeleteJournalEntry {
     pub original_dir: String,
     pub trash_dir: String,
     pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateJournalEntry {
+    pub op: String, // "create" | "clone"
+    pub project_id: String,
+    pub project_slug: String,
+    pub staging_dir: String,
+    pub target_dir: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileBackupEntry {
+    pub live_path: String,
+    pub existed_before: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backup_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum MutationCommitWitness {
+    ProjectUpdatedAt {
+        project_id: String,
+        expected_updated_at: String,
+    },
+    WorkflowVersionExists {
+        project_id: String,
+        workflow_id: String,
+        version_id: String,
+        expected_sha256: String,
+    },
+    VisionTemplateExists {
+        project_id: String,
+        rel_path: String,
+        expected_sha256: String,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MutationJournalEntry {
+    pub op: String, // "mutation"
+    pub journal_id: String,
+    pub project_id: String,
+    pub backup_dir: String,
+    pub files: Vec<FileBackupEntry>,
+    pub commit_witness: MutationCommitWitness,
+    pub created_at: String,
+}
+
+/// Witness interface checked during startup filesystem reconciliation against committed SQLite state.
+/// SQLite transactions and NTFS directory/file operations reside in separate durability domains;
+/// crash consistency is achieved by intent-journaling pre-images + verifying this SQLite commit witness.
+pub trait CommitWitness {
+    fn has_project(&self, project_id: &str) -> Result<bool>;
+    fn active_project_dirs(&self) -> Result<Vec<PathBuf>>;
+    fn matches_mutation_witness(&self, witness: &MutationCommitWitness) -> Result<bool>;
 }
 
 /// Checks whether a filesystem path is a symlink or Windows NTFS junction/reparse point.
@@ -135,7 +198,6 @@ pub fn ensure_contained_project_dir(projects_root: &Path, target_dir: &Path) -> 
     }
     let canon_root = std::fs::canonicalize(projects_root)?;
 
-    // Check any existing prefix from root down to target_dir
     if target_dir.exists() {
         if is_reparse_or_symlink(target_dir) {
             bail!(
@@ -154,7 +216,6 @@ pub fn ensure_contained_project_dir(projects_root: &Path, target_dir: &Path) -> 
         return Ok(canon_target);
     }
 
-    // Target doesn't exist yet: walk up to first existing ancestor and verify containment + non-symlink
     let mut probe = target_dir.parent();
     while let Some(ancestor) = probe {
         if ancestor.exists() {
@@ -179,7 +240,7 @@ pub fn ensure_contained_project_dir(projects_root: &Path, target_dir: &Path) -> 
     Ok(target_dir.to_path_buf())
 }
 
-/// Atomically writes bytes to `target` using a temp file in the same directory + `sync_all` + `rename`.
+/// Atomically replaces `target` via temp file in same directory + `sync_all` + `rename`.
 pub fn atomic_write_bytes(target: &Path, bytes: &[u8]) -> Result<()> {
     let parent = target
         .parent()
@@ -244,109 +305,350 @@ pub fn copy_dir_files_safe(src: &Path, dst: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Cleans up orphan `.fp_staging/*` and committed `.fp_trash/*` / `.fp_journal/*` directories
-/// left behind by a prior mid-operation crash.
-/// - Any `.fp_staging/*` folder is uncommitted by definition (since `tx.commit()` only runs AFTER rename out of staging) -> safe to purge!
-/// - Any `.fp_journal/delete_<id>.json`: if `project_id` is NOT in `active_project_ids`, DB delete committed -> purge `trash_dir` & journal;
-///   if `project_id` IS still in `active_project_ids` and `original_dir` doesn't exist -> restore `trash_dir` back to `original_dir`!
-///   Journal and trash entries are preserved if recovery fails so data is never silently lost.
-pub fn reconcile_project_storage_orphans(
-    projects_root: &Path,
-    active_project_ids: &[String],
-) -> Result<usize> {
-    if !projects_root.exists() {
-        return Ok(0);
+fn path_strictly_inside(candidate: &Path, base_canon: &Path) -> bool {
+    if is_reparse_or_symlink(candidate) {
+        return false;
     }
-    let mut cleaned = 0usize;
-    let canon_root = std::fs::canonicalize(projects_root)?;
-    let trash_root = projects_root.join(TRASH_DIR_NAME);
+    if candidate.exists() {
+        return std::fs::canonicalize(candidate)
+            .map(|c| c.starts_with(base_canon) && c != base_canon)
+            .unwrap_or(false);
+    }
+    candidate
+        .parent()
+        .and_then(|p| {
+            if is_reparse_or_symlink(p) {
+                return None;
+            }
+            std::fs::canonicalize(p).ok()
+        })
+        .map(|cp| cp.starts_with(base_canon))
+        .unwrap_or(false)
+}
 
-    let staging_root = projects_root.join(STAGING_DIR_NAME);
-    if staging_root.exists() {
-        for entry in std::fs::read_dir(&staging_root)? {
-            let entry = entry?;
+fn is_atomic_tmp_file_name(name: &str) -> bool {
+    name.starts_with('.') && name.contains(".tmp.")
+}
+
+fn purge_tmp_files_in_dir(dir: &Path, report: &mut ReconcileReport) {
+    if !dir.exists() || is_reparse_or_symlink(dir) {
+        return;
+    }
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
             let p = entry.path();
-            if p.is_dir() {
-                if std::fs::remove_dir_all(&p).is_ok() {
-                    cleaned += 1;
+            if p.is_file() {
+                if let Some(name) = p.file_name().and_then(|n| n.to_str()) {
+                    if is_atomic_tmp_file_name(name) && std::fs::remove_file(&p).is_ok() {
+                        report.tmp_files_purged += 1;
+                        report.total_resolved += 1;
+                    }
                 }
-            } else if std::fs::remove_file(&p).is_ok() {
-                cleaned += 1;
+            } else if p.is_dir() && !is_reparse_or_symlink(&p) {
+                if let Some(name) = p.file_name().and_then(|n| n.to_str()) {
+                    if matches!(name, "workflows" | "templates" | "branding") {
+                        purge_tmp_files_in_dir(&p, report);
+                    }
+                }
             }
         }
     }
+}
 
-    let mut protected_trash_paths: std::collections::HashSet<PathBuf> =
-        std::collections::HashSet::new();
-
+/// Reconciles `.fp_journal/*`, `.fp_staging/*`, `.fp_trash/*`, and orphan `.tmp.*` files against committed SQLite state.
+/// Order matters:
+/// 1. Process `.fp_journal/*` entries FIRST so pre-image backups in `.fp_staging/bak_*` are intact before staging sweep.
+/// 2. Sweep remaining unprotected `.fp_staging/*` & `.fp_trash/*` entries.
+/// 3. Sweep stray `.*.tmp.*` files inside active project directories.
+pub fn reconcile_project_storage_with_witness(
+    projects_root: &Path,
+    witness: &dyn CommitWitness,
+) -> Result<ReconcileReport> {
+    let mut report = ReconcileReport::default();
+    if !projects_root.exists() {
+        return Ok(report);
+    }
+    let canon_root = std::fs::canonicalize(projects_root)?;
+    let staging_root = projects_root.join(STAGING_DIR_NAME);
+    let trash_root = projects_root.join(TRASH_DIR_NAME);
     let journal_root = projects_root.join(JOURNAL_DIR_NAME);
+
+    let active_dirs: HashSet<PathBuf> = witness
+        .active_project_dirs()?
+        .into_iter()
+        .map(|d| std::fs::canonicalize(&d).unwrap_or(d))
+        .collect();
+
+    let mut protected_staging_paths: HashSet<PathBuf> = HashSet::new();
+    let mut protected_trash_paths: HashSet<PathBuf> = HashSet::new();
+
+    // 1. Reconcile journals first
     if journal_root.exists() {
+        let canon_staging = std::fs::canonicalize(&staging_root).ok();
+        let canon_trash = std::fs::canonicalize(&trash_root).ok();
+
         for entry in std::fs::read_dir(&journal_root)? {
             let entry = entry?;
             let jpath = entry.path();
             if !jpath.is_file() {
                 continue;
             }
-            if let Ok(raw) = std::fs::read(&jpath) {
-                if let Ok(item) = serde_json::from_slice::<DeleteJournalEntry>(&raw) {
-                    let still_in_db = active_project_ids.iter().any(|id| id == &item.project_id);
-                    let trash_p = PathBuf::from(&item.trash_dir);
-                    let orig_p = PathBuf::from(&item.original_dir);
+            let Ok(raw) = std::fs::read(&jpath) else {
+                continue;
+            };
+            let Ok(val) = serde_json::from_slice::<serde_json::Value>(&raw) else {
+                continue;
+            };
+            let op_str = val.get("op").and_then(|v| v.as_str()).unwrap_or("");
 
-                    // Ensure journal paths stay strictly inside projects_root
-                    let trash_inside = trash_p
-                        .parent()
-                        .and_then(|p| std::fs::canonicalize(p).ok())
-                        .map(|cp| cp.starts_with(&canon_root))
-                        .unwrap_or(false);
-                    let orig_inside = orig_p
-                        .parent()
-                        .and_then(|p| std::fs::canonicalize(p).ok())
-                        .map(|cp| cp.starts_with(&canon_root))
-                        .unwrap_or(false);
+            if op_str == "create" || op_str == "clone" {
+                if let Ok(item) = serde_json::from_slice::<CreateJournalEntry>(&raw) {
+                    let committed = witness.has_project(&item.project_id)?;
+                    let stg_p = PathBuf::from(&item.staging_dir);
+                    let tgt_p = PathBuf::from(&item.target_dir);
+                    let tgt_canon = std::fs::canonicalize(&tgt_p).unwrap_or_else(|_| tgt_p.clone());
 
-                    let mut journal_resolved = false;
-                    if trash_inside && orig_inside {
-                        if still_in_db {
-                            if trash_p.exists() && !orig_p.exists() {
-                                if std::fs::rename(&trash_p, &orig_p).is_ok() {
-                                    cleaned += 1;
-                                    journal_resolved = true;
-                                } else {
-                                    protected_trash_paths.insert(
-                                        std::fs::canonicalize(&trash_p).unwrap_or_else(|_| trash_p.clone()),
-                                    );
-                                }
-                            } else if !trash_p.exists() {
-                                journal_resolved = true;
+                    let stg_ok = canon_staging
+                        .as_ref()
+                        .map(|cs| path_strictly_inside(&stg_p, cs))
+                        .unwrap_or(false);
+                    let tgt_ok = path_strictly_inside(&tgt_p, &canon_root)
+                        && !tgt_p
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .map(|n| n == STAGING_DIR_NAME || n == TRASH_DIR_NAME || n == JOURNAL_DIR_NAME)
+                            .unwrap_or(false);
+
+                    let mut resolved = false;
+                    if committed {
+                        if stg_ok && stg_p.exists() {
+                            let _ = std::fs::remove_dir_all(&stg_p);
+                        }
+                        report.creates_finalized += 1;
+                        report.total_resolved += 1;
+                        report.actions.push(format!(
+                            "create_finalized:{}:kept_committed_dir",
+                            item.project_id
+                        ));
+                        resolved = true;
+                    } else {
+                        if stg_ok && stg_p.exists() && std::fs::remove_dir_all(&stg_p).is_ok() {
+                            report.staging_purged += 1;
+                            report.total_resolved += 1;
+                        }
+                        if tgt_ok && tgt_p.exists() && !active_dirs.contains(&tgt_canon) {
+                            let mf_path = tgt_p.join("project.json");
+                            let id_matches_or_incomplete = if mf_path.exists() {
+                                std::fs::read_to_string(&mf_path)
+                                    .ok()
+                                    .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+                                    .and_then(|m| {
+                                        m.get("projectId")
+                                            .and_then(|x| x.as_str())
+                                            .map(|pid| pid == item.project_id)
+                                    })
+                                    .unwrap_or(true)
                             } else {
-                                protected_trash_paths.insert(
-                                    std::fs::canonicalize(&trash_p).unwrap_or_else(|_| trash_p.clone()),
-                                );
+                                true
+                            };
+                            if id_matches_or_incomplete && std::fs::remove_dir_all(&tgt_p).is_ok() {
+                                report.uncommitted_dirs_reverted += 1;
+                                report.total_resolved += 1;
+                                report.actions.push(format!(
+                                    "create_reverted:{}:removed_uncommitted_dir",
+                                    item.project_id
+                                ));
+                                resolved = true;
                             }
-                        } else if trash_p.exists() {
-                            if std::fs::remove_dir_all(&trash_p).is_ok() {
-                                cleaned += 1;
-                                journal_resolved = true;
-                            } else {
-                                protected_trash_paths.insert(
-                                    std::fs::canonicalize(&trash_p).unwrap_or_else(|_| trash_p.clone()),
-                                );
-                            }
-                        } else {
-                            journal_resolved = true;
+                        } else if !tgt_p.exists() {
+                            report.actions.push(format!(
+                                "create_aborted_in_staging:{}",
+                                item.project_id
+                            ));
+                            resolved = true;
                         }
                     }
 
-                    if journal_resolved {
+                    if resolved {
                         let _ = std::fs::remove_file(&jpath);
                     }
+                    continue;
+                }
+            }
+
+            if op_str == "mutation" {
+                if let Ok(item) = serde_json::from_slice::<MutationJournalEntry>(&raw) {
+                    let committed = witness.matches_mutation_witness(&item.commit_witness)?;
+                    let bak_p = PathBuf::from(&item.backup_dir);
+                    let bak_ok = canon_staging
+                        .as_ref()
+                        .map(|cs| path_strictly_inside(&bak_p, cs))
+                        .unwrap_or(false);
+
+                    let mut resolved = true;
+                    if committed {
+                        report.mutations_finalized += 1;
+                        report.total_resolved += 1;
+                        report.actions.push(format!(
+                            "mutation_finalized:{}:kept_committed_files",
+                            item.journal_id
+                        ));
+                    } else {
+                        for f in &item.files {
+                            let live_p = PathBuf::from(&f.live_path);
+                            // Ensure target file is strictly inside a project subfolder of projects_root
+                            let live_ok = live_p
+                                .parent()
+                                .filter(|par| !is_reparse_or_symlink(par))
+                                .and_then(|par| std::fs::canonicalize(par).ok())
+                                .map(|cp| cp.starts_with(&canon_root) && cp != canon_root)
+                                .unwrap_or(false);
+                            if !live_ok {
+                                resolved = false;
+                                continue;
+                            }
+
+                            if f.existed_before {
+                                if let Some(ref bpath_str) = f.backup_path {
+                                    let bpath = PathBuf::from(bpath_str);
+                                    let b_ok = canon_staging
+                                        .as_ref()
+                                        .map(|cs| path_strictly_inside(&bpath, cs))
+                                        .unwrap_or(false);
+                                    if b_ok && bpath.exists() {
+                                        if let Ok(bytes) = std::fs::read(&bpath) {
+                                            if atomic_write_bytes(&live_p, &bytes).is_err() {
+                                                resolved = false;
+                                            }
+                                        } else {
+                                            resolved = false;
+                                        }
+                                    } else {
+                                        resolved = false;
+                                    }
+                                } else {
+                                    resolved = false;
+                                }
+                            } else if live_p.exists() && std::fs::remove_file(&live_p).is_err() {
+                                resolved = false;
+                            }
+
+                            if let Some(par) = live_p.parent() {
+                                purge_tmp_files_in_dir(par, &mut report);
+                            }
+                        }
+
+                        if resolved {
+                            report.mutations_rolled_back += 1;
+                            report.total_resolved += 1;
+                            report.actions.push(format!(
+                                "mutation_rolled_back:{}:restored_pre_image",
+                                item.journal_id
+                            ));
+                        } else if bak_ok && bak_p.exists() {
+                            protected_staging_paths
+                                .insert(std::fs::canonicalize(&bak_p).unwrap_or(bak_p.clone()));
+                        }
+                    }
+
+                    if resolved {
+                        if bak_ok && bak_p.exists() {
+                            let _ = std::fs::remove_dir_all(&bak_p);
+                        }
+                        let _ = std::fs::remove_file(&jpath);
+                    }
+                    continue;
+                }
+            }
+
+            // Legacy / explicit DeleteJournalEntry
+            if let Ok(item) = serde_json::from_slice::<DeleteJournalEntry>(&raw) {
+                let still_in_db = witness.has_project(&item.project_id)?;
+                let trash_p = PathBuf::from(&item.trash_dir);
+                let orig_p = PathBuf::from(&item.original_dir);
+
+                let trash_inside = canon_trash
+                    .as_ref()
+                    .map(|ct| path_strictly_inside(&trash_p, ct))
+                    .unwrap_or(false);
+                let orig_inside = orig_p
+                    .parent()
+                    .and_then(|p| std::fs::canonicalize(p).ok())
+                    .map(|cp| cp.starts_with(&canon_root))
+                    .unwrap_or(false);
+
+                let mut journal_resolved = false;
+                if trash_inside && orig_inside {
+                    if still_in_db {
+                        if trash_p.exists() && !orig_p.exists() {
+                            if std::fs::rename(&trash_p, &orig_p).is_ok() {
+                                report.deletes_restored += 1;
+                                report.total_resolved += 1;
+                                report.actions.push(format!(
+                                    "delete_restored:{}:moved_back_from_trash",
+                                    item.project_id
+                                ));
+                                journal_resolved = true;
+                            } else {
+                                protected_trash_paths.insert(
+                                    std::fs::canonicalize(&trash_p).unwrap_or_else(|_| trash_p.clone()),
+                                );
+                            }
+                        } else if !trash_p.exists() {
+                            journal_resolved = true;
+                        } else {
+                            protected_trash_paths.insert(
+                                std::fs::canonicalize(&trash_p).unwrap_or_else(|_| trash_p.clone()),
+                            );
+                        }
+                    } else if trash_p.exists() {
+                        if std::fs::remove_dir_all(&trash_p).is_ok() {
+                            report.deletes_finalized += 1;
+                            report.total_resolved += 1;
+                            report.actions.push(format!(
+                                "delete_finalized:{}:purged_committed_trash",
+                                item.project_id
+                            ));
+                            journal_resolved = true;
+                        } else {
+                            protected_trash_paths.insert(
+                                std::fs::canonicalize(&trash_p).unwrap_or_else(|_| trash_p.clone()),
+                            );
+                        }
+                    } else {
+                        journal_resolved = true;
+                    }
+                }
+
+                if journal_resolved {
+                    let _ = std::fs::remove_file(&jpath);
                 }
             }
         }
     }
 
-    // Any remaining unreferenced dirs in .fp_trash (not protected by an unresolved journal) can be purged
+    // 2. Sweep remaining unprotected .fp_staging/* entries
+    if staging_root.exists() {
+        for entry in std::fs::read_dir(&staging_root)? {
+            let entry = entry?;
+            let p = entry.path();
+            let p_cmp = std::fs::canonicalize(&p).unwrap_or_else(|_| p.clone());
+            if protected_staging_paths.contains(&p_cmp) || protected_staging_paths.contains(&p) {
+                continue;
+            }
+            if p.is_dir() {
+                if std::fs::remove_dir_all(&p).is_ok() {
+                    report.staging_purged += 1;
+                    report.total_resolved += 1;
+                }
+            } else if std::fs::remove_file(&p).is_ok() {
+                report.staging_purged += 1;
+                report.total_resolved += 1;
+            }
+        }
+    }
+
+    // 3. Sweep remaining unprotected .fp_trash/* entries
     if trash_root.exists() {
         for entry in std::fs::read_dir(&trash_root)? {
             let entry = entry?;
@@ -357,13 +659,41 @@ pub fn reconcile_project_storage_orphans(
             }
             if p.is_dir() {
                 if std::fs::remove_dir_all(&p).is_ok() {
-                    cleaned += 1;
+                    report.trash_purged += 1;
+                    report.total_resolved += 1;
                 }
             } else if std::fs::remove_file(&p).is_ok() {
-                cleaned += 1;
+                report.trash_purged += 1;
+                report.total_resolved += 1;
             }
         }
     }
 
-    Ok(cleaned)
+    // 4. Sweep any stray `.*.tmp.*` inside active project dirs
+    for d in &active_dirs {
+        purge_tmp_files_in_dir(d, &mut report);
+    }
+
+    Ok(report)
+}
+
+struct IdListWitness<'a>(&'a [String]);
+impl CommitWitness for IdListWitness<'_> {
+    fn has_project(&self, project_id: &str) -> Result<bool> {
+        Ok(self.0.iter().any(|id| id == project_id))
+    }
+    fn active_project_dirs(&self) -> Result<Vec<PathBuf>> {
+        Ok(Vec::new())
+    }
+    fn matches_mutation_witness(&self, _witness: &MutationCommitWitness) -> Result<bool> {
+        Ok(false)
+    }
+}
+
+pub fn reconcile_project_storage_orphans(
+    projects_root: &Path,
+    active_project_ids: &[String],
+) -> Result<usize> {
+    let rep = reconcile_project_storage_with_witness(projects_root, &IdListWitness(active_project_ids))?;
+    Ok(rep.total_resolved)
 }

@@ -94,6 +94,28 @@ enum Commands {
         #[arg(long)]
         out_dir: PathBuf,
     },
+
+    /// Verify Hotfix I (Argon2id + AES-256-GCM), Hotfix II (6+ real OS TerminateProcess crash tests), and III.1 (wf-jx2-01-login migration) in sandbox
+    VerifyHotfix {
+        #[arg(long)]
+        out_dir: Option<PathBuf>,
+    },
+
+    /// Diagnostic internal worker that arms at an exact crash window and waits to be force-killed by OS TerminateProcess
+    #[command(hide = true)]
+    CrashWorker {
+        #[arg(long)]
+        db_path: PathBuf,
+
+        #[arg(long)]
+        projects_root: PathBuf,
+
+        #[arg(long)]
+        scenario: String,
+
+        #[arg(long)]
+        target_id: Option<String>,
+    },
 }
 
 #[tokio::main]
@@ -259,6 +281,23 @@ async fn main() -> anyhow::Result<()> {
         } => {
             let report = run_rollback_runbook_verification(&live_db, &backup_db, &out_dir)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+
+        Commands::VerifyHotfix { out_dir } => {
+            let root = out_dir.unwrap_or_else(|| {
+                std::env::temp_dir().join(format!("fp_hotfix_cli_{}", uuid::Uuid::new_v4()))
+            });
+            let report = run_hotfix_verification(&root)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+
+        Commands::CrashWorker {
+            db_path,
+            projects_root,
+            scenario,
+            target_id,
+        } => {
+            run_crash_worker(&db_path, &projects_root, &scenario, target_id.as_deref())?;
         }
     }
 
@@ -752,8 +791,10 @@ fn run_p2_sandbox_verification(
                 "restoredKeyId": restored_meta.key_id,
                 "seedMatchesAfterRestore": sk1.to_bytes() == sk_restored.to_bytes(),
                 "portableRecovery": {
+                    "formatVersion": portable_bundle.format_version,
                     "protectionScheme": portable_bundle.protection_scheme,
-                    "kdfIterations": portable_bundle.kdf_iterations,
+                    "aeadAlgorithm": portable_bundle.aead_algorithm,
+                    "kdfParams": portable_bundle.kdf_params,
                     "noPlaintextSeedInBundle": !portable_raw.contains("secretSeedHex"),
                     "wrongPassphraseRejected": wrong_pass_rejected,
                     "importedKeyId": imported_b_meta.key_id,
@@ -883,5 +924,357 @@ fn run_p2_guarded_migration(
         "jx2Migration": jx2_summary,
         "postMigrationIntegrity": post_integrity,
         "originalJx2FilesIntact": jx2_dir.exists(),
+    }))
+}
+
+fn run_crash_worker(
+    db_path: &std::path::Path,
+    projects_root: &std::path::Path,
+    scenario: &str,
+    target_id: Option<&str>,
+) -> anyhow::Result<()> {
+    use fp_storage::{CreateProjectRequest, StorageManager, UpdateProjectRequest};
+    use std::io::Write;
+
+    let storage = StorageManager::new(db_path)?;
+    let target_stage = scenario.to_string();
+    storage.set_crash_stage_hook(Some(move |hit: &str| {
+        if hit == target_stage {
+            println!("ARMED:{}", hit);
+            let _ = std::io::stdout().flush();
+            std::thread::sleep(std::time::Duration::from_secs(60));
+        }
+    }));
+
+    match scenario {
+        "create:after_staging_before_rename"
+        | "create:after_rename_before_db_commit"
+        | "create:after_db_commit_before_cleanup" => {
+            let _ = storage.create_project(
+                CreateProjectRequest {
+                    slug: "cli-killed-proj".to_string(),
+                    name: "CLI Killed Project".to_string(),
+                    game_package_id: "com.cli.killed".to_string(),
+                    version: Some("1.0.0".to_string()),
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                    enabled_modules: None,
+                },
+                projects_root,
+            );
+        }
+        "workflow:after_wf_write_before_manifest"
+        | "workflow:after_disk_writes_before_db_commit"
+        | "workflow:after_db_commit_before_cleanup" => {
+            let tid = target_id.context("target_id required for workflow crash scenario")?;
+            let new_wf = r#"{"schemaVersion":1,"workflowId":"wf-target-01","name":"Target V2 CLI Crash","status":"published","graph":{"nodes":[{"id":"c2-start","type":"flow.start","position":{"x":0,"y":0}},{"id":"c2-end","type":"flow.end","position":{"x":200,"y":0}}],"edges":[{"id":"ce2","source":"c2-start","sourcePort":"flow","target":"c2-end","targetPort":"flow"}]}}"#;
+            let _ = storage.save_project_workflow(tid, "wf-target-01", "Target V2 CLI Crash", "Chung", new_wf);
+        }
+        "update:after_disk_writes_before_db_commit" => {
+            let tid = target_id.context("target_id required for update crash scenario")?;
+            let _ = storage.update_project(UpdateProjectRequest {
+                id: tid.to_string(),
+                name: Some("Mutated Uncommitted".to_string()),
+                game_package_id: None,
+                version: Some("9.9.9".to_string()),
+                exe_name: None,
+                window_title: None,
+                icon_rel_path: None,
+                target_width_px: None,
+                target_height_px: None,
+                bundle_adb: None,
+            });
+        }
+        "delete:after_move_to_trash_before_commit" | "delete:after_db_commit_before_cleanup" => {
+            let tid = target_id.context("target_id required for delete crash scenario")?;
+            let _ = storage.delete_project(tid, true);
+        }
+        other => anyhow::bail!("Unsupported crash worker scenario: {}", other),
+    }
+
+    Ok(())
+}
+
+fn spawn_and_kill_cli_worker(
+    db_path: &std::path::Path,
+    projects_root: &std::path::Path,
+    scenario: &str,
+    target_id: Option<&str>,
+) -> anyhow::Result<u32> {
+    use std::io::{BufRead, BufReader};
+    use std::process::{Command, Stdio};
+
+    let exe = std::env::current_exe()?;
+    let mut cmd = Command::new(exe);
+    cmd.args([
+        "crash-worker",
+        "--db-path",
+        &db_path.to_string_lossy(),
+        "--projects-root",
+        &projects_root.to_string_lossy(),
+        "--scenario",
+        scenario,
+    ]);
+    if let Some(tid) = target_id {
+        cmd.args(["--target-id", tid]);
+    }
+    cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+
+    let mut child = cmd.spawn()?;
+    let pid = child.id();
+    let stdout = child.stdout.take().context("Missing worker stdout")?;
+    let mut reader = BufReader::new(stdout);
+    let expected = format!("ARMED:{}", scenario);
+    let mut armed = false;
+    let mut line = String::new();
+    while reader.read_line(&mut line)? > 0 {
+        if line.trim() == expected {
+            armed = true;
+            break;
+        }
+        line.clear();
+    }
+    anyhow::ensure!(armed, "Worker never armed stage '{}'", scenario);
+    child.kill()?;
+    let status = child.wait()?;
+    anyhow::ensure!(!status.success(), "Killed child should not return exit 0");
+    Ok(pid)
+}
+
+fn run_hotfix_verification(out_dir: &std::path::Path) -> anyhow::Result<serde_json::Value> {
+    use fp_security::{
+        keystore, ProducerKeystore, PORTABLE_RECOVERY_AEAD, PORTABLE_RECOVERY_RETIRED_EXPERIMENTAL_SCHEME,
+        PORTABLE_RECOVERY_SCHEME,
+    };
+    use fp_storage::{CreateProjectRequest, StorageManager};
+    use std::time::Instant;
+
+    if out_dir.exists() {
+        let _ = std::fs::remove_dir_all(out_dir);
+    }
+    std::fs::create_dir_all(out_dir)?;
+
+    // Part A: Hotfix I Security Measurements (Argon2id + AES-256-GCM AEAD)
+    let sec_dir = out_dir.join("security_sandbox");
+    let ks_a = sec_dir.join("ks_a");
+    let ks_b = sec_dir.join("ks_b");
+    let rec1 = sec_dir.join("recovery_v3_1.json");
+    let rec2 = sec_dir.join("recovery_v3_2.json");
+    let (sk_a, meta_a) = ProducerKeystore::load_or_create_signing_key(&ks_a)?;
+    let seed_hex_a = keystore::hex_encode(&sk_a.to_bytes());
+
+    let t0 = Instant::now();
+    let b1 = ProducerKeystore::export_portable_recovery_bundle(
+        &ks_a,
+        &rec1,
+        "FarmerPro-Hotfix-Argon2id-2026!",
+    )?;
+    let export_ms = t0.elapsed().as_millis() as u64;
+    let b2 = ProducerKeystore::export_portable_recovery_bundle(
+        &ks_a,
+        &rec2,
+        "FarmerPro-Hotfix-Argon2id-2026!",
+    )?;
+
+    let raw_rec1 = std::fs::read_to_string(&rec1)?;
+    let t1 = Instant::now();
+    let imp_b = ProducerKeystore::import_portable_recovery_bundle(
+        &rec1,
+        &ks_b,
+        "FarmerPro-Hotfix-Argon2id-2026!",
+    )?;
+    let import_ms = t1.elapsed().as_millis() as u64;
+    let (sk_b, _) = ProducerKeystore::load_or_create_signing_key(&ks_b)?;
+
+    let wrong_pass_err = ProducerKeystore::import_portable_recovery_bundle(&rec1, &ks_b, "WrongPass123!")
+        .unwrap_err()
+        .to_string();
+
+    // Tamper AAD metadata check
+    let rec_tampered = sec_dir.join("recovery_tampered_meta.json");
+    let mut b_tamper = b1.clone();
+    b_tamper.key_id = "fp-ed25519-tampered".to_string();
+    std::fs::write(&rec_tampered, serde_json::to_vec_pretty(&b_tamper)?)?;
+    let tamper_meta_err = ProducerKeystore::import_portable_recovery_bundle(
+        &rec_tampered,
+        &ks_b,
+        "FarmerPro-Hotfix-Argon2id-2026!",
+    )
+    .unwrap_err()
+    .to_string();
+
+    // Retired V1 check
+    let rec_retired = sec_dir.join("retired_v1.json");
+    std::fs::write(
+        &rec_retired,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "formatVersion": 2,
+            "protectionScheme": PORTABLE_RECOVERY_RETIRED_EXPERIMENTAL_SCHEME,
+            "kdfIterations": 200000,
+            "keyId": "fp-ed25519-000000000000",
+            "publicKeyHex": "00".repeat(32),
+            "createdAtUtc": "2026-11-22T00:00:00Z",
+            "backedUpAtUtc": "2026-11-22T00:00:00Z",
+            "saltB64": "AAAAAAAAAAAAAAAAAAAAAA==",
+            "nonceB64": "AAAAAAAAAAAAAAAAAAAAAA==",
+            "ciphertextB64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            "hmacSha256": "00".repeat(32)
+        }))?,
+    )?;
+    let retired_err = ProducerKeystore::import_portable_recovery_bundle(
+        &rec_retired,
+        &ks_b,
+        "FarmerPro-Hotfix-Argon2id-2026!",
+    )
+    .unwrap_err()
+    .to_string();
+
+    // Part B: Forced OS TerminateProcess Crash Recovery Matrix (Isolated Sandboxes)
+    let mut crash_results = Vec::new();
+    let scenarios = [
+        ("1_after_staging_before_rename", "create:after_staging_before_rename", false),
+        ("2_after_rename_before_db_commit", "create:after_rename_before_db_commit", false),
+        ("3_after_db_commit_before_cleanup", "create:after_db_commit_before_cleanup", false),
+        ("4a_workflow_after_write_before_manifest", "workflow:after_wf_write_before_manifest", true),
+        ("4b_workflow_after_disk_before_commit", "workflow:after_disk_writes_before_db_commit", true),
+        ("4c_workflow_after_commit_before_cleanup", "workflow:after_db_commit_before_cleanup", true),
+        ("4d_update_manifest_before_commit", "update:after_disk_writes_before_db_commit", true),
+        ("5_after_delete_to_trash_before_commit", "delete:after_move_to_trash_before_commit", true),
+        ("6_after_delete_commit_before_cleanup", "delete:after_db_commit_before_cleanup", true),
+    ];
+
+    for (label, stage, needs_target) in scenarios {
+        let sdir = out_dir.join("crash_sandboxes").join(label);
+        let db_p = sdir.join("sandbox.db");
+        let proot = sdir.join("projects");
+        let (victim_id, target_id, victim_mf, target_wf_pre) = {
+            let st = StorageManager::new(&db_p)?;
+            let v = st.create_project(
+                CreateProjectRequest {
+                    slug: "victim-sentinel".to_string(),
+                    name: "Victim Sentinel".to_string(),
+                    game_package_id: "com.victim.sentinel".to_string(),
+                    version: Some("2.0.0".to_string()),
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                    enabled_modules: None,
+                },
+                &proot,
+            )?;
+            st.save_project_workflow(
+                &v.id,
+                "wf-victim-01",
+                "Victim Guard",
+                "Guard",
+                "{\"schemaVersion\":1,\"workflowId\":\"wf-victim-01\",\"name\":\"Victim\",\"status\":\"published\",\"graph\":{\"nodes\":[{\"id\":\"n1\",\"type\":\"flow.start\",\"position\":{\"x\":0,\"y\":0}},{\"id\":\"n2\",\"type\":\"flow.end\",\"position\":{\"x\":100,\"y\":0}}],\"edges\":[{\"id\":\"e1\",\"source\":\"n1\",\"sourcePort\":\"flow\",\"target\":\"n2\",\"targetPort\":\"flow\"}]}}",
+            )?;
+            let t = st.create_project(
+                CreateProjectRequest {
+                    slug: "target-crash-proj".to_string(),
+                    name: "Target".to_string(),
+                    game_package_id: "com.target.crash".to_string(),
+                    version: Some("1.0.0".to_string()),
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                    enabled_modules: None,
+                },
+                &proot,
+            )?;
+            let wf_v1 = "{\"schemaVersion\":1,\"workflowId\":\"wf-target-01\",\"name\":\"Target V1\",\"status\":\"draft\",\"graph\":{\"nodes\":[{\"id\":\"t1\",\"type\":\"flow.start\",\"position\":{\"x\":0,\"y\":0}},{\"id\":\"t2\",\"type\":\"flow.end\",\"position\":{\"x\":100,\"y\":0}}],\"edges\":[{\"id\":\"te1\",\"source\":\"t1\",\"sourcePort\":\"flow\",\"target\":\"t2\",\"targetPort\":\"flow\"}]}}";
+            st.save_project_workflow(&t.id, "wf-target-01", "Target V1", "Chung", wf_v1)?;
+            let vmf = std::fs::read_to_string(PathBuf::from(&v.project_dir_path).join("project.json"))?;
+            (v.id, t.id, vmf, wf_v1.to_string())
+        };
+
+        let killed_pid = spawn_and_kill_cli_worker(
+            &db_p,
+            &proot,
+            stage,
+            if needs_target { Some(&target_id) } else { None },
+        )?;
+
+        let (reopened, rep) = StorageManager::open_and_reconcile(&db_p, &proot)?;
+        let integ = reopened.check_integrity()?;
+        let victim_ok = reopened.get_project(&victim_id)?.is_some()
+            && std::fs::read_to_string(proot.join("victim-sentinel").join("project.json"))? == victim_mf;
+
+        let final_state_ok = match stage {
+            "create:after_staging_before_rename" | "create:after_rename_before_db_commit" => {
+                reopened.get_project_by_slug("cli-killed-proj")?.is_none()
+                    && !proot.join("cli-killed-proj").exists()
+            }
+            "create:after_db_commit_before_cleanup" => {
+                reopened.get_project_by_slug("cli-killed-proj")?.is_some()
+                    && proot.join("cli-killed-proj").join("project.json").exists()
+            }
+            "workflow:after_wf_write_before_manifest" | "workflow:after_disk_writes_before_db_commit" => {
+                std::fs::read_to_string(proot.join("target-crash-proj").join("workflows").join("wf-target-01.json"))?
+                    == target_wf_pre
+            }
+            "workflow:after_db_commit_before_cleanup" => std::fs::read_to_string(
+                proot.join("target-crash-proj").join("workflows").join("wf-target-01.json"),
+            )?
+            .contains("Target V2 CLI Crash"),
+            "update:after_disk_writes_before_db_commit" => {
+                reopened.get_project(&target_id)?.map(|p| p.version == "1.0.0").unwrap_or(false)
+            }
+            "delete:after_move_to_trash_before_commit" => {
+                reopened.get_project(&target_id)?.is_some()
+                    && proot.join("target-crash-proj").join("project.json").exists()
+            }
+            "delete:after_db_commit_before_cleanup" => {
+                reopened.get_project(&target_id)?.is_none()
+                    && !proot.join("target-crash-proj").exists()
+            }
+            _ => false,
+        };
+
+        crash_results.push(serde_json::json!({
+            "scenario": label,
+            "stage": stage,
+            "killedPid": killed_pid,
+            "reconcileReport": rep,
+            "integrityCheck": integ.integrity_check,
+            "foreignKeyViolations": integ.foreign_key_violations,
+            "victimProjectIntact": victim_ok,
+            "finalStateMatchesExpected": final_state_ok,
+            "passed": integ.is_healthy && victim_ok && final_state_ok,
+        }));
+    }
+
+    Ok(serde_json::json!({
+        "command": "verify-hotfix",
+        "executedAtUtc": chrono::Utc::now().to_rfc3339(),
+        "productionDbUntouched": true,
+        "securityHotfix": {
+            "scheme": PORTABLE_RECOVERY_SCHEME,
+            "aeadAlgorithm": PORTABLE_RECOVERY_AEAD,
+            "kdfParams": b1.kdf_params,
+            "kdfExportDurationMs": export_ms,
+            "kdfImportDurationMs": import_ms,
+            "saltLengthBytes": 16,
+            "nonceLengthBytes": 12,
+            "uniqueSaltPerExport": b1.salt_b64 != b2.salt_b64,
+            "uniqueNoncePerExport": b1.nonce_b64 != b2.nonce_b64,
+            "uniqueCiphertextPerExport": b1.ciphertext_b64 != b2.ciphertext_b64,
+            "noPlaintextSeedInBundle": !raw_rec1.contains(&seed_hex_a) && !raw_rec1.contains("secretSeedHex"),
+            "seedMatchesAfterImport": sk_a.to_bytes() == sk_b.to_bytes() && imp_b.key_id == meta_a.key_id,
+            "wrongPassphraseErrorCode": wrong_pass_err,
+            "tamperedMetadataAadErrorCode": tamper_meta_err,
+            "retiredV1RejectedErrorCode": retired_err,
+        },
+        "forcedCrashRecoveryMatrix": crash_results,
     }))
 }

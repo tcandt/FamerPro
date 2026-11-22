@@ -284,6 +284,22 @@ pub enum CrashFaultPoint {
     FailAfterDbCommitTrashPurge,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReconcileReport {
+    pub total_resolved: usize,
+    pub creates_finalized: usize,
+    pub uncommitted_dirs_reverted: usize,
+    pub mutations_finalized: usize,
+    pub mutations_rolled_back: usize,
+    pub deletes_finalized: usize,
+    pub deletes_restored: usize,
+    pub staging_purged: usize,
+    pub trash_purged: usize,
+    pub tmp_files_purged: usize,
+    pub actions: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RollbackVerificationReport {
