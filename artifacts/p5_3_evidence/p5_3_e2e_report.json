@@ -1,0 +1,1024 @@
+{
+  "executedAtUtc": "2026-11-22T12:48:34.415Z",
+  "gitHead": "5e8989efd3acc233d12d822ebb080ecf4111a795",
+  "adbLiveHardware": {
+    "adbDevicesOutput": "List of devices attached",
+    "ldplayer14Vm0IsRunning": "stop",
+    "status": "BLOCKED (0 ADB online)"
+  },
+  "publicSignedCommercialRelease": {
+    "status": "BLOCKED (No commercial Authenticode CA certificate present; tested fail-closed rejection with no-cert and self-signed cert)",
+    "noCertBlocked": true,
+    "selfSignedBlocked": true,
+    "publicNoCertErr": "PUBLIC_SIGN_TRUST_FAILED: certificate signed binary cleanly but failed Windows public trust chain (SelfSignedUntrustedRoot: Self-Signed / Untrusted Root (0x800B0109): Authenticode PE hash intact, NOT trusted as Public Release.). Self-signed certificates cannot be marked TrustedPublicRelease.",
+    "publicSelfSignedErr": "PUBLIC_SIGN_TRUST_FAILED: certificate signed binary cleanly but failed Windows public trust chain (SelfSignedUntrustedRoot: Self-Signed / Untrusted Root (0x800B0109): Authenticode PE hash intact, NOT trusted as Public Release.). Self-signed certificates cannot be marked TrustedPublicRelease."
+  },
+  "consoleErrors": {
+    "studio": [],
+    "brandAlpha": [],
+    "brandBeta": []
+  },
+  "secretLeakScanHits": [],
+  "studioResult": {
+    "pubAlpha": {
+      "id": "pub-fce6a218-0988-497d-a662-31ce00095437",
+      "publisherId": "pub-alpha-vanguard",
+      "displayName": "Alpha Vanguard Publishing",
+      "organization": "Alpha Vanguard Automation Co., Ltd.",
+      "website": "https://alphavanguard.example.invalid",
+      "supportContact": "support@alphavanguard.example.invalid",
+      "copyright": "Copyright (C) 2026 Alpha Vanguard Automation Co., Ltd.",
+      "ed25519KeyId": "",
+      "ed25519PubkeyHex": "",
+      "authenticodeCertRef": null,
+      "releaseChannel": "internal",
+      "signingPolicy": "unsigned_internal",
+      "createdAt": "2026-11-22T12:47:51.273487400+00:00",
+      "updatedAt": "2026-11-22T12:47:51.273487400+00:00"
+    },
+    "pubBeta": {
+      "id": "pub-9fefce13-238c-4750-a4eb-458d9a880cae",
+      "publisherId": "pub-beta-nova",
+      "displayName": "Beta Nova Studio",
+      "organization": "Beta Nova Interactive Labs Pte. Ltd.",
+      "website": "https://betanova.example.invalid",
+      "supportContact": "sec@betanova.example.invalid",
+      "copyright": "Copyright (C) 2026 Beta Nova Interactive Labs Pte. Ltd.",
+      "ed25519KeyId": "",
+      "ed25519PubkeyHex": "",
+      "authenticodeCertRef": "CERT_STORE://CurrentUser/My/3A90016D3CC5CCAC333A083DF9D0C44A14B19D51",
+      "releaseChannel": "qa",
+      "signingPolicy": "self_signed_qa",
+      "createdAt": "2026-11-22T12:47:54.036380600+00:00",
+      "updatedAt": "2026-11-22T12:47:54.036380600+00:00"
+    },
+    "qaCert": {
+      "subject": "CN=Beta Nova QA Publisher",
+      "thumbprint": "3A90016D3CC5CCAC333A083DF9D0C44A14B19D51",
+      "storeLocation": "Cert:\\CurrentUser\\My",
+      "certRef": "CERT_STORE://CurrentUser/My/3A90016D3CC5CCAC333A083DF9D0C44A14B19D51",
+      "notAfterUtc": "2027-02-20T12:47:53.0000000Z"
+    },
+    "pAlpha": {
+      "id": "proj-brand-alpha-8698190a",
+      "slug": "brand-alpha",
+      "name": "Vanguard Auto Suite",
+      "gamePackageId": "com.vanguard.alpha",
+      "version": "1.0.0",
+      "exeName": "Auto_BrandAlpha.exe",
+      "windowTitle": "Vanguard Auto Suite v1.0.0",
+      "iconRelPath": "branding/icon.ico",
+      "targetWidthPx": 1280,
+      "targetHeightPx": 720,
+      "bundleAdb": false,
+      "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-alpha",
+      "createdAt": "2026-11-22T12:47:54.039852100+00:00",
+      "updatedAt": "2026-11-22T12:47:54.039852100+00:00",
+      "publisherProfileId": null,
+      "signingMode": "unsigned_internal",
+      "versionInfoJson": null
+    },
+    "pBeta": {
+      "id": "proj-brand-beta-a48cc2b3",
+      "slug": "brand-beta",
+      "name": "Nova Tactics Automator",
+      "gamePackageId": "com.nova.beta",
+      "version": "1.0.0",
+      "exeName": "Auto_BrandBeta.exe",
+      "windowTitle": "Nova Tactics Automator v1.0.0",
+      "iconRelPath": "branding/icon.ico",
+      "targetWidthPx": 1920,
+      "targetHeightPx": 1080,
+      "bundleAdb": false,
+      "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta",
+      "createdAt": "2026-11-22T12:47:58.388509800+00:00",
+      "updatedAt": "2026-11-22T12:47:58.388509800+00:00",
+      "publisherProfileId": null,
+      "signingMode": "unsigned_internal",
+      "versionInfoJson": null
+    },
+    "signPreAlpha": {
+      "ready": true,
+      "signtoolAvailable": true,
+      "signtoolPath": "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.26100.0\\x64\\signtool.exe",
+      "signingMode": "unsigned_internal",
+      "publisherProfilePresent": true,
+      "certRefPresent": false,
+      "keystoreKeyId": "fp-ed25519-014c0bca7673",
+      "issues": [],
+      "warnings": [
+        "Unsigned Internal build: PE VERSIONINFO & Ed25519 bundle signature applied; no Authenticode signature (dev/internal only)."
+      ]
+    },
+    "resAlpha": {
+      "release": {
+        "id": "rel-d8d1c20a-f565-475e-8305-4109f3187aff",
+        "projectId": "proj-brand-alpha-8698190a",
+        "version": "1.0.0",
+        "outputDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-alpha\\releases\\v1.0.0",
+        "exePath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-alpha\\releases\\v1.0.0\\Auto_BrandAlpha.exe",
+        "exeSizeBytes": 24297984,
+        "exeSha256": "510d0ef6cfbc7751f6748d5b3eb2fddefeb70754b7f7fafff68c41319c46f5e9",
+        "keyId": "fp-ed25519-014c0bca7673",
+        "publisherPublicKeyHex": "014c0bca767390f9d73c5c707ac0062df32fbba3525c7aa9a128565e470c6fe3",
+        "peRcdataPubkeyId": 7777,
+        "signatureEd25519Hex": "e2aef488c1de7d0ad52fd878e3317fa7cc9f62adc1e9f8481ff298ae407b548e32be8dab209e30dfb6a41b908b895efcfa82de4e19309b6b6549f62284f96d0d",
+        "buildReportJson": "{\"projectId\":\"proj-brand-alpha-8698190a\",\"projectSlug\":\"brand-alpha\",\"toolExeName\":\"Auto_BrandAlpha.exe\",\"toolExePath\":\"E:\\\\DATA\\\\FarmerPro\\\\artifacts\\\\p5_3_evidence\\\\sandbox\\\\projects\\\\brand-alpha\\\\releases\\\\v1.0.0\\\\Auto_BrandAlpha.exe\",\"toolExeSizeBytes\":24297984,\"toolExeSha256\":\"510d0ef6cfbc7751f6748d5b3eb2fddefeb70754b7f7fafff68c41319c46f5e9\",\"peIconLayersInjected\":1,\"peIconGroupResourceBytes\":20,\"peIconFirstLayerBytes\":4264,\"peEmbeddedPubkeyResourceId\":7777,\"peEmbeddedPubkeyVerified\":true,\"authenticodeStatus\":\"Unsigned Internal Build (No Authenticode; Ed25519 PE RT_RCDATA #7777 Verified)\",\"signingMode\":\"unsigned_internal\",\"trustedPublicRelease\":false,\"versionInfo\":{\"companyName\":\"Alpha Vanguard Automation Co., Ltd.\",\"fileDescription\":\"Vanguard Auto Suite Internal Runner\",\"fileVersion\":\"1.0.0.10\",\"internalName\":\"brand-alpha\",\"legalCopyright\":\"Copyright (C) 2026 Alpha Vanguard Automation Co., Ltd.\",\"originalFilename\":\"Auto_BrandAlpha.exe\",\"productName\":\"Vanguard Auto Suite\",\"productVersion\":\"1.0.0\"},\"authenticodeVerification\":{\"signed\":false,\"trustStatus\":\"unsigned\",\"trustedPublicRelease\":false,\"winTrustErrorCode\":2148204800,\"signerSubject\":null,\"signerIssuer\":null,\"signerThumbprint\":null,\"timestampStatus\":\"NONE\",\"detail\":\"Unsigned Internal Build (TRUST_E_NOSIGNATURE 0x800B0100).\"},\"keyId\":\"fp-ed25519-014c0bca7673\",\"publisherPublicKeyHex\":\"014c0bca767390f9d73c5c707ac0062df32fbba3525c7aa9a128565e470c6fe3\",\"externalKeystorePath\":\"C:\\\\Users\\\\TINH-NGUYEN\\\\AppData\\\\Local\\\\FarmerPro\\\\ProducerKeys\\\\active_producer_ed25519.json\",\"signatureAlgorithm\":\"Ed25519-RFC8032-SHA256\",\"signatureEd25519Hex\":\"e2aef488c1de7d0ad52fd878e3317fa7cc9f62adc1e9f8481ff298ae407b548e32be8dab209e30dfb6a41b908b895efcfa82de4e19309b6b6549f62284f96d0d\",\"totalDurationMs\":4215,\"steps\":[{\"stepNo\":1,\"name\":\"Validate Project, UI Schema & Workflows\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Validated 1 workflows and UI schema (v1) for 'Vanguard Auto Suite'\"},{\"stepNo\":2,\"name\":\"Asset Integrity & Path Traversal Guard\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Verified 0 template PNGs and icon 'branding/icon.ico'\"},{\"stepNo\":3,\"name\":\"Resolve 5-State Module Matrix\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Packaged modules: [\\\"mod.adb_core\\\", \\\"mod.vision_ocr\\\"]\"},{\"stepNo\":4,\"name\":\"Copy Dedicated Mini Runtime Binary\",\"durationMs\":41,\"status\":\"PASS\",\"detail\":\"Copied target/debug/fp-mini-runtime.exe -> E:\\\\DATA\\\\FarmerPro\\\\artifacts\\\\p5_3_evidence\\\\sandbox\\\\projects\\\\brand-alpha\\\\releases\\\\v1.0.0\\\\Auto_BrandAlpha.exe\"},{\"stepNo\":5,\"name\":\"PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection\",\"durationMs\":3626,\"status\":\"PASS\",\"detail\":\"Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Vanguard Auto Suite', Company='Alpha Vanguard Automation Co., Ltd.'), PE RT_RCDATA #7777=014c0bca767390f9\"},{\"stepNo\":6,\"name\":\"Package Bundle Assets & Android ADB Dependencies\",\"durationMs\":5,\"status\":\"PASS\",\"detail\":\"Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=false\"},{\"stepNo\":7,\"name\":\"Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature\",\"durationMs\":12,\"status\":\"PASS\",\"detail\":\"Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-014c0bca7673, PubKey: 014c0bca767390f9d73c5c707ac0062df32fbba3525c7aa9a128565e470c6fe3)\"},{\"stepNo\":8,\"name\":\"Authenticode Sign/Verify (WinVerifyTrust) & Final PE Root-of-Trust Check\",\"durationMs\":518,\"status\":\"PASS\",\"detail\":\"Mode=UnsignedInternal, Trust=Unsigned, TrustedPublicRelease=false, exe SHA-256=510d0ef6cfbc7751\"}],\"modules\":[{\"moduleId\":\"mod.adb_core\",\"displayName\":\"ADB & Device Driver Core\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"adb_exec\"],\"compiledInBinary\":true,\"packagedInRelease\":true,\"permittedToInitialize\":true,\"enabledByUserConfig\":true,\"activeAndInitialized\":true,\"technicalNote\":\"Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn.\"},{\"moduleId\":\"mod.vision_ocr\",\"displayName\":\"Multiscale Vision & WinRT OCR\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"filesystem_read_write\"],\"compiledInBinary\":true,\"packagedInRelease\":true,\"permittedToInitialize\":true,\"enabledByUserConfig\":true,\"activeAndInitialized\":true,\"technicalNote\":\"So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR.\"},{\"moduleId\":\"mod.account_vault\",\"displayName\":\"Account Vault (Credential Manager)\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"credential_vault_access\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool.\"},{\"moduleId\":\"mod.proxy_network\",\"displayName\":\"SOCKS5/HTTP Application Proxy\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"outbound_proxy_connect\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding).\"},{\"moduleId\":\"mod.adb_port_forward\",\"displayName\":\"ADB Host-Device Socket Forwarding\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"adb_exec\",\"local_socket_bind\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game).\"},{\"moduleId\":\"mod.emulator_optimizer\",\"displayName\":\"Emulator Watchdog & Auto-Reconnect\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"adb_exec\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối.\"}],\"dependencyAudit\":{\"webview2EvergreenInstalled\":true,\"webview2VersionOrNote\":\"Evergreen Runtime v157.0.4341.60 (Fixed Version fallback supported if offline target lacks Evergreen)\",\"adbExePresent\":false,\"adbWinApiDllPresent\":false,\"adbWinUsbApiDllPresent\":false,\"winrtOcrPowershellAvailable\":true,\"exeDirWritable\":true,\"writeProbeError\":null,\"resolvedSqliteDbPath\":\"E:\\\\DATA\\\\FarmerPro\\\\artifacts\\\\p5_3_evidence\\\\sandbox\\\\projects\\\\brand-alpha\\\\releases\\\\v1.0.0\\\\data\\\\runtime_brand-alpha.db\",\"fallbackToLocalAppdataUsed\":false,\"offlineExecutionReady\":true}}",
+        "builtAt": "2026-11-22T12:47:58.374973200+00:00",
+        "lifecycleState": "Draft",
+        "releaseChannel": "internal",
+        "changelogMd": "",
+        "minRuntimeVersion": "0.1.0",
+        "workflowSchemaVersion": 1,
+        "uiSchemaVersion": 1,
+        "moduleApiVersion": "1.0.0",
+        "sqliteSchemaVersion": 5,
+        "gitCommit": "5e8989e",
+        "signatureStatus": "Unsigned Internal Build (No Authenticode; Ed25519 PE RT_RCDATA #7777 Verified)",
+        "promotedAt": null,
+        "rolledBackFromId": null,
+        "publisherProfileId": "pub-fce6a218-0988-497d-a662-31ce00095437",
+        "signingMode": "unsigned_internal",
+        "authenticodeTrustStatus": "unsigned",
+        "authenticodeThumbprint": null,
+        "authenticodeSubject": null,
+        "trustedPublicRelease": false
+      },
+      "buildReport": {
+        "projectId": "proj-brand-alpha-8698190a",
+        "projectSlug": "brand-alpha",
+        "toolExeName": "Auto_BrandAlpha.exe",
+        "toolExePath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-alpha\\releases\\v1.0.0\\Auto_BrandAlpha.exe",
+        "toolExeSizeBytes": 24297984,
+        "toolExeSha256": "510d0ef6cfbc7751f6748d5b3eb2fddefeb70754b7f7fafff68c41319c46f5e9",
+        "peIconLayersInjected": 1,
+        "peIconGroupResourceBytes": 20,
+        "peIconFirstLayerBytes": 4264,
+        "peEmbeddedPubkeyResourceId": 7777,
+        "peEmbeddedPubkeyVerified": true,
+        "authenticodeStatus": "Unsigned Internal Build (No Authenticode; Ed25519 PE RT_RCDATA #7777 Verified)",
+        "signingMode": "unsigned_internal",
+        "trustedPublicRelease": false,
+        "versionInfo": {
+          "companyName": "Alpha Vanguard Automation Co., Ltd.",
+          "fileDescription": "Vanguard Auto Suite Internal Runner",
+          "fileVersion": "1.0.0.10",
+          "internalName": "brand-alpha",
+          "legalCopyright": "Copyright (C) 2026 Alpha Vanguard Automation Co., Ltd.",
+          "originalFilename": "Auto_BrandAlpha.exe",
+          "productName": "Vanguard Auto Suite",
+          "productVersion": "1.0.0"
+        },
+        "authenticodeVerification": {
+          "signed": false,
+          "trustStatus": "unsigned",
+          "trustedPublicRelease": false,
+          "winTrustErrorCode": 2148204800,
+          "signerSubject": null,
+          "signerIssuer": null,
+          "signerThumbprint": null,
+          "timestampStatus": "NONE",
+          "detail": "Unsigned Internal Build (TRUST_E_NOSIGNATURE 0x800B0100)."
+        },
+        "keyId": "fp-ed25519-014c0bca7673",
+        "publisherPublicKeyHex": "014c0bca767390f9d73c5c707ac0062df32fbba3525c7aa9a128565e470c6fe3",
+        "externalKeystorePath": "C:\\Users\\TINH-NGUYEN\\AppData\\Local\\FarmerPro\\ProducerKeys\\active_producer_ed25519.json",
+        "signatureAlgorithm": "Ed25519-RFC8032-SHA256",
+        "signatureEd25519Hex": "e2aef488c1de7d0ad52fd878e3317fa7cc9f62adc1e9f8481ff298ae407b548e32be8dab209e30dfb6a41b908b895efcfa82de4e19309b6b6549f62284f96d0d",
+        "totalDurationMs": 4215,
+        "steps": [
+          {
+            "stepNo": 1,
+            "name": "Validate Project, UI Schema & Workflows",
+            "durationMs": 0,
+            "status": "PASS",
+            "detail": "Validated 1 workflows and UI schema (v1) for 'Vanguard Auto Suite'"
+          },
+          {
+            "stepNo": 2,
+            "name": "Asset Integrity & Path Traversal Guard",
+            "durationMs": 0,
+            "status": "PASS",
+            "detail": "Verified 0 template PNGs and icon 'branding/icon.ico'"
+          },
+          {
+            "stepNo": 3,
+            "name": "Resolve 5-State Module Matrix",
+            "durationMs": 0,
+            "status": "PASS",
+            "detail": "Packaged modules: [\"mod.adb_core\", \"mod.vision_ocr\"]"
+          },
+          {
+            "stepNo": 4,
+            "name": "Copy Dedicated Mini Runtime Binary",
+            "durationMs": 41,
+            "status": "PASS",
+            "detail": "Copied target/debug/fp-mini-runtime.exe -> E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-alpha\\releases\\v1.0.0\\Auto_BrandAlpha.exe"
+          },
+          {
+            "stepNo": 5,
+            "name": "PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection",
+            "durationMs": 3626,
+            "status": "PASS",
+            "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Vanguard Auto Suite', Company='Alpha Vanguard Automation Co., Ltd.'), PE RT_RCDATA #7777=014c0bca767390f9"
+          },
+          {
+            "stepNo": 6,
+            "name": "Package Bundle Assets & Android ADB Dependencies",
+            "durationMs": 5,
+            "status": "PASS",
+            "detail": "Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=false"
+          },
+          {
+            "stepNo": 7,
+            "name": "Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature",
+            "durationMs": 12,
+            "status": "PASS",
+            "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-014c0bca7673, PubKey: 014c0bca767390f9d73c5c707ac0062df32fbba3525c7aa9a128565e470c6fe3)"
+          },
+          {
+            "stepNo": 8,
+            "name": "Authenticode Sign/Verify (WinVerifyTrust) & Final PE Root-of-Trust Check",
+            "durationMs": 518,
+            "status": "PASS",
+            "detail": "Mode=UnsignedInternal, Trust=Unsigned, TrustedPublicRelease=false, exe SHA-256=510d0ef6cfbc7751"
+          }
+        ],
+        "modules": [
+          {
+            "moduleId": "mod.adb_core",
+            "displayName": "ADB & Device Driver Core",
+            "version": "1.0.0",
+            "dependencies": [],
+            "requiredCapabilities": [
+              "adb_exec"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": true,
+            "permittedToInitialize": true,
+            "enabledByUserConfig": true,
+            "activeAndInitialized": true,
+            "technicalNote": "Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn."
+          },
+          {
+            "moduleId": "mod.vision_ocr",
+            "displayName": "Multiscale Vision & WinRT OCR",
+            "version": "1.0.0",
+            "dependencies": [
+              "mod.adb_core"
+            ],
+            "requiredCapabilities": [
+              "filesystem_read_write"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": true,
+            "permittedToInitialize": true,
+            "enabledByUserConfig": true,
+            "activeAndInitialized": true,
+            "technicalNote": "So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR."
+          },
+          {
+            "moduleId": "mod.account_vault",
+            "displayName": "Account Vault (Credential Manager)",
+            "version": "1.0.0",
+            "dependencies": [],
+            "requiredCapabilities": [
+              "credential_vault_access"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": false,
+            "permittedToInitialize": false,
+            "enabledByUserConfig": false,
+            "activeAndInitialized": false,
+            "technicalNote": "Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool."
+          },
+          {
+            "moduleId": "mod.proxy_network",
+            "displayName": "SOCKS5/HTTP Application Proxy",
+            "version": "1.0.0",
+            "dependencies": [],
+            "requiredCapabilities": [
+              "outbound_proxy_connect"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": false,
+            "permittedToInitialize": false,
+            "enabledByUserConfig": false,
+            "activeAndInitialized": false,
+            "technicalNote": "Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding)."
+          },
+          {
+            "moduleId": "mod.adb_port_forward",
+            "displayName": "ADB Host-Device Socket Forwarding",
+            "version": "1.0.0",
+            "dependencies": [
+              "mod.adb_core"
+            ],
+            "requiredCapabilities": [
+              "adb_exec",
+              "local_socket_bind"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": false,
+            "permittedToInitialize": false,
+            "enabledByUserConfig": false,
+            "activeAndInitialized": false,
+            "technicalNote": "Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game)."
+          },
+          {
+            "moduleId": "mod.emulator_optimizer",
+            "displayName": "Emulator Watchdog & Auto-Reconnect",
+            "version": "1.0.0",
+            "dependencies": [
+              "mod.adb_core"
+            ],
+            "requiredCapabilities": [
+              "adb_exec"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": false,
+            "permittedToInitialize": false,
+            "enabledByUserConfig": false,
+            "activeAndInitialized": false,
+            "technicalNote": "Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối."
+          }
+        ],
+        "dependencyAudit": {
+          "webview2EvergreenInstalled": true,
+          "webview2VersionOrNote": "Evergreen Runtime v157.0.4341.60 (Fixed Version fallback supported if offline target lacks Evergreen)",
+          "adbExePresent": false,
+          "adbWinApiDllPresent": false,
+          "adbWinUsbApiDllPresent": false,
+          "winrtOcrPowershellAvailable": true,
+          "exeDirWritable": true,
+          "writeProbeError": null,
+          "resolvedSqliteDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-alpha\\releases\\v1.0.0\\data\\runtime_brand-alpha.db",
+          "fallbackToLocalAppdataUsed": false,
+          "offlineExecutionReady": true
+        }
+      }
+    },
+    "signPreBeta": {
+      "ready": true,
+      "signtoolAvailable": true,
+      "signtoolPath": "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.26100.0\\x64\\signtool.exe",
+      "signingMode": "self_signed_qa",
+      "publisherProfilePresent": true,
+      "certRefPresent": true,
+      "keystoreKeyId": "fp-ed25519-014c0bca7673",
+      "issues": [],
+      "warnings": [
+        "Self-Signed QA builds verify cryptographic integrity & Authenticode signature but DO NOT claim TrustedPublicRelease."
+      ]
+    },
+    "resBeta100": {
+      "release": {
+        "id": "rel-b1331857-b740-47c5-a23b-ca254d7252b5",
+        "projectId": "proj-brand-beta-a48cc2b3",
+        "version": "1.0.0",
+        "outputDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta\\releases\\v1.0.0",
+        "exePath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta\\releases\\v1.0.0\\Auto_BrandBeta.exe",
+        "exeSizeBytes": 24299480,
+        "exeSha256": "34c4441d4c769be5df583e0878904a5d8702940455252f52cab98eb6c76aaed1",
+        "keyId": "fp-ed25519-014c0bca7673",
+        "publisherPublicKeyHex": "014c0bca767390f9d73c5c707ac0062df32fbba3525c7aa9a128565e470c6fe3",
+        "peRcdataPubkeyId": 7777,
+        "signatureEd25519Hex": "baac22642b68ae7881be52b0d1b5ad0e9c2b209798cbed9119c68ad55deccbc3cee66d4c5f3cfa8b1d4b982ef96405ecd757f73bff60e029abf84311556c3907",
+        "buildReportJson": "{\"projectId\":\"proj-brand-beta-a48cc2b3\",\"projectSlug\":\"brand-beta\",\"toolExeName\":\"Auto_BrandBeta.exe\",\"toolExePath\":\"E:\\\\DATA\\\\FarmerPro\\\\artifacts\\\\p5_3_evidence\\\\sandbox\\\\projects\\\\brand-beta\\\\releases\\\\v1.0.0\\\\Auto_BrandBeta.exe\",\"toolExeSizeBytes\":24299480,\"toolExeSha256\":\"34c4441d4c769be5df583e0878904a5d8702940455252f52cab98eb6c76aaed1\",\"peIconLayersInjected\":1,\"peIconGroupResourceBytes\":20,\"peIconFirstLayerBytes\":4264,\"peEmbeddedPubkeyResourceId\":7777,\"peEmbeddedPubkeyVerified\":true,\"authenticodeStatus\":\"Authenticode Self-Signed QA Build (NOT TrustedPublicRelease; Subject='Beta Nova QA Publisher', Thumbprint=3A90016D3CC5CCAC333A083DF9D0C44A14B19D51)\",\"signingMode\":\"self_signed_qa\",\"trustedPublicRelease\":false,\"versionInfo\":{\"companyName\":\"Beta Nova Interactive Labs Pte. Ltd.\",\"fileDescription\":\"Nova Tactics QA Signed Automator\",\"fileVersion\":\"1.0.0.20\",\"internalName\":\"brand-beta\",\"legalCopyright\":\"Copyright (C) 2026 Beta Nova Interactive Labs Pte. Ltd.\",\"originalFilename\":\"Auto_BrandBeta.exe\",\"productName\":\"Nova Tactics Automator\",\"productVersion\":\"1.0.0\"},\"authenticodeVerification\":{\"signed\":true,\"trustStatus\":\"self_signed_untrusted_root\",\"trustedPublicRelease\":false,\"winTrustErrorCode\":2148204809,\"signerSubject\":\"Beta Nova QA Publisher\",\"signerIssuer\":\"Beta Nova QA Publisher\",\"signerThumbprint\":\"3A90016D3CC5CCAC333A083DF9D0C44A14B19D51\",\"timestampStatus\":\"NONE_OR_QA\",\"detail\":\"Self-Signed / Untrusted Root (0x800B0109): Authenticode PE hash intact, NOT trusted as Public Release.\"},\"keyId\":\"fp-ed25519-014c0bca7673\",\"publisherPublicKeyHex\":\"014c0bca767390f9d73c5c707ac0062df32fbba3525c7aa9a128565e470c6fe3\",\"externalKeystorePath\":\"C:\\\\Users\\\\TINH-NGUYEN\\\\AppData\\\\Local\\\\FarmerPro\\\\ProducerKeys\\\\active_producer_ed25519.json\",\"signatureAlgorithm\":\"Ed25519-RFC8032-SHA256\",\"signatureEd25519Hex\":\"baac22642b68ae7881be52b0d1b5ad0e9c2b209798cbed9119c68ad55deccbc3cee66d4c5f3cfa8b1d4b982ef96405ecd757f73bff60e029abf84311556c3907\",\"totalDurationMs\":4578,\"steps\":[{\"stepNo\":1,\"name\":\"Validate Project, UI Schema & Workflows\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Validated 1 workflows and UI schema (v1) for 'Nova Tactics Automator'\"},{\"stepNo\":2,\"name\":\"Asset Integrity & Path Traversal Guard\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Verified 0 template PNGs and icon 'branding/icon.ico'\"},{\"stepNo\":3,\"name\":\"Resolve 5-State Module Matrix\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Packaged modules: [\\\"mod.adb_core\\\", \\\"mod.vision_ocr\\\"]\"},{\"stepNo\":4,\"name\":\"Copy Dedicated Mini Runtime Binary\",\"durationMs\":41,\"status\":\"PASS\",\"detail\":\"Copied target/debug/fp-mini-runtime.exe -> E:\\\\DATA\\\\FarmerPro\\\\artifacts\\\\p5_3_evidence\\\\sandbox\\\\projects\\\\brand-beta\\\\releases\\\\v1.0.0\\\\Auto_BrandBeta.exe\"},{\"stepNo\":5,\"name\":\"PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection\",\"durationMs\":3031,\"status\":\"PASS\",\"detail\":\"Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Nova Tactics Automator', Company='Beta Nova Interactive Labs Pte. Ltd.'), PE RT_RCDATA #7777=014c0bca767390f9\"},{\"stepNo\":6,\"name\":\"Package Bundle Assets & Android ADB Dependencies\",\"durationMs\":4,\"status\":\"PASS\",\"detail\":\"Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=false\"},{\"stepNo\":7,\"name\":\"Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature\",\"durationMs\":12,\"status\":\"PASS\",\"detail\":\"Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-014c0bca7673, PubKey: 014c0bca767390f9d73c5c707ac0062df32fbba3525c7aa9a128565e470c6fe3)\"},{\"stepNo\":8,\"name\":\"Authenticode Sign/Verify (WinVerifyTrust) & Final PE Root-of-Trust Check\",\"durationMs\":1480,\"status\":\"PASS\",\"detail\":\"Mode=SelfSignedQa, Trust=SelfSignedUntrustedRoot, TrustedPublicRelease=false, exe SHA-256=34c4441d4c769be5\"}],\"modules\":[{\"moduleId\":\"mod.adb_core\",\"displayName\":\"ADB & Device Driver Core\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"adb_exec\"],\"compiledInBinary\":true,\"packagedInRelease\":true,\"permittedToInitialize\":true,\"enabledByUserConfig\":true,\"activeAndInitialized\":true,\"technicalNote\":\"Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn.\"},{\"moduleId\":\"mod.vision_ocr\",\"displayName\":\"Multiscale Vision & WinRT OCR\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"filesystem_read_write\"],\"compiledInBinary\":true,\"packagedInRelease\":true,\"permittedToInitialize\":true,\"enabledByUserConfig\":true,\"activeAndInitialized\":true,\"technicalNote\":\"So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR.\"},{\"moduleId\":\"mod.account_vault\",\"displayName\":\"Account Vault (Credential Manager)\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"credential_vault_access\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool.\"},{\"moduleId\":\"mod.proxy_network\",\"displayName\":\"SOCKS5/HTTP Application Proxy\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"outbound_proxy_connect\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding).\"},{\"moduleId\":\"mod.adb_port_forward\",\"displayName\":\"ADB Host-Device Socket Forwarding\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"adb_exec\",\"local_socket_bind\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game).\"},{\"moduleId\":\"mod.emulator_optimizer\",\"displayName\":\"Emulator Watchdog & Auto-Reconnect\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"adb_exec\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối.\"}],\"dependencyAudit\":{\"webview2EvergreenInstalled\":true,\"webview2VersionOrNote\":\"Evergreen Runtime v157.0.4341.60 (Fixed Version fallback supported if offline target lacks Evergreen)\",\"adbExePresent\":false,\"adbWinApiDllPresent\":false,\"adbWinUsbApiDllPresent\":false,\"winrtOcrPowershellAvailable\":true,\"exeDirWritable\":true,\"writeProbeError\":null,\"resolvedSqliteDbPath\":\"E:\\\\DATA\\\\FarmerPro\\\\artifacts\\\\p5_3_evidence\\\\sandbox\\\\projects\\\\brand-beta\\\\releases\\\\v1.0.0\\\\data\\\\runtime_brand-beta.db\",\"fallbackToLocalAppdataUsed\":false,\"offlineExecutionReady\":true}}",
+        "builtAt": "2026-11-22T12:48:03.084810100+00:00",
+        "lifecycleState": "Draft",
+        "releaseChannel": "qa",
+        "changelogMd": "",
+        "minRuntimeVersion": "0.1.0",
+        "workflowSchemaVersion": 1,
+        "uiSchemaVersion": 1,
+        "moduleApiVersion": "1.0.0",
+        "sqliteSchemaVersion": 5,
+        "gitCommit": "5e8989e",
+        "signatureStatus": "Authenticode Self-Signed QA Build (NOT TrustedPublicRelease; Subject='Beta Nova QA Publisher', Thumbprint=3A90016D3CC5CCAC333A083DF9D0C44A14B19D51)",
+        "promotedAt": null,
+        "rolledBackFromId": null,
+        "publisherProfileId": "pub-9fefce13-238c-4750-a4eb-458d9a880cae",
+        "signingMode": "self_signed_qa",
+        "authenticodeTrustStatus": "self_signed_untrusted_root",
+        "authenticodeThumbprint": "3A90016D3CC5CCAC333A083DF9D0C44A14B19D51",
+        "authenticodeSubject": "Beta Nova QA Publisher",
+        "trustedPublicRelease": false
+      },
+      "buildReport": {
+        "projectId": "proj-brand-beta-a48cc2b3",
+        "projectSlug": "brand-beta",
+        "toolExeName": "Auto_BrandBeta.exe",
+        "toolExePath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta\\releases\\v1.0.0\\Auto_BrandBeta.exe",
+        "toolExeSizeBytes": 24299480,
+        "toolExeSha256": "34c4441d4c769be5df583e0878904a5d8702940455252f52cab98eb6c76aaed1",
+        "peIconLayersInjected": 1,
+        "peIconGroupResourceBytes": 20,
+        "peIconFirstLayerBytes": 4264,
+        "peEmbeddedPubkeyResourceId": 7777,
+        "peEmbeddedPubkeyVerified": true,
+        "authenticodeStatus": "Authenticode Self-Signed QA Build (NOT TrustedPublicRelease; Subject='Beta Nova QA Publisher', Thumbprint=3A90016D3CC5CCAC333A083DF9D0C44A14B19D51)",
+        "signingMode": "self_signed_qa",
+        "trustedPublicRelease": false,
+        "versionInfo": {
+          "companyName": "Beta Nova Interactive Labs Pte. Ltd.",
+          "fileDescription": "Nova Tactics QA Signed Automator",
+          "fileVersion": "1.0.0.20",
+          "internalName": "brand-beta",
+          "legalCopyright": "Copyright (C) 2026 Beta Nova Interactive Labs Pte. Ltd.",
+          "originalFilename": "Auto_BrandBeta.exe",
+          "productName": "Nova Tactics Automator",
+          "productVersion": "1.0.0"
+        },
+        "authenticodeVerification": {
+          "signed": true,
+          "trustStatus": "self_signed_untrusted_root",
+          "trustedPublicRelease": false,
+          "winTrustErrorCode": 2148204809,
+          "signerSubject": "Beta Nova QA Publisher",
+          "signerIssuer": "Beta Nova QA Publisher",
+          "signerThumbprint": "3A90016D3CC5CCAC333A083DF9D0C44A14B19D51",
+          "timestampStatus": "NONE_OR_QA",
+          "detail": "Self-Signed / Untrusted Root (0x800B0109): Authenticode PE hash intact, NOT trusted as Public Release."
+        },
+        "keyId": "fp-ed25519-014c0bca7673",
+        "publisherPublicKeyHex": "014c0bca767390f9d73c5c707ac0062df32fbba3525c7aa9a128565e470c6fe3",
+        "externalKeystorePath": "C:\\Users\\TINH-NGUYEN\\AppData\\Local\\FarmerPro\\ProducerKeys\\active_producer_ed25519.json",
+        "signatureAlgorithm": "Ed25519-RFC8032-SHA256",
+        "signatureEd25519Hex": "baac22642b68ae7881be52b0d1b5ad0e9c2b209798cbed9119c68ad55deccbc3cee66d4c5f3cfa8b1d4b982ef96405ecd757f73bff60e029abf84311556c3907",
+        "totalDurationMs": 4578,
+        "steps": [
+          {
+            "stepNo": 1,
+            "name": "Validate Project, UI Schema & Workflows",
+            "durationMs": 0,
+            "status": "PASS",
+            "detail": "Validated 1 workflows and UI schema (v1) for 'Nova Tactics Automator'"
+          },
+          {
+            "stepNo": 2,
+            "name": "Asset Integrity & Path Traversal Guard",
+            "durationMs": 0,
+            "status": "PASS",
+            "detail": "Verified 0 template PNGs and icon 'branding/icon.ico'"
+          },
+          {
+            "stepNo": 3,
+            "name": "Resolve 5-State Module Matrix",
+            "durationMs": 0,
+            "status": "PASS",
+            "detail": "Packaged modules: [\"mod.adb_core\", \"mod.vision_ocr\"]"
+          },
+          {
+            "stepNo": 4,
+            "name": "Copy Dedicated Mini Runtime Binary",
+            "durationMs": 41,
+            "status": "PASS",
+            "detail": "Copied target/debug/fp-mini-runtime.exe -> E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta\\releases\\v1.0.0\\Auto_BrandBeta.exe"
+          },
+          {
+            "stepNo": 5,
+            "name": "PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection",
+            "durationMs": 3031,
+            "status": "PASS",
+            "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Nova Tactics Automator', Company='Beta Nova Interactive Labs Pte. Ltd.'), PE RT_RCDATA #7777=014c0bca767390f9"
+          },
+          {
+            "stepNo": 6,
+            "name": "Package Bundle Assets & Android ADB Dependencies",
+            "durationMs": 4,
+            "status": "PASS",
+            "detail": "Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=false"
+          },
+          {
+            "stepNo": 7,
+            "name": "Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature",
+            "durationMs": 12,
+            "status": "PASS",
+            "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-014c0bca7673, PubKey: 014c0bca767390f9d73c5c707ac0062df32fbba3525c7aa9a128565e470c6fe3)"
+          },
+          {
+            "stepNo": 8,
+            "name": "Authenticode Sign/Verify (WinVerifyTrust) & Final PE Root-of-Trust Check",
+            "durationMs": 1480,
+            "status": "PASS",
+            "detail": "Mode=SelfSignedQa, Trust=SelfSignedUntrustedRoot, TrustedPublicRelease=false, exe SHA-256=34c4441d4c769be5"
+          }
+        ],
+        "modules": [
+          {
+            "moduleId": "mod.adb_core",
+            "displayName": "ADB & Device Driver Core",
+            "version": "1.0.0",
+            "dependencies": [],
+            "requiredCapabilities": [
+              "adb_exec"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": true,
+            "permittedToInitialize": true,
+            "enabledByUserConfig": true,
+            "activeAndInitialized": true,
+            "technicalNote": "Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn."
+          },
+          {
+            "moduleId": "mod.vision_ocr",
+            "displayName": "Multiscale Vision & WinRT OCR",
+            "version": "1.0.0",
+            "dependencies": [
+              "mod.adb_core"
+            ],
+            "requiredCapabilities": [
+              "filesystem_read_write"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": true,
+            "permittedToInitialize": true,
+            "enabledByUserConfig": true,
+            "activeAndInitialized": true,
+            "technicalNote": "So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR."
+          },
+          {
+            "moduleId": "mod.account_vault",
+            "displayName": "Account Vault (Credential Manager)",
+            "version": "1.0.0",
+            "dependencies": [],
+            "requiredCapabilities": [
+              "credential_vault_access"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": false,
+            "permittedToInitialize": false,
+            "enabledByUserConfig": false,
+            "activeAndInitialized": false,
+            "technicalNote": "Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool."
+          },
+          {
+            "moduleId": "mod.proxy_network",
+            "displayName": "SOCKS5/HTTP Application Proxy",
+            "version": "1.0.0",
+            "dependencies": [],
+            "requiredCapabilities": [
+              "outbound_proxy_connect"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": false,
+            "permittedToInitialize": false,
+            "enabledByUserConfig": false,
+            "activeAndInitialized": false,
+            "technicalNote": "Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding)."
+          },
+          {
+            "moduleId": "mod.adb_port_forward",
+            "displayName": "ADB Host-Device Socket Forwarding",
+            "version": "1.0.0",
+            "dependencies": [
+              "mod.adb_core"
+            ],
+            "requiredCapabilities": [
+              "adb_exec",
+              "local_socket_bind"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": false,
+            "permittedToInitialize": false,
+            "enabledByUserConfig": false,
+            "activeAndInitialized": false,
+            "technicalNote": "Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game)."
+          },
+          {
+            "moduleId": "mod.emulator_optimizer",
+            "displayName": "Emulator Watchdog & Auto-Reconnect",
+            "version": "1.0.0",
+            "dependencies": [
+              "mod.adb_core"
+            ],
+            "requiredCapabilities": [
+              "adb_exec"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": false,
+            "permittedToInitialize": false,
+            "enabledByUserConfig": false,
+            "activeAndInitialized": false,
+            "technicalNote": "Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối."
+          }
+        ],
+        "dependencyAudit": {
+          "webview2EvergreenInstalled": true,
+          "webview2VersionOrNote": "Evergreen Runtime v157.0.4341.60 (Fixed Version fallback supported if offline target lacks Evergreen)",
+          "adbExePresent": false,
+          "adbWinApiDllPresent": false,
+          "adbWinUsbApiDllPresent": false,
+          "winrtOcrPowershellAvailable": true,
+          "exeDirWritable": true,
+          "writeProbeError": null,
+          "resolvedSqliteDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta\\releases\\v1.0.0\\data\\runtime_brand-beta.db",
+          "fallbackToLocalAppdataUsed": false,
+          "offlineExecutionReady": true
+        }
+      }
+    },
+    "resBeta110": {
+      "release": {
+        "id": "rel-4814108e-b06e-4e34-aa18-24870f6fc214",
+        "projectId": "proj-brand-beta-a48cc2b3",
+        "version": "1.1.0",
+        "outputDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta\\releases\\v1.1.0",
+        "exePath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta\\releases\\v1.1.0\\Auto_BrandBeta.exe",
+        "exeSizeBytes": 24299480,
+        "exeSha256": "e991f9f3137e4a0ad9ac010a3272b6d0431e9145c8ed8036848c22156e8b471b",
+        "keyId": "fp-ed25519-c73bebffe271",
+        "publisherPublicKeyHex": "c73bebffe271e409020b8dc573c0918f2ad4143f10af3f39b503094fd6f85591",
+        "peRcdataPubkeyId": 7777,
+        "signatureEd25519Hex": "e87f0df1921c19ea6d47acb7548408027584e3c094c8771371507aafa16f687f861fec1676fff8dfcf6d3fd52b6e1a3100067cefa889664cbb700fae5fa6bc0c",
+        "buildReportJson": "{\"projectId\":\"proj-brand-beta-a48cc2b3\",\"projectSlug\":\"brand-beta\",\"toolExeName\":\"Auto_BrandBeta.exe\",\"toolExePath\":\"E:\\\\DATA\\\\FarmerPro\\\\artifacts\\\\p5_3_evidence\\\\sandbox\\\\projects\\\\brand-beta\\\\releases\\\\v1.1.0\\\\Auto_BrandBeta.exe\",\"toolExeSizeBytes\":24299480,\"toolExeSha256\":\"e991f9f3137e4a0ad9ac010a3272b6d0431e9145c8ed8036848c22156e8b471b\",\"peIconLayersInjected\":1,\"peIconGroupResourceBytes\":20,\"peIconFirstLayerBytes\":4264,\"peEmbeddedPubkeyResourceId\":7777,\"peEmbeddedPubkeyVerified\":true,\"authenticodeStatus\":\"Authenticode Self-Signed QA Build (NOT TrustedPublicRelease; Subject='Beta Nova QA Publisher', Thumbprint=3A90016D3CC5CCAC333A083DF9D0C44A14B19D51)\",\"signingMode\":\"self_signed_qa\",\"trustedPublicRelease\":false,\"versionInfo\":{\"companyName\":\"Beta Nova Interactive Labs Pte. Ltd.\",\"fileDescription\":\"Nova Tactics QA Signed Automator\",\"fileVersion\":\"1.1.0.21\",\"internalName\":\"brand-beta\",\"legalCopyright\":\"Copyright (C) 2026 Beta Nova Interactive Labs Pte. Ltd.\",\"originalFilename\":\"Auto_BrandBeta.exe\",\"productName\":\"Nova Tactics Automator\",\"productVersion\":\"1.1.0\"},\"authenticodeVerification\":{\"signed\":true,\"trustStatus\":\"self_signed_untrusted_root\",\"trustedPublicRelease\":false,\"winTrustErrorCode\":2148204809,\"signerSubject\":\"Beta Nova QA Publisher\",\"signerIssuer\":\"Beta Nova QA Publisher\",\"signerThumbprint\":\"3A90016D3CC5CCAC333A083DF9D0C44A14B19D51\",\"timestampStatus\":\"NONE_OR_QA\",\"detail\":\"Self-Signed / Untrusted Root (0x800B0109): Authenticode PE hash intact, NOT trusted as Public Release.\"},\"keyId\":\"fp-ed25519-c73bebffe271\",\"publisherPublicKeyHex\":\"c73bebffe271e409020b8dc573c0918f2ad4143f10af3f39b503094fd6f85591\",\"externalKeystorePath\":\"C:\\\\Users\\\\TINH-NGUYEN\\\\AppData\\\\Local\\\\FarmerPro\\\\ProducerKeys\\\\active_producer_ed25519.json\",\"signatureAlgorithm\":\"Ed25519-RFC8032-SHA256\",\"signatureEd25519Hex\":\"e87f0df1921c19ea6d47acb7548408027584e3c094c8771371507aafa16f687f861fec1676fff8dfcf6d3fd52b6e1a3100067cefa889664cbb700fae5fa6bc0c\",\"totalDurationMs\":4217,\"steps\":[{\"stepNo\":1,\"name\":\"Validate Project, UI Schema & Workflows\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Validated 1 workflows and UI schema (v1) for 'Nova Tactics Automator'\"},{\"stepNo\":2,\"name\":\"Asset Integrity & Path Traversal Guard\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Verified 0 template PNGs and icon 'branding/icon.ico'\"},{\"stepNo\":3,\"name\":\"Resolve 5-State Module Matrix\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Packaged modules: [\\\"mod.adb_core\\\", \\\"mod.vision_ocr\\\"]\"},{\"stepNo\":4,\"name\":\"Copy Dedicated Mini Runtime Binary\",\"durationMs\":38,\"status\":\"PASS\",\"detail\":\"Copied target/debug/fp-mini-runtime.exe -> E:\\\\DATA\\\\FarmerPro\\\\artifacts\\\\p5_3_evidence\\\\sandbox\\\\projects\\\\brand-beta\\\\releases\\\\v1.1.0\\\\Auto_BrandBeta.exe\"},{\"stepNo\":5,\"name\":\"PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection\",\"durationMs\":2958,\"status\":\"PASS\",\"detail\":\"Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Nova Tactics Automator', Company='Beta Nova Interactive Labs Pte. Ltd.'), PE RT_RCDATA #7777=c73bebffe271e409\"},{\"stepNo\":6,\"name\":\"Package Bundle Assets & Android ADB Dependencies\",\"durationMs\":5,\"status\":\"PASS\",\"detail\":\"Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=false\"},{\"stepNo\":7,\"name\":\"Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature\",\"durationMs\":12,\"status\":\"PASS\",\"detail\":\"Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-c73bebffe271, PubKey: c73bebffe271e409020b8dc573c0918f2ad4143f10af3f39b503094fd6f85591)\"},{\"stepNo\":8,\"name\":\"Authenticode Sign/Verify (WinVerifyTrust) & Final PE Root-of-Trust Check\",\"durationMs\":1194,\"status\":\"PASS\",\"detail\":\"Mode=SelfSignedQa, Trust=SelfSignedUntrustedRoot, TrustedPublicRelease=false, exe SHA-256=e991f9f3137e4a0a\"}],\"modules\":[{\"moduleId\":\"mod.adb_core\",\"displayName\":\"ADB & Device Driver Core\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"adb_exec\"],\"compiledInBinary\":true,\"packagedInRelease\":true,\"permittedToInitialize\":true,\"enabledByUserConfig\":true,\"activeAndInitialized\":true,\"technicalNote\":\"Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn.\"},{\"moduleId\":\"mod.vision_ocr\",\"displayName\":\"Multiscale Vision & WinRT OCR\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"filesystem_read_write\"],\"compiledInBinary\":true,\"packagedInRelease\":true,\"permittedToInitialize\":true,\"enabledByUserConfig\":true,\"activeAndInitialized\":true,\"technicalNote\":\"So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR.\"},{\"moduleId\":\"mod.account_vault\",\"displayName\":\"Account Vault (Credential Manager)\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"credential_vault_access\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool.\"},{\"moduleId\":\"mod.proxy_network\",\"displayName\":\"SOCKS5/HTTP Application Proxy\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"outbound_proxy_connect\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding).\"},{\"moduleId\":\"mod.adb_port_forward\",\"displayName\":\"ADB Host-Device Socket Forwarding\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"adb_exec\",\"local_socket_bind\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game).\"},{\"moduleId\":\"mod.emulator_optimizer\",\"displayName\":\"Emulator Watchdog & Auto-Reconnect\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"adb_exec\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối.\"}],\"dependencyAudit\":{\"webview2EvergreenInstalled\":true,\"webview2VersionOrNote\":\"Evergreen Runtime v157.0.4341.60 (Fixed Version fallback supported if offline target lacks Evergreen)\",\"adbExePresent\":false,\"adbWinApiDllPresent\":false,\"adbWinUsbApiDllPresent\":false,\"winrtOcrPowershellAvailable\":true,\"exeDirWritable\":true,\"writeProbeError\":null,\"resolvedSqliteDbPath\":\"E:\\\\DATA\\\\FarmerPro\\\\artifacts\\\\p5_3_evidence\\\\sandbox\\\\projects\\\\brand-beta\\\\releases\\\\v1.1.0\\\\data\\\\runtime_brand-beta.db\",\"fallbackToLocalAppdataUsed\":false,\"offlineExecutionReady\":true}}",
+        "builtAt": "2026-11-22T12:48:15.409321100+00:00",
+        "lifecycleState": "Draft",
+        "releaseChannel": "qa",
+        "changelogMd": "",
+        "minRuntimeVersion": "0.1.0",
+        "workflowSchemaVersion": 1,
+        "uiSchemaVersion": 1,
+        "moduleApiVersion": "1.0.0",
+        "sqliteSchemaVersion": 5,
+        "gitCommit": "5e8989e",
+        "signatureStatus": "Authenticode Self-Signed QA Build (NOT TrustedPublicRelease; Subject='Beta Nova QA Publisher', Thumbprint=3A90016D3CC5CCAC333A083DF9D0C44A14B19D51)",
+        "promotedAt": null,
+        "rolledBackFromId": null,
+        "publisherProfileId": "pub-9fefce13-238c-4750-a4eb-458d9a880cae",
+        "signingMode": "self_signed_qa",
+        "authenticodeTrustStatus": "self_signed_untrusted_root",
+        "authenticodeThumbprint": "3A90016D3CC5CCAC333A083DF9D0C44A14B19D51",
+        "authenticodeSubject": "Beta Nova QA Publisher",
+        "trustedPublicRelease": false
+      },
+      "buildReport": {
+        "projectId": "proj-brand-beta-a48cc2b3",
+        "projectSlug": "brand-beta",
+        "toolExeName": "Auto_BrandBeta.exe",
+        "toolExePath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta\\releases\\v1.1.0\\Auto_BrandBeta.exe",
+        "toolExeSizeBytes": 24299480,
+        "toolExeSha256": "e991f9f3137e4a0ad9ac010a3272b6d0431e9145c8ed8036848c22156e8b471b",
+        "peIconLayersInjected": 1,
+        "peIconGroupResourceBytes": 20,
+        "peIconFirstLayerBytes": 4264,
+        "peEmbeddedPubkeyResourceId": 7777,
+        "peEmbeddedPubkeyVerified": true,
+        "authenticodeStatus": "Authenticode Self-Signed QA Build (NOT TrustedPublicRelease; Subject='Beta Nova QA Publisher', Thumbprint=3A90016D3CC5CCAC333A083DF9D0C44A14B19D51)",
+        "signingMode": "self_signed_qa",
+        "trustedPublicRelease": false,
+        "versionInfo": {
+          "companyName": "Beta Nova Interactive Labs Pte. Ltd.",
+          "fileDescription": "Nova Tactics QA Signed Automator",
+          "fileVersion": "1.1.0.21",
+          "internalName": "brand-beta",
+          "legalCopyright": "Copyright (C) 2026 Beta Nova Interactive Labs Pte. Ltd.",
+          "originalFilename": "Auto_BrandBeta.exe",
+          "productName": "Nova Tactics Automator",
+          "productVersion": "1.1.0"
+        },
+        "authenticodeVerification": {
+          "signed": true,
+          "trustStatus": "self_signed_untrusted_root",
+          "trustedPublicRelease": false,
+          "winTrustErrorCode": 2148204809,
+          "signerSubject": "Beta Nova QA Publisher",
+          "signerIssuer": "Beta Nova QA Publisher",
+          "signerThumbprint": "3A90016D3CC5CCAC333A083DF9D0C44A14B19D51",
+          "timestampStatus": "NONE_OR_QA",
+          "detail": "Self-Signed / Untrusted Root (0x800B0109): Authenticode PE hash intact, NOT trusted as Public Release."
+        },
+        "keyId": "fp-ed25519-c73bebffe271",
+        "publisherPublicKeyHex": "c73bebffe271e409020b8dc573c0918f2ad4143f10af3f39b503094fd6f85591",
+        "externalKeystorePath": "C:\\Users\\TINH-NGUYEN\\AppData\\Local\\FarmerPro\\ProducerKeys\\active_producer_ed25519.json",
+        "signatureAlgorithm": "Ed25519-RFC8032-SHA256",
+        "signatureEd25519Hex": "e87f0df1921c19ea6d47acb7548408027584e3c094c8771371507aafa16f687f861fec1676fff8dfcf6d3fd52b6e1a3100067cefa889664cbb700fae5fa6bc0c",
+        "totalDurationMs": 4217,
+        "steps": [
+          {
+            "stepNo": 1,
+            "name": "Validate Project, UI Schema & Workflows",
+            "durationMs": 0,
+            "status": "PASS",
+            "detail": "Validated 1 workflows and UI schema (v1) for 'Nova Tactics Automator'"
+          },
+          {
+            "stepNo": 2,
+            "name": "Asset Integrity & Path Traversal Guard",
+            "durationMs": 0,
+            "status": "PASS",
+            "detail": "Verified 0 template PNGs and icon 'branding/icon.ico'"
+          },
+          {
+            "stepNo": 3,
+            "name": "Resolve 5-State Module Matrix",
+            "durationMs": 0,
+            "status": "PASS",
+            "detail": "Packaged modules: [\"mod.adb_core\", \"mod.vision_ocr\"]"
+          },
+          {
+            "stepNo": 4,
+            "name": "Copy Dedicated Mini Runtime Binary",
+            "durationMs": 38,
+            "status": "PASS",
+            "detail": "Copied target/debug/fp-mini-runtime.exe -> E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta\\releases\\v1.1.0\\Auto_BrandBeta.exe"
+          },
+          {
+            "stepNo": 5,
+            "name": "PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection",
+            "durationMs": 2958,
+            "status": "PASS",
+            "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Nova Tactics Automator', Company='Beta Nova Interactive Labs Pte. Ltd.'), PE RT_RCDATA #7777=c73bebffe271e409"
+          },
+          {
+            "stepNo": 6,
+            "name": "Package Bundle Assets & Android ADB Dependencies",
+            "durationMs": 5,
+            "status": "PASS",
+            "detail": "Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=false"
+          },
+          {
+            "stepNo": 7,
+            "name": "Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature",
+            "durationMs": 12,
+            "status": "PASS",
+            "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-c73bebffe271, PubKey: c73bebffe271e409020b8dc573c0918f2ad4143f10af3f39b503094fd6f85591)"
+          },
+          {
+            "stepNo": 8,
+            "name": "Authenticode Sign/Verify (WinVerifyTrust) & Final PE Root-of-Trust Check",
+            "durationMs": 1194,
+            "status": "PASS",
+            "detail": "Mode=SelfSignedQa, Trust=SelfSignedUntrustedRoot, TrustedPublicRelease=false, exe SHA-256=e991f9f3137e4a0a"
+          }
+        ],
+        "modules": [
+          {
+            "moduleId": "mod.adb_core",
+            "displayName": "ADB & Device Driver Core",
+            "version": "1.0.0",
+            "dependencies": [],
+            "requiredCapabilities": [
+              "adb_exec"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": true,
+            "permittedToInitialize": true,
+            "enabledByUserConfig": true,
+            "activeAndInitialized": true,
+            "technicalNote": "Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn."
+          },
+          {
+            "moduleId": "mod.vision_ocr",
+            "displayName": "Multiscale Vision & WinRT OCR",
+            "version": "1.0.0",
+            "dependencies": [
+              "mod.adb_core"
+            ],
+            "requiredCapabilities": [
+              "filesystem_read_write"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": true,
+            "permittedToInitialize": true,
+            "enabledByUserConfig": true,
+            "activeAndInitialized": true,
+            "technicalNote": "So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR."
+          },
+          {
+            "moduleId": "mod.account_vault",
+            "displayName": "Account Vault (Credential Manager)",
+            "version": "1.0.0",
+            "dependencies": [],
+            "requiredCapabilities": [
+              "credential_vault_access"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": false,
+            "permittedToInitialize": false,
+            "enabledByUserConfig": false,
+            "activeAndInitialized": false,
+            "technicalNote": "Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool."
+          },
+          {
+            "moduleId": "mod.proxy_network",
+            "displayName": "SOCKS5/HTTP Application Proxy",
+            "version": "1.0.0",
+            "dependencies": [],
+            "requiredCapabilities": [
+              "outbound_proxy_connect"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": false,
+            "permittedToInitialize": false,
+            "enabledByUserConfig": false,
+            "activeAndInitialized": false,
+            "technicalNote": "Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding)."
+          },
+          {
+            "moduleId": "mod.adb_port_forward",
+            "displayName": "ADB Host-Device Socket Forwarding",
+            "version": "1.0.0",
+            "dependencies": [
+              "mod.adb_core"
+            ],
+            "requiredCapabilities": [
+              "adb_exec",
+              "local_socket_bind"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": false,
+            "permittedToInitialize": false,
+            "enabledByUserConfig": false,
+            "activeAndInitialized": false,
+            "technicalNote": "Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game)."
+          },
+          {
+            "moduleId": "mod.emulator_optimizer",
+            "displayName": "Emulator Watchdog & Auto-Reconnect",
+            "version": "1.0.0",
+            "dependencies": [
+              "mod.adb_core"
+            ],
+            "requiredCapabilities": [
+              "adb_exec"
+            ],
+            "compiledInBinary": true,
+            "packagedInRelease": false,
+            "permittedToInitialize": false,
+            "enabledByUserConfig": false,
+            "activeAndInitialized": false,
+            "technicalNote": "Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối."
+          }
+        ],
+        "dependencyAudit": {
+          "webview2EvergreenInstalled": true,
+          "webview2VersionOrNote": "Evergreen Runtime v157.0.4341.60 (Fixed Version fallback supported if offline target lacks Evergreen)",
+          "adbExePresent": false,
+          "adbWinApiDllPresent": false,
+          "adbWinUsbApiDllPresent": false,
+          "winrtOcrPowershellAvailable": true,
+          "exeDirWritable": true,
+          "writeProbeError": null,
+          "resolvedSqliteDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta\\releases\\v1.1.0\\data\\runtime_brand-beta.db",
+          "fallbackToLocalAppdataUsed": false,
+          "offlineExecutionReady": true
+        }
+      }
+    },
+    "rotRes": {
+      "newMeta": {
+        "formatVersion": 2,
+        "protectionScheme": "WIN32_DPAPI_LOCAL_USER",
+        "keyId": "fp-ed25519-c73bebffe271",
+        "publicKeyHex": "c73bebffe271e409020b8dc573c0918f2ad4143f10af3f39b503094fd6f85591",
+        "createdAtUtc": "2026-11-22T12:48:11.114842400+00:00",
+        "keyStorePath": "C:\\Users\\TINH-NGUYEN\\AppData\\Local\\FarmerPro\\ProducerKeys\\active_producer_ed25519.json"
+      },
+      "delegation": {
+        "publisherId": "pub-beta-nova",
+        "productSlug": "brand-beta",
+        "oldPubkeyHex": "014c0bca767390f9d73c5c707ac0062df32fbba3525c7aa9a128565e470c6fe3",
+        "newPubkeyHex": "c73bebffe271e409020b8dc573c0918f2ad4143f10af3f39b503094fd6f85591",
+        "issuedAtUtc": "2026-11-22T12:48:11.115411+00:00",
+        "expiresAtUtc": "2027-02-20T12:48:11.115411+00:00",
+        "nonce": "rot-7737ba3922a24abc984717075cdff53b",
+        "signatureByOldKeyHex": "cd111b93d071b23857e68f3ba520710ad27e436e444bed7490f8e120c3842d0eaf6b1bc35e51db8b74113a59f5287e0aac8e3a547c22ac6d1122e0b5a1abe60f"
+      },
+      "delegationSavedPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta\\key-rotation-delegation.json"
+    },
+    "publicNoCertErr": "PUBLIC_SIGN_TRUST_FAILED: certificate signed binary cleanly but failed Windows public trust chain (SelfSignedUntrustedRoot: Self-Signed / Untrusted Root (0x800B0109): Authenticode PE hash intact, NOT trusted as Public Release.). Self-signed certificates cannot be marked TrustedPublicRelease.",
+    "publicSelfSignedErr": "PUBLIC_SIGN_TRUST_FAILED: certificate signed binary cleanly but failed Windows public trust chain (SelfSignedUntrustedRoot: Self-Signed / Untrusted Root (0x800B0109): Authenticode PE hash intact, NOT trusted as Public Release.). Self-signed certificates cannot be marked TrustedPublicRelease."
+  },
+  "osInspect": {
+    "alphaVersionInfo": {
+      "ProductVersion": "1.0.0",
+      "FileVersion": "1.0.0.10",
+      "ProductName": "Vanguard Auto Suite",
+      "LegalCopyright": "Copyright (C) 2026 Alpha Vanguard Automation Co., Ltd.",
+      "OriginalFilename": "Auto_BrandAlpha.exe",
+      "CompanyName": "Alpha Vanguard Automation Co., Ltd.",
+      "InternalName": "brand-alpha",
+      "FileDescription": "Vanguard Auto Suite Internal Runner"
+    },
+    "alphaAuth": {
+      "signer": null,
+      "status": "NotSigned"
+    },
+    "beta100VersionInfo": {
+      "ProductVersion": "1.0.0",
+      "FileVersion": "1.0.0.20",
+      "ProductName": "Nova Tactics Automator",
+      "LegalCopyright": "Copyright (C) 2026 Beta Nova Interactive Labs Pte. Ltd.",
+      "OriginalFilename": "Auto_BrandBeta.exe",
+      "CompanyName": "Beta Nova Interactive Labs Pte. Ltd.",
+      "InternalName": "brand-beta",
+      "FileDescription": "Nova Tactics QA Signed Automator"
+    },
+    "beta100Auth": {
+      "subject": "CN=Beta Nova QA Publisher",
+      "status": "UnknownError",
+      "thumbprint": "3A90016D3CC5CCAC333A083DF9D0C44A14B19D51",
+      "statusMessage": "A certificate chain processed, but terminated in a root certificate which is not trusted by the trust provider"
+    },
+    "beta110VersionInfo": {
+      "ProductVersion": "1.1.0",
+      "FileVersion": "1.1.0.21",
+      "ProductName": "Nova Tactics Automator",
+      "LegalCopyright": "Copyright (C) 2026 Beta Nova Interactive Labs Pte. Ltd.",
+      "OriginalFilename": "Auto_BrandBeta.exe",
+      "CompanyName": "Beta Nova Interactive Labs Pte. Ltd.",
+      "InternalName": "brand-beta",
+      "FileDescription": "Nova Tactics QA Signed Automator"
+    },
+    "beta110Auth": {
+      "subject": "CN=Beta Nova QA Publisher",
+      "status": "UnknownError",
+      "thumbprint": "3A90016D3CC5CCAC333A083DF9D0C44A14B19D51"
+    }
+  },
+  "updaterLifecycle": {
+    "installAlphaRes": {
+      "operation": "install_initial",
+      "status": "COMPLETED",
+      "projectSlug": "brand-alpha",
+      "previousVersion": null,
+      "activeVersion": "1.0.0",
+      "stageReached": "completed",
+      "backupDbPath": null,
+      "backupVerifiedOk": false,
+      "signatureVerifiedOk": true,
+      "compatibilityVerifiedOk": true,
+      "postUpdateAutoResumeBlocked": false,
+      "blockedJobIds": [],
+      "binaryRollbackOnly": false,
+      "databaseRestored": false,
+      "preRollbackSafetyDbPath": null,
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\installed\\BrandAlpha\\.updater\\update-journal.json",
+      "detail": "Initial Mini Tool versioned installation verified and activated."
+    },
+    "installBetaRes": {
+      "operation": "install_initial",
+      "status": "COMPLETED",
+      "projectSlug": "brand-beta",
+      "previousVersion": null,
+      "activeVersion": "1.0.0",
+      "stageReached": "completed",
+      "backupDbPath": null,
+      "backupVerifiedOk": false,
+      "signatureVerifiedOk": true,
+      "compatibilityVerifiedOk": true,
+      "postUpdateAutoResumeBlocked": false,
+      "blockedJobIds": [],
+      "binaryRollbackOnly": false,
+      "databaseRestored": false,
+      "preRollbackSafetyDbPath": null,
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\installed\\BrandBeta\\.updater\\update-journal.json",
+      "detail": "Initial Mini Tool versioned installation verified and activated."
+    },
+    "peTamperErr": "Error: AUTHENTICODE_TAMPERED_OR_INVALID: PE Authenticode verification failed (0x80096010: AUTHENTICODE_INVALID (0x80096010): binary modified post-signing or signature corrupt!)\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\fp-updater.exe check-compat --release-dir E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\tampered_beta_pe\nError: AUTHENTICODE_TAMPERED_OR_INVALID: PE Authenticode verification failed (0x80096010: AUTHENTICODE_INVALID (0x80096010): binary modified post-signing or signature corrupt!)",
+    "upgradeBetaRes": {
+      "operation": "upgrade",
+      "status": "COMPLETED",
+      "projectSlug": "brand-beta",
+      "previousVersion": "1.0.0",
+      "activeVersion": "1.1.0",
+      "stageReached": "completed",
+      "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\installed\\BrandBeta\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261122_124827_046.db",
+      "backupVerifiedOk": true,
+      "signatureVerifiedOk": true,
+      "compatibilityVerifiedOk": true,
+      "postUpdateAutoResumeBlocked": false,
+      "blockedJobIds": [],
+      "binaryRollbackOnly": false,
+      "databaseRestored": false,
+      "preRollbackSafetyDbPath": null,
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\installed\\BrandBeta\\.updater\\update-journal.json",
+      "detail": "Upgraded Mini Tool safely with WAL backup and atomic version switch."
+    },
+    "replayErr": "Error: SEMVER_UPGRADE_REJECTED: candidate version 1.1.0 is not newer than active version 1.1.0 (use rollback for downgrade)\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\fp-updater.exe upgrade --install-root E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\installed\\BrandBeta --release-dir E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\projects\\brand-beta\\releases\\v1.1.0\nError: SEMVER_UPGRADE_REJECTED: candidate version 1.1.0 is not newer than active version 1.1.0 (use rollback for downgrade)",
+    "reconcileTrustedRes": {
+      "status": "RECOVERED_POINTER",
+      "actionTaken": "REBUILT_CORRUPT_OR_MISSING_ACTIVE_POINTER",
+      "recoveredFromStage": "completed",
+      "activeVersion": "1.1.0",
+      "dbIntegrityOk": true,
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_3_evidence\\sandbox\\installed\\BrandBeta\\.updater\\update-journal.json",
+      "detail": "Recovered missing or corrupt active_version.json from shadow/version scan."
+    }
+  },
+  "independentRuntime": {
+    "studioClosedBeforeLaunch": true,
+    "alphaRuntimeSnap": {
+      "title": "Vanguard Auto Suite v1.0.0",
+      "badge": "",
+      "bodyText": "Vanguard Auto Suite • v1.0.0\nADB: 0 ONLINE (OFFLINE)\n✓ Ed25519 Signed\n1/2 Cột ⇄\nDANH SÁCH THIẾT BỊ ADB & CỘT RUNTIME\n▾\n[✓] THIẾT BỊ ADB\tPACKAGE GAME\tTRẠNG THÁI\nChưa có thiết bị kết nối\tcom.vanguard.alpha\tOFFLINE\nĐIỀU KHIỂN\nTIỆN ÍCH\nMODULES\n▾\nNHẬT KÝ\nCÀI ĐẶT (⚙)\n▾\n[19:48:30][Snapshot] Live=0, TestKit=0, Seqs={}\n[19:48:30]Trạng thái ADB thực tế: 0 máy kết nối.\n[19:48:29]Chữ ký RFC 8032 (Ed25519-RFC8032-SHA256): HỢP LỆ\n[19:48:29]Khởi động Vanguard Auto Suite v1.0.0 (compact2_col)\n[19:48:29][EventStream] Đã kết nối mini://runtime-var-delta & mini://task-progress\n▶ CHẠY NHIỆM VỤ (ADB THẬT)\n🧪 CHẠY "
+    },
+    "betaRuntimeSnap": {
+      "title": "Nova Tactics Automator v1.1.0",
+      "badge": "",
+      "bodyText": "Nova Tactics Automator • v1.1.0\nADB: 0 ONLINE (OFFLINE)\n✓ Ed25519 Signed\n1/2 Cột ⇄\nDANH SÁCH THIẾT BỊ ADB & CỘT RUNTIME\n▾\n[✓] THIẾT BỊ ADB\tPACKAGE GAME\tTRẠNG THÁI\nChưa có thiết bị kết nối\tcom.nova.beta\tOFFLINE\nĐIỀU KHIỂN\nTIỆN ÍCH\nMODULES\n▾\nNHẬT KÝ\nCÀI ĐẶT (⚙)\n▾\n[19:48:32][Snapshot] Live=0, TestKit=0, Seqs={}\n[19:48:32]Trạng thái ADB thực tế: 0 máy kết nối.\n[19:48:32]Chữ ký RFC 8032 (Ed25519-RFC8032-SHA256): HỢP LỆ\n[19:48:32]Khởi động Nova Tactics Automator v1.1.0 (compact2_col)\n[19:48:32][EventStream] Đã kết nối mini://runtime-var-delta & mini://task-progress\n▶ CHẠY NHIỆM VỤ (ADB THẬT)\n🧪 CHẠY"
+    }
+  }
+}
