@@ -1,7 +1,7 @@
 use crate::AppState;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use fp_actions::{SafeRegionSampler, SafeTapPolicy};
-use fp_adb::{validate_adb_token, AdbDeviceDriver, AdbRunner};
+use fp_adb::{validate_adb_token, AdbDeviceDriver};
 use fp_builder::{BuildPreflightReport, BuildReport, MiniToolPackager};
 use fp_bundle_verify::{sha256_hex, validate_safe_relative_path};
 use fp_domain::{
@@ -17,9 +17,7 @@ use fp_storage::{
 use fp_vision::{
     annotate_match_and_tap_png, crop_roi_png, scale_bounds_for_geometry, RoiRect, VisionEngine,
 };
-use fp_workflow_runtime::coordinator::{
-    RunProjectWorkflowRequest, RunWorkflowExecutionSummary, RuntimeCoordinator,
-};
+use fp_workflow_runtime::coordinator::{RunProjectWorkflowRequest, RunWorkflowExecutionSummary};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -770,6 +768,105 @@ pub fn studio_builder_export_release(
         &release_dir,
         None,
     )
+}
+
+fn parse_hex_bgra(accent_hex: Option<&str>) -> [u8; 4] {
+    let raw = accent_hex.unwrap_or("#1878F5").trim().trim_start_matches('#');
+    if raw.len() == 6 {
+        if let (Ok(r), Ok(g), Ok(b)) = (
+            u8::from_str_radix(&raw[0..2], 16),
+            u8::from_str_radix(&raw[2..4], 16),
+            u8::from_str_radix(&raw[4..6], 16),
+        ) {
+            return [b, g, r, 255];
+        }
+    }
+    [245, 120, 24, 255]
+}
+
+fn build_branded_ico_32x32(accent_hex: Option<&str>) -> Vec<u8> {
+    let accent = parse_hex_bgra(accent_hex);
+    let border = [42, 30, 18, 255]; // dark #121E2A BGRA
+    let inner = [235, 185, 95, 255];
+    let mut ico = Vec::new();
+    ico.extend_from_slice(&0u16.to_le_bytes());
+    ico.extend_from_slice(&1u16.to_le_bytes());
+    ico.extend_from_slice(&1u16.to_le_bytes());
+
+    let mut bmp = Vec::new();
+    bmp.extend_from_slice(&40u32.to_le_bytes());
+    bmp.extend_from_slice(&32i32.to_le_bytes());
+    bmp.extend_from_slice(&64i32.to_le_bytes());
+    bmp.extend_from_slice(&1u16.to_le_bytes());
+    bmp.extend_from_slice(&32u16.to_le_bytes());
+    bmp.extend_from_slice(&0u32.to_le_bytes());
+    bmp.extend_from_slice(&(32 * 32 * 4u32).to_le_bytes());
+    bmp.extend_from_slice(&0i32.to_le_bytes());
+    bmp.extend_from_slice(&0i32.to_le_bytes());
+    bmp.extend_from_slice(&0u32.to_le_bytes());
+    bmp.extend_from_slice(&0u32.to_le_bytes());
+    for y in 0..32 {
+        for x in 0..32 {
+            let px = if !(3..=28).contains(&x) || !(3..=28).contains(&y) {
+                border
+            } else if (11..=20).contains(&x) && (11..=20).contains(&y) {
+                inner
+            } else {
+                accent
+            };
+            bmp.extend_from_slice(&px);
+        }
+    }
+    bmp.resize(bmp.len() + 32 * 4, 0u8);
+
+    ico.push(32);
+    ico.push(32);
+    ico.push(0);
+    ico.push(0);
+    ico.extend_from_slice(&1u16.to_le_bytes());
+    ico.extend_from_slice(&32u16.to_le_bytes());
+    ico.extend_from_slice(&(bmp.len() as u32).to_le_bytes());
+    ico.extend_from_slice(&22u32.to_le_bytes());
+    ico.extend_from_slice(&bmp);
+    ico
+}
+
+#[tauri::command]
+pub fn studio_ensure_project_icon(
+    project_id: String,
+    icon_base64: Option<String>,
+    accent_hex: Option<String>,
+    overwrite: Option<bool>,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<String, String> {
+    let st = state.lock().unwrap();
+    let proj = st
+        .storage
+        .get_project(&project_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("GameProject '{}' not found", project_id))?;
+
+    let proj_dir = PathBuf::from(&proj.project_dir_path);
+    let icon_path =
+        validate_safe_relative_path(&proj_dir, &proj.icon_rel_path).map_err(|e| e.to_string())?;
+    if let Some(parent) = icon_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    if let Some(b64) = icon_base64.filter(|s| !s.trim().is_empty()) {
+        let bytes = B64
+            .decode(b64.trim())
+            .map_err(|e| format!("Invalid base64 ICO payload: {}", e))?;
+        if bytes.len() < 22 || bytes[0..4] != [0, 0, 1, 0] {
+            return Err("Uploaded file is not a valid Windows .ico container".to_string());
+        }
+        std::fs::write(&icon_path, bytes).map_err(|e| e.to_string())?;
+    } else if !icon_path.exists() || overwrite.unwrap_or(false) {
+        let bytes = build_branded_ico_32x32(accent_hex.as_deref());
+        std::fs::write(&icon_path, bytes).map_err(|e| e.to_string())?;
+    }
+
+    Ok(icon_path.to_string_lossy().to_string())
 }
 
 #[tauri::command]

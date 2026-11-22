@@ -683,6 +683,16 @@ export const api = {
     });
   },
 
+  async studioEnsureProjectIcon(params: {
+    projectId: string;
+    iconBase64?: string;
+    accentHex?: string;
+    overwrite?: boolean;
+  }): Promise<string> {
+    requireTauri('studio_ensure_project_icon');
+    return await invoke<string>('studio_ensure_project_icon', params);
+  },
+
   async studioListProjectReleases(projectId: string): Promise<ProjectReleaseRecord[]> {
     if (!isTauri()) return [];
     return await invoke<ProjectReleaseRecord[]>('studio_list_project_releases', { projectId });

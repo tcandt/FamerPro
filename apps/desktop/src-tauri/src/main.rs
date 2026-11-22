@@ -1171,6 +1171,7 @@ fn main() {
             studio_p3::studio_probe_project_proxy,
             studio_p3::studio_builder_preflight,
             studio_p3::studio_builder_export_release,
+            studio_p3::studio_ensure_project_icon,
             studio_p3::studio_list_project_releases
         ])
         .run(tauri::generate_context!())
