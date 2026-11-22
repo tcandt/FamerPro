@@ -15,9 +15,13 @@ fp-storage = { path = "../../crates/fp-storage" }
 fp-security = { path = "../../crates/fp-security" }
 fp-testkit = { path = "../../crates/fp-testkit" }
 fp-builder = { path = "../../crates/fp-builder" }
+fp-bundle-contract = { path = "../../crates/fp-bundle-contract" }
 clap.workspace = true
 tokio.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 serde_json.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+rusqlite.workspace = true

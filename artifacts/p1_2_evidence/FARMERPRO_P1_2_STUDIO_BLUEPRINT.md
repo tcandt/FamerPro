@@ -412,7 +412,9 @@ Dashboard không còn là bảng điều khiển chạy auto cho một game duy 
    - **Node Inspector (Bên phải)**: Rộng `300px`, tự động hiển thị khi chọn Node và có nút đóng/mở trên `CanvasToolbar`.
    - **Execution & Debug Dock (Phía dưới Canvas)**: Cao `36px` ở chế độ thu gọn (chỉ hiện thanh trạng thái bước cuối) và `210px` khi mở rộng.
    - **Diện tích thực tế của React Flow Canvas**:
-     - Ở `1280×720` (khi thu gọn NavRail + Palette): **`920×614 px`** (chiếm >72% diện tích màn hình).
+     - Ở `1280×720` (khi thu gọn NavRail `60px` + Palette `0px`, mở Inspector `300px`):
+       - Với Execution Dock thu gọn (`36px`): **`920×614 px`** (`564,880 px²` $\approx$ **`61,3%`** tổng diện tích cửa sổ `1280×720`, trong đó chiều rộng `920 px` chiếm **`71,9%`** chiều rộng cửa sổ và **`75,4%`** chiều rộng vùng nội dung khả dụng sau NavRail).
+       - Với vùng Canvas đo ở cấu hình dock/toolbar mở rộng (`920×510 px` như chú thích trên mockup `Ảnh 03A`): `920×510 px` (`469,200 px²`) tương ứng **`~50,9%`** tổng diện tích cửa sổ `1280×720` (`921,600 px²`), trong khi chiều rộng `920 px` chiếm **`~71,9%`** chiều rộng cửa sổ. *(Đã hiệu chỉnh chuẩn đo lường theo phản hồi P1.2 `v1.2.1-REVIEW` Mục II.1 trước khi áp dụng cho nghiệm thu P4).*
      - Ở `1600×900`: **`840×620 px`** (khi mở đủ mọi panel) đến **`1240×794 px`** (khi thu gọn panel phụ).
      - Ở `1920×1080`: **`1160×800 px`** (mở đủ mọi panel) đến **`1560×974 px`**.
 2. **Tích hợp Trực tiếp Các Hành động Cầu nối (Bridge Actions)**:
@@ -735,7 +737,7 @@ Nếu `fp-mini-runtime.exe` chỉ đọc khóa công khai từ tệp văn bản 
 | # | Yêu cầu Kiểm định | Nội dung Hiệu chỉnh trong `v1.2.1-REVIEW` |
 |---|---|---|
 | **1** | **Chất lượng PDF & Khả năng đọc 100–125%** | Tăng cỡ chữ chuẩn toàn tài liệu (`body 12px`, bảng `10.8–11.5px`, loại bỏ cỡ `6.5pt`), tách 10 sơ đồ kiến trúc `IV.1–IV.10` thành **1 sơ đồ/trang** (~136mm), phóng to ảnh UI lên ~128–134mm, sửa ngắt chữ giữa từ, bổ sung **PDF Bookmarks (Outline)** và tối ưu khoảng trắng dưới đáy trang. |
-| **2** | **Thiết kế Tương tác Workflow Studio** | Bổ sung `Ảnh 03A` (ưu tiên Canvas `>72% @ 1280×720`, `~64% @ 1600×900`) và `Ảnh 03B` minh họa đủ **6 trạng thái tương tác**: Canvas mặc định, Chọn Node + Inspector, Đang thực thi, Lỗi + Debug, Đặt Breakpoint/Step Run, Crop ảnh từ Device Lab vào Vision Node. |
+| **2** | **Thiết kế Tương tác Workflow Studio** | Bổ sung `Ảnh 03A` (ưu tiên chiều rộng Canvas `920 px` = `~71,9%` chiều rộng cửa sổ, `920×510` = `~50,9%` diện tích cửa sổ @ `1280×720`; `~64%` diện tích @ `1600×900`) và `Ảnh 03B` minh họa đủ **6 trạng thái tương tác**: Canvas mặc định, Chọn Node + Inspector, Đang thực thi, Lỗi + Debug, Đặt Breakpoint/Step Run, Crop ảnh từ Device Lab vào Vision Node. |
 | **3** | **Trình dựng Trực quan Mini Tool Builder** | Thiết kế lại `Ảnh 07A` theo bố cục **WYSIWYG 3 khung** (Thêm/xóa/sắp xếp khu vực UI, chọn nhiệm vụ, click thành phần trên Preview để chỉnh nhãn & liên kết biến Runtime — **không bắt sửa JSON tay**), kèm `Ảnh 07B` cho **3 Layout Presets** (`1 cột / 2 cột / Expanded`) & **4 Preview States** (`Online / Offline / Running / Error`). |
 | **4** | **Ma trận Phân loại Thực tế 5 Trạng thái** | Loại bỏ nhãn *"Bảo toàn 100% tính năng"*; phân tách rạch ròi **Bảo toàn Thiết kế/Cấu trúc UI** vs **Trạng thái Backend Thực tế** (`IMPLEMENTED / PARTIAL / MOCK / MISSING / PLANNED`), kiểm toán đúng `CredentialVault` (`HashMap`), `NetworkView` (`setTimeout` + static `forwardRules`), `TasksView`, `RunsView` (`job-demo-8492`), `jx2Workflows.ts` và `Checkpoint Restore`. |
 | **5** | **Đóng gói Hồ sơ Evidence Di động** | Đóng gói thư mục độc lập `artifacts/p1_2_v1_2_1_evidence_pack/` gồm raw logs (`cargo test --workspace` fresh run, `cargo tree`, live ADB, tamper JSON), screenshots gốc, SVG/MMD, Git & OS metadata, `CHANGELOG` và `EVIDENCE_MANIFEST_SHA256.json`. |

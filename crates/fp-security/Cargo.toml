@@ -7,6 +7,12 @@ license.workspace = true
 [dependencies]
 fp-domain = { path = "../fp-domain" }
 serde.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
 regex = "1.11"
+base64 = "0.21"
+sha2 = "0.10.9"
+chrono.workspace = true
+uuid.workspace = true
+ed25519-dalek = { version = "2.2.0", default-features = false, features = ["std"] }

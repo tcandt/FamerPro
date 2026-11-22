@@ -20,6 +20,7 @@ fp-scheduler = { path = "../../../crates/fp-scheduler" }
 fp-storage = { path = "../../../crates/fp-storage" }
 fp-security = { path = "../../../crates/fp-security" }
 fp-testkit = { path = "../../../crates/fp-testkit" }
+fp-bundle-contract = { path = "../../../crates/fp-bundle-contract" }
 tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true

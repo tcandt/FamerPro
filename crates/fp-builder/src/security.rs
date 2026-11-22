@@ -1,136 +1,62 @@
 //! Producer Key Lifecycle Management & RFC 8032 Ed25519 Bundle Signer.
 //!
-//! KEY MANAGEMENT MODEL (Requirement 1):
+//! KEY MANAGEMENT MODEL (Requirement 1 + P2 DPAPI Hardening):
 //! - Neither `FarmerPro.exe` (Studio) nor `fp-mini-runtime.exe` embeds a shared static private signing key in source code.
-//! - Each Studio producer machine generates its own unique 32-byte Ed25519 seed stored outside the repository/binaries
-//!   at `%LOCALAPPDATA%\FarmerPro\ProducerKeys\producer_ed25519.key` (or an explicitly configured external key path).
+//! - Each Studio producer machine generates its own unique 32-byte Ed25519 seed protected by Windows DPAPI (`CryptProtectData`)
+//!   and stored outside the repository/binaries at `%LOCALAPPDATA%\FarmerPro\ProducerKeys\active_producer_ed25519.json`.
 //! - When building a Mini Tool release, `fp-builder` signs the bundle with the producer's external `SigningKey`
-//!   and writes the corresponding 32-byte `VerifyingKey` (Public Key) into `bundle/trusted_publisher.pub`.
-//! - Supports full Key Rotation (`rotate_producer_key`): archives the old keypair with timestamp and generates a new keypair.
+//!   and embeds the corresponding 32-byte `VerifyingKey` (Public Key) in PE `RT_RCDATA #7777` + `bundle/trusted_publisher.pub`.
+//! - Supports full Key Rotation (`rotate_producer_key`), DPAPI-protected Backup (`backup_signing_key`), and Restore (`restore_signing_key`).
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use ed25519_dalek::{Signer, SigningKey};
 use fp_bundle_verify::{
-    canonical_signing_message, hex_decode, hex_encode, sha256_hex, SignedBundleEnvelope,
+    canonical_signing_message, hex_encode, sha256_hex, SignedBundleEnvelope,
 };
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
+use fp_security::{ProducerKeyBackupBundle, ProducerKeystore};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProducerKeyMetadata {
-    pub key_id: String,
-    pub public_key_hex: String,
-    pub created_at_utc: String,
-    pub key_store_path: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct StoredProducerKeyFile {
-    pub key_id: String,
-    pub secret_seed_hex: String,
-    pub public_key_hex: String,
-    pub created_at_utc: String,
-}
+pub use fp_security::ProducerKeyMetadata;
 
 pub struct ProducerKeyManager;
 
 impl ProducerKeyManager {
     /// Resolves the default external key store directory in `%LOCALAPPDATA%\FarmerPro\ProducerKeys`
     pub fn default_external_keystore_dir() -> PathBuf {
-        let base = std::env::var("LOCALAPPDATA")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::temp_dir());
-        base.join("FarmerPro").join("ProducerKeys")
+        ProducerKeystore::default_external_keystore_dir()
     }
 
-    /// Generates a fresh 32-byte Ed25519 seed using OS entropy (`Uuid::new_v4()` x 2 + timestamp + process ID hashed via SHA-256)
-    fn generate_fresh_seed(salt_label: &str) -> [u8; 32] {
-        let mut hasher = Sha256::new();
-        hasher.update(uuid::Uuid::new_v4().as_bytes());
-        hasher.update(uuid::Uuid::new_v4().as_bytes());
-        hasher.update(chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0).to_le_bytes());
-        hasher.update(std::process::id().to_le_bytes());
-        hasher.update(salt_label.as_bytes());
-        let digest = hasher.finalize();
-        let mut seed = [0u8; 32];
-        seed.copy_from_slice(&digest);
-        seed
-    }
-
-    /// Loads the active producer Ed25519 `SigningKey` from an external keystore directory,
-    /// or generates and saves a new one on first run.
+    /// Loads the active producer Ed25519 `SigningKey` (DPAPI-protected) from an external keystore directory,
+    /// or generates and saves a new DPAPI-protected one on first run.
     pub fn load_or_create_signing_key(
         keystore_dir: &Path,
     ) -> Result<(SigningKey, ProducerKeyMetadata)> {
-        std::fs::create_dir_all(keystore_dir)?;
-        let key_file = keystore_dir.join("active_producer_ed25519.json");
-
-        if key_file.exists() {
-            let raw = std::fs::read(&key_file)?;
-            let stored: StoredProducerKeyFile = serde_json::from_slice(&raw)?;
-            let seed_vec = hex_decode(&stored.secret_seed_hex)?;
-            if seed_vec.len() != 32 {
-                bail!("Invalid stored Ed25519 seed length in {}", key_file.display());
-            }
-            let mut seed = [0u8; 32];
-            seed.copy_from_slice(&seed_vec);
-            let signing_key = SigningKey::from_bytes(&seed);
-            let pub_hex = hex_encode(signing_key.verifying_key().as_bytes());
-
-            let meta = ProducerKeyMetadata {
-                key_id: stored.key_id,
-                public_key_hex: pub_hex,
-                created_at_utc: stored.created_at_utc,
-                key_store_path: key_file.to_string_lossy().to_string(),
-            };
-            return Ok((signing_key, meta));
-        }
-
-        Self::rotate_producer_key(keystore_dir, "initial")
+        ProducerKeystore::load_or_create_signing_key(keystore_dir)
     }
 
-    /// Rotates the producer's Ed25519 signing key: archives any existing key file and writes a brand-new keypair.
+    /// Rotates the producer's Ed25519 signing key: archives any existing key file and writes a brand-new DPAPI-protected keypair.
     pub fn rotate_producer_key(
         keystore_dir: &Path,
         reason: &str,
     ) -> Result<(SigningKey, ProducerKeyMetadata)> {
-        std::fs::create_dir_all(keystore_dir)?;
-        let key_file = keystore_dir.join("active_producer_ed25519.json");
+        ProducerKeystore::rotate_producer_key(keystore_dir, reason)
+    }
 
-        if key_file.exists() {
-            let archive_name = format!(
-                "archived_producer_ed25519_{}.json",
-                chrono::Utc::now().format("%Y%m%d_%H%M%S_%f")
-            );
-            std::fs::rename(&key_file, keystore_dir.join(archive_name))?;
-        }
+    /// Exports a DPAPI-protected, SHA-256 checksummed backup of the active signing key.
+    pub fn backup_signing_key(
+        keystore_dir: &Path,
+        backup_file_path: &Path,
+    ) -> Result<ProducerKeyBackupBundle> {
+        ProducerKeystore::backup_signing_key(keystore_dir, backup_file_path)
+    }
 
-        let seed = Self::generate_fresh_seed(reason);
-        let signing_key = SigningKey::from_bytes(&seed);
-        let pub_hex = hex_encode(signing_key.verifying_key().as_bytes());
-        let short_pub = &pub_hex[..12];
-        let key_id = format!("fp-ed25519-{}", short_pub);
-        let now = chrono::Utc::now().to_rfc3339();
-
-        let stored = StoredProducerKeyFile {
-            key_id: key_id.clone(),
-            secret_seed_hex: hex_encode(&seed),
-            public_key_hex: pub_hex.clone(),
-            created_at_utc: now.clone(),
-        };
-        std::fs::write(&key_file, serde_json::to_vec_pretty(&stored)?)?;
-
-        let meta = ProducerKeyMetadata {
-            key_id,
-            public_key_hex: pub_hex,
-            created_at_utc: now,
-            key_store_path: key_file.to_string_lossy().to_string(),
-        };
-        Ok((signing_key, meta))
+    /// Restores a DPAPI-protected signing key backup after verifying checksum and cryptographic roundtrip.
+    pub fn restore_signing_key(
+        backup_file_path: &Path,
+        keystore_dir: &Path,
+    ) -> Result<ProducerKeyMetadata> {
+        ProducerKeystore::restore_signing_key(backup_file_path, keystore_dir)
     }
 
     /// Signs a bundle's manifest SHA-256 and file checksums table using RFC 8032 Ed25519 (`ed25519-dalek`)

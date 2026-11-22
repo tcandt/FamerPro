@@ -1,8 +1,11 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod studio_p2;
+
 use fp_adb::AdbRunner;
 use fp_domain::{ConnectionState, DeviceDetail, DeviceDriver, DeviceSummary, StepEvent};
+use fp_security::CredentialVault;
 use fp_storage::StorageManager;
 use fp_testkit::FakeDeviceDriver;
 use fp_workflow_runtime::{ExecutionContext, ExecutionSignal, WorkflowExecutor};
@@ -72,7 +75,9 @@ pub struct ExecuteWorkflowResponse {
 pub struct AppState {
     pub storage: StorageManager,
     pub adb_runner: AdbRunner,
+    pub vault: CredentialVault,
     pub db_path: String,
+    pub projects_root: std::path::PathBuf,
     pub is_portable: bool,
 }
 
@@ -1035,18 +1040,40 @@ fn resolve_portable_paths() -> (std::path::PathBuf, bool) {
     (std::path::PathBuf::from("farmerpro.db"), false)
 }
 
+fn resolve_projects_root(db_path: &std::path::Path) -> std::path::PathBuf {
+    if let Ok(env_dir) = std::env::var("FARMERPRO_PROJECTS_DIR") {
+        if !env_dir.trim().is_empty() {
+            return std::path::PathBuf::from(env_dir);
+        }
+    }
+    if let Some(parent) = db_path.parent() {
+        if parent.file_name().and_then(|n| n.to_str()) == Some("data") {
+            if let Some(root) = parent.parent() {
+                return root.join("projects");
+            }
+        }
+    }
+    std::env::current_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."))
+        .join("projects")
+}
+
 fn main() {
     let (db_path_buf, is_portable) = resolve_portable_paths();
     let db_path_str = db_path_buf.to_string_lossy().to_string();
+    let projects_root = resolve_projects_root(&db_path_buf);
 
     let storage = StorageManager::new(&db_path_buf)
         .unwrap_or_else(|_| StorageManager::new_in_memory().expect("Failed to initialize storage"));
     let adb_runner = AdbRunner::default();
+    let vault = CredentialVault::new();
 
     let app_state = Arc::new(Mutex::new(AppState {
         storage,
         adb_runner,
+        vault,
         db_path: db_path_str,
+        projects_root,
         is_portable,
     }));
 
@@ -1076,7 +1103,36 @@ fn main() {
             is_device_app_running,
             ldplayer_list_instances,
             ldplayer_action,
-            ldplayer_detect_path
+            ldplayer_detect_path,
+            studio_p2::studio_list_projects,
+            studio_p2::studio_get_project_detail,
+            studio_p2::studio_create_project,
+            studio_p2::studio_update_project,
+            studio_p2::studio_clone_project,
+            studio_p2::studio_delete_project,
+            studio_p2::studio_list_project_workflows,
+            studio_p2::studio_save_project_workflow,
+            studio_p2::studio_list_project_templates,
+            studio_p2::studio_list_project_tasks,
+            studio_p2::studio_upsert_project_task,
+            studio_p2::studio_delete_project_task,
+            studio_p2::studio_list_project_modules,
+            studio_p2::studio_upsert_project_module,
+            studio_p2::studio_get_ui_schema,
+            studio_p2::studio_save_ui_schema,
+            studio_p2::studio_list_project_accounts,
+            studio_p2::studio_upsert_project_account,
+            studio_p2::studio_vault_set_secret,
+            studio_p2::studio_vault_has_secret,
+            studio_p2::studio_vault_list_namespace,
+            studio_p2::studio_vault_delete_secret,
+            studio_p2::studio_get_producer_key_status,
+            studio_p2::studio_rotate_producer_key,
+            studio_p2::studio_backup_producer_key,
+            studio_p2::studio_restore_producer_key,
+            studio_p2::studio_backup_database,
+            studio_p2::studio_check_db_integrity,
+            studio_p2::studio_migrate_legacy_jx2
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

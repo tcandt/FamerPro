@@ -1002,6 +1002,7 @@ dependencies = [
  "chrono",
  "fp-actions",
  "fp-adb",
+ "fp-bundle-contract",
  "fp-device",
  "fp-domain",
  "fp-scheduler",
@@ -1202,10 +1203,12 @@ name = "fp-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
  "fp-actions",
  "fp-adb",
  "fp-builder",
+ "fp-bundle-contract",
  "fp-domain",
  "fp-security",
  "fp-storage",
@@ -1213,10 +1216,12 @@ dependencies = [
  "fp-vision",
  "fp-workflow-runtime",
  "fp-workflow-schema",
+ "rusqlite",
  "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -1290,10 +1295,16 @@ name = "fp-security"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.21.7",
+ "chrono",
+ "ed25519-dalek",
  "fp-domain",
  "regex",
  "serde",
+ "serde_json",
+ "sha2 0.10.9",
  "thiserror 2.0.21",
+ "uuid",
 ]
 
 [[package]]
@@ -1302,11 +1313,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "fp-bundle-contract",
  "fp-domain",
  "fp-workflow-schema",
+ "image",
  "rusqlite",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "thiserror 2.0.21",
  "tracing",
  "uuid",

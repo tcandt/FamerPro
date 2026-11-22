@@ -669,18 +669,31 @@ impl WorkflowExecutor {
                 }
             }
 
-            // Check inside standard template search paths
+            // Check inside standard project/bundle template search paths (game-agnostic)
             if let Some(file_name) = path.file_name() {
-                let jx2_path = std::path::Path::new("games/jx2mobile/templates").join(file_name);
-                if jx2_path.exists() {
-                    return std::fs::read(jx2_path).context(
-                        "Failed to read template image from games/jx2mobile/templates",
-                    );
+                for base_dir in ["bundle/templates", "assets/templates"] {
+                    let candidate = std::path::Path::new(base_dir).join(file_name);
+                    if candidate.exists() {
+                        return std::fs::read(&candidate).with_context(|| {
+                            format!("Failed to read template image from {}", candidate.display())
+                        });
+                    }
                 }
-                let assets_path = std::path::Path::new("assets/templates").join(file_name);
-                if assets_path.exists() {
-                    return std::fs::read(assets_path)
-                        .context("Failed to read template image from assets/templates");
+                for root_dir in ["projects", "games"] {
+                    let root_path = std::path::Path::new(root_dir);
+                    if let Ok(entries) = std::fs::read_dir(root_path) {
+                        for entry in entries.flatten() {
+                            let candidate = entry.path().join("templates").join(file_name);
+                            if candidate.exists() {
+                                return std::fs::read(&candidate).with_context(|| {
+                                    format!(
+                                        "Failed to read template image from {}",
+                                        candidate.display()
+                                    )
+                                });
+                            }
+                        }
+                    }
                 }
             }
 
