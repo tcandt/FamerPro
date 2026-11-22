@@ -1,0 +1,135 @@
+{
+  "packageSchemaVersion": 1,
+  "packageType": "mini_tool_portable_win_x64",
+  "projectSlug": "portable-beta",
+  "productName": "Orion Citadel Manager",
+  "version": "1.1.0",
+  "exeName": "Auto_PortableBeta.exe",
+  "finalExeSha256": "3e69abfe6a3760ba404d9ac6ee523499e3cc68b4b2baa561c457d3424168db7a",
+  "builtAtUtc": "2026-11-22T15:27:16.880065600+00:00",
+  "requirements": {
+    "requiresRust": false,
+    "requiresCargo": false,
+    "requiresNode": false,
+    "requiresPython": false,
+    "requiresWindowsSdk": false,
+    "webview2Strategy": "Evergreen Runtime v157.0.4341.60 (Registry Client Verified; offline target requires WebView2 Evergreen/Bootstrapper if missing)",
+    "offlineReady": true,
+    "dataIsolationPolicy": "External data/ next to install root OR %LOCALAPPDATA%\\FarmerPro\\MiniTools\\<slug> fallback; never inside versions/v*"
+  },
+  "publisher": {
+    "publisherId": "pub-orion-beta",
+    "displayName": "Beta Orion Games Studio",
+    "organization": "Beta Orion Games Studio",
+    "website": null,
+    "supportContact": null,
+    "copyright": "Copyright (C) 2026 Beta Orion Games Studio",
+    "ed25519KeyId": "",
+    "ed25519PubkeyHex": "",
+    "authenticodeCertRef": "CERT_STORE://CurrentUser/My/DC96E92F6CF074CB68CC857521B293C1D9C55B86",
+    "releaseChannel": "qa",
+    "signingPolicy": "self_signed_qa"
+  },
+  "signing": {
+    "signingMode": "self_signed_qa",
+    "publisherId": "pub-orion-beta",
+    "publisherOrganization": "Beta Orion Games Studio",
+    "releaseChannel": "qa",
+    "authenticodeTrustStatus": "self_signed_untrusted_root",
+    "trustedPublicRelease": false,
+    "signerThumbprint": "DC96E92F6CF074CB68CC857521B293C1D9C55B86",
+    "signerSubject": "Beta Orion Games Studio",
+    "versionInfo": {
+      "companyName": "Beta Orion Games Studio",
+      "fileDescription": "Orion Citadel Manager QA Signed Portable",
+      "fileVersion": "1.1.0.201",
+      "internalName": "portable-beta",
+      "legalCopyright": "Copyright (C) 2026 Beta Orion Games Studio",
+      "originalFilename": "Auto_PortableBeta.exe",
+      "productName": "Orion Citadel Manager",
+      "productVersion": "1.1.0"
+    },
+    "keyRotation": {
+      "publisherId": "pub-orion-beta",
+      "productSlug": "portable-beta",
+      "oldPubkeyHex": "b39369b1a1dffb862e8d9b1068078d536bdc03180c0da46a30f154b2e1d6be4e",
+      "newPubkeyHex": "30cf55fc2e8679aac2ae8c81430ba6165b81b9255db596ab68972a49fed51cfb",
+      "issuedAtUtc": "2026-11-22T15:27:14.463797200+00:00",
+      "expiresAtUtc": "2027-02-20T15:27:14.463797200+00:00",
+      "nonce": "rot-cd9958f7f2d44101a4dd1c5f4d3974bd",
+      "signatureByOldKeyHex": "ec45fbdad222e8503703d1e6211d2d871fc85a9b96da4efa49c1209b3d9cc58527b8c41ae9652c0aadd9d2f236d1f31c696f786ae8cbdebbd7e51b1b225f2502"
+    }
+  },
+  "distributedFiles": [
+    {
+      "relPath": "Auto_PortableBeta.exe",
+      "sizeBytes": 15760872,
+      "sha256": "3e69abfe6a3760ba404d9ac6ee523499e3cc68b4b2baa561c457d3424168db7a"
+    },
+    {
+      "relPath": "THIRD_PARTY_NOTICES.txt",
+      "sizeBytes": 532,
+      "sha256": "febda6bc7fcfc8df2111468bda143498a072a18630c75d07e08774742b520aa5"
+    },
+    {
+      "relPath": "bin/AdbWinApi.dll",
+      "sizeBytes": 108184,
+      "sha256": "120bef587119c6cb926b86b9be90fdfbce38937588eae28cd91a94ce63c7b965"
+    },
+    {
+      "relPath": "bin/AdbWinUsbApi.dll",
+      "sizeBytes": 73368,
+      "sha256": "6ca69a2ca0e31309c087d288f058977d421ad03500e4c3e1dbd981241a069c60"
+    },
+    {
+      "relPath": "bin/adb.exe",
+      "sizeBytes": 8485016,
+      "sha256": "957e46b8615f7af5b7292a2ddabe98d2e61940c3fb2b0545756507f080613e71"
+    },
+    {
+      "relPath": "bundle/branding/icon.ico",
+      "sizeBytes": 4286,
+      "sha256": "615c4fcf8181ce1220834befbba9d1fb8a87e483b233729a6969576089cdd440"
+    },
+    {
+      "relPath": "bundle/checksums.sha256",
+      "sizeBytes": 260,
+      "sha256": "4b8b7141b97157d3c4f544f7a22411c7a02a48b379002aa49a4ba1a2755a951c"
+    },
+    {
+      "relPath": "bundle/manifest.fpbundle.json",
+      "sizeBytes": 6435,
+      "sha256": "680c29cb978dca385cfc2e49ca6384db24e81b6bbb4fa40522f373fe557f4fed"
+    },
+    {
+      "relPath": "bundle/signature.fpbundle.json",
+      "sizeBytes": 883,
+      "sha256": "0267b094a9094e696d845e05ce1aa8a9285a9f1b3b2cdc50cd8e11e14dce1da2"
+    },
+    {
+      "relPath": "bundle/trusted_publisher.pub",
+      "sizeBytes": 64,
+      "sha256": "073c86d77fa4bb466253ccbfce1e2db2f50f72f2226eb2dab3158e36424e7edb"
+    },
+    {
+      "relPath": "bundle/ui-schema.json",
+      "sizeBytes": 504,
+      "sha256": "12520827d8b9abb80cb1f7c06bb0202916de730d3e9bac17dea5519674e954eb"
+    },
+    {
+      "relPath": "bundle/workflows.fpbundle.json",
+      "sizeBytes": 1407,
+      "sha256": "5c2788dbafedb1054769e65e45520eb4700403d40d4e4278eed6ad675b55bd1a"
+    },
+    {
+      "relPath": "updater/fp-updater.exe",
+      "sizeBytes": 5507072,
+      "sha256": "9e3c449664f69654842a72072439d87459b9027919c462f7acda69851b315550"
+    }
+  ],
+  "thirdPartyNotices": [
+    "FarmerPro Mini Runtime — MIT OR Apache-2.0",
+    "Microsoft Edge WebView2 Loader / Evergreen Runtime — Redistributable Notice (requires Evergreen Runtime or Fixed Version on offline Windows targets)",
+    "Android Debug Bridge (adb.exe, AdbWinApi.dll, AdbWinUsbApi.dll) — Apache License 2.0 (Android SDK Platform-Tools)"
+  ]
+}

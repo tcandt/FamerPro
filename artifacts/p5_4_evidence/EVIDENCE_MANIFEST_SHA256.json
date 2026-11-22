@@ -1,0 +1,246 @@
+{
+  "FARMERPRO_P5_4_ACCEPTANCE_REPORT.html": {
+    "bytes": 346057,
+    "sha256": "f2ce4612d16d1b17b0cc651629d20305e63533f2b5bb2cc336976e42a0e91b27"
+  },
+  "FARMERPRO_P5_4_ACCEPTANCE_REPORT.pdf": {
+    "bytes": 406314,
+    "sha256": "2b1c404216630f9ed4e820d66f81d3ac763ae7a20122a846753f424a642edd07"
+  },
+  "cargo_test_workspace_p5_4.log": {
+    "bytes": 17388,
+    "sha256": "ed8b9081df16321746bd423ac1027f8677a0b8df8681ffc334f1ff6130474524"
+  },
+  "p5_4_e2e_report.json": {
+    "bytes": 9146,
+    "sha256": "0ae8b3ec5f8f97ef5a260b0f330a79cc3973a01962812561a13077ab13ace3d1"
+  },
+  "p5_4_pdf_qa.json": {
+    "bytes": 513,
+    "sha256": "39c33a2d608c468acc08be98e8ef76c81a530a1dddabcf40d20ae01eca034684"
+  },
+  "p5_4_portable_alpha_running.png": {
+    "bytes": 37288,
+    "sha256": "7bbf0d355d8f6e30402b879576c2702e69e149b75ecfcbd686314908557bcf98"
+  },
+  "p5_4_portable_beta_running.png": {
+    "bytes": 37215,
+    "sha256": "04d34417dd9489a9c44573bd0bfaf4fbc7a3fb3d1918a1c41af1363e9dbeee8b"
+  },
+  "p5_4_studio_factory_installed.png": {
+    "bytes": 167672,
+    "sha256": "be884acebf0802d33b4f7c07b30478760fa1bf5fe8fff12c99b4fbb5b50d9ab7"
+  },
+  "verify_p5_4_stdout.log": {
+    "bytes": 712,
+    "sha256": "ebeab40aaa366c11cdcf069a39dc24e5836b52d50bd65ba975ed0e1e5de98e48"
+  },
+  "dist_releases/FarmerPro_0.1.0_x64-setup.exe": {
+    "bytes": 15111242,
+    "sha256": "bbc0a6b8ad0a439457b84767670829753a57658f7520781efa6c7974d3fed22b"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64.zip": {
+    "bytes": 11864766,
+    "sha256": "0cdc6894fedd3c40ca90c0f9290ab2baa94fc33a1a323ef345154c9dc4b9f3b5"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64.zip": {
+    "bytes": 11866389,
+    "sha256": "c5dc3734cef0b868fee58b51bb2078bf3f882ae53caef52ee204d2ae22a27143"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/Auto_PortableAlpha.exe": {
+    "bytes": 15759360,
+    "sha256": "d1412336a444c43b1758cc2c742303857606919b11213b49871abcac22e0cbc3"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/THIRD_PARTY_NOTICES.txt": {
+    "bytes": 532,
+    "sha256": "febda6bc7fcfc8df2111468bda143498a072a18630c75d07e08774742b520aa5"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/build-report.json": {
+    "bytes": 8333,
+    "sha256": "d451cd3703bde6bec7861624437dbff4ff050e93e2cfbcd22cd6a6e6b51c4376"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/release-manifest.json": {
+    "bytes": 4600,
+    "sha256": "276d9682acf9d81ade8a223f6f41a3918aa775d622923890fdb11665206d061f"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/bin/AdbWinApi.dll": {
+    "bytes": 108184,
+    "sha256": "120bef587119c6cb926b86b9be90fdfbce38937588eae28cd91a94ce63c7b965"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/bin/AdbWinUsbApi.dll": {
+    "bytes": 73368,
+    "sha256": "6ca69a2ca0e31309c087d288f058977d421ad03500e4c3e1dbd981241a069c60"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/bin/adb.exe": {
+    "bytes": 8485016,
+    "sha256": "957e46b8615f7af5b7292a2ddabe98d2e61940c3fb2b0545756507f080613e71"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/bundle/checksums.sha256": {
+    "bytes": 260,
+    "sha256": "e05ee442c77fb73cd80f5a1d04ef086fdee0eebbbf7276de251774b14b6fdeea"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/bundle/manifest.fpbundle.json": {
+    "bytes": 5722,
+    "sha256": "a9fbf25896a621f34f3b882accd05d827a7ccf7093111d84e7436866d04b8c41"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/bundle/signature.fpbundle.json": {
+    "bytes": 883,
+    "sha256": "6aeb7d3b68c6b9ed8b246aaaf83542b050a0bece08db077e838d6a3244d10156"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/bundle/trusted_publisher.pub": {
+    "bytes": 64,
+    "sha256": "bbd39c9069085e266a3844223a2112ffd6e092076523ff7c4a3a375c03019b03"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/bundle/ui-schema.json": {
+    "bytes": 506,
+    "sha256": "e7d730c77b276f21b5b205daf6851e47e6d479d4b9d0c97dbbfbf398516311c4"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/bundle/workflows.fpbundle.json": {
+    "bytes": 1402,
+    "sha256": "9342893b2df3a46d1f105f69fa50b1109b77f0a810aad28b0d54bd56a76b4dff"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/bundle/branding/icon.ico": {
+    "bytes": 4286,
+    "sha256": "2f04362440d44d374c4893c6e0e825e5dfe5722c8bdba21b2449e03e634bb1df"
+  },
+  "dist_releases/Portable_Alpha_v1.0.0_win-x64/updater/fp-updater.exe": {
+    "bytes": 5507072,
+    "sha256": "9e3c449664f69654842a72072439d87459b9027919c462f7acda69851b315550"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/Auto_PortableBeta.exe": {
+    "bytes": 15760872,
+    "sha256": "2ffb8c32dcf60e60ce716d7df6a430377a5612e6f3b508cdfeb9ec87a69f08d8"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/THIRD_PARTY_NOTICES.txt": {
+    "bytes": 532,
+    "sha256": "febda6bc7fcfc8df2111468bda143498a072a18630c75d07e08774742b520aa5"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/build-report.json": {
+    "bytes": 8539,
+    "sha256": "5218713a638145fd301280f0ddcf2c9c30920e49812fed3546a869bf9d31e946"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/release-manifest.json": {
+    "bytes": 4709,
+    "sha256": "3fdea84491486f8700ba8dfeb5ddb561f9ebfa03f62505438bd40eddcee7b054"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/bin/AdbWinApi.dll": {
+    "bytes": 108184,
+    "sha256": "120bef587119c6cb926b86b9be90fdfbce38937588eae28cd91a94ce63c7b965"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/bin/AdbWinUsbApi.dll": {
+    "bytes": 73368,
+    "sha256": "6ca69a2ca0e31309c087d288f058977d421ad03500e4c3e1dbd981241a069c60"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/bin/adb.exe": {
+    "bytes": 8485016,
+    "sha256": "957e46b8615f7af5b7292a2ddabe98d2e61940c3fb2b0545756507f080613e71"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/bundle/checksums.sha256": {
+    "bytes": 260,
+    "sha256": "c6ef4cb73043b3a0ea2b3878d9b98cd1bf9ac8764ab2c3fe83ca6d544aece187"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/bundle/manifest.fpbundle.json": {
+    "bytes": 5838,
+    "sha256": "c1b3001cf4e7c9dfd28aad50eba532cb2528e92d4a66eeadf670cfb90657e6bd"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/bundle/signature.fpbundle.json": {
+    "bytes": 883,
+    "sha256": "feb29f60d12464fa364dd4ab32fae2189fda37d5f9c08a1a31f44c0f7c702495"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/bundle/trusted_publisher.pub": {
+    "bytes": 64,
+    "sha256": "bbd39c9069085e266a3844223a2112ffd6e092076523ff7c4a3a375c03019b03"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/bundle/ui-schema.json": {
+    "bytes": 504,
+    "sha256": "aec5ccfb2c86557a7117ddda13a6134288905cbeb63d0bbc2199933781ea9172"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/bundle/workflows.fpbundle.json": {
+    "bytes": 1407,
+    "sha256": "5c2788dbafedb1054769e65e45520eb4700403d40d4e4278eed6ad675b55bd1a"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/bundle/branding/icon.ico": {
+    "bytes": 4286,
+    "sha256": "615c4fcf8181ce1220834befbba9d1fb8a87e483b233729a6969576089cdd440"
+  },
+  "dist_releases/Portable_Beta_v1.0.0_win-x64/updater/fp-updater.exe": {
+    "bytes": 5507072,
+    "sha256": "9e3c449664f69654842a72072439d87459b9027919c462f7acda69851b315550"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/Auto_PortableBeta.exe": {
+    "bytes": 15760872,
+    "sha256": "3e69abfe6a3760ba404d9ac6ee523499e3cc68b4b2baa561c457d3424168db7a"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/THIRD_PARTY_NOTICES.txt": {
+    "bytes": 532,
+    "sha256": "febda6bc7fcfc8df2111468bda143498a072a18630c75d07e08774742b520aa5"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/build-report.json": {
+    "bytes": 8539,
+    "sha256": "5f651c522c494faf5f7d9e3a02eed9bb519f18817ea76410641a025fbe70fdd9"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/release-manifest.json": {
+    "bytes": 5306,
+    "sha256": "9edd596c335108b43f891a8d399b844544b7b0f8464d26f41b204b1a6c4c491e"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/bin/AdbWinApi.dll": {
+    "bytes": 108184,
+    "sha256": "120bef587119c6cb926b86b9be90fdfbce38937588eae28cd91a94ce63c7b965"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/bin/AdbWinUsbApi.dll": {
+    "bytes": 73368,
+    "sha256": "6ca69a2ca0e31309c087d288f058977d421ad03500e4c3e1dbd981241a069c60"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/bin/adb.exe": {
+    "bytes": 8485016,
+    "sha256": "957e46b8615f7af5b7292a2ddabe98d2e61940c3fb2b0545756507f080613e71"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/bundle/checksums.sha256": {
+    "bytes": 260,
+    "sha256": "4b8b7141b97157d3c4f544f7a22411c7a02a48b379002aa49a4ba1a2755a951c"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/bundle/manifest.fpbundle.json": {
+    "bytes": 6435,
+    "sha256": "680c29cb978dca385cfc2e49ca6384db24e81b6bbb4fa40522f373fe557f4fed"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/bundle/signature.fpbundle.json": {
+    "bytes": 883,
+    "sha256": "0267b094a9094e696d845e05ce1aa8a9285a9f1b3b2cdc50cd8e11e14dce1da2"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/bundle/trusted_publisher.pub": {
+    "bytes": 64,
+    "sha256": "073c86d77fa4bb466253ccbfce1e2db2f50f72f2226eb2dab3158e36424e7edb"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/bundle/ui-schema.json": {
+    "bytes": 504,
+    "sha256": "12520827d8b9abb80cb1f7c06bb0202916de730d3e9bac17dea5519674e954eb"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/bundle/workflows.fpbundle.json": {
+    "bytes": 1407,
+    "sha256": "5c2788dbafedb1054769e65e45520eb4700403d40d4e4278eed6ad675b55bd1a"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/bundle/branding/icon.ico": {
+    "bytes": 4286,
+    "sha256": "615c4fcf8181ce1220834befbba9d1fb8a87e483b233729a6969576089cdd440"
+  },
+  "dist_releases/Portable_Beta_v1.1.0_win-x64/updater/fp-updater.exe": {
+    "bytes": 5507072,
+    "sha256": "9e3c449664f69654842a72072439d87459b9027919c462f7acda69851b315550"
+  },
+  "pdf_p5_4_rendered_pages/p5_4_page_01.png": {
+    "bytes": 320601,
+    "sha256": "c96e14ff5344d07b8bb7e27444677dea8b0086442c038d383968cd60caf61900"
+  },
+  "pdf_p5_4_rendered_pages/p5_4_page_02.png": {
+    "bytes": 258639,
+    "sha256": "e7b02b5714b67eebff4b18c23fe8dc176d3860cf488632e779059666f0db2066"
+  },
+  "pdf_p5_4_rendered_pages/p5_4_page_03.png": {
+    "bytes": 257400,
+    "sha256": "36b4b3bd23059bfbc0c36662163ed5d7f11f1fe63e02e655293d83e379041413"
+  },
+  "pdf_p5_4_rendered_pages/p5_4_page_04.png": {
+    "bytes": 238654,
+    "sha256": "5c28c9644a55dc3169d58ae792e94dcbff1315161c3273f2a6b580b26d07ce20"
+  }
+}

@@ -1,0 +1,215 @@
+{
+  "projectId": "proj-portable-beta-2b90a6fe",
+  "projectSlug": "portable-beta",
+  "toolExeName": "Auto_PortableBeta.exe",
+  "toolExePath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\dist_releases\\Portable_Beta_v1.0.0_win-x64\\Auto_PortableBeta.exe",
+  "toolExeSizeBytes": 15760872,
+  "toolExeSha256": "2ffb8c32dcf60e60ce716d7df6a430377a5612e6f3b508cdfeb9ec87a69f08d8",
+  "peIconLayersInjected": 1,
+  "peIconGroupResourceBytes": 20,
+  "peIconFirstLayerBytes": 4264,
+  "peEmbeddedPubkeyResourceId": 7777,
+  "peEmbeddedPubkeyVerified": true,
+  "authenticodeStatus": "Authenticode Self-Signed QA Build (NOT TrustedPublicRelease; Subject='Beta Orion Games Studio', Thumbprint=DC96E92F6CF074CB68CC857521B293C1D9C55B86)",
+  "signingMode": "self_signed_qa",
+  "trustedPublicRelease": false,
+  "versionInfo": {
+    "companyName": "Beta Orion Games Studio",
+    "fileDescription": "Orion Citadel Manager QA Signed Portable",
+    "fileVersion": "1.0.0.200",
+    "internalName": "portable-beta",
+    "legalCopyright": "Copyright (C) 2026 Beta Orion Games Studio",
+    "originalFilename": "Auto_PortableBeta.exe",
+    "productName": "Orion Citadel Manager",
+    "productVersion": "1.0.0"
+  },
+  "authenticodeVerification": {
+    "signed": true,
+    "trustStatus": "self_signed_untrusted_root",
+    "trustedPublicRelease": false,
+    "winTrustErrorCode": 2148204809,
+    "signerSubject": "Beta Orion Games Studio",
+    "signerIssuer": "Beta Orion Games Studio",
+    "signerThumbprint": "DC96E92F6CF074CB68CC857521B293C1D9C55B86",
+    "timestampStatus": "NONE_OR_QA",
+    "detail": "Self-Signed / Untrusted Root (0x800B0109): Authenticode PE hash intact, NOT trusted as Public Release."
+  },
+  "keyId": "fp-ed25519-b39369b1a1df",
+  "publisherPublicKeyHex": "b39369b1a1dffb862e8d9b1068078d536bdc03180c0da46a30f154b2e1d6be4e",
+  "externalKeystorePath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\AppData\\Local\\FarmerPro\\ProducerKeys\\active_producer_ed25519.json",
+  "signatureAlgorithm": "Ed25519-RFC8032-SHA256",
+  "signatureEd25519Hex": "6a79ce87cf79f2356cc0c37b33bd69f7a77d640499eb628bc731f0430629271661cf59058460014ab967d5113600db14659114e178c76df9bac137f799171105",
+  "totalDurationMs": 2632,
+  "steps": [
+    {
+      "stepNo": 1,
+      "name": "Validate Project, UI Schema & Workflows",
+      "durationMs": 0,
+      "status": "PASS",
+      "detail": "Validated 1 workflows and UI schema (v1) for 'Orion Citadel Manager'"
+    },
+    {
+      "stepNo": 2,
+      "name": "Asset Integrity & Path Traversal Guard",
+      "durationMs": 0,
+      "status": "PASS",
+      "detail": "Verified 0 template PNGs and icon 'branding/icon.ico'"
+    },
+    {
+      "stepNo": 3,
+      "name": "Resolve 5-State Module Matrix",
+      "durationMs": 0,
+      "status": "PASS",
+      "detail": "Packaged modules: [\"mod.adb_core\", \"mod.vision_ocr\"]"
+    },
+    {
+      "stepNo": 4,
+      "name": "Copy Dedicated Mini Runtime Binary",
+      "durationMs": 25,
+      "status": "PASS",
+      "detail": "Copied E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\InstalledStudio\\fp-mini-runtime.exe -> E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\dist_releases\\Portable_Beta_v1.0.0_win-x64\\Auto_PortableBeta.exe"
+    },
+    {
+      "stepNo": 5,
+      "name": "PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection",
+      "durationMs": 1711,
+      "status": "PASS",
+      "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Orion Citadel Manager', Company='Beta Orion Games Studio'), PE RT_RCDATA #7777=b39369b1a1dffb86"
+    },
+    {
+      "stepNo": 6,
+      "name": "Package Bundle Assets, Notices & Standalone Updater/ADB",
+      "durationMs": 32,
+      "status": "PASS",
+      "detail": "Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=true"
+    },
+    {
+      "stepNo": 7,
+      "name": "Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature",
+      "durationMs": 2,
+      "status": "PASS",
+      "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-b39369b1a1df, PubKey: b39369b1a1dffb862e8d9b1068078d536bdc03180c0da46a30f154b2e1d6be4e)"
+    },
+    {
+      "stepNo": 8,
+      "name": "Authenticode Sign/Verify (WinVerifyTrust) & Final Release Manifest Check",
+      "durationMs": 858,
+      "status": "PASS",
+      "detail": "Mode=SelfSignedQa, Trust=SelfSignedUntrustedRoot, FilesChecked=13, PubCertMatch=true, exe SHA-256=2ffb8c32dcf60e60"
+    }
+  ],
+  "modules": [
+    {
+      "moduleId": "mod.adb_core",
+      "displayName": "ADB & Device Driver Core",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn."
+    },
+    {
+      "moduleId": "mod.vision_ocr",
+      "displayName": "Multiscale Vision & WinRT OCR",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "filesystem_read_write"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR."
+    },
+    {
+      "moduleId": "mod.account_vault",
+      "displayName": "Account Vault (Credential Manager)",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "credential_vault_access"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool."
+    },
+    {
+      "moduleId": "mod.proxy_network",
+      "displayName": "SOCKS5/HTTP Application Proxy",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "outbound_proxy_connect"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding)."
+    },
+    {
+      "moduleId": "mod.adb_port_forward",
+      "displayName": "ADB Host-Device Socket Forwarding",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec",
+        "local_socket_bind"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game)."
+    },
+    {
+      "moduleId": "mod.emulator_optimizer",
+      "displayName": "Emulator Watchdog & Auto-Reconnect",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối."
+    }
+  ],
+  "dependencyAudit": {
+    "webview2EvergreenInstalled": true,
+    "webview2VersionOrNote": "Evergreen Runtime v157.0.4341.60 (Registry Client Verified; offline target requires WebView2 Evergreen/Bootstrapper if missing)",
+    "adbExePresent": true,
+    "adbWinApiDllPresent": true,
+    "adbWinUsbApiDllPresent": true,
+    "winrtOcrPowershellAvailable": true,
+    "exeDirWritable": true,
+    "writeProbeError": null,
+    "resolvedSqliteDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\dist_releases\\Portable_Beta_v1.0.0_win-x64\\data\\runtime_portable-beta.db",
+    "fallbackToLocalAppdataUsed": false,
+    "offlineExecutionReady": true,
+    "thirdPartyNoticesPresent": true,
+    "updaterBundled": true
+  }
+}

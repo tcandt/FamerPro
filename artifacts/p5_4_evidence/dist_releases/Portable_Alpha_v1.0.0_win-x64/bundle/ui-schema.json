@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "projectSlug": "portable-alpha",
+  "windowTitle": "Zenith Daily Harvester v1.0.0",
+  "versionBadge": "v1.0.0",
+  "themeAccentHex": "#1878F5",
+  "headerBgHex": "#141C28",
+  "layoutPreset": "compact2_col",
+  "defaultWindowSize": [
+    740,
+    660
+  ],
+  "sectionsOrder": [
+    "device_table",
+    "task_and_log_split",
+    "footer_controls"
+  ],
+  "hiddenComponents": [],
+  "deviceColumns": [],
+  "taskCategories": [],
+  "tasks": [],
+  "utilities": [],
+  "initialRuntimeVars": {}
+}

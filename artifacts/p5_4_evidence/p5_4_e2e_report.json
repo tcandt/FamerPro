@@ -1,0 +1,183 @@
+{
+  "executedAtUtc": "2026-11-22T15:27:38.908Z",
+  "gitHead": "1207e8724304b909f23b59a3300f7af01e9e9968",
+  "hostEnvironment": {
+    "osCaption": "Microsoft Windows 11 Pro",
+    "osBuild": "26200",
+    "arch": "AMD64",
+    "webview2Version": "157.0.4341.60",
+    "windowsSandboxExists": false
+  },
+  "cleanWindowsVmOrSandboxStatus": "BLOCKED (Windows Sandbox disabled / requires UAC Admin; no Windows VM present. Executed Scrubbed-PATH Isolated User Profile E2E without dev tools on PATH instead — NOT marked CLEAN_WINDOWS_PASS.)",
+  "publicSignedCommercialRelease": {
+    "status": "BLOCKED (No commercial CA Authenticode cert on host; PublicSigned enforces TrustedPublicChain fail-closed)"
+  },
+  "adbLiveHardware": {
+    "adbDevicesOutput": "List of devices attached",
+    "ldplayer14Vm0IsRunning": "stop",
+    "status": "BLOCKED (0 ADB online)"
+  },
+  "nsisInstaller": {
+    "installerPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\dist_releases\\FarmerPro_0.1.0_x64-setup.exe",
+    "installerSizeBytes": 15111242,
+    "installerSha256": "bbc0a6b8ad0a439457b84767670829753a57658f7520781efa6c7974d3fed22b",
+    "installedFilesCount": 9,
+    "sdkBundled": false,
+    "dbExistsBeforeUninstall": true,
+    "dbPreservedAfterUninstall": true,
+    "studioExeRemovedAfterUninstall": true
+  },
+  "studioFactory": {
+    "consoleErrors": [],
+    "appStatus": {
+      "version": "0.1.0",
+      "adb_available": true,
+      "adb_version": "Android Debug Bridge version 1.0.41",
+      "adb_path": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\InstalledStudio\\bin\\adb.exe",
+      "db_status": "SQLite WAL Healthy",
+      "db_path": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\AppData\\Local\\FarmerPro\\StudioData\\data\\farmerpro.db",
+      "devices_count": 0,
+      "is_portable": false
+    },
+    "toolchainDiscovery": {
+      "signtoolFound": true,
+      "discoveredPath": "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.26100.0\\x64\\signtool.exe",
+      "sdkBundledInApp": false,
+      "searchedLocations": [
+        "PATH",
+        "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\*\\x64\\signtool.exe"
+      ],
+      "unsignedInternalSupported": true,
+      "guidance": "Detected Windows SDK signtool.exe on host (external SDK; not bundled)."
+    },
+    "finalVerifyAlpha": {
+      "verified": true,
+      "releaseDir": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\dist_releases\\Portable_Alpha_v1.0.0_win-x64",
+      "exeName": "Auto_PortableAlpha.exe",
+      "finalExeSha256": "d1412336a444c43b1758cc2c742303857606919b11213b49871abcac22e0cbc3",
+      "authenticodeChecked": true,
+      "authenticodeTrustStatus": "unsigned",
+      "authenticodeTrustedPublicChain": false,
+      "ed25519BundleVerified": true,
+      "peRootPubkeyMatches": true,
+      "peVersionInfoValid": true,
+      "publisherIdentityMatchesCert": false,
+      "publisherIdentityDetail": "No X.509 certificate subject present (VERSIONINFO CompanyName alone does not verify publisher identity).",
+      "distributedFilesChecked": 13,
+      "distributedFileMismatches": [],
+      "issues": []
+    },
+    "finalVerifyBeta": {
+      "verified": true,
+      "releaseDir": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\dist_releases\\Portable_Beta_v1.0.0_win-x64",
+      "exeName": "Auto_PortableBeta.exe",
+      "finalExeSha256": "2ffb8c32dcf60e60ce716d7df6a430377a5612e6f3b508cdfeb9ec87a69f08d8",
+      "authenticodeChecked": true,
+      "authenticodeTrustStatus": "self_signed_untrusted_root",
+      "authenticodeTrustedPublicChain": false,
+      "ed25519BundleVerified": true,
+      "peRootPubkeyMatches": true,
+      "peVersionInfoValid": true,
+      "publisherIdentityMatchesCert": true,
+      "publisherIdentityDetail": "Certificate subject 'Beta Orion Games Studio' matches declared publisher 'Beta Orion Games Studio'",
+      "distributedFilesChecked": 13,
+      "distributedFileMismatches": [],
+      "issues": []
+    },
+    "zipAlphaBytes": 11864766,
+    "zipAlphaSha256": "0cdc6894fedd3c40ca90c0f9290ab2baa94fc33a1a323ef345154c9dc4b9f3b5",
+    "zipBetaBytes": 11866389,
+    "zipBetaSha256": "c5dc3734cef0b868fee58b51bb2078bf3f882ae53caef52ee204d2ae22a27143"
+  },
+  "portableCleanHostRun": {
+    "depsAlpha": {
+      "webview2EvergreenInstalled": true,
+      "webview2VersionOrNote": "Evergreen Runtime v157.0.4341.60 (Registry Client Verified; offline target requires WebView2 Evergreen/Bootstrapper if missing)",
+      "adbExePresent": true,
+      "adbWinApiDllPresent": true,
+      "adbWinUsbApiDllPresent": true,
+      "winrtOcrPowershellAvailable": true,
+      "exeDirWritable": true,
+      "writeProbeError": null,
+      "resolvedSqliteDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\OtherMachine\\Portable_Alpha_v1.0.0_win-x64\\data\\runtime_portable-alpha.db",
+      "fallbackToLocalAppdataUsed": false,
+      "offlineExecutionReady": true,
+      "thirdPartyNoticesPresent": true,
+      "updaterBundled": true
+    },
+    "depsBeta": {
+      "webview2EvergreenInstalled": true,
+      "webview2VersionOrNote": "Evergreen Runtime v157.0.4341.60 (Registry Client Verified; offline target requires WebView2 Evergreen/Bootstrapper if missing)",
+      "adbExePresent": true,
+      "adbWinApiDllPresent": true,
+      "adbWinUsbApiDllPresent": true,
+      "winrtOcrPowershellAvailable": true,
+      "exeDirWritable": true,
+      "writeProbeError": null,
+      "resolvedSqliteDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\OtherMachine\\Portable_Beta_v1.0.0_win-x64\\data\\runtime_portable-beta.db",
+      "fallbackToLocalAppdataUsed": false,
+      "offlineExecutionReady": true,
+      "thirdPartyNoticesPresent": true,
+      "updaterBundled": true
+    },
+    "roDepsFallbackUsed": true,
+    "roDepsDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\AppData\\Local\\FarmerPro\\MiniTools\\portable-alpha\\data\\runtime_portable-alpha.db",
+    "alphaRuntimeSnap": {
+      "title": "Zenith Daily Harvester v1.0.0",
+      "badge": ""
+    },
+    "betaRuntimeSnap": {
+      "title": "Orion Citadel Manager v1.0.0",
+      "badge": ""
+    },
+    "osVerify": {
+      "alphaCompany": "Alpha Zenith Systems Ltd.",
+      "alphaAuth": "NotSigned",
+      "betaCompany": "Beta Orion Games Studio",
+      "betaAuth": "UnknownError",
+      "betaAuthSubject": "CN=Beta Orion Games Studio"
+    },
+    "signtoolVerifyBetaSnippet": "Verifying: E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\OtherMachine\\Portable_Beta_v1.0.0_win-x64\\Auto_PortableBeta.exe\r\r\n\r\nSignature Index: 0 (Primary Signature)\r\nHash of file (sha256): 27B69B57D6A898C8BF6B1687CA62744EBD4D6A2360A812C7D698B75EB82C3D0E\r\n\r\nSigning Certificate Chain:\r\n    Issued to: Beta Orion Games Studio\r\r\n    Issued by: Beta Orion Games Studio\r\r\n    Expires:   Sat Feb 20 22:27:08 2027\r\r\n    SHA1 hash: DC96E92F6CF074CB68CC857521B293C1D9C55B86\r\r\n\r\nFile is not timestamped.\r\n\r\n\r\nNumber of signatures successfully Verified: 0\r\r\nNumber of warnings: 0\r\r\nNumber of errors: 1\r\r\n Sig"
+  },
+  "updaterAndAntiRollback": {
+    "instOut": {
+      "operation": "install_initial",
+      "status": "COMPLETED",
+      "projectSlug": "portable-beta",
+      "previousVersion": null,
+      "activeVersion": "1.0.0",
+      "stageReached": "completed",
+      "backupDbPath": null,
+      "backupVerifiedOk": false,
+      "signatureVerifiedOk": true,
+      "compatibilityVerifiedOk": true,
+      "postUpdateAutoResumeBlocked": false,
+      "blockedJobIds": [],
+      "binaryRollbackOnly": false,
+      "databaseRestored": false,
+      "preRollbackSafetyDbPath": null,
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\ManagedBeta\\.updater\\update-journal.json",
+      "detail": "Initial Mini Tool versioned installation verified and activated."
+    },
+    "upgOut": {
+      "operation": "upgrade",
+      "status": "COMPLETED",
+      "projectSlug": "portable-beta",
+      "previousVersion": "1.0.0",
+      "activeVersion": "1.1.0",
+      "stageReached": "completed",
+      "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\ManagedBeta\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261122_152736_878.db",
+      "backupVerifiedOk": true,
+      "signatureVerifiedOk": true,
+      "compatibilityVerifiedOk": true,
+      "postUpdateAutoResumeBlocked": false,
+      "blockedJobIds": [],
+      "binaryRollbackOnly": false,
+      "databaseRestored": false,
+      "preRollbackSafetyDbPath": null,
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\ManagedBeta\\.updater\\update-journal.json",
+      "detail": "Upgraded Mini Tool safely with WAL backup and atomic version switch."
+    },
+    "antiRollbackErr": "Error: TRUST_STATE_ROLLBACK_DETECTED: local trust-state.json epoch 1 < authoritative ledger epoch 2\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\dist_releases\\Portable_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe rollback --install-root E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\ManagedBeta\nError: TRUST_STATE_ROLLBACK_DETECTED: local trust-state.json epoch 1 < authoritative ledger epoch 2"
+  }
+}

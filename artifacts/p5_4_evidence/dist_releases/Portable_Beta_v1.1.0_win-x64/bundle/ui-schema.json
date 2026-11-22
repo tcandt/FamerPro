@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "projectSlug": "portable-beta",
+  "windowTitle": "Orion Citadel Manager v1.1.0",
+  "versionBadge": "v1.1.0",
+  "themeAccentHex": "#E11D48",
+  "headerBgHex": "#2A1024",
+  "layoutPreset": "compact2_col",
+  "defaultWindowSize": [
+    740,
+    660
+  ],
+  "sectionsOrder": [
+    "device_table",
+    "task_and_log_split",
+    "footer_controls"
+  ],
+  "hiddenComponents": [],
+  "deviceColumns": [],
+  "taskCategories": [],
+  "tasks": [],
+  "utilities": [],
+  "initialRuntimeVars": {}
+}

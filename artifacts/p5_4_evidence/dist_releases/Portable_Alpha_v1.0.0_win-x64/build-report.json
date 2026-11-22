@@ -1,0 +1,215 @@
+{
+  "projectId": "proj-portable-alpha-3a309a31",
+  "projectSlug": "portable-alpha",
+  "toolExeName": "Auto_PortableAlpha.exe",
+  "toolExePath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\dist_releases\\Portable_Alpha_v1.0.0_win-x64\\Auto_PortableAlpha.exe",
+  "toolExeSizeBytes": 15759360,
+  "toolExeSha256": "d1412336a444c43b1758cc2c742303857606919b11213b49871abcac22e0cbc3",
+  "peIconLayersInjected": 1,
+  "peIconGroupResourceBytes": 20,
+  "peIconFirstLayerBytes": 4264,
+  "peEmbeddedPubkeyResourceId": 7777,
+  "peEmbeddedPubkeyVerified": true,
+  "authenticodeStatus": "Unsigned Internal Build (No Authenticode; Ed25519 PE RT_RCDATA #7777 Verified)",
+  "signingMode": "unsigned_internal",
+  "trustedPublicRelease": false,
+  "versionInfo": {
+    "companyName": "Alpha Zenith Systems Ltd.",
+    "fileDescription": "Zenith Daily Harvester Portable Runtime",
+    "fileVersion": "1.0.0.100",
+    "internalName": "portable-alpha",
+    "legalCopyright": "Copyright (C) 2026 Alpha Zenith Systems Ltd.",
+    "originalFilename": "Auto_PortableAlpha.exe",
+    "productName": "Zenith Daily Harvester",
+    "productVersion": "1.0.0"
+  },
+  "authenticodeVerification": {
+    "signed": false,
+    "trustStatus": "unsigned",
+    "trustedPublicRelease": false,
+    "winTrustErrorCode": 2148204800,
+    "signerSubject": null,
+    "signerIssuer": null,
+    "signerThumbprint": null,
+    "timestampStatus": "NONE",
+    "detail": "Unsigned Internal Build (TRUST_E_NOSIGNATURE 0x800B0100)."
+  },
+  "keyId": "fp-ed25519-b39369b1a1df",
+  "publisherPublicKeyHex": "b39369b1a1dffb862e8d9b1068078d536bdc03180c0da46a30f154b2e1d6be4e",
+  "externalKeystorePath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\AppData\\Local\\FarmerPro\\ProducerKeys\\active_producer_ed25519.json",
+  "signatureAlgorithm": "Ed25519-RFC8032-SHA256",
+  "signatureEd25519Hex": "e21c2f65353f557ab0cfb74b311144f8389864c23847c1e843f698ac8cf099132b74f55dd3aa34730fa8d5823e240dd400eebf2443ded7bfd9e4b548194f5005",
+  "totalDurationMs": 2084,
+  "steps": [
+    {
+      "stepNo": 1,
+      "name": "Validate Project, UI Schema & Workflows",
+      "durationMs": 0,
+      "status": "PASS",
+      "detail": "Validated 1 workflows and UI schema (v1) for 'Zenith Daily Harvester'"
+    },
+    {
+      "stepNo": 2,
+      "name": "Asset Integrity & Path Traversal Guard",
+      "durationMs": 0,
+      "status": "PASS",
+      "detail": "Verified 0 template PNGs and icon 'branding/icon.ico'"
+    },
+    {
+      "stepNo": 3,
+      "name": "Resolve 5-State Module Matrix",
+      "durationMs": 0,
+      "status": "PASS",
+      "detail": "Packaged modules: [\"mod.adb_core\", \"mod.vision_ocr\"]"
+    },
+    {
+      "stepNo": 4,
+      "name": "Copy Dedicated Mini Runtime Binary",
+      "durationMs": 24,
+      "status": "PASS",
+      "detail": "Copied E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\sandbox\\InstalledStudio\\fp-mini-runtime.exe -> E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\dist_releases\\Portable_Alpha_v1.0.0_win-x64\\Auto_PortableAlpha.exe"
+    },
+    {
+      "stepNo": 5,
+      "name": "PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection",
+      "durationMs": 1516,
+      "status": "PASS",
+      "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Zenith Daily Harvester', Company='Alpha Zenith Systems Ltd.'), PE RT_RCDATA #7777=b39369b1a1dffb86"
+    },
+    {
+      "stepNo": 6,
+      "name": "Package Bundle Assets, Notices & Standalone Updater/ADB",
+      "durationMs": 32,
+      "status": "PASS",
+      "detail": "Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=true"
+    },
+    {
+      "stepNo": 7,
+      "name": "Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature",
+      "durationMs": 3,
+      "status": "PASS",
+      "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-b39369b1a1df, PubKey: b39369b1a1dffb862e8d9b1068078d536bdc03180c0da46a30f154b2e1d6be4e)"
+    },
+    {
+      "stepNo": 8,
+      "name": "Authenticode Sign/Verify (WinVerifyTrust) & Final Release Manifest Check",
+      "durationMs": 507,
+      "status": "PASS",
+      "detail": "Mode=UnsignedInternal, Trust=Unsigned, FilesChecked=13, PubCertMatch=false, exe SHA-256=d1412336a444c43b"
+    }
+  ],
+  "modules": [
+    {
+      "moduleId": "mod.adb_core",
+      "displayName": "ADB & Device Driver Core",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn."
+    },
+    {
+      "moduleId": "mod.vision_ocr",
+      "displayName": "Multiscale Vision & WinRT OCR",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "filesystem_read_write"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR."
+    },
+    {
+      "moduleId": "mod.account_vault",
+      "displayName": "Account Vault (Credential Manager)",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "credential_vault_access"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool."
+    },
+    {
+      "moduleId": "mod.proxy_network",
+      "displayName": "SOCKS5/HTTP Application Proxy",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "outbound_proxy_connect"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding)."
+    },
+    {
+      "moduleId": "mod.adb_port_forward",
+      "displayName": "ADB Host-Device Socket Forwarding",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec",
+        "local_socket_bind"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game)."
+    },
+    {
+      "moduleId": "mod.emulator_optimizer",
+      "displayName": "Emulator Watchdog & Auto-Reconnect",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối."
+    }
+  ],
+  "dependencyAudit": {
+    "webview2EvergreenInstalled": true,
+    "webview2VersionOrNote": "Evergreen Runtime v157.0.4341.60 (Registry Client Verified; offline target requires WebView2 Evergreen/Bootstrapper if missing)",
+    "adbExePresent": true,
+    "adbWinApiDllPresent": true,
+    "adbWinUsbApiDllPresent": true,
+    "winrtOcrPowershellAvailable": true,
+    "exeDirWritable": true,
+    "writeProbeError": null,
+    "resolvedSqliteDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_4_evidence\\dist_releases\\Portable_Alpha_v1.0.0_win-x64\\data\\runtime_portable-alpha.db",
+    "fallbackToLocalAppdataUsed": false,
+    "offlineExecutionReady": true,
+    "thirdPartyNoticesPresent": true,
+    "updaterBundled": true
+  }
+}

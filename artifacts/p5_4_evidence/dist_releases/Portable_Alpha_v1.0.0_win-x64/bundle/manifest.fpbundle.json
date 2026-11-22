@@ -1,0 +1,177 @@
+{
+  "compatibility": {
+    "projectSchemaVersion": 1,
+    "workflowSchemaVersion": 1,
+    "uiSchemaVersion": 1,
+    "moduleApiVersion": "1.0.0",
+    "minRuntimeVersion": "0.1.0",
+    "sqliteSchemaVersion": 5
+  },
+  "project": {
+    "compatibility": {
+      "projectSchemaVersion": 1,
+      "workflowSchemaVersion": 1,
+      "uiSchemaVersion": 1,
+      "moduleApiVersion": "1.0.0",
+      "minRuntimeVersion": "0.1.0",
+      "sqliteSchemaVersion": 5
+    },
+    "projectId": "proj-portable-alpha-3a309a31",
+    "slug": "portable-alpha",
+    "name": "Zenith Daily Harvester",
+    "gamePackageId": "com.zenith.daily",
+    "version": "1.0.0",
+    "exeName": "Auto_PortableAlpha.exe",
+    "windowTitle": "Zenith Daily Harvester v1.0.0",
+    "iconRelPath": "branding/icon.ico",
+    "targetResolution": [
+      1280,
+      720
+    ],
+    "packagedModules": [
+      "mod.adb_core",
+      "mod.vision_ocr"
+    ],
+    "workflowFiles": [
+      "workflows/wf-zenith-1.json"
+    ],
+    "templateFiles": [],
+    "bundleAdb": true
+  },
+  "moduleStates": [
+    {
+      "moduleId": "mod.adb_core",
+      "displayName": "ADB & Device Driver Core",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn."
+    },
+    {
+      "moduleId": "mod.vision_ocr",
+      "displayName": "Multiscale Vision & WinRT OCR",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "filesystem_read_write"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR."
+    },
+    {
+      "moduleId": "mod.account_vault",
+      "displayName": "Account Vault (Credential Manager)",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "credential_vault_access"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool."
+    },
+    {
+      "moduleId": "mod.proxy_network",
+      "displayName": "SOCKS5/HTTP Application Proxy",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "outbound_proxy_connect"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding)."
+    },
+    {
+      "moduleId": "mod.adb_port_forward",
+      "displayName": "ADB Host-Device Socket Forwarding",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec",
+        "local_socket_bind"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game)."
+    },
+    {
+      "moduleId": "mod.emulator_optimizer",
+      "displayName": "Emulator Watchdog & Auto-Reconnect",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối."
+    }
+  ],
+  "workflowsCount": 1,
+  "templatesCount": 0,
+  "builtAtUtc": "2026-11-22T15:27:11.112135400+00:00",
+  "publisher": {
+    "publisherId": "pub-zenith-alpha",
+    "displayName": "Zenith Studio Alpha",
+    "organization": "Alpha Zenith Systems Ltd.",
+    "website": null,
+    "supportContact": null,
+    "copyright": "Copyright (C) 2026 Alpha Zenith Systems Ltd.",
+    "ed25519KeyId": "",
+    "ed25519PubkeyHex": "",
+    "authenticodeCertRef": null,
+    "releaseChannel": "internal",
+    "signingPolicy": "unsigned_internal"
+  },
+  "signing": {
+    "signingMode": "unsigned_internal",
+    "publisherId": "pub-zenith-alpha",
+    "publisherOrganization": "Alpha Zenith Systems Ltd.",
+    "releaseChannel": "internal",
+    "authenticodeTrustStatus": "unsigned",
+    "trustedPublicRelease": false,
+    "signerThumbprint": null,
+    "signerSubject": null,
+    "versionInfo": {
+      "companyName": "Alpha Zenith Systems Ltd.",
+      "fileDescription": "Zenith Daily Harvester Portable Runtime",
+      "fileVersion": "1.0.0.100",
+      "internalName": "portable-alpha",
+      "legalCopyright": "Copyright (C) 2026 Alpha Zenith Systems Ltd.",
+      "originalFilename": "Auto_PortableAlpha.exe",
+      "productName": "Zenith Daily Harvester",
+      "productVersion": "1.0.0"
+    },
+    "keyRotation": null
+  }
+}

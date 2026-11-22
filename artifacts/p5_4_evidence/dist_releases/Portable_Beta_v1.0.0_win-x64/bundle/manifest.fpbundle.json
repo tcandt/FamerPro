@@ -1,0 +1,177 @@
+{
+  "compatibility": {
+    "projectSchemaVersion": 1,
+    "workflowSchemaVersion": 1,
+    "uiSchemaVersion": 1,
+    "moduleApiVersion": "1.0.0",
+    "minRuntimeVersion": "0.1.0",
+    "sqliteSchemaVersion": 5
+  },
+  "project": {
+    "compatibility": {
+      "projectSchemaVersion": 1,
+      "workflowSchemaVersion": 1,
+      "uiSchemaVersion": 1,
+      "moduleApiVersion": "1.0.0",
+      "minRuntimeVersion": "0.1.0",
+      "sqliteSchemaVersion": 5
+    },
+    "projectId": "proj-portable-beta-2b90a6fe",
+    "slug": "portable-beta",
+    "name": "Orion Citadel Manager",
+    "gamePackageId": "com.orion.citadel",
+    "version": "1.0.0",
+    "exeName": "Auto_PortableBeta.exe",
+    "windowTitle": "Orion Citadel Manager v1.0.0",
+    "iconRelPath": "branding/icon.ico",
+    "targetResolution": [
+      1920,
+      1080
+    ],
+    "packagedModules": [
+      "mod.adb_core",
+      "mod.vision_ocr"
+    ],
+    "workflowFiles": [
+      "workflows/wf-orion-1.json"
+    ],
+    "templateFiles": [],
+    "bundleAdb": true
+  },
+  "moduleStates": [
+    {
+      "moduleId": "mod.adb_core",
+      "displayName": "ADB & Device Driver Core",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn."
+    },
+    {
+      "moduleId": "mod.vision_ocr",
+      "displayName": "Multiscale Vision & WinRT OCR",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "filesystem_read_write"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR."
+    },
+    {
+      "moduleId": "mod.account_vault",
+      "displayName": "Account Vault (Credential Manager)",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "credential_vault_access"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool."
+    },
+    {
+      "moduleId": "mod.proxy_network",
+      "displayName": "SOCKS5/HTTP Application Proxy",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "outbound_proxy_connect"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding)."
+    },
+    {
+      "moduleId": "mod.adb_port_forward",
+      "displayName": "ADB Host-Device Socket Forwarding",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec",
+        "local_socket_bind"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game)."
+    },
+    {
+      "moduleId": "mod.emulator_optimizer",
+      "displayName": "Emulator Watchdog & Auto-Reconnect",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối."
+    }
+  ],
+  "workflowsCount": 1,
+  "templatesCount": 0,
+  "builtAtUtc": "2026-11-22T15:27:13.495119600+00:00",
+  "publisher": {
+    "publisherId": "pub-orion-beta",
+    "displayName": "Beta Orion Games Studio",
+    "organization": "Beta Orion Games Studio",
+    "website": null,
+    "supportContact": null,
+    "copyright": "Copyright (C) 2026 Beta Orion Games Studio",
+    "ed25519KeyId": "",
+    "ed25519PubkeyHex": "",
+    "authenticodeCertRef": "CERT_STORE://CurrentUser/My/DC96E92F6CF074CB68CC857521B293C1D9C55B86",
+    "releaseChannel": "qa",
+    "signingPolicy": "self_signed_qa"
+  },
+  "signing": {
+    "signingMode": "self_signed_qa",
+    "publisherId": "pub-orion-beta",
+    "publisherOrganization": "Beta Orion Games Studio",
+    "releaseChannel": "qa",
+    "authenticodeTrustStatus": "self_signed_untrusted_root",
+    "trustedPublicRelease": false,
+    "signerThumbprint": "CERT_STORE://CurrentUser/My/DC96E92F6CF074CB68CC857521B293C1D9C55B86",
+    "signerSubject": null,
+    "versionInfo": {
+      "companyName": "Beta Orion Games Studio",
+      "fileDescription": "Orion Citadel Manager QA Signed Portable",
+      "fileVersion": "1.0.0.200",
+      "internalName": "portable-beta",
+      "legalCopyright": "Copyright (C) 2026 Beta Orion Games Studio",
+      "originalFilename": "Auto_PortableBeta.exe",
+      "productName": "Orion Citadel Manager",
+      "productVersion": "1.0.0"
+    },
+    "keyRotation": null
+  }
+}

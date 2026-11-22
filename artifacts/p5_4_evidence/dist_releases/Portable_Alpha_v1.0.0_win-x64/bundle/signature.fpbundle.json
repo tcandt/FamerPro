@@ -1,0 +1,14 @@
+{
+  "algorithm": "Ed25519-RFC8032-SHA256",
+  "keyId": "fp-ed25519-b39369b1a1df",
+  "publisherPublicKeyHex": "b39369b1a1dffb862e8d9b1068078d536bdc03180c0da46a30f154b2e1d6be4e",
+  "manifestSha256": "a9fbf25896a621f34f3b882accd05d827a7ccf7093111d84e7436866d04b8c41",
+  "checksumsTableSha256": "4ca26ef4f1d5bdf94494d5bb3a81ad56c23b95cf391d339a8c2add910562c74b",
+  "fileChecksums": {
+    "manifest.fpbundle.json": "a9fbf25896a621f34f3b882accd05d827a7ccf7093111d84e7436866d04b8c41",
+    "ui-schema.json": "e7d730c77b276f21b5b205daf6851e47e6d479d4b9d0c97dbbfbf398516311c4",
+    "workflows.fpbundle.json": "9342893b2df3a46d1f105f69fa50b1109b77f0a810aad28b0d54bd56a76b4dff"
+  },
+  "signatureEd25519Hex": "e21c2f65353f557ab0cfb74b311144f8389864c23847c1e843f698ac8cf099132b74f55dd3aa34730fa8d5823e240dd400eebf2443ded7bfd9e4b548194f5005",
+  "signedAtUtc": "2026-11-22T15:27:11.145326500+00:00"
+}
