@@ -7,6 +7,22 @@ export type ConnectionState =
   | 'recovering'
   | 'blocked';
 
+export type RuntimeSourceStatus = 'LIVE' | 'OFFLINE' | 'TESTKIT' | 'ERROR';
+
+export type StudioViewId =
+  | 'projects'
+  | 'studio'
+  | 'tasks'
+  | 'devices'
+  | 'runs'
+  | 'builder'
+  | 'accounts'
+  | 'network'
+  | 'settings'
+  | 'overview'
+  | 'workflows'
+  | 'gallery';
+
 export interface DeviceSummary {
   id: string;
   adb_serial: string;
@@ -69,7 +85,13 @@ export interface StepEvent {
   id: string;
   job_id: string;
   node_id: string;
-  event_type: 'command_sent' | 'device_ack' | 'verification_passed' | 'verification_failed' | 'checkpoint_saved';
+  event_type:
+    | 'command_sent'
+    | 'device_ack'
+    | 'verification_passed'
+    | 'verification_failed'
+    | 'checkpoint_saved'
+    | 'unknown';
   attempt_no: number;
   at: string;
   payload_json: string;
@@ -79,8 +101,11 @@ export interface AppStatus {
   version: string;
   adb_available: boolean;
   adb_version: string;
+  adb_path: string;
   db_status: string;
+  db_path: string;
   devices_count: number;
+  is_portable: boolean;
 }
 
 export interface AppPackageInfo {
@@ -104,4 +129,496 @@ export interface LdPlayerInstance {
 export interface ScanRangeResult {
   scanned_count: number;
   connected_endpoints: string[];
+}
+
+// =========================================================================
+// P2 Multi-Project, Bundle Contract & Security Types
+// =========================================================================
+
+export type MiniLayoutPreset = 'compact_1_col' | 'compact_2_col' | 'expanded';
+
+export interface RuntimeColumnBinding {
+  id: string;
+  label: string;
+  runtimeVarKey: string;
+  fallbackDisplay: string;
+  minWindowWidth: number;
+  badgeColor?: string | null;
+}
+
+export interface TaskCategoryDef {
+  id: string;
+  shortTag: string;
+  displayName: string;
+  colorHex: string;
+}
+
+export interface TaskSettingField {
+  key: string;
+  label: string;
+  fieldType: string;
+  defaultValue: any;
+  options?: string[] | null;
+}
+
+export interface MiniTaskDef {
+  id: string;
+  title: string;
+  categoryId: string;
+  workflowId: string;
+  defaultEnabled: boolean;
+  priority: number;
+  estimateSec: number;
+  settingsSchema: TaskSettingField[];
+}
+
+export interface UtilityToggleDef {
+  id: string;
+  label: string;
+  defaultEnabled: boolean;
+  requiredModule?: string | null;
+  settingsSchema: TaskSettingField[];
+}
+
+export interface MiniToolUiSchema {
+  schemaVersion: number;
+  projectSlug: string;
+  windowTitle: string;
+  versionBadge: string;
+  themeAccentHex: string;
+  headerBgHex: string;
+  layoutPreset: MiniLayoutPreset;
+  defaultWindowSize: [number, number];
+  sectionsOrder: string[];
+  hiddenComponents: string[];
+  deviceColumns: RuntimeColumnBinding[];
+  taskCategories: TaskCategoryDef[];
+  tasks: MiniTaskDef[];
+  utilities: UtilityToggleDef[];
+  initialRuntimeVars: Record<string, any>;
+}
+
+export interface GameProjectRecord {
+  id: string;
+  slug: string;
+  name: string;
+  gamePackageId: string;
+  version: string;
+  exeName: string;
+  windowTitle: string;
+  iconRelPath: string;
+  targetWidthPx: number;
+  targetHeightPx: number;
+  bundleAdb: boolean;
+  projectDirPath: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GameProjectSummary {
+  project: GameProjectRecord;
+  workflowsCount: number;
+  tasksCount: number;
+  templatesCount: number;
+  modulesCount: number;
+  accountsCount: number;
+  jobsCount: number;
+  releasesCount: number;
+  latestReleaseVersion?: string | null;
+  latestReleaseExePath?: string | null;
+}
+
+export interface CreateProjectRequest {
+  slug: string;
+  name: string;
+  gamePackageId: string;
+  version?: string | null;
+  exeName?: string | null;
+  windowTitle?: string | null;
+  iconRelPath?: string | null;
+  targetWidthPx?: number | null;
+  targetHeightPx?: number | null;
+  bundleAdb?: boolean | null;
+  enabledModules?: string[] | null;
+}
+
+export interface UpdateProjectRequest {
+  id: string;
+  name?: string | null;
+  gamePackageId?: string | null;
+  version?: string | null;
+  exeName?: string | null;
+  windowTitle?: string | null;
+  iconRelPath?: string | null;
+  targetWidthPx?: number | null;
+  targetHeightPx?: number | null;
+  bundleAdb?: boolean | null;
+}
+
+export interface CloneProjectRequest {
+  sourceProjectId: string;
+  newSlug: string;
+  newName: string;
+  newGamePackageId?: string | null;
+  newExeName?: string | null;
+}
+
+export interface ProjectModuleRecord {
+  projectId: string;
+  moduleId: string;
+  packagedInRelease: boolean;
+  enabledByDefault: boolean;
+  configJson: string;
+  updatedAt: string;
+}
+
+export interface VisionTemplateRecord {
+  id: string;
+  projectId: string;
+  name: string;
+  relPath: string;
+  widthPx: number;
+  heightPx: number;
+  sourceCropX?: number | null;
+  sourceCropY?: number | null;
+  defaultConfidence: number;
+  sha256: string;
+  createdAt: string;
+}
+
+export interface ProjectTaskRecord {
+  id: string;
+  projectId: string;
+  workflowId: string;
+  categoryId: string;
+  categoryShortTag: string;
+  categoryName: string;
+  categoryColorHex: string;
+  title: string;
+  priority: number;
+  estimateSec: number;
+  defaultEnabled: boolean;
+  settingsSchemaJson: string;
+  updatedAt: string;
+}
+
+export interface ProjectWorkflowRecord {
+  id: string;
+  projectId: string;
+  name: string;
+  category: string;
+  draftJson: string;
+  draftUpdatedAt: string;
+  archivedAt?: string | null;
+  latestVersionNo?: number | null;
+}
+
+export interface ProjectAccountInput {
+  id?: string | null;
+  projectId: string;
+  alias: string;
+  gameProfileId?: string | null;
+  secretRef?: string | null;
+  state: string;
+}
+
+export interface ProjectAccountRecord {
+  id: string;
+  projectId: string;
+  alias: string;
+  gameProfileId?: string | null;
+  secretRef?: string | null;
+  state: string;
+  updatedAt: string;
+}
+
+export interface ProjectReleaseRecord {
+  id: string;
+  projectId: string;
+  version: string;
+  outputDirPath: string;
+  exePath: string;
+  exeSizeBytes: number;
+  exeSha256: string;
+  keyId: string;
+  publisherPublicKeyHex: string;
+  peRcdataPubkeyId: number;
+  signatureEd25519Hex: string;
+  buildReportJson: string;
+  builtAt: string;
+}
+
+export interface GameProjectDetail {
+  project: GameProjectRecord;
+  modules: ProjectModuleRecord[];
+  workflows: ProjectWorkflowRecord[];
+  templates: VisionTemplateRecord[];
+  tasks: ProjectTaskRecord[];
+  uiSchema?: MiniToolUiSchema | null;
+  accounts: ProjectAccountRecord[];
+  releases: ProjectReleaseRecord[];
+}
+
+export interface IntegrityReport {
+  integrityCheck: string;
+  foreignKeyViolations: number;
+  journalMode: string;
+  schemaVersions: number[];
+  tableCounts: Record<string, number>;
+  isHealthy: boolean;
+}
+
+export interface BackupReport {
+  backupPath: string;
+  backupSizeBytes: number;
+  backupSha256: string;
+  integrity: IntegrityReport;
+  backedUpAtUtc: string;
+}
+
+export interface ProducerKeyMetadata {
+  keyId: string;
+  publicKeyHex: string;
+  algorithm: string;
+  createdAtUtc: string;
+  keyStorePath: string;
+}
+
+export interface CredentialMetadata {
+  uri: string;
+  scope: string;
+  projectSlug: string;
+  keyName: string;
+}
+
+export interface Jx2MigrationSummary {
+  projectId: string;
+  projectSlug: string;
+  projectDirPath: string;
+  workflowsImported: number;
+  legacyWorkflowsPreserved: number;
+  templatesImported: number;
+  tasksSeeded: number;
+  modulesSeeded: number;
+  originalSourcePreserved: boolean;
+}
+
+// =========================================================================
+// P3 Runtime Coordinator, Vision/ROI, Proxy, ADB & Builder Types
+// =========================================================================
+
+export interface ProjectJobRecord {
+  id: string;
+  projectId?: string | null;
+  deviceId: string;
+  accountId?: string | null;
+  workflowVersionId: string;
+  priority: number;
+  state: string;
+  fencingGeneration: number;
+  currentNodeId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CheckpointRecord {
+  id: string;
+  jobId: string;
+  nodeId: string;
+  stateJson: string;
+  evidenceRef?: string | null;
+  createdAt: string;
+}
+
+export interface JobResumeContext {
+  job: ProjectJobRecord;
+  projectDirPath: string;
+  workflowId: string;
+  workflowVersionNo: number;
+  workflowGraphJson: string;
+  workflowSha256: string;
+  latestCheckpoint?: CheckpointRecord | null;
+}
+
+export interface JobResumeDetail {
+  resumeContext: JobResumeContext;
+  stepEvents: StepEvent[];
+}
+
+export interface RunProjectWorkflowRequest {
+  jobId?: string | null;
+  projectId: string;
+  workflowId: string;
+  taskId?: string | null;
+  deviceId: string;
+  accountId?: string | null;
+  priority: number;
+  leaseTtlSecs: number;
+  workflowTimeoutMs?: number | null;
+  initialVariables?: Record<string, any>;
+}
+
+export interface RunWorkflowExecutionSummary {
+  jobId: string;
+  projectId: string;
+  workflowId: string;
+  workflowVersionId: string;
+  workflowSha256: string;
+  taskId?: string | null;
+  deviceId: string;
+  accountId?: string | null;
+  fencingGeneration: number;
+  adapterKind: string;
+  state: string;
+  currentNodeId?: string | null;
+  checkpointId?: string | null;
+  resumedFromNodeId?: string | null;
+  blockReason?: string | null;
+  eventsRecorded: number;
+  variables: Record<string, any>;
+}
+
+export interface BackgroundJobStarted {
+  jobId: string;
+  deviceId: string;
+  state: string;
+}
+
+export interface ActiveDeviceLeaseView {
+  deviceId: string;
+  jobId: string;
+  generation: number;
+  expiresAt: string;
+}
+
+export interface DeviceHealthReport {
+  serial: string;
+  reachable: boolean;
+  connectionState: ConnectionState;
+  widthPx: number;
+  heightPx: number;
+  rotationDeg: number;
+  latencyMs: number;
+  error?: string | null;
+}
+
+export interface DevicePortMapping {
+  direction: string;
+  serial: string;
+  local: string;
+  remote: string;
+}
+
+export interface AdbPortMappingsOverview {
+  serial: string;
+  forwards: DevicePortMapping[];
+  reverses: DevicePortMappingsOverviewItem[];
+  note: string;
+}
+
+type DevicePortMappingsOverviewItem = DevicePortMapping;
+
+export interface RoiRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface Bounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface TemplateMatchPreviewReport {
+  projectId: string;
+  templateId: string;
+  templateName: string;
+  matched: boolean;
+  confidence?: number | null;
+  bounds?: Bounds | null;
+  suggestedTapPoint?: { x: number; y: number } | null;
+  annotatedPngBase64?: string | null;
+  savedAnnotatedPath?: string | null;
+  error?: string | null;
+}
+
+export type ProxyProtocol = 'tcp_only' | 'socks5' | 'http_connect';
+
+export interface ProxyConfig {
+  host: string;
+  port: number;
+  protocol: ProxyProtocol;
+  username?: string | null;
+  password?: string | null;
+  timeoutMs: number;
+  targetProbeHost?: string | null;
+  targetProbePort?: number | null;
+}
+
+export interface ProxyProbeReport {
+  host: string;
+  port: number;
+  protocol: ProxyProtocol;
+  reachable: boolean;
+  handshakeOk: boolean;
+  authStatus: string;
+  targetConnectOk?: boolean | null;
+  tcpConnectMs?: number | null;
+  totalLatencyMs: number;
+  error?: string | null;
+  disclaimer: string;
+  checkedAtUtc: string;
+}
+
+export interface BuildStepMetric {
+  stepNo: number;
+  name: string;
+  durationMs: number;
+  status: string;
+  detail: string;
+}
+
+export interface BuildPreflightReport {
+  ready: boolean;
+  projectId: string;
+  projectSlug: string;
+  projectName: string;
+  exeName: string;
+  workflowCount: number;
+  templateCount: number;
+  runtimeExePresent: boolean;
+  iconPresent: boolean;
+  adbReady: boolean;
+  keystoreKeyId?: string | null;
+  issues: string[];
+  checks: BuildStepMetric[];
+  modules: any[];
+}
+
+export interface BuildReport {
+  projectId: string;
+  projectSlug: string;
+  toolExeName: string;
+  toolExePath: string;
+  toolExeSizeBytes: number;
+  toolExeSha256: string;
+  peIconLayersInjected: number;
+  peEmbeddedPubkeyResourceId: number;
+  peEmbeddedPubkeyVerified: boolean;
+  authenticodeStatus: string;
+  keyId: string;
+  publisherPublicKeyHex: string;
+  externalKeystorePath: string;
+  signatureAlgorithm: string;
+  signatureEd25519Hex: string;
+  totalDurationMs: number;
+  steps: BuildStepMetric[];
+}
+
+export interface BuilderReleaseExportResult {
+  release: ProjectReleaseRecord;
+  buildReport: BuildReport;
 }

@@ -19,16 +19,60 @@
   --color-danger: #F27883;
   --color-vision: #B291F7;
   --color-node-neutral: #7BA6D6;
+
+  --radius-control: 6px;
+  --radius-panel: 9px;
+  --radius-dialog: 12px;
+  --radius-node: 10px;
 }
 
 body {
   font-family: Inter, "Segoe UI Variable", "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 19px;
   background-color: var(--bg-app);
   color: var(--fg-primary);
   margin: 0;
   padding: 0;
   overflow: hidden;
   user-select: none;
+}
+
+/* Precision Panel & Status Utilities */
+.fp-panel {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-panel);
+}
+
+.fp-elevated {
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+}
+
+.fp-badge-live {
+  background-color: rgba(59, 195, 141, 0.14);
+  color: #3BC38D;
+  border: 1px solid rgba(59, 195, 141, 0.35);
+}
+
+.fp-badge-testkit {
+  background-color: rgba(178, 145, 247, 0.14);
+  color: #B291F7;
+  border: 1px solid rgba(178, 145, 247, 0.38);
+}
+
+.fp-badge-offline {
+  background-color: rgba(116, 134, 157, 0.14);
+  color: #A9B8CC;
+  border: 1px solid rgba(116, 134, 157, 0.3);
+}
+
+.fp-badge-error {
+  background-color: rgba(242, 120, 131, 0.14);
+  color: #F27883;
+  border: 1px solid rgba(242, 120, 131, 0.35);
 }
 
 /* Custom Scrollbars */

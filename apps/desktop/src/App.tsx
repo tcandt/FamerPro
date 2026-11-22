@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { AppShell } from './components/shell/AppShell';
+import { ProjectsDashboardView } from './features/projects/ProjectsDashboardView';
 import { OverviewView } from './features/overview/OverviewView';
 import { DevicesView } from './features/devices/DevicesView';
 import { WorkflowsView } from './features/workflows/WorkflowsView';
 import { WorkflowStudioView } from './features/studio/WorkflowStudioView';
 import { TasksView } from './features/tasks/TasksView';
 import { RunsView } from './features/runs/RunsView';
+import { MiniToolBuilderView } from './features/builder/MiniToolBuilderView';
 import { AccountsView } from './features/accounts/AccountsView';
 import { NetworkView } from './features/network/NetworkView';
 import { SettingsView } from './features/settings/SettingsView';
@@ -22,17 +24,21 @@ export const App: React.FC = () => {
         if (hash) return hash;
       }
     }
-    return 'overview';
+    return 'projects';
   });
 
   return (
     <AppShell currentView={currentView} onSelectView={setCurrentView}>
+      {currentView === 'projects' && <ProjectsDashboardView onNavigate={setCurrentView} />}
       {currentView === 'overview' && <OverviewView onNavigate={setCurrentView} />}
       {currentView === 'devices' && <DevicesView onNavigate={setCurrentView} />}
-      {currentView === 'workflows' && <WorkflowsView onOpenStudio={() => setCurrentView('studio')} />}
+      {currentView === 'workflows' && (
+        <WorkflowsView onOpenStudio={() => setCurrentView('studio')} />
+      )}
       {currentView === 'studio' && <WorkflowStudioView />}
       {currentView === 'tasks' && <TasksView />}
       {currentView === 'runs' && <RunsView />}
+      {currentView === 'builder' && <MiniToolBuilderView onNavigate={setCurrentView} />}
       {currentView === 'accounts' && <AccountsView />}
       {currentView === 'network' && <NetworkView />}
       {currentView === 'settings' && <SettingsView />}

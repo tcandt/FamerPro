@@ -1,21 +1,21 @@
 import React from 'react';
 import {
-  LayoutDashboard,
-  Smartphone,
-  FolderKanban,
+  FolderGit2,
   Workflow,
   ListChecks,
-  Activity,
+  Smartphone,
+  BugPlay,
+  PackageCheck,
   Users,
   Network,
   Settings,
-  Palette,
   ChevronLeft,
   ChevronRight,
   Terminal,
 } from 'lucide-react';
 import { useDeviceStore } from '../../stores/deviceStore';
 import { useWorkflowStore } from '../../stores/workflowStore';
+import { useProjectStore } from '../../stores/projectStore';
 
 interface NavRailProps {
   currentView: string;
@@ -32,72 +32,112 @@ export const NavRail: React.FC<NavRailProps> = ({
 }) => {
   const { devices } = useDeviceStore();
   const { isRunning } = useWorkflowStore();
-  const readyCount = devices.filter((d) => d.connection_state === 'ready').length;
+  const { projects, activeProjectDetail } = useProjectStore();
+
+  const readyCount = devices.filter((d) => d.connection_state === 'ready' && !d.is_mock).length;
+  const wfCount = activeProjectDetail?.workflows.length ?? 0;
+  const taskCount = activeProjectDetail?.tasks.length ?? 0;
+  const releaseCount = activeProjectDetail?.releases.length ?? 0;
 
   const navSections = [
     {
-      title: 'VẬN HÀNH CHÍNH',
+      title: 'STUDIO SẢN XUẤT',
       items: [
-        { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard, badge: null },
         {
-          id: 'devices',
-          label: 'Thiết bị Android',
-          icon: Smartphone,
-          badge: readyCount > 0 ? `${readyCount} online` : `${devices.length}`,
-          badgeColor: readyCount > 0 ? 'bg-[#133528] text-[#3BC38D]' : 'bg-[#202B3B] text-[#74869D]',
+          id: 'projects',
+          label: 'Projects & Dashboard',
+          icon: FolderGit2,
+          badge: projects.length > 0 ? `${projects.length}` : null,
+          badgeColor: 'bg-[#173355] text-[#4B9CFF]',
         },
         {
-          id: 'workflows',
-          label: 'Kho Quy trình JX2',
-          icon: FolderKanban,
-          badge: '10 Luồng',
+          id: 'studio',
+          label: 'Workflow Studio',
+          icon: Workflow,
+          badge: wfCount > 0 ? `${wfCount} WF` : 'Canvas',
           badgeColor: 'bg-[#173355] text-[#38BDF8]',
         },
-        { id: 'studio', label: 'Workflow Studio', icon: Workflow, badge: 'Canvas' },
-        { id: 'tasks', label: 'Bộ Nhiệm vụ', icon: ListChecks, badge: 'Queue' },
+        {
+          id: 'tasks',
+          label: 'Tasks & Modules',
+          icon: ListChecks,
+          badge: taskCount > 0 ? `${taskCount}` : null,
+          badgeColor: 'bg-[#202B3B] text-[#A9B8CC]',
+        },
+      ],
+    },
+    {
+      title: 'THIẾT BỊ & KIỂM THỬ',
+      items: [
+        {
+          id: 'devices',
+          label: 'Device Lab',
+          icon: Smartphone,
+          badge: readyCount > 0 ? `${readyCount} LIVE` : devices.length > 0 ? `${devices.length}` : '0',
+          badgeColor:
+            readyCount > 0
+              ? 'bg-[#133528] text-[#3BC38D]'
+              : 'bg-[#202B3B] text-[#74869D]',
+        },
         {
           id: 'runs',
-          label: 'Phiên chạy',
-          icon: Activity,
-          badge: isRunning ? 'Đang chạy' : null,
+          label: 'Test & Debug',
+          icon: BugPlay,
+          badge: isRunning ? 'RUN' : null,
           badgeColor: 'bg-[#3B2D17] text-[#E7B15B] animate-pulse',
         },
       ],
     },
     {
-      title: 'TÀI NGUYÊN & MẠNG',
+      title: 'ĐÓNG GÓI & PHÁT HÀNH',
       items: [
-        { id: 'accounts', label: 'Tài khoản (Vault)', icon: Users, badge: null },
-        { id: 'network', label: 'Mạng & Proxy', icon: Network, badge: null },
+        {
+          id: 'builder',
+          label: 'Mini Tool Builder',
+          icon: PackageCheck,
+          badge: releaseCount > 0 ? `${releaseCount} EXE` : 'Build',
+          badgeColor:
+            releaseCount > 0
+              ? 'bg-[#133528] text-[#3BC38D]'
+              : 'bg-[#202B3B] text-[#B291F7]',
+        },
       ],
     },
     {
-      title: 'HỆ THỐNG',
+      title: 'HẠ TẦNG & HỆ THỐNG',
       items: [
-        { id: 'gallery', label: 'Design Tokens', icon: Palette, badge: 'Tokens' },
-        { id: 'settings', label: 'Cài đặt & ADB', icon: Settings, badge: null },
+        { id: 'accounts', label: 'Account Vault', icon: Users, badge: null },
+        { id: 'network', label: 'Proxy & Port Map', icon: Network, badge: null },
+        { id: 'settings', label: 'System Settings', icon: Settings, badge: null },
       ],
     },
   ];
 
+  const isViewMatch = (itemId: string) => {
+    if (itemId === 'projects' && (currentView === 'overview' || currentView === 'workflows')) {
+      return true;
+    }
+    return currentView === itemId;
+  };
+
   return (
     <aside
-      className={`bg-[#141C28] border-r border-[#2A3647] flex flex-col justify-between transition-all duration-200 select-none z-30 shrink-0 ${
-        isExpanded ? 'w-[230px]' : 'w-[64px]'
+      className={`bg-[#161E29] border-r border-[#2A3647] flex flex-col justify-between transition-all duration-200 select-none z-30 shrink-0 ${
+        isExpanded ? 'w-[220px]' : 'w-[64px]'
       }`}
     >
-      {/* Top Nav Items */}
-      <div className="flex flex-col py-3 space-y-4 overflow-y-auto">
+      {/* Navigation Sections */}
+      <div className="flex flex-col py-2.5 space-y-3.5 overflow-y-auto">
         {navSections.map((sec, idx) => (
-          <div key={idx} className="flex flex-col space-y-1">
+          <div key={idx} className="flex flex-col space-y-0.5">
             {isExpanded && (
-              <span className="px-4 text-[10px] font-bold text-[#5A6D85] tracking-wider uppercase">
+              <span className="px-3.5 pb-1 text-[10px] font-bold text-[#5A6D85] tracking-wider uppercase">
                 {sec.title}
               </span>
             )}
             {sec.items.map((item) => {
               const Icon = item.icon;
-              const isActive = currentView === item.id;
+              const isActive = isViewMatch(item.id);
               return (
                 <button
                   key={item.id}
@@ -109,24 +149,23 @@ export const NavRail: React.FC<NavRailProps> = ({
                       : 'text-[#A9B8CC] hover:text-[#EDF3FC] hover:bg-[#192230]'
                   }`}
                 >
-                  {/* Left Active Indicator Bar */}
                   {isActive && (
                     <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-[#1878F5] rounded-r" />
                   )}
 
                   <Icon
-                    size={17}
+                    size={16}
                     className={`shrink-0 ${
-                      isActive ? 'text-[#1878F5]' : 'text-[#74869D] group-hover:text-[#A9B8CC]'
+                      isActive ? 'text-[#4B9CFF]' : 'text-[#74869D] group-hover:text-[#A9B8CC]'
                     }`}
                   />
 
                   {isExpanded && (
-                    <div className="ml-3 flex-1 flex items-center justify-between min-w-0">
-                      <span className="text-xs truncate">{item.label}</span>
+                    <div className="ml-2.5 flex-1 flex items-center justify-between min-w-0">
+                      <span className="text-[12.5px] truncate">{item.label}</span>
                       {item.badge && (
                         <span
-                          className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-medium ${
+                          className={`text-[9.5px] px-1.5 py-0.2 rounded font-mono font-semibold shrink-0 ml-1 ${
                             item.badgeColor || 'bg-[#202B3B] text-[#7BA6D6]'
                           }`}
                         >
@@ -142,27 +181,33 @@ export const NavRail: React.FC<NavRailProps> = ({
         ))}
       </div>
 
-      {/* Bottom Footer: Environment Health & Expand Toggle */}
-      <div className="p-2 border-t border-[#2A3647] flex flex-col space-y-2">
+      {/* Bottom Footer: Environment & Collapse Toggle */}
+      <div className="p-2 border-t border-[#2A3647] flex flex-col space-y-1.5">
         {isExpanded && (
-          <div className="px-2 py-1.5 rounded bg-[#101722] border border-[#2A3647]/60 flex items-center justify-between text-[11px]">
-            <div className="flex items-center gap-1.5 text-[#3BC38D]">
-              <Terminal size={12} />
-              <span className="font-mono text-[10px]">Portable ADB</span>
+          <div className="px-2.5 py-1.5 rounded bg-[#101722] border border-[#2A3647]/70 flex items-center justify-between text-[11px]">
+            <div className="flex items-center gap-1.5 text-[#A9B8CC]">
+              <Terminal size={12} className={readyCount > 0 ? 'text-[#3BC38D]' : 'text-[#74869D]'} />
+              <span className="font-mono text-[10.5px]">
+                ADB {readyCount > 0 ? `${readyCount} online` : 'standby'}
+              </span>
             </div>
-            <span className="w-2 h-2 rounded-full bg-[#3BC38D]" title="ADB Ready" />
+            <span
+              className={`w-2 h-2 rounded-full ${readyCount > 0 ? 'bg-[#3BC38D]' : 'bg-[#74869D]'}`}
+              title={readyCount > 0 ? 'Có thiết bị ADB ready' : 'Chưa phát hiện thiết bị ADB ready'}
+            />
           </div>
         )}
 
         <button
           onClick={onToggleExpand}
           className="w-full flex items-center justify-center p-1.5 rounded hover:bg-[#192230] text-[#74869D] hover:text-[#EDF3FC] transition-colors cursor-pointer"
-          title={isExpanded ? 'Thu gọn thanh bên (64px)' : 'Mở rộng thanh bên (230px)'}
+          title={isExpanded ? 'Thu gọn thanh bên (64px)' : 'Mở rộng thanh bên (220px)'}
+          aria-label="Toggle Sidebar"
         >
           {isExpanded ? (
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-1.5 text-xs">
               <ChevronLeft size={15} />
-              <span>Thu gọn thanh bên</span>
+              <span>Thu gọn Sidebar</span>
             </div>
           ) : (
             <ChevronRight size={16} />

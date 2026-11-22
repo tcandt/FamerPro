@@ -1,0 +1,74 @@
+{
+  "milestone": "P4.0",
+  "executedAtUtc": "2026-11-22T04:52:44.390Z",
+  "tauriUrl": "http://tauri.localhost/",
+  "hasTauriLiveBadge": true,
+  "ipcProbe": {
+    "ok": true,
+    "status": {
+      "version": "0.1.0",
+      "adb_available": true,
+      "adb_version": "Android Debug Bridge version 1.0.41",
+      "adb_path": "E:\\DATA\\FarmerPro\\artifacts\\p4_evidence\\p4_0_sandbox\\bin\\adb.exe",
+      "db_status": "SQLite WAL Healthy",
+      "db_path": "E:\\DATA\\FarmerPro\\artifacts\\p4_evidence\\p4_0_sandbox\\data\\farmerpro.db",
+      "devices_count": 0,
+      "is_portable": true
+    },
+    "projectsCount": 0,
+    "devicesCount": 0
+  },
+  "consoleErrors": [],
+  "screenshots": [
+    {
+      "filename": "p4_0_projects_1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "scrollHeight": 720,
+      "clientHeight": 720,
+      "headerHeight": 44
+    },
+    {
+      "filename": "p4_0_projects_1600x900.png",
+      "width": 1600,
+      "height": 900,
+      "scrollWidth": 1600,
+      "clientWidth": 1600,
+      "scrollHeight": 900,
+      "clientHeight": 900,
+      "headerHeight": 44
+    },
+    {
+      "filename": "p4_0_projects_1920x1080.png",
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "scrollHeight": 1080,
+      "clientHeight": 1080,
+      "headerHeight": 44
+    },
+    {
+      "filename": "p4_0_collapsed_1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "scrollHeight": 720,
+      "clientHeight": 720,
+      "headerHeight": 44
+    },
+    {
+      "filename": "p4_0_studio_1600x900.png",
+      "width": 1600,
+      "height": 900,
+      "scrollWidth": 1600,
+      "clientWidth": 1600,
+      "scrollHeight": 900,
+      "clientHeight": 900,
+      "headerHeight": 44
+    }
+  ]
+}
