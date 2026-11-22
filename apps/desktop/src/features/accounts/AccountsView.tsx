@@ -1,193 +1,171 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
+  AlertCircle,
+  Clock,
   KeyRound,
   Plus,
-  ShieldCheck,
+  RefreshCw,
   Search,
-  Clock,
-  AlertCircle,
-  Play,
-  RotateCw,
+  ShieldCheck,
+  X,
 } from 'lucide-react';
-
-interface AccountRecord {
-  id: string;
-  alias: string;
-  gameProfileId: string;
-  assignedDevice: string;
-  secretRef: string;
-  status: 'ready' | 'in_session' | 'cooldown' | 'expired';
-  cooldownUntil?: string;
-  goldFarmed: number;
-  level: number;
-  lastActive: string;
-}
+import { useProjectStore } from '../../stores/projectStore';
+import { api } from '../../lib/api';
+import type { ProjectAccountRecord } from '../../types';
 
 export const AccountsView: React.FC = () => {
+  const { activeProjectId, activeProjectDetail, refreshActiveProject } = useProjectStore();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('acc-01');
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [accounts] = useState<AccountRecord[]>([
-    {
-      id: 'acc-01',
-      alias: 'Farmer_Main_01',
-      gameProfileId: 'Hero_Knight_Lv42',
-      assignedDevice: 'Pixel 6 — Máy 01',
-      secretRef: 'CRED_MGR://farmerpro/acc_main_01',
-      status: 'in_session',
-      goldFarmed: 145000,
-      level: 42,
-      lastActive: 'Vừa xong',
-    },
-    {
-      id: 'acc-02',
-      alias: 'Farmer_Alt_02',
-      gameProfileId: 'Mage_Frost_Lv38',
-      assignedDevice: 'Galaxy S22 — Máy 02',
-      secretRef: 'CRED_MGR://farmerpro/acc_alt_02',
-      status: 'ready',
-      goldFarmed: 89000,
-      level: 38,
-      lastActive: '12 phút trước',
-    },
-    {
-      id: 'acc-03',
-      alias: 'Farmer_Alt_03',
-      gameProfileId: 'Ranger_Wind_Lv31',
-      assignedDevice: 'Chưa gán máy',
-      secretRef: 'CRED_MGR://farmerpro/acc_alt_03',
-      status: 'cooldown',
-      cooldownUntil: 'Còn 35 phút',
-      goldFarmed: 42000,
-      level: 31,
-      lastActive: '45 phút trước',
-    },
-    {
-      id: 'acc-04',
-      alias: 'Farmer_Backup_04',
-      gameProfileId: 'Priest_Light_Lv25',
-      assignedDevice: 'Chưa gán máy',
-      secretRef: 'CRED_MGR://farmerpro/acc_backup_04',
-      status: 'expired',
-      goldFarmed: 12000,
-      level: 25,
-      lastActive: '2 ngày trước',
-    },
-  ]);
+  const [alias, setAlias] = useState('');
+  const [gameProfileId, setGameProfileId] = useState('');
+  const [secretRef, setSecretRef] = useState('');
+  const [stateValue, setStateValue] = useState('ready');
 
-  const selectedAccount = accounts.find((a) => a.id === selectedAccountId) || accounts[0];
+  const accounts: ProjectAccountRecord[] = activeProjectDetail?.accounts || [];
 
-  const filteredAccounts = accounts.filter((acc) => {
-    if (filterStatus !== 'all' && acc.status !== filterStatus) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        acc.alias.toLowerCase().includes(q) ||
-        acc.gameProfileId.toLowerCase().includes(q) ||
-        acc.assignedDevice.toLowerCase().includes(q)
-      );
+  const filteredAccounts = useMemo(() => {
+    return accounts.filter((acc) => {
+      if (filterStatus !== 'all' && acc.state !== filterStatus) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (
+          acc.alias.toLowerCase().includes(q) ||
+          (acc.gameProfileId || '').toLowerCase().includes(q) ||
+          (acc.secretRef || '').toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [accounts, filterStatus, searchQuery]);
+
+  const selectedAccount =
+    filteredAccounts.find((a) => a.id === selectedAccountId) || filteredAccounts[0] || null;
+
+  const handleSaveAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeProjectId || !alias.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.studioUpsertProjectAccount({
+        projectId: activeProjectId,
+        alias: alias.trim(),
+        gameProfileId: gameProfileId.trim() || null,
+        secretRef:
+          secretRef.trim() ||
+          `dpapi://${activeProjectDetail?.project.slug || 'project'}/${alias.trim()}`,
+        state: stateValue,
+      });
+      await refreshActiveProject();
+      setShowModal(false);
+      setAlias('');
+      setGameProfileId('');
+      setSecretRef('');
+      setStateValue('ready');
+    } catch (err: any) {
+      setError(err?.message || String(err));
+    } finally {
+      setSaving(false);
     }
-    return true;
-  });
+  };
 
-  const renderStatusChip = (status: AccountRecord['status']) => {
-    switch (status) {
+  const renderStateChip = (st: string) => {
+    switch (st) {
       case 'in_session':
         return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#173355] text-[#38BDF8] border border-[#38BDF8]/40 flex items-center gap-1 w-fit">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-pulse" />
-            <span>Đang trong phiên</span>
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#173355] text-[#38BDF8] border border-[#38BDF8]/40 w-fit inline-flex items-center gap-1">
+            <span>in_session</span>
           </span>
         );
       case 'ready':
         return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#133528] text-[#3BC38D] border border-[#3BC38D]/40 flex items-center gap-1 w-fit">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#3BC38D]" />
-            <span>Sẵn sàng</span>
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#133528] text-[#3BC38D] border border-[#3BC38D]/40 w-fit inline-flex items-center gap-1">
+            <span>ready</span>
           </span>
         );
       case 'cooldown':
         return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#3B2D17] text-[#E7B15B] border border-[#E7B15B]/40 flex items-center gap-1 w-fit">
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#3B2D17] text-[#E7B15B] border border-[#E7B15B]/40 w-fit inline-flex items-center gap-1">
             <Clock size={10} />
-            <span>Chờ hồi phục</span>
+            <span>cooldown</span>
           </span>
         );
-      case 'expired':
+      default:
         return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#381E24] text-[#F27883] border border-[#F27883]/40 flex items-center gap-1 w-fit">
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#381E24] text-[#F27883] border border-[#F27883]/40 w-fit inline-flex items-center gap-1">
             <AlertCircle size={10} />
-            <span>Cần đăng nhập lại</span>
+            <span>{st}</span>
           </span>
         );
     }
   };
 
+  if (!activeProjectId || !activeProjectDetail) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#101722] p-6">
+        <div className="fp-panel p-6 max-w-md text-center space-y-2">
+          <KeyRound size={26} className="mx-auto text-[#4B9CFF]" />
+          <div className="text-sm font-bold text-[#EDF3FC]">Chưa chọn Game Project</div>
+          <p className="text-xs text-[#74869D]">
+            Chọn một Game Project từ Header để xem và quản lý tài khoản trong bảng{' '}
+            <code>project_accounts</code>.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex overflow-hidden bg-[#101722] text-[#EDF3FC]">
-      {/* Left: Accounts Table & Filter */}
       <div className="flex-1 flex flex-col border-r border-[#2A3647] overflow-hidden">
-        {/* Header Bar */}
         <div className="p-4 border-b border-[#2A3647] space-y-3 bg-[#141C28]">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-sm font-bold text-[#EDF3FC] tracking-wide">
-                  Quản lý Tài khoản (Account Vault)
+                <h1 className="text-sm font-bold text-[#EDF3FC]">
+                  Account Vault — {activeProjectDetail.project.name}
                 </h1>
                 <span className="px-2 py-0.5 rounded text-[10px] bg-[#173355] text-[#38BDF8] font-mono font-semibold border border-[#2A3647]">
-                  {accounts.length} tài khoản
+                  {accounts.length} tài khoản (SQLite)
                 </span>
               </div>
               <p className="text-xs text-[#74869D] mt-0.5">
-                Bảo vệ bí mật thông qua Windows Credential Manager. Tuyệt đối không lưu mật khẩu plaintext trong JSON hoặc SQLite.
+                Chỉ lưu tham chiếu bí mật (<code>secret_ref</code>) theo từng dự án; mật khẩu được
+                bảo vệ riêng qua Windows DPAPI CurrentUser.
               </p>
             </div>
 
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-3 py-1.5 bg-[#1878F5] hover:bg-[#2F8CFF] text-white text-xs font-semibold rounded-md shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Plus size={13} />
-              <span>Thêm tài khoản</span>
-            </button>
-          </div>
-
-          {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-4 gap-2 text-xs">
-            <div className="p-2 rounded bg-[#101722] border border-[#2A3647] flex items-center justify-between">
-              <span className="text-[#74869D]">Tổng số:</span>
-              <span className="font-bold text-[#EDF3FC] font-mono">{accounts.length}</span>
-            </div>
-            <div className="p-2 rounded bg-[#101722] border border-[#2A3647] flex items-center justify-between">
-              <span className="text-[#74869D]">Đang chạy:</span>
-              <span className="font-bold text-[#38BDF8] font-mono">
-                {accounts.filter((a) => a.status === 'in_session').length}
-              </span>
-            </div>
-            <div className="p-2 rounded bg-[#101722] border border-[#2A3647] flex items-center justify-between">
-              <span className="text-[#74869D]">Sẵn sàng:</span>
-              <span className="font-bold text-[#3BC38D] font-mono">
-                {accounts.filter((a) => a.status === 'ready').length}
-              </span>
-            </div>
-            <div className="p-2 rounded bg-[#101722] border border-[#2A3647] flex items-center justify-between">
-              <span className="text-[#74869D]">Cần xử lý:</span>
-              <span className="font-bold text-[#E7B15B] font-mono">
-                {accounts.filter((a) => a.status === 'cooldown' || a.status === 'expired').length}
-              </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => refreshActiveProject()}
+                className="px-2.5 py-1.5 rounded bg-[#161E29] border border-[#2A3647] text-xs text-[#A9B8CC] flex items-center gap-1 cursor-pointer"
+              >
+                <RefreshCw size={12} />
+                <span>Làm mới</span>
+              </button>
+              <button
+                onClick={() => setShowModal(true)}
+                className="px-3 py-1.5 bg-[#1878F5] hover:bg-[#2F8CFF] text-white text-xs font-semibold rounded-md flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus size={13} />
+                <span>Thêm tài khoản</span>
+              </button>
             </div>
           </div>
 
-          {/* Search & Tabs */}
-          <div className="flex items-center justify-between gap-3 pt-1">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-1.5 bg-[#101722] border border-[#2A3647] rounded-md px-2.5 py-1 text-xs flex-1 max-w-xs">
               <Search size={13} className="text-[#74869D] shrink-0" />
               <input
                 type="text"
-                placeholder="Tìm theo bí danh, game profile..."
+                placeholder="Tìm alias, profile, secretRef..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-transparent text-[#EDF3FC] placeholder-[#74869D] outline-none text-xs"
@@ -195,225 +173,172 @@ export const AccountsView: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-1 bg-[#101722] p-1 rounded-md border border-[#2A3647] text-xs">
-              {['all', 'in_session', 'ready', 'cooldown'].map((st) => (
+              {['all', 'ready', 'in_session', 'cooldown'].map((st) => (
                 <button
                   key={st}
                   onClick={() => setFilterStatus(st)}
-                  className={`px-2.5 py-0.5 rounded font-medium transition-colors ${
+                  className={`px-2.5 py-0.5 rounded font-medium cursor-pointer ${
                     filterStatus === st
                       ? 'bg-[#1878F5] text-white'
                       : 'text-[#74869D] hover:text-white'
                   }`}
                 >
-                  {st === 'all'
-                    ? 'Tất cả'
-                    : st === 'in_session'
-                    ? 'Đang chạy'
-                    : st === 'ready'
-                    ? 'Sẵn sàng'
-                    : 'Cooldown'}
+                  {st}
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="flex-1 overflow-y-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead className="bg-[#141C28] text-[#74869D] sticky top-0 border-b border-[#2A3647] z-10 font-bold uppercase tracking-wider text-[11px]">
-              <tr>
-                <th className="p-3">Bí danh tài khoản</th>
-                <th className="p-3">Hồ sơ Game</th>
-                <th className="p-3">Thiết bị gán</th>
-                <th className="p-3">Tham chiếu Secret</th>
-                <th className="p-3">Trạng thái</th>
-                <th className="p-3">Vàng tích lũy</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#2A3647]">
-              {filteredAccounts.map((acc) => {
-                const isSelected = acc.id === selectedAccount?.id;
-                return (
+        <div className="flex-1 overflow-y-auto p-4">
+          {filteredAccounts.length === 0 ? (
+            <div className="p-6 rounded-lg bg-[#16202F] border border-dashed border-[#2A3647] text-center text-xs text-[#74869D]">
+              Project này chưa có tài khoản nào trong <code>project_accounts</code>.
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-[#141C28] text-[#74869D] border-b border-[#2A3647] uppercase text-[11px]">
+                <tr>
+                  <th className="p-3">Alias</th>
+                  <th className="p-3">Game Profile</th>
+                  <th className="p-3">Secret Ref</th>
+                  <th className="p-3">Trạng thái</th>
+                  <th className="p-3">Cập nhật</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#2A3647]">
+                {filteredAccounts.map((acc) => (
                   <tr
                     key={acc.id}
                     onClick={() => setSelectedAccountId(acc.id)}
-                    className={`cursor-pointer transition-colors ${
-                      isSelected
-                        ? 'bg-[#17273D] border-l-4 border-l-[#1878F5]'
-                        : 'hover:bg-[#16202F]'
+                    className={`cursor-pointer ${
+                      acc.id === selectedAccount?.id ? 'bg-[#17273D]' : 'hover:bg-[#16202F]'
                     }`}
                   >
-                    <td className="p-3">
-                      <div className="font-bold text-[#EDF3FC] text-[13px]">{acc.alias}</div>
-                      <div className="text-[10px] text-[#74869D]">ID: {acc.id}</div>
-                    </td>
-                    <td className="p-3">
-                      <div className="font-medium text-[#A9B8CC]">{acc.gameProfileId}</div>
-                      <div className="text-[10px] text-[#7BA6D6]">Cấp độ {acc.level}</div>
-                    </td>
-                    <td className="p-3">
-                      <span className="text-[#38BDF8] font-medium">{acc.assignedDevice}</span>
-                    </td>
+                    <td className="p-3 font-semibold text-[#EDF3FC]">{acc.alias}</td>
+                    <td className="p-3 text-[#A9B8CC]">{acc.gameProfileId || '—'}</td>
                     <td className="p-3 font-mono text-[11px] text-[#3BC38D]">
-                      <div className="flex items-center gap-1.5">
-                        <KeyRound size={12} className="shrink-0" />
-                        <span className="truncate max-w-[170px]">{acc.secretRef}</span>
-                      </div>
+                      {acc.secretRef || '—'}
                     </td>
-                    <td className="p-3">{renderStatusChip(acc.status)}</td>
-                    <td className="p-3 font-mono text-[#FDE047] font-semibold">
-                      {acc.goldFarmed.toLocaleString()} vàng
+                    <td className="p-3">{renderStateChip(acc.state)}</td>
+                    <td className="p-3 font-mono text-[11px] text-[#74869D]">
+                      {new Date(acc.updatedAt).toLocaleString()}
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
-      {/* Right: Account Contextual Drawer */}
-      <div className="w-[360px] bg-[#141C28] flex flex-col overflow-y-auto p-4 space-y-4 shrink-0">
+      <div className="w-[320px] bg-[#141C28] p-4 space-y-4 shrink-0 overflow-y-auto">
         {selectedAccount ? (
           <>
-            <div className="border-b border-[#2A3647] pb-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-[#74869D] uppercase font-mono">
-                  {selectedAccount.id}
-                </span>
-                {renderStatusChip(selectedAccount.status)}
-              </div>
-              <h3 className="text-sm font-bold text-[#EDF3FC] mt-0.5">
-                {selectedAccount.alias}
-              </h3>
-              <p className="text-[11px] text-[#74869D]">
-                Hồ sơ: {selectedAccount.gameProfileId} (Level {selectedAccount.level})
-              </p>
+            <div className="border-b border-[#2A3647] pb-3 space-y-1">
+              <div className="font-mono text-[10px] text-[#74869D]">{selectedAccount.id}</div>
+              <div className="text-sm font-bold text-[#EDF3FC]">{selectedAccount.alias}</div>
+              {renderStateChip(selectedAccount.state)}
             </div>
-
-            {/* Secret Reference Box */}
-            <div className="p-3 rounded-lg bg-[#17202E] border border-[#2A3647] space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-[#3BC38D]">
+            <div className="p-3 rounded-lg bg-[#101722] border border-[#2A3647] space-y-1.5 text-xs">
+              <div className="flex items-center gap-1.5 text-[#3BC38D] font-bold">
                 <ShieldCheck size={14} />
-                <span>Bảo vệ bởi Windows DPAPI</span>
+                <span>Secret Reference Isolation</span>
               </div>
-              <p className="text-[11px] text-[#A9B8CC] leading-relaxed">
-                Mật khẩu và refresh token được mã hóa trực tiếp bởi hệ điều hành Windows qua khóa người dùng hiện tại.
-              </p>
-              <div className="p-2 rounded bg-[#101722] border border-[#2A3647] font-mono text-[10px] text-[#38BDF8] break-all">
-                {selectedAccount.secretRef}
-              </div>
-            </div>
-
-            {/* Session Stats */}
-            <div className="p-3 rounded-lg bg-[#17202E] border border-[#2A3647] space-y-2 text-xs">
-              <span className="font-bold text-[#EDF3FC] text-xs block">
-                Thống kê Vận hành Phiên
-              </span>
-
-              <div className="space-y-1.5 text-[11px]">
-                <div className="flex justify-between py-1 border-b border-[#2A3647]/50">
-                  <span className="text-[#74869D]">Thiết bị gán:</span>
-                  <span className="font-semibold text-[#38BDF8]">
-                    {selectedAccount.assignedDevice}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#2A3647]/50">
-                  <span className="text-[#74869D]">Tài nguyên farm:</span>
-                  <span className="font-mono text-[#FDE047] font-bold">
-                    {selectedAccount.goldFarmed.toLocaleString()} Vàng
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#2A3647]/50">
-                  <span className="text-[#74869D]">Hoạt động gần nhất:</span>
-                  <span className="text-[#EDF3FC]">{selectedAccount.lastActive}</span>
-                </div>
-              </div>
-
-              <div className="pt-2 flex flex-col space-y-2">
-                <button className="w-full py-1.5 bg-[#1878F5] hover:bg-[#2F8CFF] text-white text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
-                  <Play size={12} fill="currentColor" />
-                  <span>Khởi chạy phiên cho tài khoản này</span>
-                </button>
-                <button className="w-full py-1.5 bg-[#192434] hover:bg-[#202E42] text-[#38BDF8] border border-[#2A3647] rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
-                  <RotateCw size={12} />
-                  <span>Đổi thiết bị gán</span>
-                </button>
+              <div className="font-mono text-[11px] text-[#A9B8CC] break-all">
+                {selectedAccount.secretRef || 'Chưa gán secretRef'}
               </div>
             </div>
           </>
         ) : (
-          <div className="p-6 text-center text-[#74869D] text-xs">
-            Chưa có tài khoản nào được chọn.
-          </div>
+          <div className="text-xs text-[#74869D]">Chọn một tài khoản để xem chi tiết.</div>
         )}
       </div>
 
-      {/* Add Account Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="w-[440px] bg-[#16202F] border border-[#2A3647] rounded-xl p-5 space-y-4 shadow-2xl animate-fadeIn">
-            <div className="flex items-center justify-between border-b border-[#2A3647] pb-3">
-              <h3 className="text-sm font-bold text-[#EDF3FC]">Thêm Tài khoản Mới</h3>
+      {showModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <form
+            onSubmit={handleSaveAccount}
+            className="w-full max-w-md rounded-xl bg-[#16202F] border border-[#2A3647] p-5 space-y-3 text-xs"
+          >
+            <div className="flex items-center justify-between border-b border-[#2A3647] pb-2.5">
+              <h3 className="text-sm font-bold text-[#EDF3FC]">Thêm tài khoản vào Project</h3>
               <button
-                onClick={() => setShowAddModal(false)}
-                className="text-[#74869D] hover:text-white text-xs"
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="text-[#74869D] hover:text-[#EDF3FC] cursor-pointer"
               >
-                ✕
+                <X size={15} />
               </button>
             </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block text-[#A9B8CC] mb-1 font-semibold">Bí danh tài khoản</label>
-                <input
-                  type="text"
-                  placeholder="Farmer_Alt_05"
-                  className="w-full bg-[#101722] border border-[#2A3647] rounded px-3 py-1.5 text-[#EDF3FC] outline-none"
-                />
+            {error && (
+              <div className="p-2 rounded bg-[#381E24] text-[#F27883] border border-[#F27883]/40">
+                {error}
               </div>
-
-              <div>
-                <label className="block text-[#A9B8CC] mb-1 font-semibold">Tên nhân vật / Game ID</label>
-                <input
-                  type="text"
-                  placeholder="Hero_Warrior_Lv1"
-                  className="w-full bg-[#101722] border border-[#2A3647] rounded px-3 py-1.5 text-[#EDF3FC] outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[#A9B8CC] mb-1 font-semibold">
-                  Mật khẩu / Token (Lưu vào Windows Credential)
-                </label>
-                <input
-                  type="password"
-                  placeholder="••••••••••••"
-                  className="w-full bg-[#101722] border border-[#2A3647] rounded px-3 py-1.5 text-[#EDF3FC] outline-none"
-                />
-                <p className="text-[10px] text-[#3BC38D] mt-1 flex items-center gap-1">
-                  <ShieldCheck size={11} />
-                  <span>Được mã hóa an toàn qua OS API, không lưu plaintext</span>
-                </p>
-              </div>
+            )}
+            <div>
+              <label className="block text-[#A9B8CC] mb-1 font-semibold">Alias</label>
+              <input
+                type="text"
+                required
+                value={alias}
+                onChange={(e) => setAlias(e.target.value)}
+                placeholder="acc_worker_01"
+                className="w-full bg-[#101722] border border-[#2A3647] rounded px-3 py-1.5 text-[#EDF3FC] outline-none"
+              />
             </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#2A3647]">
+            <div>
+              <label className="block text-[#A9B8CC] mb-1 font-semibold">Game Profile ID</label>
+              <input
+                type="text"
+                value={gameProfileId}
+                onChange={(e) => setGameProfileId(e.target.value)}
+                placeholder="profile-server-01"
+                className="w-full bg-[#101722] border border-[#2A3647] rounded px-3 py-1.5 text-[#EDF3FC] outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[#A9B8CC] mb-1 font-semibold">
+                Secret Ref (DPAPI URI)
+              </label>
+              <input
+                type="text"
+                value={secretRef}
+                onChange={(e) => setSecretRef(e.target.value)}
+                placeholder={`dpapi://${activeProjectDetail.project.slug}/acc_01`}
+                className="w-full bg-[#101722] border border-[#2A3647] rounded px-3 py-1.5 text-[#EDF3FC] font-mono outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[#A9B8CC] mb-1 font-semibold">Trạng thái</label>
+              <select
+                value={stateValue}
+                onChange={(e) => setStateValue(e.target.value)}
+                className="w-full bg-[#101722] border border-[#2A3647] rounded px-2.5 py-1.5 text-[#EDF3FC] outline-none"
+              >
+                <option value="ready">ready</option>
+                <option value="in_session">in_session</option>
+                <option value="cooldown">cooldown</option>
+                <option value="expired">expired</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#2A3647]">
               <button
-                onClick={() => setShowAddModal(false)}
-                className="px-3 py-1.5 bg-[#101722] hover:bg-[#16202F] text-[#A9B8CC] rounded border border-[#2A3647] text-xs font-medium"
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="px-3 py-1.5 rounded bg-[#101722] border border-[#2A3647] text-[#A9B8CC]"
               >
                 Hủy
               </button>
               <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-1.5 bg-[#1878F5] hover:bg-[#2F8CFF] text-white rounded text-xs font-semibold"
+                type="submit"
+                disabled={saving}
+                className="px-4 py-1.5 rounded bg-[#1878F5] text-white font-semibold cursor-pointer"
               >
-                Lưu vào Vault
+                {saving ? 'Đang lưu...' : 'Lưu vào SQLite'}
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

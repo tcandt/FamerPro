@@ -33,7 +33,11 @@ pub fn validate_adb_token(label: &str, value: &str) -> Result<String> {
 pub fn classify_device_adapter(serial: &str, model: Option<&str>) -> DeviceAdapterKind {
     let s = serial.to_lowercase();
     let m = model.unwrap_or("").to_lowercase();
-    if s.starts_with("fake") || s.starts_with("demo-fake") {
+    if s.starts_with("fake")
+        || s.starts_with("demo-fake")
+        || s.starts_with("testkit")
+        || s.starts_with("synthetic")
+    {
         return DeviceAdapterKind::Synthetic;
     }
     if m.contains("nox") || s.contains("620") {

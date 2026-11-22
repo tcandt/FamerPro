@@ -1,302 +1,304 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertCircle,
-  Wifi,
-  Radio,
   ArrowRightLeft,
   CheckCircle2,
   Play,
-  Plus,
-  Shield,
+  RefreshCw,
+  Wifi,
 } from 'lucide-react';
+import { useProjectStore } from '../../stores/projectStore';
+import { useDeviceStore } from '../../stores/deviceStore';
+import { api } from '../../lib/api';
+import type {
+  AdbPortMappingsOverview,
+  ProxyProbeReport,
+  ProxyProtocol,
+} from '../../types';
 
 export const NetworkView: React.FC = () => {
+  const { activeProjectId, activeProjectDetail } = useProjectStore();
+  const { devices, selectedDeviceId } = useDeviceStore();
 
   const [testHost, setTestHost] = useState('127.0.0.1');
   const [testPort, setTestPort] = useState('10808');
-  const [testProtocol, setTestProtocol] = useState<'socks5' | 'http'>('socks5');
+  const [testProtocol, setTestProtocol] = useState<ProxyProtocol>('socks5');
+  const [targetProbeHost, setTargetProbeHost] = useState('');
+  const [targetProbePort, setTargetProbePort] = useState('');
   const [isTesting, setIsTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{
-    success: boolean;
-    latencyMs: number;
-    ip: string;
-    message: string;
-  } | null>(null);
+  const [probeReport, setProbeReport] = useState<ProxyProbeReport | null>(null);
+  const [probeError, setProbeError] = useState<string | null>(null);
 
-  const handleTestProxy = () => {
-    setIsTesting(true);
-    setTestResult(null);
-    setTimeout(() => {
-      setIsTesting(false);
-      setTestResult({
-        success: true,
-        latencyMs: 38,
-        ip: '103.142.26.88 (VN Viettel IDC)',
-        message: 'Kết nối SOCKS5 thành công — Ping 38ms',
-      });
-    }, 600);
+  const [portOverview, setPortOverview] = useState<AdbPortMappingsOverview | null>(null);
+  const [portError, setPortError] = useState<string | null>(null);
+
+  const selectedDevice = devices.find((d) => d.id === selectedDeviceId) || devices[0] || null;
+
+  const refreshPorts = async () => {
+    if (!selectedDevice?.adb_serial) {
+      setPortOverview(null);
+      return;
+    }
+    setPortError(null);
+    try {
+      const overview = await api.studioListDevicePorts(selectedDevice.adb_serial);
+      setPortOverview(overview);
+    } catch (err: any) {
+      setPortError(err?.message || String(err));
+    }
   };
 
-  const forwardRules = [
-    {
-      id: 'rule-1',
-      deviceSerial: 'emulator-5554',
-      type: 'reverse',
-      localPort: 'tcp:8080',
-      remotePort: 'tcp:8080',
-      desc: 'API mock server callback',
-    },
-    {
-      id: 'rule-2',
-      deviceSerial: '192.168.1.105:5555',
-      type: 'forward',
-      localPort: 'tcp:5555',
-      remotePort: 'tcp:5555',
-      desc: 'ADB wireless bridge tunnel',
-    },
-  ];
+  useEffect(() => {
+    void refreshPorts();
+  }, [selectedDevice?.adb_serial]);
+
+  const handleProbeProxy = async () => {
+    if (!activeProjectId) {
+      setProbeError('Cần chọn Game Project ở Header trước khi kiểm tra Proxy.');
+      return;
+    }
+    const parsedPort = Number(testPort);
+    if (!Number.isFinite(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
+      setProbeError('Port phải nằm trong khoảng 1..65535.');
+      return;
+    }
+
+    setIsTesting(true);
+    setProbeReport(null);
+    setProbeError(null);
+    try {
+      const report = await api.studioProbeProjectProxy(activeProjectId, {
+        host: testHost.trim(),
+        port: parsedPort,
+        protocol: testProtocol,
+        timeoutMs: 2500,
+        targetProbeHost: targetProbeHost.trim() || null,
+        targetProbePort: targetProbePort.trim() ? Number(targetProbePort) : null,
+      });
+      setProbeReport(report);
+    } catch (err: any) {
+      setProbeError(err?.message || String(err));
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#101722] text-[#EDF3FC]">
-      {/* Top Header */}
-      <div className="flex items-center justify-between">
+    <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-[#101722] text-[#EDF3FC]">
+      <div className="fp-panel p-4 flex items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-[#EDF3FC] tracking-tight">
-              Cấu hình Mạng & Proxy Gateway
-            </h1>
-            <span className="px-2 py-0.5 rounded text-[10px] bg-[#173355] text-[#38BDF8] font-mono font-semibold border border-[#2A3647]">
-              Mạng cục bộ (Direct LAN)
+            <span className="px-2 py-0.5 rounded text-[10px] bg-[#173355] text-[#38BDF8] font-mono font-bold border border-[#2A3647]">
+              NETWORK &amp; PROXY DIAGNOSTICS
             </span>
+            {activeProjectDetail && (
+              <span className="text-xs font-mono text-[#A9B8CC]">
+                {activeProjectDetail.project.slug}
+              </span>
+            )}
           </div>
-          <p className="text-xs text-[#74869D] mt-1">
-            Quản lý tuyến mạng, kiểm tra độ trễ proxy và giám sát bảng chuyển tiếp cổng ADB (Socket Forwarding).
+          <h1 className="text-lg font-bold text-[#EDF3FC] mt-1">
+            Kiểm tra Proxy (Rust TCP/SOCKS5/HTTP) &amp; ADB Port Map
+          </h1>
+          <p className="text-xs text-[#74869D]">
+            Mọi kết quả Proxy Probe và danh sách cổng ADB đều được đo trực tiếp từ Rust backend,
+            không dùng số liệu ping giả lập.
           </p>
         </div>
       </div>
 
-      {/* Critical Warning Banner on Android System Proxy Limits */}
-      <div className="p-4 rounded-xl bg-[#3B2D17]/40 border border-[#E7B15B]/40 flex items-start gap-3 text-xs text-[#E7B15B] shadow-sm">
-        <AlertCircle size={18} className="shrink-0 mt-0.5 text-[#E7B15B]" />
+      {/* Warning banner */}
+      <div className="p-3.5 rounded-xl bg-[#3B2D17]/40 border border-[#E7B15B]/40 flex items-start gap-3 text-xs text-[#E7B15B]">
+        <AlertCircle size={17} className="shrink-0 mt-0.5" />
         <div>
-          <div className="font-bold text-[#EDF3FC] text-[13px]">
-            Lưu ý kỹ thuật quan trọng về Proxy trên Android:
+          <div className="font-bold text-[#EDF3FC]">
+            Phân tách Proxy Máy trạm vs Proxy trong Game Android:
           </div>
-          <p className="mt-1 leading-relaxed text-[#A9B8CC]">
-            Đổi proxy trên máy tính không tự động thay đổi kết nối của game trên điện thoại. Lệnh cài đặt Android System Proxy qua ADB có thể bị nhiều game bỏ qua nếu không sử dụng VPN profile hợp lệ. FarmerPro không cam kết vượt rào cản mạng nếu ứng dụng đích không hỗ trợ.
+          <p className="mt-0.5 text-[#A9B8CC] leading-relaxed">
+            Proxy Probe chỉ xác minh kết nối TCP/handshake từ máy Windows tới proxy server. Android
+            có thể bỏ qua system proxy nếu app sử dụng socket trực tiếp hoặc không có VPN TUN profile.
           </p>
         </div>
       </div>
 
-      {/* 2-Column Grid */}
-      <div className="grid grid-cols-12 gap-6">
-        {/* Left Column (7 cols): Network Profiles + ADB Port Forwarding */}
-        <div className="col-span-7 space-y-6">
-          {/* Network Profiles */}
-          <div className="rounded-xl bg-[#16202F] border border-[#2A3647] p-4 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-bold text-[#EDF3FC]">Hồ sơ Mạng Khả dụng</h3>
-                <span className="text-[11px] text-[#74869D]">
-                  Các cấu hình định tuyến cho máy trạm và thiết bị
-                </span>
-              </div>
+      <div className="grid grid-cols-12 gap-5">
+        {/* Left: Real ADB Forward/Reverse Inspection */}
+        <div className="col-span-12 lg:col-span-6 fp-panel p-4 space-y-3">
+          <div className="flex items-center justify-between border-b border-[#2A3647] pb-2.5">
+            <div className="flex items-center gap-2">
+              <ArrowRightLeft size={15} className="text-[#38BDF8]" />
+              <h3 className="text-xs font-bold text-[#EDF3FC]">
+                Bảng ADB Forward / Reverse Thực tế
+              </h3>
             </div>
+            <button
+              onClick={() => refreshPorts()}
+              disabled={!selectedDevice}
+              className="px-2.5 py-1 rounded bg-[#161E29] border border-[#2A3647] text-[11px] text-[#A9B8CC] flex items-center gap-1 cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw size={11} />
+              <span>Quét lại</span>
+            </button>
+          </div>
 
+          {!selectedDevice ? (
+            <div className="p-4 rounded bg-[#101722] border border-dashed border-[#2A3647] text-xs text-[#74869D]">
+              0 thiết bị ADB đang kết nối (OFFLINE). Kết nối thiết bị thật/giả lập hoặc quản lý chi
+              tiết trong Device Lab &rarr; Port Map.
+            </div>
+          ) : portError ? (
+            <div className="p-3 rounded bg-[#381E24] border border-[#F27883]/40 text-xs text-[#F27883]">
+              {portError}
+            </div>
+          ) : (
             <div className="space-y-2 text-xs">
-              {/* Direct LAN Profile */}
-              <div className="p-3 bg-[#101722] border border-[#3BC38D]/40 rounded-lg flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-md bg-[#133528] flex items-center justify-center text-[#3BC38D]">
-                    <Wifi size={16} />
-                  </div>
-                  <div>
-                    <div className="font-bold text-[#EDF3FC]">Direct LAN (Mạng Nội bộ)</div>
-                    <div className="text-[11px] text-[#74869D]">
-                      Kết nối trực tiếp qua switch mạng gia đình / văn phòng. Ping: 12ms.
-                    </div>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-[#133528] text-[#3BC38D] border border-[#3BC38D]/30 font-bold">
-                  Đang hoạt động
-                </span>
+              <div className="text-[11px] text-[#A9B8CC]">
+                Thiết bị: <span className="font-mono text-[#EDF3FC]">{selectedDevice.adb_serial}</span>
               </div>
-
-              {/* SOCKS5 Profile */}
-              <div className="p-3 bg-[#101722] border border-[#2A3647] rounded-lg flex items-center justify-between opacity-80 hover:opacity-100 transition-opacity">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-md bg-[#16202F] flex items-center justify-center text-[#38BDF8]">
-                    <Radio size={16} />
-                  </div>
-                  <div>
-                    <div className="font-bold text-[#EDF3FC]">Local SOCKS5 Gateway</div>
-                    <div className="text-[11px] text-[#74869D]">
-                      Định tuyến 127.0.0.1:10808 (Đã cấu hình xác thực)
+              {portOverview &&
+              portOverview.forwards.length === 0 &&
+              portOverview.reverses.length === 0 ? (
+                <p className="text-[11px] text-[#74869D]">Chưa có rule forward/reverse nào.</p>
+              ) : (
+                <>
+                  {portOverview?.forwards.map((r, i) => (
+                    <div
+                      key={`f-${i}`}
+                      className="p-2.5 rounded bg-[#101722] border border-[#2A3647] font-mono text-[11px]"
+                    >
+                      FORWARD {r.local} &rarr; {r.remote}
                     </div>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-[#202B3B] text-[#74869D] border border-[#2A3647] font-medium">
-                  Sẵn sàng
-                </span>
-              </div>
-
-              {/* Tailscale / WireGuard Profile */}
-              <div className="p-3 bg-[#101722] border border-[#2A3647] rounded-lg flex items-center justify-between opacity-80 hover:opacity-100 transition-opacity">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-md bg-[#16202F] flex items-center justify-center text-[#B291F7]">
-                    <Shield size={16} />
-                  </div>
-                  <div>
-                    <div className="font-bold text-[#EDF3FC]">WireGuard / Tailscale Mesh</div>
-                    <div className="text-[11px] text-[#74869D]">
-                      Mạng riêng ảo P2P an toàn giữa máy chủ điều khiển và phone farm
+                  ))}
+                  {portOverview?.reverses.map((r, i) => (
+                    <div
+                      key={`r-${i}`}
+                      className="p-2.5 rounded bg-[#101722] border border-[#2A3647] font-mono text-[11px]"
+                    >
+                      REVERSE {r.remote} &rarr; {r.local}
                     </div>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-[#202B3B] text-[#74869D] border border-[#2A3647] font-medium">
-                  Chưa kích hoạt
-                </span>
-              </div>
+                  ))}
+                </>
+              )}
             </div>
-          </div>
-
-          {/* ADB Socket Reverse & Forwarding Rules */}
-          <div className="rounded-xl bg-[#16202F] border border-[#2A3647] p-4 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-bold text-[#EDF3FC]">
-                  Bảng Chuyển tiếp Cổng ADB (Socket Forwarding)
-                </h3>
-                <span className="text-[11px] text-[#74869D]">
-                  Các lệnh `adb reverse` và `adb forward` đang hoạt động
-                </span>
-              </div>
-              <button className="px-2.5 py-1 bg-[#192434] hover:bg-[#202E42] text-[#38BDF8] border border-[#2A3647] rounded-md text-xs font-semibold flex items-center gap-1 transition-colors">
-                <Plus size={12} />
-                <span>Thêm quy tắc</span>
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {forwardRules.map((rule) => (
-                <div
-                  key={rule.id}
-                  className="p-3 rounded-lg bg-[#101722] border border-[#2A3647] flex items-center justify-between text-xs"
-                >
-                  <div className="flex items-center gap-3">
-                    <ArrowRightLeft size={16} className="text-[#38BDF8]" />
-                    <div>
-                      <div className="font-mono text-[#EDF3FC] font-semibold flex items-center gap-2">
-                        <span className="text-[#74869D] uppercase text-[10px]">{rule.type}:</span>
-                        <span>{rule.localPort}</span>
-                        <span>⇄</span>
-                        <span>{rule.remotePort}</span>
-                      </div>
-                      <div className="text-[10px] text-[#74869D] mt-0.5">
-                        Thiết bị: {rule.deviceSerial} · {rule.desc}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] bg-[#133528] text-[#3BC38D] font-mono font-bold">
-                    ACTIVE
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Right Column (5 cols): Interactive Proxy Tester */}
-        <div className="col-span-5 rounded-xl bg-[#16202F] border border-[#2A3647] p-4 shadow-sm space-y-4">
-          <div>
-            <h3 className="text-xs font-bold text-[#EDF3FC]">Công cụ Đo Độ trễ Proxy</h3>
-            <span className="text-[11px] text-[#74869D]">
-              Kiểm tra IP đầu ra và độ trễ phản hồi trước khi gán cho thiết bị
-            </span>
+        {/* Right: Real Rust Proxy Probe */}
+        <div className="col-span-12 lg:col-span-6 fp-panel p-4 space-y-3 text-xs">
+          <div className="flex items-center gap-2 border-b border-[#2A3647] pb-2.5">
+            <Wifi size={15} className="text-[#4B9CFF]" />
+            <h3 className="text-xs font-bold text-[#EDF3FC]">
+              Kiểm tra Proxy Thực tế (studio_probe_project_proxy)
+            </h3>
           </div>
 
-          <div className="space-y-3 text-xs">
-            <div>
-              <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">Giao thức</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setTestProtocol('socks5')}
-                  className={`py-1.5 rounded font-semibold text-xs border transition-colors ${
-                    testProtocol === 'socks5'
-                      ? 'bg-[#1878F5] text-white border-[#1878F5]'
-                      : 'bg-[#101722] text-[#74869D] border-[#2A3647]'
-                  }`}
-                >
-                  SOCKS5
-                </button>
-                <button
-                  onClick={() => setTestProtocol('http')}
-                  className={`py-1.5 rounded font-semibold text-xs border transition-colors ${
-                    testProtocol === 'http'
-                      ? 'bg-[#1878F5] text-white border-[#1878F5]'
-                      : 'bg-[#101722] text-[#74869D] border-[#2A3647]'
-                  }`}
-                >
-                  HTTP / HTTPS
-                </button>
-              </div>
-            </div>
+          <div className="grid grid-cols-3 gap-2">
+            {(['socks5', 'http_connect', 'tcp_only'] as ProxyProtocol[]).map((proto) => (
+              <button
+                key={proto}
+                onClick={() => setTestProtocol(proto)}
+                className={`py-1.5 rounded font-semibold border cursor-pointer ${
+                  testProtocol === proto
+                    ? 'bg-[#1878F5] text-white border-[#1878F5]'
+                    : 'bg-[#101722] text-[#74869D] border-[#2A3647]'
+                }`}
+              >
+                {proto.toUpperCase()}
+              </button>
+            ))}
+          </div>
 
-            <div>
-              <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">
-                Địa chỉ máy chủ (Host / IP)
-              </label>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-2">
+              <label className="block text-[#A9B8CC] mb-1 text-[11px]">Proxy Host</label>
               <input
                 type="text"
                 value={testHost}
                 onChange={(e) => setTestHost(e.target.value)}
-                placeholder="127.0.0.1"
                 className="w-full bg-[#101722] border border-[#2A3647] rounded px-3 py-1.5 text-[#EDF3FC] font-mono outline-none"
               />
             </div>
-
             <div>
-              <label className="block text-[#A9B8CC] mb-1 font-semibold text-[11px]">Cổng (Port)</label>
+              <label className="block text-[#A9B8CC] mb-1 text-[11px]">Port</label>
               <input
                 type="text"
                 value={testPort}
                 onChange={(e) => setTestPort(e.target.value)}
-                placeholder="10808"
                 className="w-full bg-[#101722] border border-[#2A3647] rounded px-3 py-1.5 text-[#EDF3FC] font-mono outline-none"
               />
             </div>
-
-            <button
-              onClick={handleTestProxy}
-              disabled={isTesting}
-              className="w-full py-2 bg-[#1878F5] hover:bg-[#2F8CFF] text-white rounded text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
-            >
-              <Play size={12} fill="currentColor" />
-              <span>{isTesting ? 'Đang gửi gói tin kiểm tra...' : 'Kiểm tra Kết nối & Ping'}</span>
-            </button>
-
-            {/* Test Result Box */}
-            {testResult && (
-              <div className="p-3 rounded-lg bg-[#101722] border border-[#3BC38D]/40 space-y-2 text-xs animate-fadeIn">
-                <div className="flex items-center gap-1.5 text-[#3BC38D] font-bold">
-                  <CheckCircle2 size={14} />
-                  <span>{testResult.message}</span>
-                </div>
-                <div className="text-[11px] text-[#A9B8CC] space-y-1">
-                  <div>
-                    <span className="text-[#74869D]">IP Thoát: </span>
-                    <span className="font-mono text-[#EDF3FC]">{testResult.ip}</span>
-                  </div>
-                  <div>
-                    <span className="text-[#74869D]">Độ trễ Round-Trip: </span>
-                    <span className="font-mono text-[#38BDF8] font-bold">
-                      {testResult.latencyMs} ms
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-2">
+              <label className="block text-[#A9B8CC] mb-1 text-[11px]">
+                Target Probe Host (tuỳ chọn)
+              </label>
+              <input
+                type="text"
+                value={targetProbeHost}
+                onChange={(e) => setTargetProbeHost(e.target.value)}
+                placeholder="example.com"
+                className="w-full bg-[#101722] border border-[#2A3647] rounded px-3 py-1.5 text-[#EDF3FC] font-mono outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[#A9B8CC] mb-1 text-[11px]">Target Port</label>
+              <input
+                type="text"
+                value={targetProbePort}
+                onChange={(e) => setTargetProbePort(e.target.value)}
+                placeholder="443"
+                className="w-full bg-[#101722] border border-[#2A3647] rounded px-3 py-1.5 text-[#EDF3FC] font-mono outline-none"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={handleProbeProxy}
+            disabled={isTesting}
+            className="w-full py-2 bg-[#1878F5] hover:bg-[#2F8CFF] disabled:opacity-50 text-white rounded font-semibold flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Play size={12} />
+            <span>{isTesting ? 'Đang đo qua Rust TCP/SOCKS5...' : 'Chạy Proxy Probe Thật'}</span>
+          </button>
+
+          {probeError && (
+            <div className="p-3 rounded bg-[#381E24] border border-[#F27883]/40 text-[#F27883]">
+              {probeError}
+            </div>
+          )}
+
+          {probeReport && (
+            <div
+              className={`p-3 rounded-lg border space-y-1.5 ${
+                probeReport.reachable
+                  ? 'bg-[#133528] border-[#3BC38D]/40 text-[#3BC38D]'
+                  : 'bg-[#101722] border-[#E7B15B]/50 text-[#E7B15B]'
+              }`}
+            >
+              <div className="flex items-center justify-between font-bold">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 size={14} />
+                  <span>
+                    {probeReport.reachable ? 'REACHABLE' : 'UNREACHABLE'} ({probeReport.protocol})
+                  </span>
+                </span>
+                <span className="font-mono">{probeReport.totalLatencyMs} ms</span>
+              </div>
+              <div className="text-[11px] font-mono text-[#A9B8CC]">
+                Handshake: {String(probeReport.handshakeOk)} · Auth: {probeReport.authStatus}
+              </div>
+              {probeReport.error && (
+                <div className="text-[11px] font-mono text-[#F27883]">
+                  Error: {probeReport.error}
+                </div>
+              )}
+              <div className="text-[10px] text-[#74869D] pt-1 border-t border-[#2A3647]">
+                {probeReport.disclaimer}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
