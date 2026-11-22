@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 530" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="1120" height="530" rx="12" fill="#0F172A"/>
+  <text x="560" y="31" text-anchor="middle" fill="#F8FAFC" font-size="18.5" font-weight="700">SQLITE WAL SCHEMA V2 — MÔ HÌNH QUAN HỆ ĐA DỰ ÁN (15 BẢNG + 8 INDEXES)</text>
+
+  <!-- Central Root: projects -->
+  <rect x="385" y="48" width="350" height="156" rx="10" fill="#1E3A8A" stroke="#60A5FA" stroke-width="2.4"/>
+  <text x="560" y="71" text-anchor="middle" fill="#FFFFFF" font-size="14.5" font-weight="700">projects (V2 Root Entity)</text>
+  <line x1="385" y1="79" x2="735" y2="79" stroke="#60A5FA" stroke-width="1"/>
+  <text x="400" y="99" fill="#FDE68A" font-size="13" font-weight="700">PK id (TEXT) · UNIQUE slug (TEXT)</text>
+  <text x="400" y="119" fill="#E2E8F0" font-size="12.8">name · game_package_id · version</text>
+  <text x="400" y="138" fill="#E2E8F0" font-size="12.8">exe_name · window_title · icon_rel_path</text>
+  <text x="400" y="157" fill="#E2E8F0" font-size="12.8">target_width_px · target_height_px · bundle_adb</text>
+  <text x="400" y="176" fill="#93C5FD" font-size="12.8">project_dir_path · created_at · updated_at</text>
+  <text x="400" y="195" fill="#6EE7B7" font-size="12.5">Default Legacy ID: proj-jx2-mobile-001</text>
+
+  <!-- Left column: New V2 Project Tables -->
+  <rect x="20" y="48" width="340" height="94" rx="8" fill="#1E293B" stroke="#38BDF8" stroke-width="1.6"/>
+  <text x="34" y="70" fill="#38BDF8" font-size="13.8" font-weight="700">project_modules (V2)</text>
+  <text x="34" y="90" fill="#FDE68A" font-size="12.5">PK(project_id, module_id) · CASCADE</text>
+  <text x="34" y="109" fill="#CBD5E1" font-size="12.5">packaged_in_release · enabled_by_default</text>
+  <text x="34" y="128" fill="#94A3B8" font-size="12.5">config_json · updated_at</text>
+
+  <rect x="20" y="154" width="340" height="106" rx="8" fill="#1E293B" stroke="#38BDF8" stroke-width="1.6"/>
+  <text x="34" y="176" fill="#38BDF8" font-size="13.8" font-weight="700">vision_templates (V2)</text>
+  <text x="34" y="196" fill="#FDE68A" font-size="12.5">PK id · FK project_id · UNIQUE(rel_path)</text>
+  <text x="34" y="215" fill="#CBD5E1" font-size="12.5">name · rel_path · width_px · height_px</text>
+  <text x="34" y="234" fill="#CBD5E1" font-size="12.5">crop_x/y · default_confidence · sha256</text>
+  <text x="34" y="252" fill="#94A3B8" font-size="12.2">Index: idx_templates_project</text>
+
+  <rect x="20" y="272" width="340" height="114" rx="8" fill="#1E293B" stroke="#38BDF8" stroke-width="1.6"/>
+  <text x="34" y="294" fill="#38BDF8" font-size="13.8" font-weight="700">task_definitions (V2)</text>
+  <text x="34" y="314" fill="#FDE68A" font-size="12.5">PK id · FK project_id · FK workflow_id</text>
+  <text x="34" y="333" fill="#CBD5E1" font-size="12.5">category_id/short_tag/name/color_hex</text>
+  <text x="34" y="352" fill="#CBD5E1" font-size="12.5">title · priority · estimate_sec · schema</text>
+  <text x="34" y="371" fill="#94A3B8" font-size="12.2">Index: idx_tasks_project_priority</text>
+
+  <!-- Right column: Mini Tool Schema & Releases -->
+  <rect x="760" y="48" width="340" height="94" rx="8" fill="#1E293B" stroke="#A855F7" stroke-width="1.6"/>
+  <text x="774" y="70" fill="#E9D5FF" font-size="13.8" font-weight="700">mini_tool_schemas (V2)</text>
+  <text x="774" y="90" fill="#FDE68A" font-size="12.5">PK/FK project_id (1:1) · CASCADE</text>
+  <text x="774" y="109" fill="#CBD5E1" font-size="12.5">schema_version · ui_schema_json</text>
+  <text x="774" y="128" fill="#94A3B8" font-size="12.5">Sync: projects/&lt;slug&gt;/ui-schema.json</text>
+
+  <rect x="760" y="154" width="340" height="112" rx="8" fill="#1E293B" stroke="#A855F7" stroke-width="1.6"/>
+  <text x="774" y="176" fill="#E9D5FF" font-size="13.8" font-weight="700">project_releases (V2)</text>
+  <text x="774" y="196" fill="#FDE68A" font-size="12.5">PK id · FK project_id · CASCADE</text>
+  <text x="774" y="215" fill="#CBD5E1" font-size="12.5">version · exe_path · exe_sha256 · key_id</text>
+  <text x="774" y="234" fill="#CBD5E1" font-size="12.5">pe_rcdata_pubkey_id(7777) · signature</text>
+  <text x="774" y="253" fill="#94A3B8" font-size="12.2">Index: idx_releases_project_time</text>
+
+  <rect x="760" y="278" width="340" height="92" rx="8" fill="#1E293B" stroke="#64748B" stroke-width="1.5"/>
+  <text x="774" y="300" fill="#F8FAFC" font-size="13.8" font-weight="700">schema_migrations (Tracking)</text>
+  <text x="774" y="321" fill="#CBD5E1" font-size="12.5">PK version: [1 = Baseline, 2 = Multi-Proj]</text>
+  <text x="774" y="341" fill="#94A3B8" font-size="12.5">applied_at (UTC) · WAL + FK=ON</text>
+  <text x="774" y="359" fill="#6EE7B7" font-size="12.2">Idempotent + Atomic Transaction</text>
+
+  <!-- Bottom Middle: Extended V1 Tables -->
+  <rect x="385" y="224" width="350" height="90" rx="8" fill="#132D24" stroke="#10B981" stroke-width="1.8"/>
+  <text x="400" y="246" fill="#6EE7B7" font-size="13.5" font-weight="700">workflows (+project_id, category)</text>
+  <text x="400" y="266" fill="#E2E8F0" font-size="12.5">FK project_id · workflow_versions (1:N)</text>
+  <text x="400" y="285" fill="#CBD5E1" font-size="12.5">Giữ 2 workflows cũ + 10 JX2 workflows</text>
+  <text x="400" y="303" fill="#94A3B8" font-size="12.2">Block cross-write: ISOLATION_VIOLATION</text>
+
+  <rect x="385" y="326" width="350" height="80" rx="8" fill="#132D24" stroke="#10B981" stroke-width="1.8"/>
+  <text x="400" y="348" fill="#6EE7B7" font-size="13.5" font-weight="700">accounts (+project_id)</text>
+  <text x="400" y="368" fill="#E2E8F0" font-size="12.5">FK project_id · KHÔNG lưu plaintext pass</text>
+  <text x="400" y="388" fill="#CBD5E1" font-size="12.5">secret_ref = CRED_MGR://FarmerPro/...</text>
+
+  <rect x="20" y="420" width="1080" height="92" rx="8" fill="#1E293B" stroke="#10B981" stroke-width="1.6"/>
+  <text x="40" y="444" fill="#6EE7B7" font-size="14" font-weight="700">RUNTIME EXECUTION TABLES: jobs (+project_id) · devices · step_events · checkpoints · device_leases</text>
+  <text x="40" y="467" fill="#E2E8F0" font-size="12.8">• jobs: Thêm FK project_id + idx_jobs_project. Bảo toàn nguyên vẹn 2 jobs &amp; 31 step_events production.</text>
+  <text x="40" y="489" fill="#CBD5E1" font-size="12.8">• devices (Lab fleet), step_events (audit), checkpoints (WAL recovery), device_leases (fencing). Integrity = ok (0 FK errors).</text>
+
+  <!-- Connector lines -->
+  <line x1="385" y1="95" x2="360" y2="95" stroke="#38BDF8" stroke-width="1.8"/>
+  <line x1="385" y1="150" x2="360" y2="195" stroke="#38BDF8" stroke-width="1.8"/>
+  <line x1="385" y1="185" x2="360" y2="310" stroke="#38BDF8" stroke-width="1.8"/>
+  <line x1="735" y1="95" x2="760" y2="95" stroke="#A855F7" stroke-width="1.8"/>
+  <line x1="735" y1="155" x2="760" y2="205" stroke="#A855F7" stroke-width="1.8"/>
+  <line x1="560" y1="204" x2="560" y2="224" stroke="#10B981" stroke-width="2"/>
+  <line x1="560" y1="314" x2="560" y2="326" stroke="#10B981" stroke-width="1.8"/>
+  <line x1="560" y1="406" x2="560" y2="420" stroke="#10B981" stroke-width="1.8"/>
+</svg>

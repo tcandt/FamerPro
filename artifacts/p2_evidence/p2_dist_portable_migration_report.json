@@ -1,0 +1,54 @@
+﻿{
+  "command": "migrate-p2",
+  "executedAtUtc": "2026-11-22T00:39:15.821113100+00:00",
+  "jx2Migration": {
+    "legacyWorkflowsPreserved": 2,
+    "modulesSeeded": 6,
+    "originalSourcePreserved": true,
+    "projectDirPath": "dist-portable/FarmerPro/projects\\jx2-mobile",
+    "projectId": "proj-jx2-mobile-001",
+    "projectSlug": "jx2-mobile",
+    "tasksSeeded": 3,
+    "templatesImported": 8,
+    "workflowsImported": 10
+  },
+  "originalJx2FilesIntact": true,
+  "postMigrationIntegrity": {
+    "foreignKeyViolations": 0,
+    "integrityCheck": "ok",
+    "isHealthy": true,
+    "journalMode": "wal",
+    "schemaVersions": [
+      1,
+      2
+    ],
+    "tableCounts": {
+      "accounts": 0,
+      "checkpoints": 0,
+      "device_leases": 0,
+      "devices": 2,
+      "jobs": 2,
+      "mini_tool_schemas": 1,
+      "project_modules": 6,
+      "project_releases": 0,
+      "projects": 1,
+      "schema_migrations": 2,
+      "step_events": 31,
+      "task_definitions": 3,
+      "vision_templates": 8,
+      "workflow_versions": 11,
+      "workflows": 11
+    }
+  },
+  "preMigrationBackupPath": "backups/p2_verified_backup/dist_portable_pre_v2.db",
+  "preMigrationCounts": {
+    "accounts": 0,
+    "devices": 2,
+    "jobs": 2,
+    "step_events": 31,
+    "workflow_versions": 2,
+    "workflows": 2
+  },
+  "restoreProbeHealthy": true,
+  "targetDbPath": "dist-portable/FarmerPro/data/farmerpro.db"
+}

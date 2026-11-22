@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 430" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="1120" height="430" rx="12" fill="#0F172A"/>
+  <text x="560" y="34" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">QUY TRÌNH CHUYỂN ĐỔI AN TOÀN V1 → V2 (ONLINE BACKUP, RESTORE PROBE &amp; ATOMIC ROLLBACK)</text>
+
+  <!-- Step 1 -->
+  <rect x="28" y="75" width="185" height="122" rx="9" fill="#1E293B" stroke="#64748B" stroke-width="1.8"/>
+  <text x="120" y="99" text-anchor="middle" fill="#93C5FD" font-size="12.5" font-weight="700">BƯỚC 1: NGUỒN V1</text>
+  <text x="120" y="122" text-anchor="middle" fill="#F8FAFC" font-size="11.5">dist-portable farmerpro.db</text>
+  <text x="120" y="142" text-anchor="middle" fill="#CBD5E1" font-size="11">2 devices · 2 workflows</text>
+  <text x="120" y="160" text-anchor="middle" fill="#CBD5E1" font-size="11">2 jobs · 31 step_events</text>
+  <text x="120" y="182" text-anchor="middle" fill="#6EE7B7" font-size="11">integrity_check = ok</text>
+
+  <!-- Step 2 -->
+  <rect x="242" y="75" width="195" height="122" rx="9" fill="#172554" stroke="#3B82F6" stroke-width="1.8"/>
+  <text x="339" y="99" text-anchor="middle" fill="#93C5FD" font-size="12.5" font-weight="700">BƯỚC 2: ONLINE BACKUP</text>
+  <text x="339" y="122" text-anchor="middle" fill="#F8FAFC" font-size="11.5">rusqlite::backup::Backup</text>
+  <text x="339" y="142" text-anchor="middle" fill="#CBD5E1" font-size="11">Gộp WAL frames an toàn</text>
+  <text x="339" y="160" text-anchor="middle" fill="#CBD5E1" font-size="11">dist_portable_pre_v2.db</text>
+  <text x="339" y="182" text-anchor="middle" fill="#6EE7B7" font-size="11">SHA-256 + FK Check = 0</text>
+
+  <!-- Step 3 -->
+  <rect x="466" y="75" width="195" height="122" rx="9" fill="#172554" stroke="#38BDF8" stroke-width="1.8"/>
+  <text x="563" y="99" text-anchor="middle" fill="#7DD3FC" font-size="12.5" font-weight="700">BƯỚC 3: RESTORE PROBE</text>
+  <text x="563" y="122" text-anchor="middle" fill="#F8FAFC" font-size="11.5">Kiểm thử Restore bản sao</text>
+  <text x="563" y="142" text-anchor="middle" fill="#CBD5E1" font-size="11">Chạy trước khi chạm DB thật</text>
+  <text x="563" y="160" text-anchor="middle" fill="#CBD5E1" font-size="11">Chứng minh khôi phục 100%</text>
+  <text x="563" y="182" text-anchor="middle" fill="#6EE7B7" font-size="11">restoreProbeHealthy = true</text>
+
+  <!-- Step 4 -->
+  <rect x="690" y="75" width="195" height="122" rx="9" fill="#132D24" stroke="#10B981" stroke-width="2"/>
+  <text x="787" y="99" text-anchor="middle" fill="#6EE7B7" font-size="12.5" font-weight="700">BƯỚC 4: MIGRATION V2</text>
+  <text x="787" y="122" text-anchor="middle" fill="#F8FAFC" font-size="11.5">BEGIN IMMEDIATE TX</text>
+  <text x="787" y="142" text-anchor="middle" fill="#CBD5E1" font-size="11">6 bảng mới + ALTER 3 bảng</text>
+  <text x="787" y="160" text-anchor="middle" fill="#CBD5E1" font-size="11">Gắn dữ liệu cũ -&gt; jx2-mobile</text>
+  <text x="787" y="182" text-anchor="middle" fill="#6EE7B7" font-size="11">Idempotent · Versions [1, 2]</text>
+
+  <!-- Step 5 -->
+  <rect x="914" y="75" width="178" height="122" rx="9" fill="#132D24" stroke="#34D399" stroke-width="2"/>
+  <text x="1003" y="99" text-anchor="middle" fill="#6EE7B7" font-size="12.5" font-weight="700">BƯỚC 5: JX2 SEED</text>
+  <text x="1003" y="122" text-anchor="middle" fill="#F8FAFC" font-size="11.5">Copy (Không xóa gốc)</text>
+  <text x="1003" y="142" text-anchor="middle" fill="#CBD5E1" font-size="11">10 Workflows + 8 PNGs</text>
+  <text x="1003" y="160" text-anchor="middle" fill="#CBD5E1" font-size="11">3 Tasks + 6 Modules</text>
+  <text x="1003" y="182" text-anchor="middle" fill="#6EE7B7" font-size="11">31 step_events nguyên vẹn</text>
+
+  <!-- Arrows -->
+  <line x1="213" y1="136" x2="242" y2="136" stroke="#94A3B8" stroke-width="2" marker-end="url(#arr3)"/>
+  <line x1="437" y1="136" x2="466" y2="136" stroke="#94A3B8" stroke-width="2" marker-end="url(#arr3)"/>
+  <line x1="661" y1="136" x2="690" y2="136" stroke="#94A3B8" stroke-width="2" marker-end="url(#arr3)"/>
+  <line x1="885" y1="136" x2="914" y2="136" stroke="#94A3B8" stroke-width="2" marker-end="url(#arr3)"/>
+
+  <!-- Rollback Box -->
+  <rect x="242" y="248" width="643" height="142" rx="10" fill="#3B1219" stroke="#F43F5E" stroke-width="2"/>
+  <text x="563" y="274" text-anchor="middle" fill="#FDA4AF" font-size="14" font-weight="700">CƠ CHẾ ROLLBACK KÉP (TRANSACTION ATOMICITY + BACKUP RESTORE)</text>
+  <text x="265" y="302" fill="#FFE4E6" font-size="12">1. Rollback Tự động trong SQLite Transaction: Nếu bất kỳ lệnh DDL/DML nào lỗi (đã test giả lập v3 lỗi giữa chừng),</text>
+  <text x="282" y="321" fill="#FECDD3" font-size="11.5">toàn bộ CREATE/ALTER/INSERT được hoàn tác 100%, schema_migrations giữ nguyên [1, 2], 0 bảng rác.</text>
+  <text x="265" y="348" fill="#FFE4E6" font-size="12">2. Rollback Toàn Cục sau Triển khai: Phục hồi file DB từ backups/p2_verified_backup/dist_portable_pre_v2.db</text>
+  <text x="282" y="367" fill="#FECDD3" font-size="11.5">kèm git checkout master (fab1a1a). Dữ liệu gốc games/jx2mobile/ chưa bị xóa nên hoàn nguyên tức thì.</text>
+
+  <line x1="787" y1="197" x2="787" y2="248" stroke="#F43F5E" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arrRed)"/>
+
+  <defs>
+    <marker id="arr3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#94A3B8"/>
+    </marker>
+    <marker id="arrRed" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#F43F5E"/>
+    </marker>
+  </defs>
+</svg>

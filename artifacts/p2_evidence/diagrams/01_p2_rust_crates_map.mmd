@@ -1,0 +1,21 @@
+flowchart TB
+    subgraph APPS["Application Layer (apps/*)"]
+        TAURI["apps/desktop/src-tauri (farmerpro)\n26 Tauri IPC Commands (studio_p2.rs)\nAppState = StorageManager + CredentialVault + projects_root"]
+        CLI["apps/cli (fp-cli)\nverify-p2 (Sandbox) + migrate-p2 (Guarded)"]
+        UI["apps/desktop/src (React/TS UI)\nGIỮ NGUYÊN 100% — Chưa refactor ở P2"]
+    end
+    subgraph P2_CORE["P2 Multi-Project Storage & Security Crates"]
+        STOR["crates/fp-storage\nMigrations v1->v2 · Online Backup & Restore\nProject CRUD/Clone/Isolation · JX2 Seeder"]
+        SEC["crates/fp-security\nWindows Credential Manager (advapi32.dll)\nDPAPI CryptProtectData (crypt32.dll)\nProducerKeystore (v2 + Backup/Rotate/Restore)"]
+    end
+    subgraph SHARED["Shared Contracts & Game-Agnostic Runtime"]
+        CONTRACT["crates/fp-bundle-contract\nGameProjectManifest · MiniToolUiSchema · MiniTaskDef"]
+        BUILDER["crates/fp-builder\nProducerKeyManager -> delegates to fp-security"]
+        RUNTIME["crates/fp-workflow-runtime\n100% Game-Agnostic (Đã gỡ hardcode jx2mobile)"]
+    end
+    TAURI --> STOR
+    TAURI --> SEC
+    CLI --> STOR
+    CLI --> SEC
+    BUILDER --> SEC
+    STOR --> CONTRACT

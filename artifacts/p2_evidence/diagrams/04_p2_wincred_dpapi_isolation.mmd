@@ -1,0 +1,12 @@
+flowchart TB
+    subgraph VAULT["Windows Credential Manager (advapi32.dll: CredWriteW/ReadW/EnumerateW/DeleteW)"]
+        P1["Project A Namespace\nFarmerPro/project/jx2-mobile/*"]
+        P2["Project B Namespace\nFarmerPro/project/kingdom-slg/*"]
+        MT["Mini Tool Namespace\nFarmerPro/minitool/auto-kingdom/*"]
+        AC["Account Vault Namespace\nFarmerPro/account/<slug>/*"]
+    end
+    subgraph DPAPI["Producer Keystore (crypt32.dll: CryptProtectData / CryptUnprotectData)"]
+        SEED["32-Byte Ed25519 Seed (RAM Only)"] --> ENCRYPT["DPAPI Encrypt + Entropy\n(CRYPTPROTECT_UI_FORBIDDEN)"]
+        ENCRYPT --> DISK["active_producer_ed25519.json (v2)\ndpapiProtectedSeedB64 (NO plaintext)"]
+        ENCRYPT --> BK["Backup Bundle JSON\nDPAPI + payloadSha256 Verified"]
+    end

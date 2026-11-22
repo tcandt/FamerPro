@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 530" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="1120" height="530" rx="12" fill="#0F172A"/>
+  <text x="560" y="34" text-anchor="middle" fill="#F8FAFC" font-size="19" font-weight="700">FARMERPRO P2 — BẢN ĐỒ RUST CRATES &amp; RANH GIỚI BẢO MẬT / DỮ LIỆU</text>
+
+  <!-- Row 1: Application Layer -->
+  <rect x="24" y="52" width="1072" height="122" rx="10" fill="#1E293B" stroke="#334155" stroke-width="1.5"/>
+  <text x="42" y="75" fill="#93C5FD" font-size="14" font-weight="700">APPLICATION LAYER (apps/*) — GIAO TIẾP IPC &amp; CLI</text>
+
+  <rect x="40" y="86" width="430" height="76" rx="8" fill="#0F2942" stroke="#3B82F6" stroke-width="1.8"/>
+  <text x="255" y="109" text-anchor="middle" fill="#F8FAFC" font-size="14.5" font-weight="700">apps/desktop/src-tauri (studio_p2.rs)</text>
+  <text x="255" y="130" text-anchor="middle" fill="#CBD5E1" font-size="13">26 Tauri IPC: Project CRUD/Clone, Tasks, UI Schema</text>
+  <text x="255" y="149" text-anchor="middle" fill="#93C5FD" font-size="12.8">Vault Namespaces + DPAPI Keystore + DB Backup</text>
+
+  <rect x="490" y="86" width="295" height="76" rx="8" fill="#132D24" stroke="#10B981" stroke-width="1.8"/>
+  <text x="637" y="109" text-anchor="middle" fill="#F8FAFC" font-size="14.5" font-weight="700">apps/cli (fp-cli)</text>
+  <text x="637" y="130" text-anchor="middle" fill="#CBD5E1" font-size="13">verify-p2: Kiểm thử Sandbox DB + Vault</text>
+  <text x="637" y="149" text-anchor="middle" fill="#6EE7B7" font-size="12.8">migrate-p2: Backup + Probe -&gt; Migrate</text>
+
+  <rect x="805" y="86" width="275" height="76" rx="8" fill="#2B2118" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="942" y="109" text-anchor="middle" fill="#FDE68A" font-size="14" font-weight="700">apps/desktop/src (React UI)</text>
+  <text x="942" y="130" text-anchor="middle" fill="#FCD34D" font-size="13">STAGE-GATE P2: GIỮ NGUYÊN 100%</text>
+  <text x="942" y="149" text-anchor="middle" fill="#CBD5E1" font-size="12.8">Không refactor UI trước P4 (0 dòng sửa)</text>
+
+  <!-- Arrows down -->
+  <line x1="210" y1="162" x2="210" y2="206" stroke="#60A5FA" stroke-width="2.2" marker-end="url(#arr)"/>
+  <line x1="360" y1="162" x2="680" y2="206" stroke="#60A5FA" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="580" y1="162" x2="430" y2="206" stroke="#34D399" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="680" y1="162" x2="780" y2="206" stroke="#34D399" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Row 2: P2 Core Crates -->
+  <rect x="24" y="206" width="526" height="162" rx="10" fill="#172554" stroke="#3B82F6" stroke-width="2"/>
+  <text x="42" y="230" fill="#93C5FD" font-size="15" font-weight="700">crates/fp-storage (SQLite WAL Multi-Project Core)</text>
+  <text x="42" y="254" fill="#E2E8F0" font-size="13.2">• migrations.rs: v1 Baseline + v2 (BEGIN IMMEDIATE TX)</text>
+  <text x="42" y="275" fill="#E2E8F0" font-size="13.2">• Online Backup &amp; Restore: rusqlite::backup::Backup API</text>
+  <text x="42" y="296" fill="#E2E8F0" font-size="13.2">• jx2_seed.rs: Non-destructive 10 workflows + 8 PNGs</text>
+  <text x="42" y="317" fill="#E2E8F0" font-size="13.2">• Project CRUD, Clone &amp; PROJECT_ISOLATION_VIOLATION</text>
+  <text x="42" y="338" fill="#93C5FD" font-size="12.8">• Deps: fp-domain, fp-workflow-schema, fp-bundle-contract</text>
+  <text x="42" y="357" fill="#6EE7B7" font-size="12.8">• Tests: 8/8 PASS (Idempotency, Rollback, Backup, Isolation)</text>
+
+  <rect x="570" y="206" width="526" height="162" rx="10" fill="#2E1065" stroke="#A855F7" stroke-width="2"/>
+  <text x="588" y="230" fill="#E9D5FF" font-size="15" font-weight="700">crates/fp-security (Win32 Credential Manager + DPAPI)</text>
+  <text x="588" y="254" fill="#E2E8F0" font-size="13.2">• wincred.rs: advapi32 CredWriteW/ReadW/EnumerateW/DeleteW</text>
+  <text x="588" y="275" fill="#E2E8F0" font-size="13.2">• Namespaces: project/&lt;slug&gt;/ · minitool/&lt;slug&gt;/ · account/</text>
+  <text x="588" y="296" fill="#E2E8F0" font-size="13.2">• dpapi.rs: crypt32 CryptProtectData / CryptUnprotectData</text>
+  <text x="588" y="317" fill="#E2E8F0" font-size="13.2">• keystore.rs: Ed25519 Seed DPAPI v2, Backup/Rotate/Restore</text>
+  <text x="588" y="338" fill="#E9D5FF" font-size="12.8">• SecretRedactor + DestructiveActionGuard preserved 100%</text>
+  <text x="588" y="357" fill="#6EE7B7" font-size="12.8">• Tests: 6/6 PASS (Real WinCred, DPAPI Tamper, Key Backup)</text>
+
+  <!-- Row 3: Shared Contract & Runtime -->
+  <rect x="24" y="396" width="340" height="114" rx="10" fill="#1E293B" stroke="#475569" stroke-width="1.5"/>
+  <text x="194" y="421" text-anchor="middle" fill="#F8FAFC" font-size="14" font-weight="700">crates/fp-bundle-contract</text>
+  <text x="194" y="443" text-anchor="middle" fill="#CBD5E1" font-size="13">Zero-Crypto Shared Schemas:</text>
+  <text x="194" y="463" text-anchor="middle" fill="#94A3B8" font-size="12.8">GameProjectManifest · MiniToolUiSchema</text>
+  <text x="194" y="482" text-anchor="middle" fill="#94A3B8" font-size="12.8">MiniTaskDef · TaskCategoryDef</text>
+  <text x="194" y="500" text-anchor="middle" fill="#6EE7B7" font-size="12.8">1/1 Unit Test PASS</text>
+
+  <rect x="390" y="396" width="340" height="114" rx="10" fill="#1E293B" stroke="#475569" stroke-width="1.5"/>
+  <text x="560" y="421" text-anchor="middle" fill="#F8FAFC" font-size="14" font-weight="700">crates/fp-builder (security.rs)</text>
+  <text x="560" y="443" text-anchor="middle" fill="#CBD5E1" font-size="13">ProducerKeyManager delegates to</text>
+  <text x="560" y="463" text-anchor="middle" fill="#E9D5FF" font-size="12.8">fp_security::ProducerKeystore (DPAPI)</text>
+  <text x="560" y="482" text-anchor="middle" fill="#94A3B8" font-size="12.8">8-Step Packager + PE RT_RCDATA #7777</text>
+  <text x="560" y="500" text-anchor="middle" fill="#6EE7B7" font-size="12.8">4/4 Unit Tests PASS</text>
+
+  <rect x="756" y="396" width="340" height="114" rx="10" fill="#1E293B" stroke="#10B981" stroke-width="1.5"/>
+  <text x="926" y="421" text-anchor="middle" fill="#F8FAFC" font-size="14" font-weight="700">crates/fp-workflow-runtime</text>
+  <text x="926" y="443" text-anchor="middle" fill="#6EE7B7" font-size="13">ZERO Hardcoded Game Names</text>
+  <text x="926" y="463" text-anchor="middle" fill="#CBD5E1" font-size="12.8">Gỡ bỏ hardcode games/jx2mobile</text>
+  <text x="926" y="482" text-anchor="middle" fill="#94A3B8" font-size="12.8">Quét động bundle/ + projects/*/templates</text>
+  <text x="926" y="500" text-anchor="middle" fill="#6EE7B7" font-size="12.8">3/3 Unit Tests PASS (44/44 Total)</text>
+
+  <line x1="210" y1="368" x2="194" y2="396" stroke="#60A5FA" stroke-width="1.8" marker-end="url(#arr)"/>
+  <line x1="720" y1="368" x2="560" y2="396" stroke="#C084FC" stroke-width="1.8" marker-end="url(#arr)"/>
+
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#94A3B8"/>
+    </marker>
+  </defs>
+</svg>

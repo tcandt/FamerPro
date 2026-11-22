@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<title>FarmerPro P2 Acceptance Report</title>
+<style>
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.38;
+    color: #0F172A;
+    background: #FFFFFF;
+  }
+  .pdf-page {
+    width: 297mm;
+    height: 210mm;
+    padding: 9mm 11mm 10mm 11mm;
+    page-break-after: always;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #F8FAFC;
+  }
+  .pdf-page:last-child {
+    page-break-after: auto;
+  }
+  .page-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0F172A;
+    color: #F8FAFC;
+    padding: 2.2mm 4mm;
+    border-radius: 5px;
+    margin-bottom: 3.5mm;
+    flex-shrink: 0;
+  }
+  .pt-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pt-badge {
+    background: #1D4ED8;
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 8.2pt;
+    padding: 1.2mm 2.6mm;
+    border-radius: 3px;
+    letter-spacing: 0.3px;
+  }
+  .pt-title {
+    font-size: 10.5pt;
+    font-weight: 700;
+  }
+  .pt-right {
+    font-size: 8.2pt;
+    color: #94A3B8;
+    font-family: Consolas, monospace;
+  }
+  .page-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .page-bottom-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #CBD5E1;
+    padding-top: 1.8mm;
+    margin-top: 2mm;
+    font-size: 8pt;
+    color: #475569;
+    flex-shrink: 0;
+  }
+  .pg-num {
+    font-weight: 700;
+    color: #0F172A;
+  }
+  .hero-box {
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+    color: #F8FAFC;
+    padding: 4mm 5mm;
+    border-radius: 7px;
+    border-left: 5px solid #2563EB;
+  }
+  .hero-box h1 {
+    margin: 2mm 0 1.5mm 0;
+    font-size: 13.5pt;
+    line-height: 1.25;
+  }
+  .hero-sub {
+    margin: 0;
+    font-size: 9.4pt;
+    color: #E2E8F0;
+  }
+  .pill-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    font-size: 8pt;
+    font-weight: 700;
+    padding: 0.8mm 2.4mm;
+    border-radius: 3px;
+  }
+  .b-pass { background: #065F46; color: #D1FAE5; }
+  .b-info { background: #1E40AF; color: #DBEAFE; }
+  .b-warn { background: #78350F; color: #FEF3C7; }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3.5mm;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 3.2mm;
+  }
+  .card {
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    padding: 2.8mm 3.4mm;
+  }
+  .card-h {
+    font-size: 9.4pt;
+    font-weight: 700;
+    color: #1E3A8A;
+    border-bottom: 1.5px solid #E2E8F0;
+    padding-bottom: 1.2mm;
+    margin-bottom: 2mm;
+  }
+  .card p {
+    margin: 0;
+    font-size: 9pt;
+    line-height: 1.38;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.6pt;
+  }
+  th, td {
+    border: 1px solid #CBD5E1;
+    padding: 1.3mm 2mm;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.tbl-tight th, table.tbl-tight td {
+    padding: 0.95mm 1.6mm;
+    font-size: 8.3pt;
+  }
+  th {
+    background: #EFF6FF;
+    color: #1E3A8A;
+    font-weight: 700;
+  }
+  tr:nth-child(even) td {
+    background: #F8FAFC;
+  }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 8.2pt;
+    background: #F1F5F9;
+    padding: 0.2mm 1mm;
+    border-radius: 3px;
+    color: #0F172A;
+  }
+  pre.code-box {
+    margin: 0;
+    background: #0F172A;
+    color: #E2E8F0;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 8pt;
+    line-height: 1.3;
+    padding: 2.5mm 3mm;
+    border-radius: 5px;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .tag-pass {
+    display: inline-block;
+    background: #DCFCE7;
+    color: #166534;
+    font-weight: 700;
+    font-size: 8pt;
+    padding: 0.4mm 1.8mm;
+    border-radius: 3px;
+    border: 1px solid #86EFAC;
+  }
+  .tag-plan {
+    display: inline-block;
+    background: #FEF3C7;
+    color: #92400E;
+    font-weight: 700;
+    font-size: 8pt;
+    padding: 0.4mm 1.8mm;
+    border-radius: 3px;
+    border: 1px solid #FDE68A;
+  }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5mm 4mm;
+    font-size: 8.8pt;
+  }
+  .toc-grid a {
+    color: #1D4ED8;
+    text-decoration: none;
+    padding: 0.7mm 1.5mm;
+    border-radius: 3px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+  }
+  .diag-wrap {
+    background: #0F172A;
+    border-radius: 8px;
+    padding: 1.5mm;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #334155;
+  }
+  .diag-img {
+    width: 100%;
+    max-height: 136mm;
+    object-fit: contain;
+  }
+  .gate-note {
+    margin-top: 2.5mm;
+    background: #ECFDF5;
+    border: 1px solid #6EE7B7;
+    border-left: 4px solid #059669;
+    padding: 2.2mm 3mm;
+    border-radius: 4px;
+    font-size: 8.8pt;
+    color: #064E3B;
+  }
+</style>
+</head>
+<body>
+
+    <section class="pdf-page" id="page-01">
+      <div class="page-top-bar">
+        <div class="pt-left">
+          <span class="pt-badge">BÁO CÁO NGHIỆM THU P2</span>
+          <span class="pt-title">Trang Bìa & Tóm tắt Kết quả Triển khai Giai đoạn P2</span>
+        </div>
+        <div class="pt-right">FARMERPRO P2 ACCEPTANCE · BRANCH feat/p2-multi-project-storage · 2026-11-22</div>
+      </div>
+      <div class="page-content">
+  <div class="hero-box" style="padding:3mm 4.5mm;">
+    <div class="pill-row">
+      <span class="badge b-pass">STAGE-GATE P2: HOÀN THÀNH PHẠM VI KỸ THUẬT</span>
+      <span class="badge b-info">44/44 WORKSPACE UNIT TESTS PASS</span>
+      <span class="badge b-warn">apps/desktop/src UI &amp; P3–P6: GIỮ NGUYÊN 100%</span>
+    </div>
+    <h1 style="margin:1.5mm 0 1mm 0; font-size:12.8pt;">FARMERPRO P2 — BÁO CÁO NGHIỆM THU MULTI-PROJECT STORAGE, MIGRATION, WINCRED &amp; DPAPI</h1>
+    <p class="hero-sub" style="font-size:8.9pt;">
+      Triển khai hoàn chỉnh tầng dữ liệu đa dự án (<b>SQLite WAL v2</b>), cơ chế <b>Online Backup → Restore Probe → Migration v1→v2 → Atomic Rollback</b>, di chuyển bảo toàn <b>10 workflow Võ Hiệp 2 Mobile + 8 ảnh mẫu PNG</b>, thay thế mock Vault bằng <b>Windows Credential Manager</b> thực, mã hóa Producer Signing Key bằng <b>Windows DPAPI</b>, và <b>26 Tauri IPC Commands</b> cho Project CRUD &amp; Project Isolation.
+    </p>
+  </div>
+
+  <div class="grid-2" style="margin-top:2.4mm;">
+    <div class="card" style="padding:2.2mm 3mm;">
+      <div class="card-h" style="margin-bottom:1.4mm;">1. THÔNG TIN ĐỊNH DANH &amp; TUÂN THỦ STAGE-GATE P2</div>
+      <table class="tbl-tight">
+        <tr><th style="width:36%;">Hạng mục</th><th style="width:64%;">Giá trị Thực tế Đã Xác minh</th></tr>
+        <tr><td><b>Nhánh Git Triển khai</b></td><td><code>feat/p2-multi-project-storage</code> (tách từ <code>fab1a1a</code>)</td></tr>
+        <tr><td><b>Commit Code P2</b></td><td><code>9bd0e45</code> (20 files changed, +5598 / -230 lines)</td></tr>
+        <tr><td><b>Giữ nguyên UI P4</b></td><td><span class="tag-pass">PASS</span> <code>git diff -- apps/desktop/src</code> = 0 dòng</td></tr>
+        <tr><td><b>Hiệu chỉnh Blueprint II.1</b></td><td><span class="tag-pass">PASS</span> Cập nhật rõ <code>920×510</code> = ~50,9% diện tích (71,9% rộng)</td></tr>
+        <tr><td><b>Gỡ Hardcode Runtime</b></td><td><span class="tag-pass">PASS</span> Gỡ bỏ hardcode <code>games/jx2mobile/templates</code></td></tr>
+        <tr><td><b>Backup DB trước Migrate</b></td><td><code>backups/p2_verified_backup/dist_portable_pre_v2.db</code></td></tr>
+      </table>
+    </div>
+    <div class="card" style="padding:2.2mm 3mm;">
+      <div class="card-h" style="margin-bottom:1.4mm;">2. TỔNG HỢP KẾT QUẢ KIỂM ĐỊNH ĐỘC LẬP (PASS / FAIL)</div>
+      <table class="tbl-tight">
+        <tr><th style="width:46%;">Tiêu chí Nghiệm thu P2</th><th style="width:16%;">Kết quả</th><th style="width:38%;">Bằng chứng Thực thi</th></tr>
+        <tr><td>Workspace Unit Tests</td><td><span class="tag-pass">PASS</span></td><td><b>44/44 PASS</b> (34 cũ + 10 tests mới P2)</td></tr>
+        <tr><td>SQLite Migration v1→v2</td><td><span class="tag-pass">PASS</span></td><td>Versions <code>[1, 2]</code>, WAL, 0 FK violations</td></tr>
+        <tr><td>Atomic Rollback (Lỗi v3)</td><td><span class="tag-pass">PASS</span></td><td>Rollback 100%, 0 bảng rác</td></tr>
+        <tr><td>Bảo toàn JX2 (10 WF + 8 PNG)</td><td><span class="tag-pass">PASS</span></td><td>Giữ 2 jobs, 31 step_events + 10 JX2</td></tr>
+        <tr><td>Project Isolation (3 Projects)</td><td><span class="tag-pass">PASS</span></td><td>Chặn ghi chéo (<code>PROJECT_ISOLATION_VIOLATION</code>)</td></tr>
+        <tr><td>Windows CredMgr &amp; DPAPI</td><td><span class="tag-pass">PASS</span></td><td>Win32 <code>advapi32</code> + <code>crypt32</code> thực trên OS</td></tr>
+        <tr><td>UI Studio / Proxy / AuthCode</td><td><span class="tag-plan">P3–P5</span></td><td>Ngoài phạm vi P2 (giữ nguyên Stage-Gate)</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:2.4mm; padding:2mm 3mm;">
+    <div class="card-h" style="margin-bottom:1.4mm;">3. MỤC LỤC HỒ SƠ NGHIỆM THU P2 (12 TRANG — BẤM LINK HOẶC BOOKMARK ĐỂ ĐIỀU HƯỚNG)</div>
+    <div class="toc-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 1.2mm 2.4mm; font-size: 8pt;">
+      <a href="#page-02"><b>02:</b> Bản đồ Rust Crates P2 (Sơ đồ)</a>
+      <a href="#page-03"><b>03:</b> SQLite WAL v2 ER Schema (Sơ đồ)</a>
+      <a href="#page-04"><b>04:</b> Migration SQL v1→v2 &amp; Idempotency</a>
+      <a href="#page-05"><b>05:</b> Online Backup &amp; Rollback (Sơ đồ)</a>
+      <a href="#page-06"><b>06:</b> Dữ liệu Trước/Sau &amp; 10 JX2 Workflows</a>
+      <a href="#page-07"><b>07:</b> Project CRUD, Clone &amp; Isolation</a>
+      <a href="#page-08"><b>08:</b> Kiến trúc WinCred &amp; DPAPI (Sơ đồ)</a>
+      <a href="#page-09"><b>09:</b> Kết quả Test WinCred &amp; DPAPI</a>
+      <a href="#page-10"><b>10:</b> 26 Tauri IPC &amp; 44/44 Unit Tests</a>
+      <a href="#page-11"><b>11:</b> PASS/FAIL, Git Diff &amp; Rollback</a>
+      <a href="#page-12"><b>12:</b> Sẵn sàng cho P3 &amp; SHA-256</a>
+      <a href="#page-01"><b>01:</b> Tóm tắt Điều hành &amp; Stage-Gate</a>
+    </div>
+  </div>
+</div>
+      <div class="page-bottom-bar">
+        <span>Hồ sơ nghiệm thu Giai đoạn P2: Multi-Project SQLite v2, Backup/Migration/Rollback, JX2 Preservation, WinCred/DPAPI &amp; Project CRUD</span>
+        <span>Commit Base: 9bd0e45 (từ fab1a1a)</span>
+        <span class="pg-num">Trang 01 / 12</span>
+      </div>
+    </section>
+    
+    <section class="pdf-page" id="page-02">
+      <div class="page-top-bar">
+        <div class="pt-left">
+          <span class="pt-badge">KIẾN TRÚC RUST CRATES</span>
+          <span class="pt-title">Bản đồ Rust Crates & Ranh giới Kiến trúc Giai đoạn P2</span>
+        </div>
+        <div class="pt-right">FARMERPRO P2 ACCEPTANCE · BRANCH feat/p2-multi-project-storage · 2026-11-22</div>
+      </div>
+      <div class="page-content">
+  <div class="diag-wrap">
+    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTIwIDUzMCIgZm9udC1mYW1pbHk9IlNlZ29lIFVJLCBBcmlhbCwgc2Fucy1zZXJpZiI+CiAgPHJlY3Qgd2lkdGg9IjExMjAiIGhlaWdodD0iNTMwIiByeD0iMTIiIGZpbGw9IiMwRjE3MkEiLz4KICA8dGV4dCB4PSI1NjAiIHk9IjM0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRjhGQUZDIiBmb250LXNpemU9IjE5IiBmb250LXdlaWdodD0iNzAwIj5GQVJNRVJQUk8gUDIg4oCUIELhuqJOIMSQ4buSIFJVU1QgQ1JBVEVTICZhbXA7IFJBTkggR0nhu5pJIELhuqJPIE3huqxUIC8gROG7riBMSeG7hlU8L3RleHQ+CgogIDwhLS0gUm93IDE6IEFwcGxpY2F0aW9uIExheWVyIC0tPgogIDxyZWN0IHg9IjI0IiB5PSI1MiIgd2lkdGg9IjEwNzIiIGhlaWdodD0iMTIyIiByeD0iMTAiIGZpbGw9IiMxRTI5M0IiIHN0cm9rZT0iIzMzNDE1NSIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8dGV4dCB4PSI0MiIgeT0iNzUiIGZpbGw9IiM5M0M1RkQiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiPkFQUExJQ0FUSU9OIExBWUVSIChhcHBzLyopIOKAlCBHSUFPIFRJ4bq+UCBJUEMgJmFtcDsgQ0xJPC90ZXh0PgoKICA8cmVjdCB4PSI0MCIgeT0iODYiIHdpZHRoPSI0MzAiIGhlaWdodD0iNzYiIHJ4PSI4IiBmaWxsPSIjMEYyOTQyIiBzdHJva2U9IiMzQjgyRjYiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgPHRleHQgeD0iMjU1IiB5PSIxMDkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNGOEZBRkMiIGZvbnQtc2l6ZT0iMTQuNSIgZm9udC13ZWlnaHQ9IjcwMCI+YXBwcy9kZXNrdG9wL3NyYy10YXVyaSAoc3R1ZGlvX3AyLnJzKTwvdGV4dD4KICA8dGV4dCB4PSIyNTUiIHk9IjEzMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0NCRDVFMSIgZm9udC1zaXplPSIxMyI+MjYgVGF1cmkgSVBDOiBQcm9qZWN0IENSVUQvQ2xvbmUsIFRhc2tzLCBVSSBTY2hlbWE8L3RleHQ+CiAgPHRleHQgeD0iMjU1IiB5PSIxNDkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5M0M1RkQiIGZvbnQtc2l6ZT0iMTIuOCI+VmF1bHQgTmFtZXNwYWNlcyArIERQQVBJIEtleXN0b3JlICsgREIgQmFja3VwPC90ZXh0PgoKICA8cmVjdCB4PSI0OTAiIHk9Ijg2IiB3aWR0aD0iMjk1IiBoZWlnaHQ9Ijc2IiByeD0iOCIgZmlsbD0iIzEzMkQyNCIgc3Ryb2tlPSIjMTBCOTgxIiBzdHJva2Utd2lkdGg9IjEuOCIvPgogIDx0ZXh0IHg9IjYzNyIgeT0iMTA5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRjhGQUZDIiBmb250LXNpemU9IjE0LjUiIGZvbnQtd2VpZ2h0PSI3MDAiPmFwcHMvY2xpIChmcC1jbGkpPC90ZXh0PgogIDx0ZXh0IHg9IjYzNyIgeT0iMTMwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjQ0JENUUxIiBmb250LXNpemU9IjEzIj52ZXJpZnktcDI6IEtp4buDbSB0aOG7rSBTYW5kYm94IERCICsgVmF1bHQ8L3RleHQ+CiAgPHRleHQgeD0iNjM3IiB5PSIxNDkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTIuOCI+bWlncmF0ZS1wMjogQmFja3VwICsgUHJvYmUgLSZndDsgTWlncmF0ZTwvdGV4dD4KCiAgPHJlY3QgeD0iODA1IiB5PSI4NiIgd2lkdGg9IjI3NSIgaGVpZ2h0PSI3NiIgcng9IjgiIGZpbGw9IiMyQjIxMTgiIHN0cm9rZT0iI0Y1OUUwQiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1kYXNoYXJyYXk9IjYsNCIvPgogIDx0ZXh0IHg9Ijk0MiIgeT0iMTA5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRkRFNjhBIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIj5hcHBzL2Rlc2t0b3Avc3JjIChSZWFjdCBVSSk8L3RleHQ+CiAgPHRleHQgeD0iOTQyIiB5PSIxMzAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNGQ0QzNEQiIGZvbnQtc2l6ZT0iMTMiPlNUQUdFLUdBVEUgUDI6IEdJ4buuIE5HVVnDik4gMTAwJTwvdGV4dD4KICA8dGV4dCB4PSI5NDIiIHk9IjE0OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0NCRDVFMSIgZm9udC1zaXplPSIxMi44Ij5LaMO0bmcgcmVmYWN0b3IgVUkgdHLGsOG7m2MgUDQgKDAgZMOybmcgc+G7rWEpPC90ZXh0PgoKICA8IS0tIEFycm93cyBkb3duIC0tPgogIDxsaW5lIHgxPSIyMTAiIHkxPSIxNjIiIHgyPSIyMTAiIHkyPSIyMDYiIHN0cm9rZT0iIzYwQTVGQSIgc3Ryb2tlLXdpZHRoPSIyLjIiIG1hcmtlci1lbmQ9InVybCgjYXJyKSIvPgogIDxsaW5lIHgxPSIzNjAiIHkxPSIxNjIiIHgyPSI2ODAiIHkyPSIyMDYiIHN0cm9rZT0iIzYwQTVGQSIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2FycikiLz4KICA8bGluZSB4MT0iNTgwIiB5MT0iMTYyIiB4Mj0iNDMwIiB5Mj0iMjA2IiBzdHJva2U9IiMzNEQzOTkiIHN0cm9rZS13aWR0aD0iMiIgbWFya2VyLWVuZD0idXJsKCNhcnIpIi8+CiAgPGxpbmUgeDE9IjY4MCIgeTE9IjE2MiIgeDI9Ijc4MCIgeTI9IjIwNiIgc3Ryb2tlPSIjMzREMzk5IiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYXJyKSIvPgoKICA8IS0tIFJvdyAyOiBQMiBDb3JlIENyYXRlcyAtLT4KICA8cmVjdCB4PSIyNCIgeT0iMjA2IiB3aWR0aD0iNTI2IiBoZWlnaHQ9IjE2MiIgcng9IjEwIiBmaWxsPSIjMTcyNTU0IiBzdHJva2U9IiMzQjgyRjYiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjQyIiB5PSIyMzAiIGZpbGw9IiM5M0M1RkQiIGZvbnQtc2l6ZT0iMTUiIGZvbnQtd2VpZ2h0PSI3MDAiPmNyYXRlcy9mcC1zdG9yYWdlIChTUUxpdGUgV0FMIE11bHRpLVByb2plY3QgQ29yZSk8L3RleHQ+CiAgPHRleHQgeD0iNDIiIHk9IjI1NCIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMy4yIj7igKIgbWlncmF0aW9ucy5yczogdjEgQmFzZWxpbmUgKyB2MiAoQkVHSU4gSU1NRURJQVRFIFRYKTwvdGV4dD4KICA8dGV4dCB4PSI0MiIgeT0iMjc1IiBmaWxsPSIjRTJFOEYwIiBmb250LXNpemU9IjEzLjIiPuKAoiBPbmxpbmUgQmFja3VwICZhbXA7IFJlc3RvcmU6IHJ1c3FsaXRlOjpiYWNrdXA6OkJhY2t1cCBBUEk8L3RleHQ+CiAgPHRleHQgeD0iNDIiIHk9IjI5NiIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMy4yIj7igKIgangyX3NlZWQucnM6IE5vbi1kZXN0cnVjdGl2ZSAxMCB3b3JrZmxvd3MgKyA4IFBOR3M8L3RleHQ+CiAgPHRleHQgeD0iNDIiIHk9IjMxNyIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMy4yIj7igKIgUHJvamVjdCBDUlVELCBDbG9uZSAmYW1wOyBQUk9KRUNUX0lTT0xBVElPTl9WSU9MQVRJT048L3RleHQ+CiAgPHRleHQgeD0iNDIiIHk9IjMzOCIgZmlsbD0iIzkzQzVGRCIgZm9udC1zaXplPSIxMi44Ij7igKIgRGVwczogZnAtZG9tYWluLCBmcC13b3JrZmxvdy1zY2hlbWEsIGZwLWJ1bmRsZS1jb250cmFjdDwvdGV4dD4KICA8dGV4dCB4PSI0MiIgeT0iMzU3IiBmaWxsPSIjNkVFN0I3IiBmb250LXNpemU9IjEyLjgiPuKAoiBUZXN0czogOC84IFBBU1MgKElkZW1wb3RlbmN5LCBSb2xsYmFjaywgQmFja3VwLCBJc29sYXRpb24pPC90ZXh0PgoKICA8cmVjdCB4PSI1NzAiIHk9IjIwNiIgd2lkdGg9IjUyNiIgaGVpZ2h0PSIxNjIiIHJ4PSIxMCIgZmlsbD0iIzJFMTA2NSIgc3Ryb2tlPSIjQTg1NUY3IiBzdHJva2Utd2lkdGg9IjIiLz4KICA8dGV4dCB4PSI1ODgiIHk9IjIzMCIgZmlsbD0iI0U5RDVGRiIgZm9udC1zaXplPSIxNSIgZm9udC13ZWlnaHQ9IjcwMCI+Y3JhdGVzL2ZwLXNlY3VyaXR5IChXaW4zMiBDcmVkZW50aWFsIE1hbmFnZXIgKyBEUEFQSSk8L3RleHQ+CiAgPHRleHQgeD0iNTg4IiB5PSIyNTQiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTMuMiI+4oCiIHdpbmNyZWQucnM6IGFkdmFwaTMyIENyZWRXcml0ZVcvUmVhZFcvRW51bWVyYXRlVy9EZWxldGVXPC90ZXh0PgogIDx0ZXh0IHg9IjU4OCIgeT0iMjc1IiBmaWxsPSIjRTJFOEYwIiBmb250LXNpemU9IjEzLjIiPuKAoiBOYW1lc3BhY2VzOiBwcm9qZWN0LyZsdDtzbHVnJmd0Oy8gwrcgbWluaXRvb2wvJmx0O3NsdWcmZ3Q7LyDCtyBhY2NvdW50LzwvdGV4dD4KICA8dGV4dCB4PSI1ODgiIHk9IjI5NiIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMy4yIj7igKIgZHBhcGkucnM6IGNyeXB0MzIgQ3J5cHRQcm90ZWN0RGF0YSAvIENyeXB0VW5wcm90ZWN0RGF0YTwvdGV4dD4KICA8dGV4dCB4PSI1ODgiIHk9IjMxNyIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMy4yIj7igKIga2V5c3RvcmUucnM6IEVkMjU1MTkgU2VlZCBEUEFQSSB2MiwgQmFja3VwL1JvdGF0ZS9SZXN0b3JlPC90ZXh0PgogIDx0ZXh0IHg9IjU4OCIgeT0iMzM4IiBmaWxsPSIjRTlENUZGIiBmb250LXNpemU9IjEyLjgiPuKAoiBTZWNyZXRSZWRhY3RvciArIERlc3RydWN0aXZlQWN0aW9uR3VhcmQgcHJlc2VydmVkIDEwMCU8L3RleHQ+CiAgPHRleHQgeD0iNTg4IiB5PSIzNTciIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTIuOCI+4oCiIFRlc3RzOiA2LzYgUEFTUyAoUmVhbCBXaW5DcmVkLCBEUEFQSSBUYW1wZXIsIEtleSBCYWNrdXApPC90ZXh0PgoKICA8IS0tIFJvdyAzOiBTaGFyZWQgQ29udHJhY3QgJiBSdW50aW1lIC0tPgogIDxyZWN0IHg9IjI0IiB5PSIzOTYiIHdpZHRoPSIzNDAiIGhlaWdodD0iMTE0IiByeD0iMTAiIGZpbGw9IiMxRTI5M0IiIHN0cm9rZT0iIzQ3NTU2OSIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8dGV4dCB4PSIxOTQiIHk9IjQyMSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0Y4RkFGQyIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCI+Y3JhdGVzL2ZwLWJ1bmRsZS1jb250cmFjdDwvdGV4dD4KICA8dGV4dCB4PSIxOTQiIHk9IjQ0MyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0NCRDVFMSIgZm9udC1zaXplPSIxMyI+WmVyby1DcnlwdG8gU2hhcmVkIFNjaGVtYXM6PC90ZXh0PgogIDx0ZXh0IHg9IjE5NCIgeT0iNDYzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTRBM0I4IiBmb250LXNpemU9IjEyLjgiPkdhbWVQcm9qZWN0TWFuaWZlc3QgwrcgTWluaVRvb2xVaVNjaGVtYTwvdGV4dD4KICA8dGV4dCB4PSIxOTQiIHk9IjQ4MiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk0QTNCOCIgZm9udC1zaXplPSIxMi44Ij5NaW5pVGFza0RlZiDCtyBUYXNrQ2F0ZWdvcnlEZWY8L3RleHQ+CiAgPHRleHQgeD0iMTk0IiB5PSI1MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTIuOCI+MS8xIFVuaXQgVGVzdCBQQVNTPC90ZXh0PgoKICA8cmVjdCB4PSIzOTAiIHk9IjM5NiIgd2lkdGg9IjM0MCIgaGVpZ2h0PSIxMTQiIHJ4PSIxMCIgZmlsbD0iIzFFMjkzQiIgc3Ryb2tlPSIjNDc1NTY5IiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDx0ZXh0IHg9IjU2MCIgeT0iNDIxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRjhGQUZDIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIj5jcmF0ZXMvZnAtYnVpbGRlciAoc2VjdXJpdHkucnMpPC90ZXh0PgogIDx0ZXh0IHg9IjU2MCIgeT0iNDQzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjQ0JENUUxIiBmb250LXNpemU9IjEzIj5Qcm9kdWNlcktleU1hbmFnZXIgZGVsZWdhdGVzIHRvPC90ZXh0PgogIDx0ZXh0IHg9IjU2MCIgeT0iNDYzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRTlENUZGIiBmb250LXNpemU9IjEyLjgiPmZwX3NlY3VyaXR5OjpQcm9kdWNlcktleXN0b3JlIChEUEFQSSk8L3RleHQ+CiAgPHRleHQgeD0iNTYwIiB5PSI0ODIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5NEEzQjgiIGZvbnQtc2l6ZT0iMTIuOCI+OC1TdGVwIFBhY2thZ2VyICsgUEUgUlRfUkNEQVRBICM3Nzc3PC90ZXh0PgogIDx0ZXh0IHg9IjU2MCIgeT0iNTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNkVFN0I3IiBmb250LXNpemU9IjEyLjgiPjQvNCBVbml0IFRlc3RzIFBBU1M8L3RleHQ+CgogIDxyZWN0IHg9Ijc1NiIgeT0iMzk2IiB3aWR0aD0iMzQwIiBoZWlnaHQ9IjExNCIgcng9IjEwIiBmaWxsPSIjMUUyOTNCIiBzdHJva2U9IiMxMEI5ODEiIHN0cm9rZS13aWR0aD0iMS41Ii8+CiAgPHRleHQgeD0iOTI2IiB5PSI0MjEiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNGOEZBRkMiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiPmNyYXRlcy9mcC13b3JrZmxvdy1ydW50aW1lPC90ZXh0PgogIDx0ZXh0IHg9IjkyNiIgeT0iNDQzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNkVFN0I3IiBmb250LXNpemU9IjEzIj5aRVJPIEhhcmRjb2RlZCBHYW1lIE5hbWVzPC90ZXh0PgogIDx0ZXh0IHg9IjkyNiIgeT0iNDYzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjQ0JENUUxIiBmb250LXNpemU9IjEyLjgiPkfhu6EgYuG7jyBoYXJkY29kZSBnYW1lcy9qeDJtb2JpbGU8L3RleHQ+CiAgPHRleHQgeD0iOTI2IiB5PSI0ODIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5NEEzQjgiIGZvbnQtc2l6ZT0iMTIuOCI+UXXDqXQgxJHhu5luZyBidW5kbGUvICsgcHJvamVjdHMvKi90ZW1wbGF0ZXM8L3RleHQ+CiAgPHRleHQgeD0iOTI2IiB5PSI1MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTIuOCI+My8zIFVuaXQgVGVzdHMgUEFTUyAoNDQvNDQgVG90YWwpPC90ZXh0PgoKICA8bGluZSB4MT0iMjEwIiB5MT0iMzY4IiB4Mj0iMTk0IiB5Mj0iMzk2IiBzdHJva2U9IiM2MEE1RkEiIHN0cm9rZS13aWR0aD0iMS44IiBtYXJrZXItZW5kPSJ1cmwoI2FycikiLz4KICA8bGluZSB4MT0iNzIwIiB5MT0iMzY4IiB4Mj0iNTYwIiB5Mj0iMzk2IiBzdHJva2U9IiNDMDg0RkMiIHN0cm9rZS13aWR0aD0iMS44IiBtYXJrZXItZW5kPSJ1cmwoI2FycikiLz4KCiAgPGRlZnM+CiAgICA8bWFya2VyIGlkPSJhcnIiIG1hcmtlcldpZHRoPSI4IiBtYXJrZXJIZWlnaHQ9IjgiIHJlZlg9IjYiIHJlZlk9IjMiIG9yaWVudD0iYXV0byI+CiAgICAgIDxwYXRoIGQ9Ik0wLDAgTDAsNiBMNywzIHoiIGZpbGw9IiM5NEEzQjgiLz4KICAgIDwvbWFya2VyPgogIDwvZGVmcz4KPC9zdmc+" class="diag-img"/>
+  </div>
+  <div class="grid-3" style="margin-top:3mm;">
+    <div class="card">
+      <div class="card-h">crates/fp-storage (Nâng cấp Core DB)</div>
+      <p>Tổ chức thành 4 module: <code>models.rs</code>, <code>migrations.rs</code>, <code>jx2_seed.rs</code>, <code>lib.rs</code>. Cung cấp Migration v1→v2 giao dịch nguyên tử, Online Backup API, Restore Probe, Project CRUD/Clone và cơ chế chặn truy cập chéo Project.</p>
+    </div>
+    <div class="card">
+      <div class="card-h">crates/fp-security (WinCred + DPAPI)</div>
+      <p>Thay thế hoàn toàn mock <code>HashMap</code> bằng Win32 <code>advapi32.dll</code> và <code>crypt32.dll</code> (<code>wincred.rs</code>, <code>dpapi.rs</code>, <code>keystore.rs</code>). <code>fp-builder</code> ủy quyền quản lý khóa ký về <code>ProducerKeystore</code> dùng chung.</p>
+    </div>
+    <div class="card">
+      <div class="card-h">crates/fp-workflow-runtime (Zero Hardcode)</div>
+      <p>Loại bỏ đường dẫn cứng <code>games/jx2mobile/templates</code> khỏi lõi thực thi workflow; chuyển sang quét động <code>bundle/templates</code>, <code>assets/templates</code> và <code>projects/*/templates</code>.</p>
+    </div>
+  </div>
+</div>
+      <div class="page-bottom-bar">
+        <span>Hồ sơ nghiệm thu Giai đoạn P2: Multi-Project SQLite v2, Backup/Migration/Rollback, JX2 Preservation, WinCred/DPAPI &amp; Project CRUD</span>
+        <span>Commit Base: 9bd0e45 (từ fab1a1a)</span>
+        <span class="pg-num">Trang 02 / 12</span>
+      </div>
+    </section>
+    
+    <section class="pdf-page" id="page-03">
+      <div class="page-top-bar">
+        <div class="pt-left">
+          <span class="pt-badge">SQLITE SCHEMA V2</span>
+          <span class="pt-title">Mô hình Quan hệ Dữ liệu Đa Dự án (SQLite WAL v2 ER Diagram)</span>
+        </div>
+        <div class="pt-right">FARMERPRO P2 ACCEPTANCE · BRANCH feat/p2-multi-project-storage · 2026-11-22</div>
+      </div>
+      <div class="page-content">
+  <div class="diag-wrap">
+    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTIwIDUzMCIgZm9udC1mYW1pbHk9IlNlZ29lIFVJLCBBcmlhbCwgc2Fucy1zZXJpZiI+CiAgPHJlY3Qgd2lkdGg9IjExMjAiIGhlaWdodD0iNTMwIiByeD0iMTIiIGZpbGw9IiMwRjE3MkEiLz4KICA8dGV4dCB4PSI1NjAiIHk9IjMxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRjhGQUZDIiBmb250LXNpemU9IjE4LjUiIGZvbnQtd2VpZ2h0PSI3MDAiPlNRTElURSBXQUwgU0NIRU1BIFYyIOKAlCBNw5QgSMOMTkggUVVBTiBI4buGIMSQQSBE4buwIMOBTiAoMTUgQuG6ok5HICsgOCBJTkRFWEVTKTwvdGV4dD4KCiAgPCEtLSBDZW50cmFsIFJvb3Q6IHByb2plY3RzIC0tPgogIDxyZWN0IHg9IjM4NSIgeT0iNDgiIHdpZHRoPSIzNTAiIGhlaWdodD0iMTU2IiByeD0iMTAiIGZpbGw9IiMxRTNBOEEiIHN0cm9rZT0iIzYwQTVGQSIgc3Ryb2tlLXdpZHRoPSIyLjQiLz4KICA8dGV4dCB4PSI1NjAiIHk9IjcxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRkZGRkZGIiBmb250LXNpemU9IjE0LjUiIGZvbnQtd2VpZ2h0PSI3MDAiPnByb2plY3RzIChWMiBSb290IEVudGl0eSk8L3RleHQ+CiAgPGxpbmUgeDE9IjM4NSIgeTE9Ijc5IiB4Mj0iNzM1IiB5Mj0iNzkiIHN0cm9rZT0iIzYwQTVGQSIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPHRleHQgeD0iNDAwIiB5PSI5OSIgZmlsbD0iI0ZERTY4QSIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCI+UEsgaWQgKFRFWFQpIMK3IFVOSVFVRSBzbHVnIChURVhUKTwvdGV4dD4KICA8dGV4dCB4PSI0MDAiIHk9IjExOSIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMi44Ij5uYW1lIMK3IGdhbWVfcGFja2FnZV9pZCDCtyB2ZXJzaW9uPC90ZXh0PgogIDx0ZXh0IHg9IjQwMCIgeT0iMTM4IiBmaWxsPSIjRTJFOEYwIiBmb250LXNpemU9IjEyLjgiPmV4ZV9uYW1lIMK3IHdpbmRvd190aXRsZSDCtyBpY29uX3JlbF9wYXRoPC90ZXh0PgogIDx0ZXh0IHg9IjQwMCIgeT0iMTU3IiBmaWxsPSIjRTJFOEYwIiBmb250LXNpemU9IjEyLjgiPnRhcmdldF93aWR0aF9weCDCtyB0YXJnZXRfaGVpZ2h0X3B4IMK3IGJ1bmRsZV9hZGI8L3RleHQ+CiAgPHRleHQgeD0iNDAwIiB5PSIxNzYiIGZpbGw9IiM5M0M1RkQiIGZvbnQtc2l6ZT0iMTIuOCI+cHJvamVjdF9kaXJfcGF0aCDCtyBjcmVhdGVkX2F0IMK3IHVwZGF0ZWRfYXQ8L3RleHQ+CiAgPHRleHQgeD0iNDAwIiB5PSIxOTUiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTIuNSI+RGVmYXVsdCBMZWdhY3kgSUQ6IHByb2otangyLW1vYmlsZS0wMDE8L3RleHQ+CgogIDwhLS0gTGVmdCBjb2x1bW46IE5ldyBWMiBQcm9qZWN0IFRhYmxlcyAtLT4KICA8cmVjdCB4PSIyMCIgeT0iNDgiIHdpZHRoPSIzNDAiIGhlaWdodD0iOTQiIHJ4PSI4IiBmaWxsPSIjMUUyOTNCIiBzdHJva2U9IiMzOEJERjgiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgPHRleHQgeD0iMzQiIHk9IjcwIiBmaWxsPSIjMzhCREY4IiBmb250LXNpemU9IjEzLjgiIGZvbnQtd2VpZ2h0PSI3MDAiPnByb2plY3RfbW9kdWxlcyAoVjIpPC90ZXh0PgogIDx0ZXh0IHg9IjM0IiB5PSI5MCIgZmlsbD0iI0ZERTY4QSIgZm9udC1zaXplPSIxMi41Ij5QSyhwcm9qZWN0X2lkLCBtb2R1bGVfaWQpIMK3IENBU0NBREU8L3RleHQ+CiAgPHRleHQgeD0iMzQiIHk9IjEwOSIgZmlsbD0iI0NCRDVFMSIgZm9udC1zaXplPSIxMi41Ij5wYWNrYWdlZF9pbl9yZWxlYXNlIMK3IGVuYWJsZWRfYnlfZGVmYXVsdDwvdGV4dD4KICA8dGV4dCB4PSIzNCIgeT0iMTI4IiBmaWxsPSIjOTRBM0I4IiBmb250LXNpemU9IjEyLjUiPmNvbmZpZ19qc29uIMK3IHVwZGF0ZWRfYXQ8L3RleHQ+CgogIDxyZWN0IHg9IjIwIiB5PSIxNTQiIHdpZHRoPSIzNDAiIGhlaWdodD0iMTA2IiByeD0iOCIgZmlsbD0iIzFFMjkzQiIgc3Ryb2tlPSIjMzhCREY4IiBzdHJva2Utd2lkdGg9IjEuNiIvPgogIDx0ZXh0IHg9IjM0IiB5PSIxNzYiIGZpbGw9IiMzOEJERjgiIGZvbnQtc2l6ZT0iMTMuOCIgZm9udC13ZWlnaHQ9IjcwMCI+dmlzaW9uX3RlbXBsYXRlcyAoVjIpPC90ZXh0PgogIDx0ZXh0IHg9IjM0IiB5PSIxOTYiIGZpbGw9IiNGREU2OEEiIGZvbnQtc2l6ZT0iMTIuNSI+UEsgaWQgwrcgRksgcHJvamVjdF9pZCDCtyBVTklRVUUocmVsX3BhdGgpPC90ZXh0PgogIDx0ZXh0IHg9IjM0IiB5PSIyMTUiIGZpbGw9IiNDQkQ1RTEiIGZvbnQtc2l6ZT0iMTIuNSI+bmFtZSDCtyByZWxfcGF0aCDCtyB3aWR0aF9weCDCtyBoZWlnaHRfcHg8L3RleHQ+CiAgPHRleHQgeD0iMzQiIHk9IjIzNCIgZmlsbD0iI0NCRDVFMSIgZm9udC1zaXplPSIxMi41Ij5jcm9wX3gveSDCtyBkZWZhdWx0X2NvbmZpZGVuY2Ugwrcgc2hhMjU2PC90ZXh0PgogIDx0ZXh0IHg9IjM0IiB5PSIyNTIiIGZpbGw9IiM5NEEzQjgiIGZvbnQtc2l6ZT0iMTIuMiI+SW5kZXg6IGlkeF90ZW1wbGF0ZXNfcHJvamVjdDwvdGV4dD4KCiAgPHJlY3QgeD0iMjAiIHk9IjI3MiIgd2lkdGg9IjM0MCIgaGVpZ2h0PSIxMTQiIHJ4PSI4IiBmaWxsPSIjMUUyOTNCIiBzdHJva2U9IiMzOEJERjgiIHN0cm9rZS13aWR0aD0iMS42Ii8+CiAgPHRleHQgeD0iMzQiIHk9IjI5NCIgZmlsbD0iIzM4QkRGOCIgZm9udC1zaXplPSIxMy44IiBmb250LXdlaWdodD0iNzAwIj50YXNrX2RlZmluaXRpb25zIChWMik8L3RleHQ+CiAgPHRleHQgeD0iMzQiIHk9IjMxNCIgZmlsbD0iI0ZERTY4QSIgZm9udC1zaXplPSIxMi41Ij5QSyBpZCDCtyBGSyBwcm9qZWN0X2lkIMK3IEZLIHdvcmtmbG93X2lkPC90ZXh0PgogIDx0ZXh0IHg9IjM0IiB5PSIzMzMiIGZpbGw9IiNDQkQ1RTEiIGZvbnQtc2l6ZT0iMTIuNSI+Y2F0ZWdvcnlfaWQvc2hvcnRfdGFnL25hbWUvY29sb3JfaGV4PC90ZXh0PgogIDx0ZXh0IHg9IjM0IiB5PSIzNTIiIGZpbGw9IiNDQkQ1RTEiIGZvbnQtc2l6ZT0iMTIuNSI+dGl0bGUgwrcgcHJpb3JpdHkgwrcgZXN0aW1hdGVfc2VjIMK3IHNjaGVtYTwvdGV4dD4KICA8dGV4dCB4PSIzNCIgeT0iMzcxIiBmaWxsPSIjOTRBM0I4IiBmb250LXNpemU9IjEyLjIiPkluZGV4OiBpZHhfdGFza3NfcHJvamVjdF9wcmlvcml0eTwvdGV4dD4KCiAgPCEtLSBSaWdodCBjb2x1bW46IE1pbmkgVG9vbCBTY2hlbWEgJiBSZWxlYXNlcyAtLT4KICA8cmVjdCB4PSI3NjAiIHk9IjQ4IiB3aWR0aD0iMzQwIiBoZWlnaHQ9Ijk0IiByeD0iOCIgZmlsbD0iIzFFMjkzQiIgc3Ryb2tlPSIjQTg1NUY3IiBzdHJva2Utd2lkdGg9IjEuNiIvPgogIDx0ZXh0IHg9Ijc3NCIgeT0iNzAiIGZpbGw9IiNFOUQ1RkYiIGZvbnQtc2l6ZT0iMTMuOCIgZm9udC13ZWlnaHQ9IjcwMCI+bWluaV90b29sX3NjaGVtYXMgKFYyKTwvdGV4dD4KICA8dGV4dCB4PSI3NzQiIHk9IjkwIiBmaWxsPSIjRkRFNjhBIiBmb250LXNpemU9IjEyLjUiPlBLL0ZLIHByb2plY3RfaWQgKDE6MSkgwrcgQ0FTQ0FERTwvdGV4dD4KICA8dGV4dCB4PSI3NzQiIHk9IjEwOSIgZmlsbD0iI0NCRDVFMSIgZm9udC1zaXplPSIxMi41Ij5zY2hlbWFfdmVyc2lvbiDCtyB1aV9zY2hlbWFfanNvbjwvdGV4dD4KICA8dGV4dCB4PSI3NzQiIHk9IjEyOCIgZmlsbD0iIzk0QTNCOCIgZm9udC1zaXplPSIxMi41Ij5TeW5jOiBwcm9qZWN0cy8mbHQ7c2x1ZyZndDsvdWktc2NoZW1hLmpzb248L3RleHQ+CgogIDxyZWN0IHg9Ijc2MCIgeT0iMTU0IiB3aWR0aD0iMzQwIiBoZWlnaHQ9IjExMiIgcng9IjgiIGZpbGw9IiMxRTI5M0IiIHN0cm9rZT0iI0E4NTVGNyIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KICA8dGV4dCB4PSI3NzQiIHk9IjE3NiIgZmlsbD0iI0U5RDVGRiIgZm9udC1zaXplPSIxMy44IiBmb250LXdlaWdodD0iNzAwIj5wcm9qZWN0X3JlbGVhc2VzIChWMik8L3RleHQ+CiAgPHRleHQgeD0iNzc0IiB5PSIxOTYiIGZpbGw9IiNGREU2OEEiIGZvbnQtc2l6ZT0iMTIuNSI+UEsgaWQgwrcgRksgcHJvamVjdF9pZCDCtyBDQVNDQURFPC90ZXh0PgogIDx0ZXh0IHg9Ijc3NCIgeT0iMjE1IiBmaWxsPSIjQ0JENUUxIiBmb250LXNpemU9IjEyLjUiPnZlcnNpb24gwrcgZXhlX3BhdGggwrcgZXhlX3NoYTI1NiDCtyBrZXlfaWQ8L3RleHQ+CiAgPHRleHQgeD0iNzc0IiB5PSIyMzQiIGZpbGw9IiNDQkQ1RTEiIGZvbnQtc2l6ZT0iMTIuNSI+cGVfcmNkYXRhX3B1YmtleV9pZCg3Nzc3KSDCtyBzaWduYXR1cmU8L3RleHQ+CiAgPHRleHQgeD0iNzc0IiB5PSIyNTMiIGZpbGw9IiM5NEEzQjgiIGZvbnQtc2l6ZT0iMTIuMiI+SW5kZXg6IGlkeF9yZWxlYXNlc19wcm9qZWN0X3RpbWU8L3RleHQ+CgogIDxyZWN0IHg9Ijc2MCIgeT0iMjc4IiB3aWR0aD0iMzQwIiBoZWlnaHQ9IjkyIiByeD0iOCIgZmlsbD0iIzFFMjkzQiIgc3Ryb2tlPSIjNjQ3NDhCIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDx0ZXh0IHg9Ijc3NCIgeT0iMzAwIiBmaWxsPSIjRjhGQUZDIiBmb250LXNpemU9IjEzLjgiIGZvbnQtd2VpZ2h0PSI3MDAiPnNjaGVtYV9taWdyYXRpb25zIChUcmFja2luZyk8L3RleHQ+CiAgPHRleHQgeD0iNzc0IiB5PSIzMjEiIGZpbGw9IiNDQkQ1RTEiIGZvbnQtc2l6ZT0iMTIuNSI+UEsgdmVyc2lvbjogWzEgPSBCYXNlbGluZSwgMiA9IE11bHRpLVByb2pdPC90ZXh0PgogIDx0ZXh0IHg9Ijc3NCIgeT0iMzQxIiBmaWxsPSIjOTRBM0I4IiBmb250LXNpemU9IjEyLjUiPmFwcGxpZWRfYXQgKFVUQykgwrcgV0FMICsgRks9T048L3RleHQ+CiAgPHRleHQgeD0iNzc0IiB5PSIzNTkiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTIuMiI+SWRlbXBvdGVudCArIEF0b21pYyBUcmFuc2FjdGlvbjwvdGV4dD4KCiAgPCEtLSBCb3R0b20gTWlkZGxlOiBFeHRlbmRlZCBWMSBUYWJsZXMgLS0+CiAgPHJlY3QgeD0iMzg1IiB5PSIyMjQiIHdpZHRoPSIzNTAiIGhlaWdodD0iOTAiIHJ4PSI4IiBmaWxsPSIjMTMyRDI0IiBzdHJva2U9IiMxMEI5ODEiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgPHRleHQgeD0iNDAwIiB5PSIyNDYiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTMuNSIgZm9udC13ZWlnaHQ9IjcwMCI+d29ya2Zsb3dzICgrcHJvamVjdF9pZCwgY2F0ZWdvcnkpPC90ZXh0PgogIDx0ZXh0IHg9IjQwMCIgeT0iMjY2IiBmaWxsPSIjRTJFOEYwIiBmb250LXNpemU9IjEyLjUiPkZLIHByb2plY3RfaWQgwrcgd29ya2Zsb3dfdmVyc2lvbnMgKDE6Tik8L3RleHQ+CiAgPHRleHQgeD0iNDAwIiB5PSIyODUiIGZpbGw9IiNDQkQ1RTEiIGZvbnQtc2l6ZT0iMTIuNSI+R2nhu68gMiB3b3JrZmxvd3MgY8WpICsgMTAgSlgyIHdvcmtmbG93czwvdGV4dD4KICA8dGV4dCB4PSI0MDAiIHk9IjMwMyIgZmlsbD0iIzk0QTNCOCIgZm9udC1zaXplPSIxMi4yIj5CbG9jayBjcm9zcy13cml0ZTogSVNPTEFUSU9OX1ZJT0xBVElPTjwvdGV4dD4KCiAgPHJlY3QgeD0iMzg1IiB5PSIzMjYiIHdpZHRoPSIzNTAiIGhlaWdodD0iODAiIHJ4PSI4IiBmaWxsPSIjMTMyRDI0IiBzdHJva2U9IiMxMEI5ODEiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgPHRleHQgeD0iNDAwIiB5PSIzNDgiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTMuNSIgZm9udC13ZWlnaHQ9IjcwMCI+YWNjb3VudHMgKCtwcm9qZWN0X2lkKTwvdGV4dD4KICA8dGV4dCB4PSI0MDAiIHk9IjM2OCIgZmlsbD0iI0UyRThGMCIgZm9udC1zaXplPSIxMi41Ij5GSyBwcm9qZWN0X2lkIMK3IEtIw5RORyBsxrB1IHBsYWludGV4dCBwYXNzPC90ZXh0PgogIDx0ZXh0IHg9IjQwMCIgeT0iMzg4IiBmaWxsPSIjQ0JENUUxIiBmb250LXNpemU9IjEyLjUiPnNlY3JldF9yZWYgPSBDUkVEX01HUjovL0Zhcm1lclByby8uLi48L3RleHQ+CgogIDxyZWN0IHg9IjIwIiB5PSI0MjAiIHdpZHRoPSIxMDgwIiBoZWlnaHQ9IjkyIiByeD0iOCIgZmlsbD0iIzFFMjkzQiIgc3Ryb2tlPSIjMTBCOTgxIiBzdHJva2Utd2lkdGg9IjEuNiIvPgogIDx0ZXh0IHg9IjQwIiB5PSI0NDQiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiPlJVTlRJTUUgRVhFQ1VUSU9OIFRBQkxFUzogam9icyAoK3Byb2plY3RfaWQpIMK3IGRldmljZXMgwrcgc3RlcF9ldmVudHMgwrcgY2hlY2twb2ludHMgwrcgZGV2aWNlX2xlYXNlczwvdGV4dD4KICA8dGV4dCB4PSI0MCIgeT0iNDY3IiBmaWxsPSIjRTJFOEYwIiBmb250LXNpemU9IjEyLjgiPuKAoiBqb2JzOiBUaMOqbSBGSyBwcm9qZWN0X2lkICsgaWR4X2pvYnNfcHJvamVjdC4gQuG6o28gdG/DoG4gbmd1ecOqbiB24bq5biAyIGpvYnMgJmFtcDsgMzEgc3RlcF9ldmVudHMgcHJvZHVjdGlvbi48L3RleHQ+CiAgPHRleHQgeD0iNDAiIHk9IjQ4OSIgZmlsbD0iI0NCRDVFMSIgZm9udC1zaXplPSIxMi44Ij7igKIgZGV2aWNlcyAoTGFiIGZsZWV0KSwgc3RlcF9ldmVudHMgKGF1ZGl0KSwgY2hlY2twb2ludHMgKFdBTCByZWNvdmVyeSksIGRldmljZV9sZWFzZXMgKGZlbmNpbmcpLiBJbnRlZ3JpdHkgPSBvayAoMCBGSyBlcnJvcnMpLjwvdGV4dD4KCiAgPCEtLSBDb25uZWN0b3IgbGluZXMgLS0+CiAgPGxpbmUgeDE9IjM4NSIgeTE9Ijk1IiB4Mj0iMzYwIiB5Mj0iOTUiIHN0cm9rZT0iIzM4QkRGOCIgc3Ryb2tlLXdpZHRoPSIxLjgiLz4KICA8bGluZSB4MT0iMzg1IiB5MT0iMTUwIiB4Mj0iMzYwIiB5Mj0iMTk1IiBzdHJva2U9IiMzOEJERjgiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgPGxpbmUgeDE9IjM4NSIgeTE9IjE4NSIgeDI9IjM2MCIgeTI9IjMxMCIgc3Ryb2tlPSIjMzhCREY4IiBzdHJva2Utd2lkdGg9IjEuOCIvPgogIDxsaW5lIHgxPSI3MzUiIHkxPSI5NSIgeDI9Ijc2MCIgeTI9Ijk1IiBzdHJva2U9IiNBODU1RjciIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgPGxpbmUgeDE9IjczNSIgeTE9IjE1NSIgeDI9Ijc2MCIgeTI9IjIwNSIgc3Ryb2tlPSIjQTg1NUY3IiBzdHJva2Utd2lkdGg9IjEuOCIvPgogIDxsaW5lIHgxPSI1NjAiIHkxPSIyMDQiIHgyPSI1NjAiIHkyPSIyMjQiIHN0cm9rZT0iIzEwQjk4MSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPGxpbmUgeDE9IjU2MCIgeTE9IjMxNCIgeDI9IjU2MCIgeTI9IjMyNiIgc3Ryb2tlPSIjMTBCOTgxIiBzdHJva2Utd2lkdGg9IjEuOCIvPgogIDxsaW5lIHgxPSI1NjAiIHkxPSI0MDYiIHgyPSI1NjAiIHkyPSI0MjAiIHN0cm9rZT0iIzEwQjk4MSIgc3Ryb2tlLXdpZHRoPSIxLjgiLz4KPC9zdmc+" class="diag-img"/>
+  </div>
+  <div class="card" style="margin-top:3mm;">
+    <div class="card-h">TÓM TẮT 15 BẢNG TRONG SQLITE V2 (9 BẢNG V1 MỞ RỘNG + 6 BẢNG MỚI V2)</div>
+    <p>
+      <b>6 bảng mới P2:</b> <code>projects</code> (Root Entity, UNIQUE <code>slug</code>), <code>project_modules</code> (Ma trận 5 trạng thái module theo project), <code>vision_templates</code> (Ảnh mẫu + tọa độ ROI + SHA-256), <code>task_definitions</code> (Thư viện nhiệm vụ gắn với <code>workflow_id</code>), <code>mini_tool_schemas</code> (Cấu hình <code>MiniToolUiSchema</code>), <code>project_releases</code> (Lịch sử build EXE + PE <code>RT_RCDATA #7777</code> + chữ ký Ed25519).
+      <b>3 bảng v1 mở rộng:</b> <code>workflows</code> (<code>+project_id, +category</code>), <code>accounts</code> (<code>+project_id</code>), <code>jobs</code> (<code>+project_id</code>) kèm 6 indexes mới.
+    </p>
+  </div>
+</div>
+      <div class="page-bottom-bar">
+        <span>Hồ sơ nghiệm thu Giai đoạn P2: Multi-Project SQLite v2, Backup/Migration/Rollback, JX2 Preservation, WinCred/DPAPI &amp; Project CRUD</span>
+        <span>Commit Base: 9bd0e45 (từ fab1a1a)</span>
+        <span class="pg-num">Trang 03 / 12</span>
+      </div>
+    </section>
+    
+    <section class="pdf-page" id="page-04">
+      <div class="page-top-bar">
+        <div class="pt-left">
+          <span class="pt-badge">MIGRATION SQL V1→V2</span>
+          <span class="pt-title">Đặc tả Migration SQL v1→v2, Indexes & Ràng buộc Toàn vẹn</span>
+        </div>
+        <div class="pt-right">FARMERPRO P2 ACCEPTANCE · BRANCH feat/p2-multi-project-storage · 2026-11-22</div>
+      </div>
+      <div class="page-content">
+  <div class="grid-2">
+    <div class="card" style="padding:2.2mm 2.8mm;">
+      <div class="card-h" style="margin-bottom:1.2mm;">MIGRATION V2 — 6 BẢNG MỚI (Phần 1: Core &amp; Assets)</div>
+      <pre class="code-box" style="font-size:7.6pt; line-height:1.22; padding:2mm 2.5mm;">CREATE TABLE IF NOT EXISTS projects (
+  id TEXT PRIMARY KEY, slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL, game_package_id TEXT NOT NULL,
+  version TEXT NOT NULL DEFAULT '1.0.0', exe_name TEXT NOT NULL,
+  window_title TEXT NOT NULL, icon_rel_path TEXT DEFAULT 'branding/icon.ico',
+  target_width_px INTEGER NOT NULL DEFAULT 1920,
+  target_height_px INTEGER NOT NULL DEFAULT 1080,
+  bundle_adb INTEGER NOT NULL DEFAULT 1, project_dir_path TEXT NOT NULL,
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS project_modules (
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  module_id TEXT NOT NULL,
+  packaged_in_release INTEGER NOT NULL DEFAULT 1,
+  enabled_by_default INTEGER NOT NULL DEFAULT 1,
+  config_json TEXT NOT NULL DEFAULT '{}', updated_at TEXT NOT NULL,
+  PRIMARY KEY (project_id, module_id)
+);
+CREATE TABLE IF NOT EXISTS vision_templates (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  name TEXT NOT NULL, rel_path TEXT NOT NULL,
+  width_px INTEGER NOT NULL, height_px INTEGER NOT NULL,
+  source_crop_x INTEGER, source_crop_y INTEGER,
+  default_confidence REAL NOT NULL DEFAULT 0.88,
+  sha256 TEXT NOT NULL, created_at TEXT NOT NULL,
+  UNIQUE(project_id, rel_path)
+);</pre>
+    </div>
+    <div class="card" style="padding:2.2mm 2.8mm;">
+      <div class="card-h" style="margin-bottom:1.2mm;">MIGRATION V2 — BẢNG MỞ RỘNG &amp; INDEXES (Phần 2)</div>
+      <pre class="code-box" style="font-size:7.6pt; line-height:1.22; padding:2mm 2.5mm;">CREATE TABLE IF NOT EXISTS task_definitions (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  workflow_id TEXT NOT NULL REFERENCES workflows(id),
+  category_id TEXT NOT NULL, category_short_tag TEXT NOT NULL,
+  category_name TEXT NOT NULL, category_color_hex TEXT NOT NULL,
+  title TEXT NOT NULL, priority INTEGER NOT NULL DEFAULT 1,
+  estimate_sec INTEGER NOT NULL DEFAULT 60,
+  default_enabled INTEGER NOT NULL DEFAULT 1,
+  settings_schema_json TEXT NOT NULL DEFAULT '[]', updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS mini_tool_schemas (
+  project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+  schema_version INTEGER NOT NULL DEFAULT 1,
+  ui_schema_json TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS project_releases (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  version TEXT NOT NULL, output_dir_path TEXT NOT NULL,
+  exe_path TEXT NOT NULL, exe_size_bytes INTEGER NOT NULL,
+  exe_sha256 TEXT NOT NULL, key_id TEXT NOT NULL,
+  publisher_public_key_hex TEXT NOT NULL,
+  pe_rcdata_pubkey_id INTEGER NOT NULL DEFAULT 7777,
+  signature_ed25519_hex TEXT NOT NULL,
+  build_report_json TEXT NOT NULL, built_at TEXT NOT NULL
+);
+-- Idempotent ALTER TABLE (checked via PRAGMA table_info):
+ALTER TABLE workflows ADD COLUMN project_id TEXT REFERENCES projects(id);
+ALTER TABLE workflows ADD COLUMN category TEXT NOT NULL DEFAULT 'Chung';
+ALTER TABLE accounts  ADD COLUMN project_id TEXT REFERENCES projects(id);
+ALTER TABLE jobs      ADD COLUMN project_id TEXT REFERENCES projects(id);</pre>
+    </div>
+  </div>
+  <div class="card" style="margin-top:2.5mm; padding:2.2mm 3mm;">
+    <div class="card-h" style="margin-bottom:1.2mm;">CƠ CHẾ ĐẢM BẢO AN TOÀN KHI MIGRATE (FILE ĐẦY ĐỦ: sqlite_v1_v2_migration.sql)</div>
+    <p style="font-size:8.7pt;"><b>1. Transaction Nguyên tử:</b> Mọi bước DDL + Backfill + Kiểm tra khóa ngoại (<code>PRAGMA foreign_key_check</code>) + Ghi phiên bản vào <code>schema_migrations</code> chạy trong <code>BEGIN IMMEDIATE ... COMMIT</code>.
+       <b>2. Idempotency:</b> Kiểm tra bảng <code>schema_migrations</code> và <code>PRAGMA table_info</code> trước khi chạy <code>ALTER TABLE</code>; gọi <code>run_migrations()</code> nhiều lần không gây lỗi trùng cột hoặc trùng dữ liệu.
+       <b>3. Bảo toàn dữ liệu cũ:</b> Các bản ghi <code>workflows</code>, <code>accounts</code>, <code>jobs</code> có <code>project_id IS NULL</code> được tự động gắn vào dự án mặc định <code>proj-jx2-mobile-001</code>.</p>
+  </div>
+</div>
+      <div class="page-bottom-bar">
+        <span>Hồ sơ nghiệm thu Giai đoạn P2: Multi-Project SQLite v2, Backup/Migration/Rollback, JX2 Preservation, WinCred/DPAPI &amp; Project CRUD</span>
+        <span>Commit Base: 9bd0e45 (từ fab1a1a)</span>
+        <span class="pg-num">Trang 04 / 12</span>
+      </div>
+    </section>
+    
+    <section class="pdf-page" id="page-05">
+      <div class="page-top-bar">
+        <div class="pt-left">
+          <span class="pt-badge">BACKUP & ROLLBACK</span>
+          <span class="pt-title">Quy trình Online Backup, Restore Probe & Atomic Rollback</span>
+        </div>
+        <div class="pt-right">FARMERPRO P2 ACCEPTANCE · BRANCH feat/p2-multi-project-storage · 2026-11-22</div>
+      </div>
+      <div class="page-content">
+  <div class="diag-wrap">
+    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTIwIDQzMCIgZm9udC1mYW1pbHk9IlNlZ29lIFVJLCBBcmlhbCwgc2Fucy1zZXJpZiI+CiAgPHJlY3Qgd2lkdGg9IjExMjAiIGhlaWdodD0iNDMwIiByeD0iMTIiIGZpbGw9IiMwRjE3MkEiLz4KICA8dGV4dCB4PSI1NjAiIHk9IjM0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRjhGQUZDIiBmb250LXNpemU9IjE4IiBmb250LXdlaWdodD0iNzAwIj5RVVkgVFLDjE5IIENIVVnhu4JOIMSQ4buUSSBBTiBUT8OATiBWMSDihpIgVjIgKE9OTElORSBCQUNLVVAsIFJFU1RPUkUgUFJPQkUgJmFtcDsgQVRPTUlDIFJPTExCQUNLKTwvdGV4dD4KCiAgPCEtLSBTdGVwIDEgLS0+CiAgPHJlY3QgeD0iMjgiIHk9Ijc1IiB3aWR0aD0iMTg1IiBoZWlnaHQ9IjEyMiIgcng9IjkiIGZpbGw9IiMxRTI5M0IiIHN0cm9rZT0iIzY0NzQ4QiIgc3Ryb2tlLXdpZHRoPSIxLjgiLz4KICA8dGV4dCB4PSIxMjAiIHk9Ijk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTNDNUZEIiBmb250LXNpemU9IjEyLjUiIGZvbnQtd2VpZ2h0PSI3MDAiPkLGr+G7mkMgMTogTkdV4buSTiBWMTwvdGV4dD4KICA8dGV4dCB4PSIxMjAiIHk9IjEyMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0Y4RkFGQyIgZm9udC1zaXplPSIxMS41Ij5kaXN0LXBvcnRhYmxlIGZhcm1lcnByby5kYjwvdGV4dD4KICA8dGV4dCB4PSIxMjAiIHk9IjE0MiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0NCRDVFMSIgZm9udC1zaXplPSIxMSI+MiBkZXZpY2VzIMK3IDIgd29ya2Zsb3dzPC90ZXh0PgogIDx0ZXh0IHg9IjEyMCIgeT0iMTYwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjQ0JENUUxIiBmb250LXNpemU9IjExIj4yIGpvYnMgwrcgMzEgc3RlcF9ldmVudHM8L3RleHQ+CiAgPHRleHQgeD0iMTIwIiB5PSIxODIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTEiPmludGVncml0eV9jaGVjayA9IG9rPC90ZXh0PgoKICA8IS0tIFN0ZXAgMiAtLT4KICA8cmVjdCB4PSIyNDIiIHk9Ijc1IiB3aWR0aD0iMTk1IiBoZWlnaHQ9IjEyMiIgcng9IjkiIGZpbGw9IiMxNzI1NTQiIHN0cm9rZT0iIzNCODJGNiIgc3Ryb2tlLXdpZHRoPSIxLjgiLz4KICA8dGV4dCB4PSIzMzkiIHk9Ijk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTNDNUZEIiBmb250LXNpemU9IjEyLjUiIGZvbnQtd2VpZ2h0PSI3MDAiPkLGr+G7mkMgMjogT05MSU5FIEJBQ0tVUDwvdGV4dD4KICA8dGV4dCB4PSIzMzkiIHk9IjEyMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0Y4RkFGQyIgZm9udC1zaXplPSIxMS41Ij5ydXNxbGl0ZTo6YmFja3VwOjpCYWNrdXA8L3RleHQ+CiAgPHRleHQgeD0iMzM5IiB5PSIxNDIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNDQkQ1RTEiIGZvbnQtc2l6ZT0iMTEiPkfhu5lwIFdBTCBmcmFtZXMgYW4gdG/DoG48L3RleHQ+CiAgPHRleHQgeD0iMzM5IiB5PSIxNjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNDQkQ1RTEiIGZvbnQtc2l6ZT0iMTEiPmRpc3RfcG9ydGFibGVfcHJlX3YyLmRiPC90ZXh0PgogIDx0ZXh0IHg9IjMzOSIgeT0iMTgyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNkVFN0I3IiBmb250LXNpemU9IjExIj5TSEEtMjU2ICsgRksgQ2hlY2sgPSAwPC90ZXh0PgoKICA8IS0tIFN0ZXAgMyAtLT4KICA8cmVjdCB4PSI0NjYiIHk9Ijc1IiB3aWR0aD0iMTk1IiBoZWlnaHQ9IjEyMiIgcng9IjkiIGZpbGw9IiMxNzI1NTQiIHN0cm9rZT0iIzM4QkRGOCIgc3Ryb2tlLXdpZHRoPSIxLjgiLz4KICA8dGV4dCB4PSI1NjMiIHk9Ijk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjN0REM0ZDIiBmb250LXNpemU9IjEyLjUiIGZvbnQtd2VpZ2h0PSI3MDAiPkLGr+G7mkMgMzogUkVTVE9SRSBQUk9CRTwvdGV4dD4KICA8dGV4dCB4PSI1NjMiIHk9IjEyMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0Y4RkFGQyIgZm9udC1zaXplPSIxMS41Ij5LaeG7g20gdGjhu60gUmVzdG9yZSBi4bqjbiBzYW88L3RleHQ+CiAgPHRleHQgeD0iNTYzIiB5PSIxNDIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNDQkQ1RTEiIGZvbnQtc2l6ZT0iMTEiPkNo4bqheSB0csaw4bubYyBraGkgY2jhuqFtIERCIHRo4bqtdDwvdGV4dD4KICA8dGV4dCB4PSI1NjMiIHk9IjE2MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0NCRDVFMSIgZm9udC1zaXplPSIxMSI+Q2jhu6luZyBtaW5oIGtow7RpIHBo4bulYyAxMDAlPC90ZXh0PgogIDx0ZXh0IHg9IjU2MyIgeT0iMTgyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNkVFN0I3IiBmb250LXNpemU9IjExIj5yZXN0b3JlUHJvYmVIZWFsdGh5ID0gdHJ1ZTwvdGV4dD4KCiAgPCEtLSBTdGVwIDQgLS0+CiAgPHJlY3QgeD0iNjkwIiB5PSI3NSIgd2lkdGg9IjE5NSIgaGVpZ2h0PSIxMjIiIHJ4PSI5IiBmaWxsPSIjMTMyRDI0IiBzdHJva2U9IiMxMEI5ODEiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9Ijc4NyIgeT0iOTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTIuNSIgZm9udC13ZWlnaHQ9IjcwMCI+Qsav4buaQyA0OiBNSUdSQVRJT04gVjI8L3RleHQ+CiAgPHRleHQgeD0iNzg3IiB5PSIxMjIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNGOEZBRkMiIGZvbnQtc2l6ZT0iMTEuNSI+QkVHSU4gSU1NRURJQVRFIFRYPC90ZXh0PgogIDx0ZXh0IHg9Ijc4NyIgeT0iMTQyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjQ0JENUUxIiBmb250LXNpemU9IjExIj42IGLhuqNuZyBt4bubaSArIEFMVEVSIDMgYuG6o25nPC90ZXh0PgogIDx0ZXh0IHg9Ijc4NyIgeT0iMTYwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjQ0JENUUxIiBmb250LXNpemU9IjExIj5H4bqvbiBk4buvIGxp4buHdSBjxakgLSZndDsgangyLW1vYmlsZTwvdGV4dD4KICA8dGV4dCB4PSI3ODciIHk9IjE4MiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMSI+SWRlbXBvdGVudCDCtyBWZXJzaW9ucyBbMSwgMl08L3RleHQ+CgogIDwhLS0gU3RlcCA1IC0tPgogIDxyZWN0IHg9IjkxNCIgeT0iNzUiIHdpZHRoPSIxNzgiIGhlaWdodD0iMTIyIiByeD0iOSIgZmlsbD0iIzEzMkQyNCIgc3Ryb2tlPSIjMzREMzk5IiBzdHJva2Utd2lkdGg9IjIiLz4KICA8dGV4dCB4PSIxMDAzIiB5PSI5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMi41IiBmb250LXdlaWdodD0iNzAwIj5Cxq/hu5pDIDU6IEpYMiBTRUVEPC90ZXh0PgogIDx0ZXh0IHg9IjEwMDMiIHk9IjEyMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0Y4RkFGQyIgZm9udC1zaXplPSIxMS41Ij5Db3B5IChLaMO0bmcgeMOzYSBn4buRYyk8L3RleHQ+CiAgPHRleHQgeD0iMTAwMyIgeT0iMTQyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjQ0JENUUxIiBmb250LXNpemU9IjExIj4xMCBXb3JrZmxvd3MgKyA4IFBOR3M8L3RleHQ+CiAgPHRleHQgeD0iMTAwMyIgeT0iMTYwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjQ0JENUUxIiBmb250LXNpemU9IjExIj4zIFRhc2tzICsgNiBNb2R1bGVzPC90ZXh0PgogIDx0ZXh0IHg9IjEwMDMiIHk9IjE4MiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMSI+MzEgc3RlcF9ldmVudHMgbmd1ecOqbiB24bq5bjwvdGV4dD4KCiAgPCEtLSBBcnJvd3MgLS0+CiAgPGxpbmUgeDE9IjIxMyIgeTE9IjEzNiIgeDI9IjI0MiIgeTI9IjEzNiIgc3Ryb2tlPSIjOTRBM0I4IiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYXJyMykiLz4KICA8bGluZSB4MT0iNDM3IiB5MT0iMTM2IiB4Mj0iNDY2IiB5Mj0iMTM2IiBzdHJva2U9IiM5NEEzQjgiIHN0cm9rZS13aWR0aD0iMiIgbWFya2VyLWVuZD0idXJsKCNhcnIzKSIvPgogIDxsaW5lIHgxPSI2NjEiIHkxPSIxMzYiIHgyPSI2OTAiIHkyPSIxMzYiIHN0cm9rZT0iIzk0QTNCOCIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2FycjMpIi8+CiAgPGxpbmUgeDE9Ijg4NSIgeTE9IjEzNiIgeDI9IjkxNCIgeTI9IjEzNiIgc3Ryb2tlPSIjOTRBM0I4IiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYXJyMykiLz4KCiAgPCEtLSBSb2xsYmFjayBCb3ggLS0+CiAgPHJlY3QgeD0iMjQyIiB5PSIyNDgiIHdpZHRoPSI2NDMiIGhlaWdodD0iMTQyIiByeD0iMTAiIGZpbGw9IiMzQjEyMTkiIHN0cm9rZT0iI0Y0M0Y1RSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHRleHQgeD0iNTYzIiB5PSIyNzQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNGREE0QUYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiPkPGoCBDSOG6viBST0xMQkFDSyBLw4lQIChUUkFOU0FDVElPTiBBVE9NSUNJVFkgKyBCQUNLVVAgUkVTVE9SRSk8L3RleHQ+CiAgPHRleHQgeD0iMjY1IiB5PSIzMDIiIGZpbGw9IiNGRkU0RTYiIGZvbnQtc2l6ZT0iMTIiPjEuIFJvbGxiYWNrIFThu7EgxJHhu5luZyB0cm9uZyBTUUxpdGUgVHJhbnNhY3Rpb246IE7hur91IGLhuqV0IGvhu7MgbOG7h25oIERETC9ETUwgbsOgbyBs4buXaSAoxJHDoyB0ZXN0IGdp4bqjIGzhuq1wIHYzIGzhu5dpIGdp4buvYSBjaOG7q25nKSw8L3RleHQ+CiAgPHRleHQgeD0iMjgyIiB5PSIzMjEiIGZpbGw9IiNGRUNERDMiIGZvbnQtc2l6ZT0iMTEuNSI+dG/DoG4gYuG7mSBDUkVBVEUvQUxURVIvSU5TRVJUIMSRxrDhu6NjIGhvw6BuIHTDoWMgMTAwJSwgc2NoZW1hX21pZ3JhdGlvbnMgZ2nhu68gbmd1ecOqbiBbMSwgMl0sIDAgYuG6o25nIHLDoWMuPC90ZXh0PgogIDx0ZXh0IHg9IjI2NSIgeT0iMzQ4IiBmaWxsPSIjRkZFNEU2IiBmb250LXNpemU9IjEyIj4yLiBSb2xsYmFjayBUb8OgbiBD4bulYyBzYXUgVHJp4buDbiBraGFpOiBQaOG7pWMgaOG7k2kgZmlsZSBEQiB04burIGJhY2t1cHMvcDJfdmVyaWZpZWRfYmFja3VwL2Rpc3RfcG9ydGFibGVfcHJlX3YyLmRiPC90ZXh0PgogIDx0ZXh0IHg9IjI4MiIgeT0iMzY3IiBmaWxsPSIjRkVDREQzIiBmb250LXNpemU9IjExLjUiPmvDqG0gZ2l0IGNoZWNrb3V0IG1hc3RlciAoZmFiMWExYSkuIEThu68gbGnhu4d1IGfhu5FjIGdhbWVzL2p4Mm1vYmlsZS8gY2jGsGEgYuG7iyB4w7NhIG7Dqm4gaG/DoG4gbmd1ecOqbiB04bupYyB0aMOsLjwvdGV4dD4KCiAgPGxpbmUgeDE9Ijc4NyIgeTE9IjE5NyIgeDI9Ijc4NyIgeTI9IjI0OCIgc3Ryb2tlPSIjRjQzRjVFIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1kYXNoYXJyYXk9IjUsNCIgbWFya2VyLWVuZD0idXJsKCNhcnJSZWQpIi8+CgogIDxkZWZzPgogICAgPG1hcmtlciBpZD0iYXJyMyIgbWFya2VyV2lkdGg9IjgiIG1hcmtlckhlaWdodD0iOCIgcmVmWD0iNiIgcmVmWT0iMyIgb3JpZW50PSJhdXRvIj4KICAgICAgPHBhdGggZD0iTTAsMCBMMCw2IEw3LDMgeiIgZmlsbD0iIzk0QTNCOCIvPgogICAgPC9tYXJrZXI+CiAgICA8bWFya2VyIGlkPSJhcnJSZWQiIG1hcmtlcldpZHRoPSI4IiBtYXJrZXJIZWlnaHQ9IjgiIHJlZlg9IjYiIHJlZlk9IjMiIG9yaWVudD0iYXV0byI+CiAgICAgIDxwYXRoIGQ9Ik0wLDAgTDAsNiBMNywzIHoiIGZpbGw9IiNGNDNGNUUiLz4KICAgIDwvbWFya2VyPgogIDwvZGVmcz4KPC9zdmc+" class="diag-img" style="max-height:105mm;"/>
+  </div>
+  <div class="grid-2" style="margin-top:2.5mm;">
+    <div class="card" style="padding:2.2mm 3mm;">
+      <div class="card-h" style="margin-bottom:1.4mm;">KẾT QUẢ KIỂM THỬ ROLLBACK KHI MIGRATION LỖI (SANDBOX PROOF)</div>
+      <table class="tbl-tight">
+        <tr><th>Tiêu chí Kiểm thử Rollback</th><th>Kết quả</th><th>Giá trị Đo được</th></tr>
+        <tr><td>Thực thi Migration v3 lỗi giữa chừng</td><td><span class="tag-pass">PASS</span></td><td><code>faultyV3Rejected = True</code></td></tr>
+        <tr><td>Phiên bản sau khi Rollback</td><td><span class="tag-pass">PASS</span></td><td><code>versionsAfterRollback = [1, 2]</code></td></tr>
+        <tr><td>Bảng rác <code>p2_faulty_temp</code> bị hoàn tác</td><td><span class="tag-pass">PASS</span></td><td><code>cleanAtomicRollback = True</code></td></tr>
+        <tr><td>Toàn vẹn dữ liệu sau Rollback</td><td><span class="tag-pass">PASS</span></td><td><code>integrity = ok</code>, 0 FK violations</td></tr>
+      </table>
+    </div>
+    <div class="card" style="padding:2.2mm 3mm;">
+      <div class="card-h" style="margin-bottom:1.4mm;">KẾT QUẢ ONLINE BACKUP &amp; RESTORE (V2 BACKUP API)</div>
+      <table class="tbl-tight">
+        <tr><th>Thuộc tính Backup / Restore</th><th>Giá trị Thực tế</th></tr>
+        <tr><td>Backup Pre-Migration Production</td><td><code>backups/p2_verified_backup/dist_portable_pre_v2.db</code></td></tr>
+        <tr><td>Restore Probe trước Migration thật</td><td><code>restoreProbeHealthy = True</code></td></tr>
+        <tr><td>Backup V2 Sandbox SHA-256</td><td><code>7b017a9ad433274de22acd8b578a...</code></td></tr>
+        <tr><td>Khớp 100% số dòng sau Restore</td><td><span class="tag-pass">PASS</span> 15/15 bảng khớp chính xác (11 wf, 31 events)</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+      <div class="page-bottom-bar">
+        <span>Hồ sơ nghiệm thu Giai đoạn P2: Multi-Project SQLite v2, Backup/Migration/Rollback, JX2 Preservation, WinCred/DPAPI &amp; Project CRUD</span>
+        <span>Commit Base: 9bd0e45 (từ fab1a1a)</span>
+        <span class="pg-num">Trang 05 / 12</span>
+      </div>
+    </section>
+    
+    <section class="pdf-page" id="page-06">
+      <div class="page-top-bar">
+        <div class="pt-left">
+          <span class="pt-badge">BẢO TOÀN DỮ LIỆU JX2</span>
+          <span class="pt-title">Đối chiếu Dữ liệu Trước/Sau Migration & Bảo toàn 10 JX2 Workflows</span>
+        </div>
+        <div class="pt-right">FARMERPRO P2 ACCEPTANCE · BRANCH feat/p2-multi-project-storage · 2026-11-22</div>
+      </div>
+      <div class="page-content">
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-h">SO SÁNH TRƯỚC / SAU TRÊN PRODUCTION DB (dist-portable)</div>
+      <table>
+        <tr><th>Bảng SQLite</th><th>Trước Migration (v1)</th><th>Sau Migration (v2 + JX2)</th><th>Trạng thái</th></tr>
+        <tr><td><code>schema_migrations</code></td><td>0 (chưa tracking)</td><td><b>2</b> (versions [1, 2])</td><td><span class="tag-pass">PASS</span></td></tr>
+        <tr><td><code>devices</code></td><td>2</td><td><b>2</b> (giữ 100%)</td><td><span class="tag-pass">PASS</span></td></tr>
+        <tr><td><code>workflows</code></td><td>2</td><td><b>11</b> (2 cũ + 9 JX2 mới)</td><td><span class="tag-pass">PASS</span></td></tr>
+        <tr><td><code>workflow_versions</code></td><td>2</td><td><b>11</b> (giữ version cũ)</td><td><span class="tag-pass">PASS</span></td></tr>
+        <tr><td><code>jobs</code></td><td>2</td><td><b>2</b> (gắn <code>proj-jx2-mobile-001</code>)</td><td><span class="tag-pass">PASS</span></td></tr>
+        <tr><td><code>step_events</code></td><td>31</td><td><b>31</b> (giữ 100%)</td><td><span class="tag-pass">PASS</span></td></tr>
+        <tr><td><code>projects</code></td><td>(chưa có bảng)</td><td><b>1</b> (<code>proj-jx2-mobile-001</code>)</td><td><span class="tag-pass">PASS</span></td></tr>
+        <tr><td><code>vision_templates</code></td><td>(chưa có bảng)</td><td><b>8</b> (8 PNG thật + SHA-256)</td><td><span class="tag-pass">PASS</span></td></tr>
+        <tr><td><code>project_modules</code></td><td>(chưa có bảng)</td><td><b>6</b> (6 modules cấu hình)</td><td><span class="tag-pass">PASS</span></td></tr>
+        <tr><td><code>task_definitions</code></td><td>(chưa có bảng)</td><td><b>3</b> (gắn wf-jx2-*)</td><td><span class="tag-pass">PASS</span></td></tr>
+        <tr><td><code>mini_tool_schemas</code></td><td>(chưa có bảng)</td><td><b>1</b> (UI Schema mặc định)</td><td><span class="tag-pass">PASS</span></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-h">KIỂM CHỨNG 10 WORKFLOW JX2 &amp; 8 ẢNH MẪU PNG</div>
+      <p style="margin-bottom:2mm;">Toàn bộ 10 file từ <code>games/jx2mobile/*.json</code> và 8 ảnh mẫu <code>games/jx2mobile/templates/*.png</code> được kiểm tra hợp lệ qua <code>WorkflowValidator</code> và copy không phá hủy vào <code>projects/jx2-mobile/</code>. Nguồn gốc <code>games/jx2mobile/</code> giữ nguyên 100%.</p>
+      <table>
+        <tr><th>Workflow ID</th><th>Danh mục</th><th>Trạng thái</th></tr>
+        <tr><td><code>wf-jx2-01-login</code></td><td>Khởi động &amp; Đăng nhập</td><td><span class="tag-pass">Bảo toàn + Import</span></td></tr>
+        <tr><td><code>wf-jx2-02-char</code></td><td>Tạo nhân vật</td><td><span class="tag-pass">Import + Ver 1</span></td></tr>
+        <tr><td><code>wf-jx2-03-tutorial</code></td><td>Hướng dẫn tân thủ</td><td><span class="tag-pass">Import + Ver 1</span></td></tr>
+        <tr><td><code>wf-jx2-04-npc</code></td><td>Tương tác NPC</td><td><span class="tag-pass">Import + Ver 1</span></td></tr>
+        <tr><td><code>wf-jx2-05-accept</code></td><td>Tiếp nhận nhiệm vụ</td><td><span class="tag-pass">Import + Ver 1</span></td></tr>
+        <tr><td><code>wf-jx2-06-movement</code></td><td>Di chuyển</td><td><span class="tag-pass">Import + Ver 1</span></td></tr>
+        <tr><td><code>wf-jx2-07-combat</code></td><td>Chiến đấu</td><td><span class="tag-pass">Import + Ver 1</span></td></tr>
+        <tr><td><code>wf-jx2-08-verify</code></td><td>Xác minh &amp; Thưởng</td><td><span class="tag-pass">Import + Ver 1</span></td></tr>
+        <tr><td><code>wf-jx2-09-complete</code></td><td>Hoàn tất tân thủ</td><td><span class="tag-pass">Import + Ver 1</span></td></tr>
+        <tr><td><code>wf-jx2-e2e-beginner</code></td><td>E2E Toàn trình</td><td><span class="tag-pass">Import + Ver 1</span></td></tr>
+        <tr><td><code>wf-beginner-quest-01</code></td><td>Legacy v1 DB</td><td><span class="tag-pass">Bảo toàn 100%</span></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+      <div class="page-bottom-bar">
+        <span>Hồ sơ nghiệm thu Giai đoạn P2: Multi-Project SQLite v2, Backup/Migration/Rollback, JX2 Preservation, WinCred/DPAPI &amp; Project CRUD</span>
+        <span>Commit Base: 9bd0e45 (từ fab1a1a)</span>
+        <span class="pg-num">Trang 06 / 12</span>
+      </div>
+    </section>
+    
+    <section class="pdf-page" id="page-07">
+      <div class="page-top-bar">
+        <div class="pt-left">
+          <span class="pt-badge">PROJECT CRUD & ISOLATION</span>
+          <span class="pt-title">Chứng cứ Project CRUD, Deep Clone & Cách ly Đa Dự án (3 GameProjects)</span>
+        </div>
+        <div class="pt-right">FARMERPRO P2 ACCEPTANCE · BRANCH feat/p2-multi-project-storage · 2026-11-22</div>
+      </div>
+      <div class="page-content">
+  <div class="card">
+    <div class="card-h">1. KẾT QUẢ THỰC THI PROJECT CRUD &amp; CLONE TRÊN SANDBOX (fp-cli verify-p2)</div>
+    <table>
+      <tr>
+        <th>Project ID</th><th>Slug</th><th>Tên Game Project</th><th>Package ID</th>
+        <th>Workflows</th><th>Templates</th><th>Tasks</th><th>Modules</th><th>Accounts</th><th>Jobs</th>
+      </tr>
+      <tr><td><code>proj-jx2-mobile-001</code></td><td><code>jx2-mobile</code></td><td>Võ Hiệp Truyền Kỳ 2 Mobile</td><td><code>com.blackhole.jx2mobile</code></td><td><b>11</b></td><td><b>8</b></td><td><b>3</b></td><td><b>5</b></td><td><b>0</b></td><td><b>2</b></td></tr><tr><td><code>proj-kingdom-slg-p2-b29547ee</code></td><td><code>kingdom-slg-p2</code></td><td>Kingdom Rise: Tactics SLG (Verified)</td><td><code>com.kingdom.rise.slg</code></td><td><b>1</b></td><td><b>1</b></td><td><b>1</b></td><td><b>3</b></td><td><b>1</b></td><td><b>0</b></td></tr><tr><td><code>proj-kingdom-slg-clone-d6ab43d6</code></td><td><code>kingdom-slg-clone</code></td><td>Kingdom Rise Clone</td><td><code>com.kingdom.rise.slg</code></td><td><b>1</b></td><td><b>1</b></td><td><b>1</b></td><td><b>3</b></td><td><b>0</b></td><td><b>0</b></td></tr>
+    </table>
+  </div>
+
+  <div class="grid-2" style="margin-top:4mm;">
+    <div class="card">
+      <div class="card-h">2. CÁC BÀI KIỂM THỬ PROJECT ISOLATION ĐÃ CHỨNG MINH</div>
+      <table>
+        <tr><th>Kịch bản Tấn công / Trộn lẫn Dự án</th><th>Cơ chế Bảo vệ</th><th>Kết quả</th></tr>
+        <tr><td>Project B cố ghi đè <code>workflow_id</code> thuộc Project A</td><td>Kiểm tra chủ sở hữu <code>workflows.project_id</code></td><td><span class="tag-pass">BLOCKED</span> (<code>PROJECT_ISOLATION_VIOLATION</code>)</td></tr>
+        <tr><td>Project B cố tạo Task trỏ tới Workflow của Project A</td><td>Xác thực <code>workflow.project_id == task.project_id</code></td><td><span class="tag-pass">BLOCKED</span> (<code>PROJECT_ISOLATION_VIOLATION</code>)</td></tr>
+        <tr><td>Project B lưu <code>MiniToolUiSchema</code> mang <code>slug</code> Project A</td><td>Kiểm tra <code>schema.project_slug == project.slug</code></td><td><span class="tag-pass">BLOCKED</span> (<code>PROJECT_ISOLATION_VIOLATION</code>)</td></tr>
+        <tr><td>Xóa Project C (Clone) khỏi SQLite &amp; đĩa</td><td>Xóa theo phạm vi <code>project_id</code> trong transaction</td><td><span class="tag-pass">PASS</span> Project A/B nguyên vẹn 100%</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-h">3. ĐỒNG BỘ THƯ MỤC ĐĨA &amp; DEEP CLONE</div>
+      <p><b>Cấu trúc tự động khởi tạo cho mỗi Project mới:</b></p>
+      <pre class="code-box">projects/&lt;slug&gt;/
+  ├── project.json       (GameProjectManifest đồng bộ)
+  ├── ui-schema.json     (MiniToolUiSchema đồng bộ khi save)
+  ├── workflows/*.json   (Quy trình riêng của Project)
+  ├── templates/*.png    (Ảnh mẫu Vision riêng + SHA-256)
+  └── branding/icon.ico  (Biểu tượng EXE riêng của Project)</pre>
+      <p style="margin-top:2mm;"><b>Deep Clone (<code>clone_project</code>):</b> Tự động remap <code>workflowId</code> mới, tạo <code>workflow_versions</code>, sao chép <code>templates/*.png</code>, remap <code>task_definitions</code> và cập nhật <code>ui-schema.json</code> không trùng lặp khóa.</p>
+    </div>
+  </div>
+</div>
+      <div class="page-bottom-bar">
+        <span>Hồ sơ nghiệm thu Giai đoạn P2: Multi-Project SQLite v2, Backup/Migration/Rollback, JX2 Preservation, WinCred/DPAPI &amp; Project CRUD</span>
+        <span>Commit Base: 9bd0e45 (từ fab1a1a)</span>
+        <span class="pg-num">Trang 07 / 12</span>
+      </div>
+    </section>
+    
+    <section class="pdf-page" id="page-08">
+      <div class="page-top-bar">
+        <div class="pt-left">
+          <span class="pt-badge">VAULT & DPAPI KEYSTORE</span>
+          <span class="pt-title">Kiến trúc Windows Credential Manager & Bảo vệ Keystore bằng DPAPI</span>
+        </div>
+        <div class="pt-right">FARMERPRO P2 ACCEPTANCE · BRANCH feat/p2-multi-project-storage · 2026-11-22</div>
+      </div>
+      <div class="page-content">
+  <div class="diag-wrap">
+    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTIwIDQ0MCIgZm9udC1mYW1pbHk9IlNlZ29lIFVJLCBBcmlhbCwgc2Fucy1zZXJpZiI+CiAgPHJlY3Qgd2lkdGg9IjExMjAiIGhlaWdodD0iNDQwIiByeD0iMTIiIGZpbGw9IiMwRjE3MkEiLz4KICA8dGV4dCB4PSI1NjAiIHk9IjM0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRjhGQUZDIiBmb250LXNpemU9IjE4LjUiIGZvbnQtd2VpZ2h0PSI3MDAiPkLhuqJPIE3huqxUIELDjSBN4bqsVCDEkEEgROG7sCDDgU46IFdJTkRPV1MgQ1JFREVOVElBTCBNQU5BR0VSICZhbXA7IERQQVBJIEtFWVNUT1JFPC90ZXh0PgoKICA8IS0tIExlZnQgUGFuZWw6IFdpbmRvd3MgQ3JlZGVudGlhbCBNYW5hZ2VyIC0tPgogIDxyZWN0IHg9IjI0IiB5PSI1NiIgd2lkdGg9IjUyNiIgaGVpZ2h0PSIzNjAiIHJ4PSIxMCIgZmlsbD0iIzFFMjkzQiIgc3Ryb2tlPSIjMzhCREY4IiBzdHJva2Utd2lkdGg9IjIiLz4KICA8dGV4dCB4PSI0NCIgeT0iODQiIGZpbGw9IiMzOEJERjgiIGZvbnQtc2l6ZT0iMTQuNSIgZm9udC13ZWlnaHQ9IjcwMCI+MS4gV0lORE9XUyBDUkVERU5USUFMIE1BTkFHRVIgKGFkdmFwaTMyLmRsbCk8L3RleHQ+CiAgPHRleHQgeD0iNDQiIHk9IjEwNiIgZmlsbD0iI0NCRDVFMSIgZm9udC1zaXplPSIxMi41Ij5UaGF5IHRo4bq/IGhvw6BuIHRvw6BuIEhhc2hNYXAgUkFNIGPFqTsgbcOjIGjDs2EgdGhlbyBwaGnDqm4gV2luZG93cyBPUy48L3RleHQ+CgogIDxyZWN0IHg9IjQ0IiB5PSIxMjIiIHdpZHRoPSI0ODYiIGhlaWdodD0iNTgiIHJ4PSI3IiBmaWxsPSIjMEYyOTQyIiBzdHJva2U9IiM2MEE1RkEiIHN0cm9rZS13aWR0aD0iMS40Ii8+CiAgPHRleHQgeD0iNjAiIHk9IjE0NCIgZmlsbD0iI0Y4RkFGQyIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCI+TmFtZXNwYWNlIEThu7Egw6FuIChQcm9qZWN0IFNjb3BlKTwvdGV4dD4KICA8dGV4dCB4PSI2MCIgeT0iMTY1IiBmaWxsPSIjOTNDNUZEIiBmb250LXNpemU9IjEyLjUiPkNSRURfTUdSOi8vRmFybWVyUHJvL3Byb2plY3QvJmx0O3Byb2plY3Rfc2x1ZyZndDsvJmx0O2tleSZndDs8L3RleHQ+CgogIDxyZWN0IHg9IjQ0IiB5PSIxOTIiIHdpZHRoPSI0ODYiIGhlaWdodD0iNTgiIHJ4PSI3IiBmaWxsPSIjMTMyRDI0IiBzdHJva2U9IiMzNEQzOTkiIHN0cm9rZS13aWR0aD0iMS40Ii8+CiAgPHRleHQgeD0iNjAiIHk9IjIxNCIgZmlsbD0iI0Y4RkFGQyIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCI+TmFtZXNwYWNlIE1pbmkgVG9vbCAoTWluaVRvb2wgU2NvcGUpPC90ZXh0PgogIDx0ZXh0IHg9IjYwIiB5PSIyMzUiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTIuNSI+Q1JFRF9NR1I6Ly9GYXJtZXJQcm8vbWluaXRvb2wvJmx0O3Rvb2xfc2x1ZyZndDsvJmx0O2tleSZndDs8L3RleHQ+CgogIDxyZWN0IHg9IjQ0IiB5PSIyNjIiIHdpZHRoPSI0ODYiIGhlaWdodD0iNTgiIHJ4PSI3IiBmaWxsPSIjMkIyMTE4IiBzdHJva2U9IiNGQkJGMjQiIHN0cm9rZS13aWR0aD0iMS40Ii8+CiAgPHRleHQgeD0iNjAiIHk9IjI4NCIgZmlsbD0iI0Y4RkFGQyIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCI+TmFtZXNwYWNlIFTDoGkga2hv4bqjbiBHYW1lIChBY2NvdW50IFZhdWx0IFNjb3BlKTwvdGV4dD4KICA8dGV4dCB4PSI2MCIgeT0iMzA1IiBmaWxsPSIjRkRFNjhBIiBmb250LXNpemU9IjEyLjUiPkNSRURfTUdSOi8vRmFybWVyUHJvL2FjY291bnQvJmx0O3Byb2plY3Rfc2x1ZyZndDsvJmx0O2FjY291bnRfaWQmZ3Q7PC90ZXh0PgoKICA8dGV4dCB4PSI0NCIgeT0iMzQ4IiBmaWxsPSIjRTJFOEYwIiBmb250LXNpemU9IjEyLjUiPuKAoiBDaOG6t24gJyonLCAnPycsICcuLicgdHLDoW5oIHbGsOG7o3QgcmFuaCBnaeG7m2kga2hpIENyZWRFbnVtZXJhdGVXPC90ZXh0PgogIDx0ZXh0IHg9IjQ0IiB5PSIzNjkiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuNSI+4oCiIFByb2plY3QgQSAmYW1wOyBQcm9qZWN0IEIgdMOhY2ggYmnhu4d0IHR1eeG7h3QgxJHhu5FpIGtoaSBTZXQgLyBHZXQgLyBEZWxldGU8L3RleHQ+CiAgPHRleHQgeD0iNDQiIHk9IjM5MCIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMi41Ij7igKIgxJDDoyBraeG7g20gY2jhu6luZyB0csOqbiBXaW5kb3dzIE9TIHRo4bqtdDogNi82IGZwLXNlY3VyaXR5IHRlc3RzPC90ZXh0PgoKICA8IS0tIFJpZ2h0IFBhbmVsOiBEUEFQSSBLZXlzdG9yZSAtLT4KICA8cmVjdCB4PSI1NzAiIHk9IjU2IiB3aWR0aD0iNTI2IiBoZWlnaHQ9IjM2MCIgcng9IjEwIiBmaWxsPSIjMUUyOTNCIiBzdHJva2U9IiNBODU1RjciIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjU5MCIgeT0iODQiIGZpbGw9IiNFOUQ1RkYiIGZvbnQtc2l6ZT0iMTQuNSIgZm9udC13ZWlnaHQ9IjcwMCI+Mi4gUFJPRFVDRVIgRUQyNTUxOSBLRVlTVE9SRSArIERQQVBJIChjcnlwdDMyLmRsbCk8L3RleHQ+CiAgPHRleHQgeD0iNTkwIiB5PSIxMDYiIGZpbGw9IiNDQkQ1RTEiIGZvbnQtc2l6ZT0iMTIuNSI+QuG6o28gduG7hyBQcml2YXRlIFNlZWQgY+G7p2EgbmjDoCBz4bqjbiB4deG6pXQgYuG6sW5nIENyeXB0UHJvdGVjdERhdGEuPC90ZXh0PgoKICA8cmVjdCB4PSI1OTAiIHk9IjEyMiIgd2lkdGg9IjQ4NiIgaGVpZ2h0PSI3MiIgcng9IjciIGZpbGw9IiMyRTEwNjUiIHN0cm9rZT0iI0MwODRGQyIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8dGV4dCB4PSI2MDYiIHk9IjE0NCIgZmlsbD0iI0Y4RkFGQyIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCI+S2hvIGtow7NhIEFjdGl2ZSAoJUxPQ0FMQVBQREFUQSVcRmFybWVyUHJvXFByb2R1Y2VyS2V5c1wpPC90ZXh0PgogIDx0ZXh0IHg9IjYwNiIgeT0iMTY0IiBmaWxsPSIjRTlENUZGIiBmb250LXNpemU9IjEyLjIiPkZvcm1hdCB2MjogZHBhcGlQcm90ZWN0ZWRTZWVkQjY0IChLSMOUTkcgY8OybiBzZWNyZXRTZWVkSGV4KTwvdGV4dD4KICA8dGV4dCB4PSI2MDYiIHk9IjE4MyIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMi4yIj5U4buxIG7Dom5nIGPhuqVwIGZpbGUgdjEgY8WpIGzDqm4gRFBBUEkgdjIgZ2nhu68gbmd1ecOqbiBrZXlwYWlyPC90ZXh0PgoKICA8cmVjdCB4PSI1OTAiIHk9IjIwOCIgd2lkdGg9IjIzNCIgaGVpZ2h0PSI4OCIgcng9IjciIGZpbGw9IiMxNzI1NTQiIHN0cm9rZT0iIzYwQTVGQSIgc3Ryb2tlLXdpZHRoPSIxLjQiLz4KICA8dGV4dCB4PSI3MDciIHk9IjIzMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzkzQzVGRCIgZm9udC1zaXplPSIxMy41IiBmb250LXdlaWdodD0iNzAwIj5Yb2F5IHbDsm5nIEtow7NhIChSb3RhdGUpPC90ZXh0PgogIDx0ZXh0IHg9IjcwNyIgeT0iMjUzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRTJFOEYwIiBmb250LXNpemU9IjEyLjIiPkzGsHUga2jDs2EgY8WpIHNhbmc8L3RleHQ+CiAgPHRleHQgeD0iNzA3IiB5PSIyNzEiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNDQkQ1RTEiIGZvbnQtc2l6ZT0iMTIuMiI+YXJjaGl2ZWRfcHJvZHVjZXJfKi5qc29uPC90ZXh0PgogIDx0ZXh0IHg9IjcwNyIgeT0iMjg4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNkVFN0I3IiBmb250LXNpemU9IjEyLjIiPlNpbmgga2jDs2EgRWQyNTUxOSBt4bubaTwvdGV4dD4KCiAgPHJlY3QgeD0iODQyIiB5PSIyMDgiIHdpZHRoPSIyMzQiIGhlaWdodD0iODgiIHJ4PSI3IiBmaWxsPSIjMTMyRDI0IiBzdHJva2U9IiMzNEQzOTkiIHN0cm9rZS13aWR0aD0iMS40Ii8+CiAgPHRleHQgeD0iOTU5IiB5PSIyMzIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2RUU3QjciIGZvbnQtc2l6ZT0iMTMuNSIgZm9udC13ZWlnaHQ9IjcwMCI+QmFja3VwICZhbXA7IFJlc3RvcmU8L3RleHQ+CiAgPHRleHQgeD0iOTU5IiB5PSIyNTMiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuMiI+RFBBUEkgQmFja3VwIEVudHJvcHkgKzwvdGV4dD4KICA8dGV4dCB4PSI5NTkiIHk9IjI3MSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0NCRDVFMSIgZm9udC1zaXplPSIxMi4yIj5wYXlsb2FkU2hhMjU2IEludGVncml0eTwvdGV4dD4KICA8dGV4dCB4PSI5NTkiIHk9IjI4OCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0ZEQTRBRiIgZm9udC1zaXplPSIxMi4yIj5DaOG6t24gZmlsZSBiYWNrdXAgYuG7iyBz4butYTwvdGV4dD4KCiAgPHRleHQgeD0iNTkwIiB5PSIzMjgiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuNSI+4oCiIFplcm9pemUgYuG7mSBuaOG7myDEkeG7h20gcGxhaW50ZXh0IHNlZWQgbmdheSBzYXUga2hpIG3DoyBow7NhIERQQVBJPC90ZXh0PgogIDx0ZXh0IHg9IjU5MCIgeT0iMzQ4IiBmaWxsPSIjRTJFOEYwIiBmb250LXNpemU9IjEyLjUiPuKAoiBNaW5pIFJ1bnRpbWUgduG6q24gZ2nhu68gcmFuaCBnaeG7m2k6IEtIw5RORyDEkeG7jWMgUHJvZHVjZXIgS2V5c3RvcmU8L3RleHQ+CiAgPHRleHQgeD0iNTkwIiB5PSIzNjkiIGZpbGw9IiNFMkU4RjAiIGZvbnQtc2l6ZT0iMTIuNSI+4oCiIEtp4buDbSB0cmEgY2jhu68ga8O9IEVkMjU1MTkgcHJvYmUgdHLGsOG7m2Mga2hpIGNo4bqlcCBuaOG6rW4gUmVzdG9yZTwvdGV4dD4KICA8dGV4dCB4PSI1OTAiIHk9IjM5MCIgZmlsbD0iIzZFRTdCNyIgZm9udC1zaXplPSIxMi41Ij7igKIgxJDDoyB0ZXN0IERQQVBJIHRhbXBlciArIGxlZ2FjeSB1cGdyYWRlICsgcm90YXRlICsgcmVzdG9yZTogUEFTUzwvdGV4dD4KPC9zdmc+" class="diag-img"/>
+  </div>
+  <div class="grid-2" style="margin-top:3mm;">
+    <div class="card">
+      <div class="card-h">THAY THẾ MOCK HASHMAP BẰNG WIN32 CREDENTIAL MANAGER</div>
+      <p>Lớp <code>CredentialVault</code> trong <code>crates/fp-security/src/lib.rs</code> mặc định sử dụng backend <code>WindowsCredentialManager</code> (gọi trực tiếp <code>advapi32.dll</code>: <code>CredWriteW</code>, <code>CredReadW</code>, <code>CredDeleteW</code>, <code>CredEnumerateW</code>, <code>CredFree</code>) với phạm vi tách biệt theo Project, Mini Tool và Account.</p>
+    </div>
+    <div class="card">
+      <div class="card-h">MÃ HÓA PRODUCER SIGNING KEY BẰNG WINDOWS DPAPI</div>
+      <p><code>ProducerKeystore</code> mã hóa 32-byte Ed25519 Seed qua <code>crypt32.dll::CryptProtectData</code> kèm <code>OptionalEntropy</code> và cờ <code>CRYPTPROTECT_UI_FORBIDDEN</code>. Không còn lưu <code>secretSeedHex</code> dạng rõ trên ổ đĩa; hỗ trợ tự nâng cấp file v1 cũ lên DPAPI v2, xoay vòng khóa, sao lưu và khôi phục an toàn.</p>
+    </div>
+  </div>
+</div>
+      <div class="page-bottom-bar">
+        <span>Hồ sơ nghiệm thu Giai đoạn P2: Multi-Project SQLite v2, Backup/Migration/Rollback, JX2 Preservation, WinCred/DPAPI &amp; Project CRUD</span>
+        <span>Commit Base: 9bd0e45 (từ fab1a1a)</span>
+        <span class="pg-num">Trang 08 / 12</span>
+      </div>
+    </section>
+    
+    <section class="pdf-page" id="page-09">
+      <div class="page-top-bar">
+        <div class="pt-left">
+          <span class="pt-badge">KẾT QUẢ BẢO MẬT</span>
+          <span class="pt-title">Bằng chứng Kiểm thử Windows Credential Manager & DPAPI Keystore</span>
+        </div>
+        <div class="pt-right">FARMERPRO P2 ACCEPTANCE · BRANCH feat/p2-multi-project-storage · 2026-11-22</div>
+      </div>
+      <div class="page-content">
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-h">1. KẾT QUẢ WINDOWS CREDENTIAL MANAGER (OS THẬT)</div>
+      <table>
+        <tr><th>Kiểm thử WinCred (<code>fp-security</code> + <code>fp-cli</code>)</th><th>Kết quả</th><th>Chi tiết Xác minh</th></tr>
+        <tr><td>Backend mặc định của <code>CredentialVault::new()</code></td><td><span class="tag-pass">PASS</span></td><td><code>WindowsCredentialManager</code> (không dùng HashMap mock)</td></tr>
+        <tr><td>Ghi &amp; đọc bí mật Project A vs Project B</td><td><span class="tag-pass">PASS</span></td><td><code>CRED_MGR://FarmerPro/project/jx2-p2-380e1e50/api_secret</code> vs <code>slg-p2-*</code></td></tr>
+        <tr><td>Ghi &amp; đọc bí mật Mini Tool Namespace</td><td><span class="tag-pass">PASS</span></td><td><code>CRED_MGR://FarmerPro/minitool/auto-slg-380e1e50/proxy_auth</code></td></tr>
+        <tr><td>Cách ly namespace chéo &amp; chặn wildcard <code>*</code> / <code>..</code></td><td><span class="tag-pass">PASS</span></td><td><code>isolatedValuesVerified = True</code></td></tr>
+        <tr><td>Liệt kê metadata &amp; xóa sạch sau test</td><td><span class="tag-pass">PASS</span></td><td><code>list_secrets_namespaced</code> chỉ trả URI, không lộ secret</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-h">2. KẾT QUẢ DPAPI KEYSTORE &amp; BACKUP/ROTATION</div>
+      <table>
+        <tr><th>Kiểm thử DPAPI (<code>crypt32.dll</code>)</th><th>Kết quả</th><th>Chi tiết Xác minh</th></tr>
+        <tr><td>Cơ chế bảo vệ trên đĩa</td><td><span class="tag-pass">PASS</span></td><td><code>WIN32_DPAPI_LOCAL_USER</code></td></tr>
+        <tr><td>Loại bỏ hoàn toàn <code>secretSeedHex</code> trên đĩa</td><td><span class="tag-pass">PASS</span></td><td><code>noPlaintextSeedOnDisk = True</code></td></tr>
+        <tr><td>Chặn giải mã DPAPI khi sai Entropy / sửa 1 byte</td><td><span class="tag-pass">PASS</span></td><td><code>CryptUnprotectData</code> fail-closed</td></tr>
+        <tr><td>Tự động nâng cấp file Keystore v1 -&gt; DPAPI v2</td><td><span class="tag-pass">PASS</span></td><td>Giữ nguyên Public Key, xóa plaintext seed</td></tr>
+        <tr><td>Xoay vòng Khóa &amp; Backup/Restore Ed25519</td><td><span class="tag-pass">PASS</span></td><td>Rotate <code>fp-ed25519-c89d249</code> -&gt; Restore khớp 100%</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="card" style="margin-top:4mm;">
+    <div class="card-h">LOG KIỂM THỬ TRỰC TIẾP TỪ `cargo test -p fp-security` (6/6 PASS)</div>
+    <pre class="code-box">running 6 tests
+test tests::test_destructive_action_guard ... ok
+test tests::test_dpapi_roundtrip_and_tamper_detection ... ok
+test tests::test_secret_redaction ... ok
+test tests::test_windows_credential_manager_namespaced_crud_and_isolation ... ok
+test tests::test_dpapi_legacy_v1_keystore_auto_upgrade ... ok
+test tests::test_dpapi_producer_keystore_create_backup_rotate_and_restore ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out</pre>
+  </div>
+</div>
+      <div class="page-bottom-bar">
+        <span>Hồ sơ nghiệm thu Giai đoạn P2: Multi-Project SQLite v2, Backup/Migration/Rollback, JX2 Preservation, WinCred/DPAPI &amp; Project CRUD</span>
+        <span>Commit Base: 9bd0e45 (từ fab1a1a)</span>
+        <span class="pg-num">Trang 09 / 12</span>
+      </div>
+    </section>
+    
+    <section class="pdf-page" id="page-10">
+      <div class="page-top-bar">
+        <div class="pt-left">
+          <span class="pt-badge">IPC & UNIT TESTS</span>
+          <span class="pt-title">Danh mục 26 Tauri IPC Commands P2 & Kết quả 44/44 Workspace Tests</span>
+        </div>
+        <div class="pt-right">FARMERPRO P2 ACCEPTANCE · BRANCH feat/p2-multi-project-storage · 2026-11-22</div>
+      </div>
+      <div class="page-content">
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-h">1. DANH MỤC 26 TAURI IPC COMMANDS MỚI (studio_p2.rs)</div>
+      <table>
+        <tr><th style="width:32%;">Nhóm Chức năng</th><th style="width:68%;">Tauri Commands Đã Đăng ký</th></tr>
+        <tr><td><b>Project Workspace (6)</b></td><td><code>studio_list_projects</code>, <code>studio_get_project_detail</code>, <code>studio_create_project</code>, <code>studio_update_project</code>, <code>studio_clone_project</code>, <code>studio_delete_project</code></td></tr>
+        <tr><td><b>Workflows &amp; Templates (3)</b></td><td><code>studio_list_project_workflows</code>, <code>studio_save_project_workflow</code>, <code>studio_list_project_templates</code></td></tr>
+        <tr><td><b>Tasks &amp; Modules (5)</b></td><td><code>studio_list_project_tasks</code>, <code>studio_upsert_project_task</code>, <code>studio_delete_project_task</code>, <code>studio_list_project_modules</code>, <code>studio_upsert_project_module</code></td></tr>
+        <tr><td><b>Mini Tool Schema &amp; Vault (6)</b></td><td><code>studio_get_ui_schema</code>, <code>studio_save_ui_schema</code>, <code>studio_list_project_accounts</code>, <code>studio_upsert_project_account</code>, <code>studio_vault_set_secret</code>, <code>studio_vault_has_secret</code>, <code>studio_vault_list_namespace</code>, <code>studio_vault_delete_secret</code></td></tr>
+        <tr><td><b>Keystore &amp; DB Ops (7)</b></td><td><code>studio_get_producer_key_status</code>, <code>studio_rotate_producer_key</code>, <code>studio_backup_producer_key</code>, <code>studio_restore_producer_key</code>, <code>studio_backup_database</code>, <code>studio_check_db_integrity</code>, <code>studio_migrate_legacy_jx2</code></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-h">2. TỔNG HỢP 44/44 UNIT TESTS TOÀN WORKSPACE</div>
+      <table>
+        <tr><th>Crate / App</th><th>Số Tests</th><th>Kết quả</th><th>Nội dung Test P2 Mới Bổ sung</th></tr>
+        <tr><td><code>farmerpro</code> (Tauri)</td><td>1</td><td><span class="tag-pass">PASS</span></td><td><code>test_tauri_p2_project_crud_and_isolation_layer</code></td></tr>
+        <tr><td><code>fp-storage</code></td><td>8</td><td><span class="tag-pass">PASS</span></td><td>+5 tests: v1→v2, Rollback, Backup/Restore, JX2 10 wf, Isolation</td></tr>
+        <tr><td><code>fp-security</code></td><td>6</td><td><span class="tag-pass">PASS</span></td><td>+4 tests: WinCred Namespaces, DPAPI, Legacy v1 Upgrade, Backup/Restore</td></tr>
+        <tr><td><code>fp-builder</code></td><td>4</td><td><span class="tag-pass">PASS</span></td><td>PE RT_RCDATA #7777 + DPAPI ProducerKeyManager delegation</td></tr>
+        <tr><td><code>fp-workflow-runtime</code></td><td>3</td><td><span class="tag-pass">PASS</span></td><td>Chạy ổn định sau khi gỡ hardcode <code>jx2mobile</code></td></tr>
+        <tr><td>10 Crates khác</td><td>22</td><td><span class="tag-pass">PASS</span></td><td><code>fp-actions(4), fp-adb(2), fp-bundle*(3), fp-device(3), fp-domain(2), fp-scheduler(2), fp-testkit(1), fp-vision(3), fp-workflow-schema(2)</code></td></tr>
+        <tr><td><b>TỔNG WORKSPACE</b></td><td><b>44</b></td><td><span class="tag-pass">44/44 PASS</span></td><td>0 failed · 0 ignored (Log: <code>cargo_test_workspace_p2_clean.log</code>)</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+      <div class="page-bottom-bar">
+        <span>Hồ sơ nghiệm thu Giai đoạn P2: Multi-Project SQLite v2, Backup/Migration/Rollback, JX2 Preservation, WinCred/DPAPI &amp; Project CRUD</span>
+        <span>Commit Base: 9bd0e45 (từ fab1a1a)</span>
+        <span class="pg-num">Trang 10 / 12</span>
+      </div>
+    </section>
+    
+    <section class="pdf-page" id="page-11">
+      <div class="page-top-bar">
+        <div class="pt-left">
+          <span class="pt-badge">GIT & ROLLBACK</span>
+          <span class="pt-title">Báo cáo PASS/FAIL Trung thực, Git Diff & Phương án Rollback P2</span>
+        </div>
+        <div class="pt-right">FARMERPRO P2 ACCEPTANCE · BRANCH feat/p2-multi-project-storage · 2026-11-22</div>
+      </div>
+      <div class="page-content">
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-h">1. BÁO CÁO TRUNG THỰC PHẠM VI P2 vs P3–P6</div>
+      <table>
+        <tr><th>Hạng mục</th><th>Trạng thái</th><th>Ghi chú Kỹ thuật Trung thực</th></tr>
+        <tr><td>Multi-Project SQLite v2 Schema &amp; CRUD</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Đã kiểm thử qua Rust unit tests + <code>fp-cli</code></td></tr>
+        <tr><td>Online Backup, Migration, Rollback &amp; JX2</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Đã verify trên bản sao và nâng cấp an toàn <code>dist-portable</code></td></tr>
+        <tr><td>Windows Credential Manager &amp; DPAPI</td><td><span class="tag-pass">PASS (TESTED)</span></td><td>Chạy API OS thật trên Windows 10/11</td></tr>
+        <tr><td>Tauri IPC Registration (26 commands)</td><td><span class="tag-pass">IMPLEMENTED</span></td><td>Biên dịch sạch + test tầng handler Rust; chưa gọi từ UI React (chờ P4)</td></tr>
+        <tr><td>Proxy Probe / ADB Forward / Checkpoint Resume</td><td><span class="tag-plan">PLANNED P3</span></td><td>Không triển khai ở P2 theo đúng kỷ luật Stage-Gate</td></tr>
+        <tr><td>Giao diện Studio 6 khu vực &amp; WYSIWYG Builder</td><td><span class="tag-plan">PLANNED P4</span></td><td><code>apps/desktop/src</code> giữ nguyên 100%</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-h">2. GIT METADATA &amp; PHƯƠNG ÁN ROLLBACK ĐẦY ĐỦ</div>
+      <p><b>Git Log trên nhánh <code>feat/p2-multi-project-storage</code>:</b></p>
+      <pre class="code-box">9bd0e45 feat(p2): implement multi-project SQLite v2 schema, guarded migration/rollback, JX2 preservation, Windows Credential Manager, DPAPI keystore, and Studio Project CRUD IPC
+fab1a1a docs(p1.2-review): publish v1.2.1-REVIEW 43-page PDF, interactive Workflow/WYSIWYG Builder mockups, 5-status audit matrix, PDF bookmarks, and portable SHA-256 evidence pack
+130d254 docs(p1.2-acceptance): finalize 34-page visual acceptance report with Sơ đồ 1.2, auto-fitted SVGs, and full PDF QA</pre>
+      <p style="margin-top:2mm;"><b>Phương án Rollback tức thì nếu cần hủy P2:</b></p>
+      <ol style="margin:1mm 0 0 4.5mm; padding:0; font-size:9pt; line-height:1.4;">
+        <li><b>Khôi phục Mã nguồn:</b> Chạy <code>git checkout master</code> (về commit <code>fab1a1a</code>) hoặc <code>git revert 9bd0e45</code>.</li>
+        <li><b>Khôi phục SQLite DB:</b> Chép đè lại bản sao lưu v1 đã kiểm chứng toàn vẹn từ <code>backups/p2_verified_backup/dist_portable_pre_v2.db</code> vào <code>dist-portable/FarmerPro/data/farmerpro.db</code> (xóa file <code>-wal/-shm</code> cũ nếu có).</li>
+        <li><b>Tài nguyên gốc JX2:</b> Toàn bộ 10 JSON + 8 PNG tại <code>games/jx2mobile/</code> không hề bị xóa nên không cần khôi phục.</li>
+      </ol>
+    </div>
+  </div>
+  <div class="card" style="margin-top:2.5mm; padding:2.2mm 3mm;">
+    <div class="card-h" style="margin-bottom:1.2mm;">3. TÓM TẮT GIT DIFF CODE P2 (git diff --stat fab1a1a..9bd0e45)</div>
+    <pre class="code-box" style="column-count:2; column-gap:5mm; font-size:7.6pt; line-height:1.22; padding:2mm 2.8mm;">Cargo.lock                                         |   14 +
+ Cargo.toml                                         |    2 +-
+ apps/cli/Cargo.toml                                |    4 +
+ apps/cli/src/main.rs                               |  423 ++++
+ apps/desktop/src-tauri/Cargo.toml                  |    1 +
+ apps/desktop/src-tauri/src/main.rs                 |   58 +-
+ apps/desktop/src-tauri/src/studio_p2.rs            |  485 +++++
+ .../FARMERPRO_P1_2_STUDIO_BLUEPRINT.md             |    6 +-
+ crates/fp-builder/src/security.rs                  |  132 +-
+ crates/fp-security/Cargo.toml                      |    6 +
+ crates/fp-security/src/dpapi.rs                    |  208 ++
+ crates/fp-security/src/keystore.rs                 |  398 ++++
+ crates/fp-security/src/lib.rs                      |  458 ++++-
+ crates/fp-security/src/wincred.rs                  |  327 +++
+ crates/fp-storage/Cargo.toml                       |    3 +
+ crates/fp-storage/src/jx2_seed.rs                  |  478 +++++
+ crates/fp-storage/src/lib.rs                       | 2163 +++++++++++++++++++-
+ crates/fp-storage/src/migrations.rs                |  370 ++++
+ crates/fp-storage/src/models.rs                    |  259 +++
+ crates/fp-workflow-runtime/src/lib.rs              |   33 +-
+ 20 files changed, 5598 insertions(+), 230 deletions(-)</pre>
+  </div>
+</div>
+      <div class="page-bottom-bar">
+        <span>Hồ sơ nghiệm thu Giai đoạn P2: Multi-Project SQLite v2, Backup/Migration/Rollback, JX2 Preservation, WinCred/DPAPI &amp; Project CRUD</span>
+        <span>Commit Base: 9bd0e45 (từ fab1a1a)</span>
+        <span class="pg-num">Trang 11 / 12</span>
+      </div>
+    </section>
+    
+    <section class="pdf-page" id="page-12">
+      <div class="page-top-bar">
+        <div class="pt-left">
+          <span class="pt-badge">SẴN SÀNG CHO P3</span>
+          <span class="pt-title">Danh sách Chức năng Sẵn sàng cho P3 & Hồ sơ Evidence SHA-256</span>
+        </div>
+        <div class="pt-right">FARMERPRO P2 ACCEPTANCE · BRANCH feat/p2-multi-project-storage · 2026-11-22</div>
+      </div>
+      <div class="page-content">
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-h">1. DANH SÁCH CHỨC NĂNG P2 SẴN SÀNG BÀN GIAO CHO P3</div>
+      <table>
+        <tr><th style="width:30%;">Thành phần Sẵn sàng</th><th style="width:70%;">Cách P3 Sử dụng Trực tiếp</th></tr>
+        <tr><td><b>Project Storage &amp; Paths</b></td><td><code>StorageManager::get_project_detail</code> + <code>projects/&lt;slug&gt;/templates/</code> sẵn sàng cho P3 ROI Cropper lưu ảnh mẫu và ghi bảng <code>vision_templates</code>.</td></tr>
+        <tr><td><b>Task &amp; UI Schema Repo</b></td><td><code>upsert_project_task</code> + <code>save_ui_schema</code> sẵn sàng đồng bộ danh mục Task từ Workflow Studio sang <code>MiniToolBuilder</code>.</td></tr>
+        <tr><td><b>Project-Scoped Jobs</b></td><td><code>ensure_project_job_exists</code> sẵn sàng gắn phiên chạy Test &amp; Debug và Checkpoint Resume vào đúng <code>project_id</code>.</td></tr>
+        <tr><td><b>Credential Vault Namespaces</b></td><td><code>SecretNamespace::Project / Account / MiniTool</code> sẵn sàng cho P3 Account Vault &amp; Proxy Auth thật thay thế mock UI.</td></tr>
+        <tr><td><b>DPAPI Producer Keystore</b></td><td><code>ProducerKeystore</code> + <code>ProducerKeyManager</code> đã bảo vệ Ed25519 seed bằng DPAPI, sẵn sàng cho Tauri Builder IPC ở P3.</td></tr>
+        <tr><td><b>Game-Agnostic Runtime</b></td><td><code>fp-workflow-runtime</code> đã gỡ bỏ hardcode <code>jx2mobile</code>, sẵn sàng chạy nhiều GameProjects song song ở P3/P6.</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-h">2. DANH MỤC TỆP BẰNG CHỨNG P2 (artifacts/p2_evidence/)</div>
+      <table>
+        <tr><th>Tệp Bằng chứng</th><th>Nội dung</th></tr>
+        <tr><td><code>cargo_test_workspace_p2_clean.log</code></td><td>Log chạy thật 44/44 workspace unit tests PASS</td></tr>
+        <tr><td><code>p2_verify_dist_portable_sandbox.json</code></td><td>JSON kết quả verify-p2 trên bản sao production DB</td></tr>
+        <tr><td><code>p2_verify_root_db_sandbox.json</code></td><td>JSON kết quả verify-p2 trên bản sao root DB</td></tr>
+        <tr><td><code>p2_dist_portable_migration_report.json</code></td><td>Báo cáo trước/sau migrate-p2 có bảo vệ backup &amp; restore probe</td></tr>
+        <tr><td><code>sqlite_v1_v2_migration.sql</code></td><td>Mã SQL đầy đủ của Migration v1→v2</td></tr>
+        <tr><td><code>git_diff_summary_p2.txt</code> &amp; <code>git_log_p2.txt</code></td><td>Thống kê diff và lịch sử commit nhánh P2</td></tr>
+        <tr><td><code>diagrams/*.svg</code> &amp; <code>*.mmd</code></td><td>4 sơ đồ kiến trúc dữ liệu, crates, migration &amp; bảo mật</td></tr>
+        <tr><td><code>EVIDENCE_MANIFEST_SHA256.json</code></td><td>Bảng băm SHA-256 kiểm chứng toàn vẹn mọi tệp P2</td></tr>
+      </table>
+      <div class="gate-note">
+        <b>ĐỀ XUẤT NGHIỆM THU P2:</b> Đủ điều kiện nghiệm thu kỹ thuật P2 và mở khóa triển khai <b>Giai đoạn P3</b> (Backend Services: Proxy Probe, ADB Forward/Reverse, Checkpoint Resume, ROI Template Cropper &amp; Builder Tauri IPC). Không thay đổi <code>apps/desktop/src</code> cho tới P4.
+      </div>
+    </div>
+  </div>
+</div>
+      <div class="page-bottom-bar">
+        <span>Hồ sơ nghiệm thu Giai đoạn P2: Multi-Project SQLite v2, Backup/Migration/Rollback, JX2 Preservation, WinCred/DPAPI &amp; Project CRUD</span>
+        <span>Commit Base: 9bd0e45 (từ fab1a1a)</span>
+        <span class="pg-num">Trang 12 / 12</span>
+      </div>
+    </section>
+    
+</body>
+</html>

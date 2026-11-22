@@ -1,0 +1,21 @@
+ Cargo.lock                                         |   14 +
+ Cargo.toml                                         |    2 +-
+ apps/cli/Cargo.toml                                |    4 +
+ apps/cli/src/main.rs                               |  423 ++++
+ apps/desktop/src-tauri/Cargo.toml                  |    1 +
+ apps/desktop/src-tauri/src/main.rs                 |   58 +-
+ apps/desktop/src-tauri/src/studio_p2.rs            |  485 +++++
+ .../FARMERPRO_P1_2_STUDIO_BLUEPRINT.md             |    6 +-
+ crates/fp-builder/src/security.rs                  |  132 +-
+ crates/fp-security/Cargo.toml                      |    6 +
+ crates/fp-security/src/dpapi.rs                    |  208 ++
+ crates/fp-security/src/keystore.rs                 |  398 ++++
+ crates/fp-security/src/lib.rs                      |  458 ++++-
+ crates/fp-security/src/wincred.rs                  |  327 +++
+ crates/fp-storage/Cargo.toml                       |    3 +
+ crates/fp-storage/src/jx2_seed.rs                  |  478 +++++
+ crates/fp-storage/src/lib.rs                       | 2163 +++++++++++++++++++-
+ crates/fp-storage/src/migrations.rs                |  370 ++++
+ crates/fp-storage/src/models.rs                    |  259 +++
+ crates/fp-workflow-runtime/src/lib.rs              |   33 +-
+ 20 files changed, 5598 insertions(+), 230 deletions(-)

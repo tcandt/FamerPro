@@ -1,0 +1,7 @@
+flowchart LR
+    S1["1. Production v1 DB\nPRAGMA integrity_check = ok"] --> S2["2. SQLite Online Backup API\nrusqlite::backup::Backup"]
+    S2 --> S3["3. Verify Backup + Restore Probe\nRestore ra bản copy tạm & kiểm FK"]
+    S3 -->|PASS| S4["4. BEGIN IMMEDIATE Transaction\nCreate 6 tables + ALTER 3 tables + Backfill"]
+    S4 --> S5{"5. PRAGMA foreign_key_check\n== 0 & Commit?"}
+    S5 -->|OK| S6["6. Non-Destructive JX2 Seed\nCopy 10 workflows + 8 PNGs (Giữ nguồn cũ)"]
+    S5 -->|FAIL / Error| RB["ROLLBACK Nguyên tử\nDB giữ nguyên v1, 0 mất mát"]

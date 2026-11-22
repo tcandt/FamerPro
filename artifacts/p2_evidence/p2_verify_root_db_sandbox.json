@@ -1,0 +1,283 @@
+﻿{
+  "backupAndRestoreV2": {
+    "onlineBackup": {
+      "backedUpAtUtc": "2026-11-22T00:38:20.117727900+00:00",
+      "backupPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\04_online_backup_v2.db",
+      "backupSha256": "2ba1ac9aa71d80997565aaa7c67b239e69a9c88b00508c6f360a3f43e95bf73e",
+      "backupSizeBytes": 266240,
+      "integrity": {
+        "foreignKeyViolations": 0,
+        "integrityCheck": "ok",
+        "isHealthy": true,
+        "journalMode": "wal",
+        "schemaVersions": [
+          1,
+          2
+        ],
+        "tableCounts": {
+          "accounts": 0,
+          "checkpoints": 0,
+          "device_leases": 0,
+          "devices": 0,
+          "jobs": 0,
+          "mini_tool_schemas": 1,
+          "project_modules": 6,
+          "project_releases": 0,
+          "projects": 1,
+          "schema_migrations": 2,
+          "step_events": 0,
+          "task_definitions": 3,
+          "vision_templates": 8,
+          "workflow_versions": 10,
+          "workflows": 10
+        }
+      }
+    },
+    "restoredIntegrity": {
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "isHealthy": true,
+      "journalMode": "wal",
+      "schemaVersions": [
+        1,
+        2
+      ],
+      "tableCounts": {
+        "accounts": 0,
+        "checkpoints": 0,
+        "device_leases": 0,
+        "devices": 0,
+        "jobs": 0,
+        "mini_tool_schemas": 1,
+        "project_modules": 6,
+        "project_releases": 0,
+        "projects": 1,
+        "schema_migrations": 2,
+        "step_events": 0,
+        "task_definitions": 3,
+        "vision_templates": 8,
+        "workflow_versions": 10,
+        "workflows": 10
+      }
+    }
+  },
+  "command": "verify-p2",
+  "credentialVaultAndDpapi": {
+    "dpapiKeystore": {
+      "backupSha256": "008086d8f170ce2c33cd9439aff913858d0fba13c3da44d91d8aee5f8f993714",
+      "initialKeyId": "fp-ed25519-b0435d4ecc2b",
+      "noPlaintextSeedOnDisk": true,
+      "protectionScheme": "WIN32_DPAPI_LOCAL_USER",
+      "restoredKeyId": "fp-ed25519-b0435d4ecc2b",
+      "rotatedKeyId": "fp-ed25519-c869c692181c",
+      "seedMatchesAfterRestore": true
+    },
+    "isolatedValuesVerified": true,
+    "uriA": "CRED_MGR://FarmerPro/project/jx2-p2-4f8a928a/api_secret",
+    "uriB": "CRED_MGR://FarmerPro/project/slg-p2-4f8a928a/api_secret",
+    "uriTool": "CRED_MGR://FarmerPro/minitool/auto-slg-4f8a928a/proxy_auth",
+    "vaultBackend": "WindowsCredentialManager"
+  },
+  "executedAtUtc": "2026-11-22T00:38:20.233585+00:00",
+  "jx2Migration": {
+    "legacyWorkflowsPreserved": 0,
+    "modulesSeeded": 6,
+    "originalSourcePreserved": true,
+    "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\projects\\jx2-mobile",
+    "projectId": "proj-jx2-mobile-001",
+    "projectSlug": "jx2-mobile",
+    "tasksSeeded": 3,
+    "templatesImported": 8,
+    "workflowsImported": 10
+  },
+  "migrationV1ToV2": {
+    "appliedVersions": [
+      1,
+      2
+    ],
+    "postMigrationIntegrity": {
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "isHealthy": true,
+      "journalMode": "wal",
+      "schemaVersions": [
+        1,
+        2
+      ],
+      "tableCounts": {
+        "accounts": 0,
+        "checkpoints": 0,
+        "device_leases": 0,
+        "devices": 0,
+        "jobs": 0,
+        "mini_tool_schemas": 0,
+        "project_modules": 0,
+        "project_releases": 0,
+        "projects": 0,
+        "schema_migrations": 2,
+        "step_events": 0,
+        "task_definitions": 0,
+        "vision_templates": 0,
+        "workflow_versions": 0,
+        "workflows": 0
+      }
+    },
+    "preRestoreIntegrity": {
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok",
+      "isHealthy": true,
+      "journalMode": "wal",
+      "schemaVersions": [],
+      "tableCounts": {
+        "accounts": 0,
+        "checkpoints": 0,
+        "device_leases": 0,
+        "devices": 0,
+        "jobs": 0,
+        "schema_migrations": 0,
+        "step_events": 0,
+        "workflow_versions": 0,
+        "workflows": 0
+      }
+    },
+    "rollbackTest": {
+      "cleanAtomicRollback": true,
+      "faultyV3Rejected": true,
+      "postRollbackIntegrity": {
+        "foreignKeyViolations": 0,
+        "integrityCheck": "ok",
+        "isHealthy": true,
+        "journalMode": "wal",
+        "schemaVersions": [
+          1,
+          2
+        ],
+        "tableCounts": {
+          "accounts": 0,
+          "checkpoints": 0,
+          "device_leases": 0,
+          "devices": 0,
+          "jobs": 0,
+          "mini_tool_schemas": 0,
+          "project_modules": 0,
+          "project_releases": 0,
+          "projects": 0,
+          "schema_migrations": 2,
+          "step_events": 0,
+          "task_definitions": 0,
+          "vision_templates": 0,
+          "workflow_versions": 0,
+          "workflows": 0
+        }
+      },
+      "versionsAfterRollback": [
+        1,
+        2
+      ]
+    }
+  },
+  "preMigration": {
+    "integrityCheck": "ok",
+    "tableCounts": {
+      "accounts": 0,
+      "checkpoints": 0,
+      "device_leases": 0,
+      "devices": 0,
+      "jobs": 0,
+      "step_events": 0,
+      "workflow_versions": 0,
+      "workflows": 0
+    }
+  },
+  "productionDbUntouched": true,
+  "projectCrudAndIsolation": {
+    "clonedSlgSlug": "kingdom-slg-clone",
+    "crossProjectOverwriteBlocked": true,
+    "projects": [
+      {
+        "accountsCount": 0,
+        "jobsCount": 0,
+        "latestReleaseExePath": null,
+        "latestReleaseVersion": null,
+        "modulesCount": 5,
+        "project": {
+          "bundleAdb": true,
+          "createdAt": "2026-11-22T00:38:20.098817400+00:00",
+          "exeName": "Auto_JX2_Mobile.exe",
+          "gamePackageId": "com.blackhole.jx2mobile",
+          "iconRelPath": "branding/icon.ico",
+          "id": "proj-jx2-mobile-001",
+          "name": "Võ Hiệp Truyền Kỳ 2 Mobile",
+          "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\projects\\jx2-mobile",
+          "slug": "jx2-mobile",
+          "targetHeightPx": 1080,
+          "targetWidthPx": 1920,
+          "updatedAt": "2026-11-22T00:38:20.098817400+00:00",
+          "version": "1.0.0",
+          "windowTitle": "Auto Võ Hiệp 2 Mobile v1.0.0"
+        },
+        "releasesCount": 0,
+        "tasksCount": 3,
+        "templatesCount": 8,
+        "workflowsCount": 10
+      },
+      {
+        "accountsCount": 1,
+        "jobsCount": 0,
+        "latestReleaseExePath": null,
+        "latestReleaseVersion": null,
+        "modulesCount": 3,
+        "project": {
+          "bundleAdb": true,
+          "createdAt": "2026-11-22T00:38:20.130996400+00:00",
+          "exeName": "Auto_Kingdom_SLG.exe",
+          "gamePackageId": "com.kingdom.rise.slg",
+          "iconRelPath": "branding/icon.ico",
+          "id": "proj-kingdom-slg-p2-a62ec7cb",
+          "name": "Kingdom Rise: Tactics SLG (Verified)",
+          "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\projects\\kingdom-slg-p2",
+          "slug": "kingdom-slg-p2",
+          "targetHeightPx": 720,
+          "targetWidthPx": 1280,
+          "updatedAt": "2026-11-22T00:38:20.135367700+00:00",
+          "version": "1.2.1",
+          "windowTitle": "Auto Kingdom Rise: Tactics SLG v1.2.0"
+        },
+        "releasesCount": 0,
+        "tasksCount": 1,
+        "templatesCount": 1,
+        "workflowsCount": 1
+      },
+      {
+        "accountsCount": 0,
+        "jobsCount": 0,
+        "latestReleaseExePath": null,
+        "latestReleaseVersion": null,
+        "modulesCount": 3,
+        "project": {
+          "bundleAdb": true,
+          "createdAt": "2026-11-22T00:38:20.140320700+00:00",
+          "exeName": "Auto_Kingdom_Slg_Clone.exe",
+          "gamePackageId": "com.kingdom.rise.slg",
+          "iconRelPath": "branding/icon.ico",
+          "id": "proj-kingdom-slg-clone-f11838a8",
+          "name": "Kingdom Rise Clone",
+          "projectDirPath": "E:\\DATA\\FarmerPro\\artifacts\\p2_evidence\\sandbox_run\\projects\\kingdom-slg-clone",
+          "slug": "kingdom-slg-clone",
+          "targetHeightPx": 720,
+          "targetWidthPx": 1280,
+          "updatedAt": "2026-11-22T00:38:20.140320700+00:00",
+          "version": "1.2.1",
+          "windowTitle": "Auto Kingdom Rise Clone v1.2.1"
+        },
+        "releasesCount": 0,
+        "tasksCount": 1,
+        "templatesCount": 1,
+        "workflowsCount": 1
+      }
+    ],
+    "projectsCount": 3,
+    "updatedSlgVersion": "1.2.1"
+  },
+  "sourceProductionDb": "farmerpro.db"
+}
