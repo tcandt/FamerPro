@@ -1,0 +1,215 @@
+{
+  "builderGenericExport": {
+    "exeName": "Auto_Starlight_Ops.exe",
+    "exeSha256": "6ca4432705a3e8908677264d7d085ee4392b400d79a1ba4641db769b890ba0d2",
+    "keyId": "fp-ed25519-acb43ebd9ab4",
+    "peEmbeddedPubkeyVerified": true,
+    "preflightReady": true,
+    "recordedReleaseId": "rel-a6b164c8-ed3d-448f-95dd-14f6cc6eed21"
+  },
+  "checkpointRecovery": {
+    "resumedGeneration": 2,
+    "resumedState": "succeeded",
+    "suspendedState": "paused",
+    "unsafePendingBlockReason": "BLOCKED_UNSAFE_PENDING_ACTION: Checkpoint 'cp-3880bfbf-8546-4068-945f-7264c6840467' recorded in-flight side-effect node 'n-key' without confirmed DeviceAck; refusing blind replay",
+    "unsafePendingBlockState": "blocked"
+  },
+  "command": "verify-p3",
+  "executedAtUtc": "2026-11-22T03:59:07.629732600+00:00",
+  "liveHardwareAdb": {
+    "adbBinaryPath": "E:\\DATA\\FarmerPro\\bin\\adb.exe",
+    "discoveredCount": 0,
+    "offlineProbe": {
+      "connectionState": "disconnected",
+      "error": "ADB_DEVICE_NOT_ATTACHED",
+      "heightPx": 0,
+      "latencyMs": 25,
+      "reachable": false,
+      "rotationDeg": 0,
+      "serial": "127.0.0.1:5555",
+      "widthPx": 0
+    },
+    "reason": "No ready Android device/emulator attached to ADB (LDPlayer dnconsole.exe requires UAC elevation on this host)",
+    "reconnectError": null,
+    "status": "BLOCKED",
+    "tokenSanitizationRejectsInjection": true
+  },
+  "multiDeviceScheduler": {
+    "activeLeasesRemaining": 0,
+    "device1Summary": {
+      "accountId": null,
+      "adapterKind": "synthetic",
+      "blockReason": null,
+      "checkpointId": "cp-df61ddbf-e99b-40cf-9972-f9ca0417517e",
+      "currentNodeId": "n-end",
+      "deviceId": "emulator-5554",
+      "eventsRecorded": 11,
+      "fencingGeneration": 2,
+      "jobId": "job-2dev-a",
+      "projectId": "proj-starlight-ops-69c705d9",
+      "resumedFromNodeId": null,
+      "state": "succeeded",
+      "taskId": null,
+      "variables": {
+        "checkpoint_gate": "2026-11-22T03:59:02.585477400+00:00"
+      },
+      "workflowId": "wf-slow-cp",
+      "workflowSha256": "60f255c9d6569eea0d4f2107c1b94938376b2b847d049d17d78c47aeb97989b9",
+      "workflowVersionId": "wf-slow-cp-v1"
+    },
+    "device2Summary": {
+      "accountId": null,
+      "adapterKind": "synthetic",
+      "blockReason": null,
+      "checkpointId": "cp-4292cb17-ee65-4f05-b61b-c72c706effd0",
+      "currentNodeId": "n-end",
+      "deviceId": "127.0.0.1:62001",
+      "eventsRecorded": 11,
+      "fencingGeneration": 1,
+      "jobId": "job-2dev-b",
+      "projectId": "proj-starlight-ops-69c705d9",
+      "resumedFromNodeId": null,
+      "state": "succeeded",
+      "taskId": null,
+      "variables": {
+        "checkpoint_gate": "2026-11-22T03:59:02.583476200+00:00"
+      },
+      "workflowId": "wf-slow-cp",
+      "workflowSha256": "60f255c9d6569eea0d4f2107c1b94938376b2b847d049d17d78c47aeb97989b9",
+      "workflowVersionId": "wf-slow-cp-v1"
+    },
+    "sameDeviceLeaseConflictBlocked": true
+  },
+  "productionDbUntouched": true,
+  "projects": {
+    "projectA": {
+      "id": "proj-starlight-ops-69c705d9",
+      "releases": 1,
+      "slug": "starlight-ops"
+    },
+    "projectB": {
+      "id": "proj-voxel-kingdom-43209054",
+      "slug": "voxel-kingdom"
+    }
+  },
+  "proxyProbes": {
+    "httpConnect407": {
+      "authStatus": "auth_failed",
+      "checkedAtUtc": "2026-11-22T03:59:02.883263800+00:00",
+      "disclaimer": "Real TCP/SOCKS5/HTTP proxy probe verifies endpoint reachability and proxy handshake only; it does not prove Android game traffic is routed through the proxy and is strictly separate from ADB forward/reverse port mappings.",
+      "error": "PROXY_AUTH_407: HTTP/1.1 407 Proxy Authentication Required",
+      "handshakeOk": false,
+      "host": "127.0.0.1",
+      "port": 47498,
+      "protocol": "http_connect",
+      "reachable": true,
+      "targetConnectOk": false,
+      "tcpConnectMs": 0,
+      "totalLatencyMs": 0
+    },
+    "socks5Ok": {
+      "authStatus": "none",
+      "checkedAtUtc": "2026-11-22T03:59:02.882726900+00:00",
+      "disclaimer": "Real TCP/SOCKS5/HTTP proxy probe verifies endpoint reachability and proxy handshake only; it does not prove Android game traffic is routed through the proxy and is strictly separate from ADB forward/reverse port mappings.",
+      "error": null,
+      "handshakeOk": true,
+      "host": "127.0.0.1",
+      "port": 47496,
+      "protocol": "socks5",
+      "reachable": true,
+      "targetConnectOk": true,
+      "tcpConnectMs": 0,
+      "totalLatencyMs": 0
+    }
+  },
+  "sqliteIntegrity": {
+    "foreignKeyViolations": 0,
+    "integrityCheck": "ok",
+    "isHealthy": true,
+    "journalMode": "wal",
+    "schemaVersions": [
+      1,
+      2
+    ],
+    "tableCounts": {
+      "accounts": 1,
+      "checkpoints": 20,
+      "device_leases": 0,
+      "devices": 4,
+      "jobs": 5,
+      "mini_tool_schemas": 2,
+      "project_modules": 12,
+      "project_releases": 1,
+      "projects": 2,
+      "schema_migrations": 2,
+      "step_events": 53,
+      "task_definitions": 1,
+      "vision_templates": 1,
+      "workflow_versions": 3,
+      "workflows": 3
+    }
+  },
+  "visionAndRoi": {
+    "afterAnnotatedPng": "artifacts\\p3_evidence\\vision_after_annotated.png",
+    "beforeCapturePng": "artifacts\\p3_evidence\\vision_before_capture.png",
+    "croppedRoiPng": "artifacts\\p3_evidence\\vision_cropped_roi.png",
+    "matchedBounds1080p": {
+      "height": 60.0,
+      "width": 120.0,
+      "x": 200.0,
+      "y": 400.0
+    },
+    "matchedConfidence": 1.0,
+    "safeTapPoint": {
+      "x": 277.0934753417969,
+      "y": 441.22039794921875
+    },
+    "scaledBounds720p": {
+      "height": 40.0,
+      "width": 80.0,
+      "x": 133.33334350585938,
+      "y": 266.66668701171875
+    },
+    "templateRecord": {
+      "createdAt": "2026-11-22T03:59:00.309056+00:00",
+      "defaultConfidence": 0.9,
+      "heightPx": 60,
+      "id": "tpl-b83834d7",
+      "name": "Deploy Mission Button",
+      "projectId": "proj-starlight-ops-69c705d9",
+      "relPath": "templates/deploy_btn.png",
+      "sha256": "9804ca1c3ef13095477c76356ab77609c0c89e57767a4ed6e3dc3dc840c30f46",
+      "sourceCropX": 200,
+      "sourceCropY": 400,
+      "widthPx": 120
+    }
+  },
+  "workflowExecution": {
+    "crossProjectEscapeState": "failed",
+    "crossProjectEscapeTaps": 0,
+    "visionRun": {
+      "accountId": "acc-3a0bafd1",
+      "adapterKind": "synthetic",
+      "blockReason": null,
+      "checkpointId": "cp-e02bf952-445e-4814-b248-bb5638ec8879",
+      "currentNodeId": "n-end",
+      "deviceId": "emulator-5554",
+      "eventsRecorded": 15,
+      "fencingGeneration": 1,
+      "jobId": "job-p3-vision-1",
+      "projectId": "proj-starlight-ops-69c705d9",
+      "resumedFromNodeId": null,
+      "state": "succeeded",
+      "taskId": "task-starlight-deploy",
+      "variables": {
+        "checkpoint_detected_deploy": "2026-11-22T03:59:02.020085+00:00",
+        "last_target_x": 204.0,
+        "last_target_y": 402.0,
+        "target_found": true
+      },
+      "workflowId": "wf-starlight-deploy",
+      "workflowSha256": "60e482a54c1ec6d8f7d0b6480025e937c72430c19e67f1e199616b3bd48e5b3b",
+      "workflowVersionId": "wf-starlight-deploy-v1"
+    }
+  }
+}

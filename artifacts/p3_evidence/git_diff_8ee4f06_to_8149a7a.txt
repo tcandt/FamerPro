@@ -1,0 +1,25 @@
+﻿ Cargo.lock                                       |   24 +
+ Cargo.toml                                       |    1 +
+ apps/cli/Cargo.toml                              |    5 +
+ apps/cli/src/main.rs                             |   18 +
+ apps/cli/src/verify_p3.rs                        |  670 ++++++++++
+ apps/desktop/src-tauri/Cargo.toml                |    4 +
+ apps/desktop/src-tauri/src/main.rs               |   46 +-
+ apps/desktop/src-tauri/src/studio_p2.rs          |    7 +-
+ apps/desktop/src-tauri/src/studio_p3.rs          | 1113 +++++++++++++++++
+ crates/fp-adb/src/lib.rs                         |  273 ++++-
+ crates/fp-builder/src/lib.rs                     |  305 +++++
+ crates/fp-device/src/lib.rs                      |  207 +++-
+ crates/fp-domain/src/lib.rs                      |   34 +
+ crates/fp-proxy/Cargo.toml                       |   13 +
+ crates/fp-proxy/src/lib.rs                       |  609 +++++++++
+ crates/fp-scheduler/src/lib.rs                   |   96 ++
+ crates/fp-storage/src/lib.rs                     |  260 ++++
+ crates/fp-storage/src/models.rs                  |   49 +
+ crates/fp-storage/tests/forced_crash_recovery.rs |  145 ++-
+ crates/fp-testkit/src/lib.rs                     |   22 +
+ crates/fp-vision/src/lib.rs                      |  180 ++-
+ crates/fp-workflow-runtime/Cargo.toml            |    3 +
+ crates/fp-workflow-runtime/src/coordinator.rs    | 1431 ++++++++++++++++++++++
+ crates/fp-workflow-runtime/src/lib.rs            |  406 ++++--
+ 24 files changed, 5757 insertions(+), 164 deletions(-)
