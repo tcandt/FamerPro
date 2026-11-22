@@ -121,10 +121,13 @@ html = f"""<!DOCTYPE html>
   .b-pass {{ display: inline-block; padding: 1px 5px; border-radius: 4px; background: #D1FAE5; color: #065F46; font-weight: 800; font-size: 7.5pt; }}
   .b-blk {{ display: inline-block; padding: 1px 5px; border-radius: 4px; background: #FEF3C7; color: #92400E; font-weight: 800; font-size: 7.5pt; }}
   .callout {{ border: 1px solid #F59E0B; background: #FFFBEB; border-radius: 6px; padding: 5px 9px; font-size: 7.9pt; color: #78350F; margin-bottom: 6px; }}
-  .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 9px; align-items: start; }}
-  .shot-frame {{ border: 1px solid #94A3B8; border-radius: 6px; padding: 4px; background: #F8FAFC; }}
-  .shot-frame img {{ width: 100%; height: auto; display: block; border-radius: 4px; }}
-  .shot-cap {{ font-size: 7.7pt; color: #1E293B; margin-top: 3px; line-height: 1.26; }}
+  .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; }}
+  .shot-frame {{ border: 1px solid #94A3B8; border-radius: 6px; padding: 4px; background: #F8FAFC; text-align: center; }}
+  .shot-frame img {{ max-height: 55mm; width: auto; max-width: 100%; height: auto; display: block; margin: 0 auto; border-radius: 4px; }}
+  .shot-cap {{ font-size: 7.6pt; color: #1E293B; margin-top: 3px; line-height: 1.24; text-align: left; }}
+  .arch-grid {{ display: grid; grid-template-columns: 1fr 20px 1fr 20px 1fr 20px 1fr; gap: 2px; align-items: center; background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 6px; padding: 6px; }}
+  .arch-box {{ border-radius: 5px; padding: 5px 7px; font-size: 7.6pt; line-height: 1.25; }}
+  .arch-arrow {{ text-align: center; font-weight: 800; font-size: 11pt; color: #334155; }}
   .ftr {{ margin-top: auto; border-top: 1px solid #CBD5E1; padding-top: 3px; display: flex; justify-content: space-between; font-size: 7.6pt; color: #475569; }}
 </style>
 </head>
@@ -167,35 +170,35 @@ html = f"""<!DOCTYPE html>
   </table>
 
   <div class="sec-h">II. Kien truc Event Sequencing, Anti-Overwrite Partitioning &amp; Cross-Process WAL Watcher</div>
-  <svg width="100%" height="108" viewBox="0 0 980 108" style="background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;">
-    <rect x="12" y="14" width="215" height="80" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
-    <text x="119" y="32" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E3A8A">1. Case 1: Mini GUI Executor</text>
-    <text x="119" y="48" text-anchor="middle" font-size="8.5" fill="#1E40AF">WorkflowExecutor -&gt; pending_var_deltas</text>
-    <text x="119" y="63" text-anchor="middle" font-size="8.5" fill="#1E40AF">fp-security::sanitize (num/str/JSON)</text>
-    <text x="119" y="78" text-anchor="middle" font-size="8.5" fill="#047857">app.emit("mini://runtime-var-delta")</text>
-
-    <rect x="255" y="14" width="225" height="80" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
-    <text x="367" y="32" text-anchor="middle" font-size="10" font-weight="bold" fill="#065F46">2. SQLite v3 Store (Partitioned)</text>
-    <text x="367" y="48" text-anchor="middle" font-size="8.5" fill="#064E3B">runtime_var_streams (monotonic seq++)</text>
-    <text x="367" y="63" text-anchor="middle" font-size="8.5" fill="#064E3B">Scope: mini:&lt;slug&gt; (LIVE) | ::testkit</text>
-    <text x="367" y="78" text-anchor="middle" font-size="8.5" fill="#B45309">Guard: TESTKIT cannot overwrite LIVE ✓</text>
-
-    <rect x="510" y="14" width="225" height="80" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
-    <text x="622" y="32" text-anchor="middle" font-size="10" font-weight="bold" fill="#92400E">3. Case 2: External CLI Worker</text>
-    <text x="622" y="48" text-anchor="middle" font-size="8.5" fill="#78350F">Auto_*.exe --run-task --mock writes WAL</text>
-    <text x="622" y="63" text-anchor="middle" font-size="8.5" fill="#78350F">Open GUI PRAGMA data_version poller</text>
-    <text x="622" y="78" text-anchor="middle" font-size="8.5" fill="#92400E">Reads runtime_var_events (seq &gt; seen)</text>
-
-    <rect x="765" y="14" width="203" height="80" rx="6" fill="#F1F5F9" stroke="#334155" stroke-width="1.5"/>
-    <text x="866" y="32" text-anchor="middle" font-size="10" font-weight="bold" fill="#0F172A">4. WebView SeqGuard &amp; Sync</text>
-    <text x="866" y="48" text-anchor="middle" font-size="8.5" fill="#334155">seq &lt;= cur: drop dup/stale</text>
-    <text x="866" y="63" text-anchor="middle" font-size="8.5" fill="#334155">seq &gt; cur+1 / focus: snapshot sync</text>
-    <text x="866" y="78" text-anchor="middle" font-size="8.5" fill="#047857">Live Badges: TESTKIT / LIVE ✓ / LEGACY</text>
-
-    <line x1="227" y1="54" x2="255" y2="54" stroke="#1E3A8A" stroke-width="1.8"/>
-    <line x1="480" y1="54" x2="510" y2="54" stroke="#059669" stroke-width="1.8"/>
-    <line x1="735" y1="54" x2="765" y2="54" stroke="#D97706" stroke-width="1.8"/>
-  </svg>
+  <div class="arch-grid">
+    <div class="arch-box" style="background:#EFF6FF;border:1.5px solid #2563EB;color:#1E3A8A;">
+      <div><strong>1. Case 1: Mini GUI Executor</strong></div>
+      <div><code>WorkflowExecutor</code> -&gt; <code>pending_var_deltas</code></div>
+      <div><code>fp-security::sanitize</code> (num/str/JSON)</div>
+      <div style="color:#047857;"><code>app.emit("mini://runtime-var-delta")</code></div>
+    </div>
+    <div class="arch-arrow">&#8594;</div>
+    <div class="arch-box" style="background:#ECFDF5;border:1.5px solid #059669;color:#065F46;">
+      <div><strong>2. SQLite v3 Store (Partitioned)</strong></div>
+      <div><code>runtime_var_streams</code> (monotonic seq++)</div>
+      <div>Scope: <code>mini:&lt;slug&gt;</code> (LIVE) | <code>::testkit</code></div>
+      <div style="color:#B45309;">Guard: TESTKIT cannot overwrite LIVE</div>
+    </div>
+    <div class="arch-arrow">&#8594;</div>
+    <div class="arch-box" style="background:#FFFBEB;border:1.5px solid #D97706;color:#92400E;">
+      <div><strong>3. Case 2: External CLI Worker</strong></div>
+      <div><code>Auto_*.exe --run-task --mock</code></div>
+      <div>Open GUI <code>PRAGMA data_version</code> poller</div>
+      <div>Reads <code>runtime_var_events</code> (seq &gt; seen)</div>
+    </div>
+    <div class="arch-arrow">&#8594;</div>
+    <div class="arch-box" style="background:#F1F5F9;border:1.5px solid #334155;color:#0F172A;">
+      <div><strong>4. WebView SeqGuard &amp; Sync</strong></div>
+      <div><code>seq &lt;= cur</code>: drop dup/stale</div>
+      <div><code>seq &gt; cur+1 / focus</code>: snapshot sync</div>
+      <div style="color:#047857;">Badges: TESTKIT / LIVE / LEGACY</div>
+    </div>
+  </div>
   <div class="ftr"><span>FarmerPro P5.1 Acceptance Report (Commit {h_esc(head_sha[:12])})</span><span>Trang 1 / 4</span></div>
 </div>
 
