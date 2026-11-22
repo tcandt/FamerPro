@@ -359,6 +359,11 @@ impl MiniToolPackager {
         let pe_root_pubkey = read_pe_embedded_pubkey_from_exe(&target_exe_path)?;
         envelope.verify_ed25519_with_public_key(&bundle_dir, &pe_root_pubkey)?;
         let dep_audit = audit_portable_environment(output_release_dir, &project.slug);
+        // Remove empty `data/` directory left by build-time ACL write probe so exported release packages never ship a `data/` tree
+        let probe_data_dir = output_release_dir.join("data");
+        if probe_data_dir.is_dir() {
+            let _ = std::fs::remove_dir(&probe_data_dir);
+        }
         let exe_bytes = std::fs::read(&target_exe_path)?;
         let exe_sha256 = sha256_hex(&exe_bytes);
 
