@@ -1,0 +1,416 @@
+{
+  "executedAtUtc": "2026-11-22T11:18:04.769Z",
+  "gitHead": "0f6692bb37f7927c13c7b5628ab67a1942dc0d0b",
+  "adbLiveHardware": {
+    "adbDevicesOutput": "List of devices attached",
+    "ldplayer14Vm0IsRunning": "stop",
+    "status": "BLOCKED (0 ADB online)"
+  },
+  "consoleErrors": {
+    "studio": [],
+    "alphaV1": [],
+    "alphaV11": []
+  },
+  "studioLifecycle": {
+    "p1Id": "proj-alpha-harvester-25685ee1",
+    "p2Id": "proj-beta-arena-76ac1195",
+    "compatA": {
+      "compatible": true,
+      "checks": [
+        {
+          "dimension": "RuntimeVersion",
+          "requiredOrBundle": ">= 0.1.0",
+          "runtimeSupported": "0.1.0",
+          "compatible": true,
+          "detail": "Compatible"
+        },
+        {
+          "dimension": "WorkflowSchemaVersion",
+          "requiredOrBundle": "v1 (max 1)",
+          "runtimeSupported": "<= v1",
+          "compatible": true,
+          "detail": "Compatible"
+        },
+        {
+          "dimension": "UiSchemaVersion",
+          "requiredOrBundle": "v1 (ui v1)",
+          "runtimeSupported": "<= v1",
+          "compatible": true,
+          "detail": "Compatible"
+        },
+        {
+          "dimension": "ModuleApiVersion",
+          "requiredOrBundle": "1.0.0",
+          "runtimeSupported": "1.0.0",
+          "compatible": true,
+          "detail": "Compatible"
+        },
+        {
+          "dimension": "SqliteSchemaVersion",
+          "requiredOrBundle": "v4",
+          "runtimeSupported": "<= v4",
+          "compatible": true,
+          "detail": "Compatible"
+        }
+      ],
+      "blockingReasons": []
+    },
+    "pubA1State": "Published",
+    "pubA11State": "Published",
+    "depA1": {
+      "operation": "install_initial",
+      "status": "COMPLETED",
+      "projectSlug": "alpha-harvester",
+      "previousVersion": null,
+      "activeVersion": "1.0.0",
+      "stageReached": "completed",
+      "backupDbPath": null,
+      "backupVerifiedOk": false,
+      "signatureVerifiedOk": true,
+      "compatibilityVerifiedOk": true,
+      "postUpdateAutoResumeBlocked": false,
+      "blockedJobIds": [],
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\.updater\\update-journal.json",
+      "detail": "Initial Mini Tool versioned installation verified and activated."
+    },
+    "depB1": {
+      "operation": "install_initial",
+      "status": "COMPLETED",
+      "projectSlug": "beta-arena",
+      "previousVersion": null,
+      "activeVersion": "1.0.0",
+      "stageReached": "completed",
+      "backupDbPath": null,
+      "backupVerifiedOk": false,
+      "signatureVerifiedOk": true,
+      "compatibilityVerifiedOk": true,
+      "postUpdateAutoResumeBlocked": false,
+      "blockedJobIds": [],
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_BetaArena\\.updater\\update-journal.json",
+      "detail": "Initial Mini Tool versioned installation verified and activated."
+    },
+    "relDirA1": "projects/alpha-harvester/releases/v1.0.0",
+    "relDirA11": "projects/alpha-harvester/releases/v1.1.0",
+    "relHistoryA": [
+      {
+        "id": "rel-f727d396-6d34-4ba9-a7ca-277380a160bc",
+        "projectId": "proj-alpha-harvester-25685ee1",
+        "version": "1.1.0",
+        "outputDirPath": "projects/alpha-harvester/releases/v1.1.0",
+        "exePath": "projects/alpha-harvester/releases/v1.1.0\\Auto_AlphaHarvester.exe",
+        "exeSizeBytes": 24131072,
+        "exeSha256": "f285aac365d37405eb003577cbd27926e44ce8a45316e94475076203f4003f56",
+        "keyId": "fp-ed25519-acb43ebd9ab4",
+        "publisherPublicKeyHex": "acb43ebd9ab499f095fe9d4bc5be6db468a6cb2966a5cc817ad545da473df455",
+        "peRcdataPubkeyId": 7777,
+        "signatureEd25519Hex": "b539c61b8f088202044995afe1f70fa801f8bb830fe4c31a0051efacd7bd228e364038bb04819e904e5a96e2935067bc8cf7c0fe692cc6ed1be03824d0586f07",
+        "buildReportJson": "{\"projectId\":\"proj-alpha-harvester-25685ee1\",\"projectSlug\":\"alpha-harvester\",\"toolExeName\":\"Auto_AlphaHarvester.exe\",\"toolExePath\":\"projects/alpha-harvester/releases/v1.1.0\\\\Auto_AlphaHarvester.exe\",\"toolExeSizeBytes\":24131072,\"toolExeSha256\":\"f285aac365d37405eb003577cbd27926e44ce8a45316e94475076203f4003f56\",\"peIconLayersInjected\":1,\"peIconGroupResourceBytes\":20,\"peIconFirstLayerBytes\":4264,\"peEmbeddedPubkeyResourceId\":7777,\"peEmbeddedPubkeyVerified\":true,\"authenticodeStatus\":\"Unsigned Portable PE Binary (PE Icon + RT_RCDATA #7777 Ed25519 Root-of-Trust Public Key injected at Step 5; ready for optional signtool.exe Authenticode code-signing as final post-resource step)\",\"keyId\":\"fp-ed25519-acb43ebd9ab4\",\"publisherPublicKeyHex\":\"acb43ebd9ab499f095fe9d4bc5be6db468a6cb2966a5cc817ad545da473df455\",\"externalKeystorePath\":\"C:\\\\Users\\\\TINH-NGUYEN\\\\AppData\\\\Local\\\\FarmerPro\\\\ProducerKeys\\\\active_producer_ed25519.json\",\"signatureAlgorithm\":\"Ed25519-RFC8032-SHA256\",\"signatureEd25519Hex\":\"b539c61b8f088202044995afe1f70fa801f8bb830fe4c31a0051efacd7bd228e364038bb04819e904e5a96e2935067bc8cf7c0fe692cc6ed1be03824d0586f07\",\"totalDurationMs\":2470,\"steps\":[{\"stepNo\":1,\"name\":\"Validate Project, UI Schema & Workflows\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Validated 1 workflows and UI schema (v1) for 'Alpha Harvester Tool'\"},{\"stepNo\":2,\"name\":\"Asset Integrity & Path Traversal Guard\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Verified 0 template PNGs and icon 'branding/icon.ico'\"},{\"stepNo\":3,\"name\":\"Resolve 5-State Module Matrix\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Packaged modules: [\\\"mod.adb_core\\\", \\\"mod.vision_ocr\\\"]\"},{\"stepNo\":4,\"name\":\"Copy Dedicated Mini Runtime Binary\",\"durationMs\":38,\"status\":\"PASS\",\"detail\":\"Copied target/debug/fp-mini-runtime.exe -> projects/alpha-harvester/releases/v1.1.0\\\\Auto_AlphaHarvester.exe\"},{\"stepNo\":5,\"name\":\"PE Icon + Ed25519 Root-of-Trust Public Key Injection (RT_RCDATA #7777)\",\"durationMs\":1971,\"status\":\"PASS\",\"detail\":\"Injected 1 icon layers (RT_GROUP_ICON=20B, RT_ICON#1=4264B) and pinned Ed25519 PubKey (acb43ebd9ab499f0) in PE RT_RCDATA #7777\"},{\"stepNo\":6,\"name\":\"Package Bundle Assets & Android ADB Dependencies\",\"durationMs\":3,\"status\":\"PASS\",\"detail\":\"Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=false\"},{\"stepNo\":7,\"name\":\"Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature\",\"durationMs\":12,\"status\":\"PASS\",\"detail\":\"Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-acb43ebd9ab4, PubKey: acb43ebd9ab499f095fe9d4bc5be6db468a6cb2966a5cc817ad545da473df455)\"},{\"stepNo\":8,\"name\":\"Verify RFC 8032 Ed25519 Signature via PE-Embedded Root of Trust & Audit Dependencies\",\"durationMs\":434,\"status\":\"PASS\",\"detail\":\"Ed25519 verified against PE RT_RCDATA #7777 key; exe SHA-256=f285aac365d37405; WebView2=true\"}],\"modules\":[{\"moduleId\":\"mod.adb_core\",\"displayName\":\"ADB & Device Driver Core\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"adb_exec\"],\"compiledInBinary\":true,\"packagedInRelease\":true,\"permittedToInitialize\":true,\"enabledByUserConfig\":true,\"activeAndInitialized\":true,\"technicalNote\":\"Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn.\"},{\"moduleId\":\"mod.vision_ocr\",\"displayName\":\"Multiscale Vision & WinRT OCR\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"filesystem_read_write\"],\"compiledInBinary\":true,\"packagedInRelease\":true,\"permittedToInitialize\":true,\"enabledByUserConfig\":true,\"activeAndInitialized\":true,\"technicalNote\":\"So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR.\"},{\"moduleId\":\"mod.account_vault\",\"displayName\":\"Account Vault (Credential Manager)\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"credential_vault_access\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool.\"},{\"moduleId\":\"mod.proxy_network\",\"displayName\":\"SOCKS5/HTTP Application Proxy\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"outbound_proxy_connect\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding).\"},{\"moduleId\":\"mod.adb_port_forward\",\"displayName\":\"ADB Host-Device Socket Forwarding\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"adb_exec\",\"local_socket_bind\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game).\"},{\"moduleId\":\"mod.emulator_optimizer\",\"displayName\":\"Emulator Watchdog & Auto-Reconnect\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"adb_exec\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối.\"}],\"dependencyAudit\":{\"webview2EvergreenInstalled\":true,\"webview2VersionOrNote\":\"Evergreen Runtime v157.0.4341.60 (Fixed Version fallback supported if offline target lacks Evergreen)\",\"adbExePresent\":false,\"adbWinApiDllPresent\":false,\"adbWinUsbApiDllPresent\":false,\"winrtOcrPowershellAvailable\":true,\"exeDirWritable\":true,\"writeProbeError\":null,\"resolvedSqliteDbPath\":\"projects/alpha-harvester/releases/v1.1.0\\\\data\\\\runtime_alpha-harvester.db\",\"fallbackToLocalAppdataUsed\":false,\"offlineExecutionReady\":true}}",
+        "builtAt": "2026-11-22T11:17:43.620796300+00:00",
+        "lifecycleState": "Published",
+        "releaseChannel": "stable",
+        "changelogMd": "",
+        "minRuntimeVersion": "0.1.0",
+        "workflowSchemaVersion": 1,
+        "uiSchemaVersion": 1,
+        "moduleApiVersion": "1.0.0",
+        "sqliteSchemaVersion": 4,
+        "gitCommit": "0f6692b",
+        "signatureStatus": "Unsigned Portable PE Binary (PE Icon + RT_RCDATA #7777 Ed25519 Root-of-Trust Public Key injected at Step 5; ready for optional signtool.exe Authenticode code-signing as final post-resource step)",
+        "promotedAt": "2026-11-22T11:17:43.631189800+00:00",
+        "rolledBackFromId": "rel-15abcd2d-c681-4f4b-9a32-7e58b03c4ed1"
+      },
+      {
+        "id": "rel-15abcd2d-c681-4f4b-9a32-7e58b03c4ed1",
+        "projectId": "proj-alpha-harvester-25685ee1",
+        "version": "1.0.0",
+        "outputDirPath": "projects/alpha-harvester/releases/v1.0.0",
+        "exePath": "projects/alpha-harvester/releases/v1.0.0\\Auto_AlphaHarvester.exe",
+        "exeSizeBytes": 24131072,
+        "exeSha256": "f285aac365d37405eb003577cbd27926e44ce8a45316e94475076203f4003f56",
+        "keyId": "fp-ed25519-acb43ebd9ab4",
+        "publisherPublicKeyHex": "acb43ebd9ab499f095fe9d4bc5be6db468a6cb2966a5cc817ad545da473df455",
+        "peRcdataPubkeyId": 7777,
+        "signatureEd25519Hex": "e6a238f137fccc0f22919605fe5100395fa2a25cc6efd149967e227b5834e99cd81b27e8aaa4fd55f35d5d3edfce01a178d4c2a8b7bbe2bea7ac8fa8a2a0d700",
+        "buildReportJson": "{\"projectId\":\"proj-alpha-harvester-25685ee1\",\"projectSlug\":\"alpha-harvester\",\"toolExeName\":\"Auto_AlphaHarvester.exe\",\"toolExePath\":\"projects/alpha-harvester/releases/v1.0.0\\\\Auto_AlphaHarvester.exe\",\"toolExeSizeBytes\":24131072,\"toolExeSha256\":\"f285aac365d37405eb003577cbd27926e44ce8a45316e94475076203f4003f56\",\"peIconLayersInjected\":1,\"peIconGroupResourceBytes\":20,\"peIconFirstLayerBytes\":4264,\"peEmbeddedPubkeyResourceId\":7777,\"peEmbeddedPubkeyVerified\":true,\"authenticodeStatus\":\"Unsigned Portable PE Binary (PE Icon + RT_RCDATA #7777 Ed25519 Root-of-Trust Public Key injected at Step 5; ready for optional signtool.exe Authenticode code-signing as final post-resource step)\",\"keyId\":\"fp-ed25519-acb43ebd9ab4\",\"publisherPublicKeyHex\":\"acb43ebd9ab499f095fe9d4bc5be6db468a6cb2966a5cc817ad545da473df455\",\"externalKeystorePath\":\"C:\\\\Users\\\\TINH-NGUYEN\\\\AppData\\\\Local\\\\FarmerPro\\\\ProducerKeys\\\\active_producer_ed25519.json\",\"signatureAlgorithm\":\"Ed25519-RFC8032-SHA256\",\"signatureEd25519Hex\":\"e6a238f137fccc0f22919605fe5100395fa2a25cc6efd149967e227b5834e99cd81b27e8aaa4fd55f35d5d3edfce01a178d4c2a8b7bbe2bea7ac8fa8a2a0d700\",\"totalDurationMs\":2436,\"steps\":[{\"stepNo\":1,\"name\":\"Validate Project, UI Schema & Workflows\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Validated 1 workflows and UI schema (v1) for 'Alpha Harvester Tool'\"},{\"stepNo\":2,\"name\":\"Asset Integrity & Path Traversal Guard\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Verified 0 template PNGs and icon 'branding/icon.ico'\"},{\"stepNo\":3,\"name\":\"Resolve 5-State Module Matrix\",\"durationMs\":0,\"status\":\"PASS\",\"detail\":\"Packaged modules: [\\\"mod.adb_core\\\", \\\"mod.vision_ocr\\\"]\"},{\"stepNo\":4,\"name\":\"Copy Dedicated Mini Runtime Binary\",\"durationMs\":38,\"status\":\"PASS\",\"detail\":\"Copied target/debug/fp-mini-runtime.exe -> projects/alpha-harvester/releases/v1.0.0\\\\Auto_AlphaHarvester.exe\"},{\"stepNo\":5,\"name\":\"PE Icon + Ed25519 Root-of-Trust Public Key Injection (RT_RCDATA #7777)\",\"durationMs\":1985,\"status\":\"PASS\",\"detail\":\"Injected 1 icon layers (RT_GROUP_ICON=20B, RT_ICON#1=4264B) and pinned Ed25519 PubKey (acb43ebd9ab499f0) in PE RT_RCDATA #7777\"},{\"stepNo\":6,\"name\":\"Package Bundle Assets & Android ADB Dependencies\",\"durationMs\":7,\"status\":\"PASS\",\"detail\":\"Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=false\"},{\"stepNo\":7,\"name\":\"Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature\",\"durationMs\":10,\"status\":\"PASS\",\"detail\":\"Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-acb43ebd9ab4, PubKey: acb43ebd9ab499f095fe9d4bc5be6db468a6cb2966a5cc817ad545da473df455)\"},{\"stepNo\":8,\"name\":\"Verify RFC 8032 Ed25519 Signature via PE-Embedded Root of Trust & Audit Dependencies\",\"durationMs\":386,\"status\":\"PASS\",\"detail\":\"Ed25519 verified against PE RT_RCDATA #7777 key; exe SHA-256=f285aac365d37405; WebView2=true\"}],\"modules\":[{\"moduleId\":\"mod.adb_core\",\"displayName\":\"ADB & Device Driver Core\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"adb_exec\"],\"compiledInBinary\":true,\"packagedInRelease\":true,\"permittedToInitialize\":true,\"enabledByUserConfig\":true,\"activeAndInitialized\":true,\"technicalNote\":\"Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn.\"},{\"moduleId\":\"mod.vision_ocr\",\"displayName\":\"Multiscale Vision & WinRT OCR\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"filesystem_read_write\"],\"compiledInBinary\":true,\"packagedInRelease\":true,\"permittedToInitialize\":true,\"enabledByUserConfig\":true,\"activeAndInitialized\":true,\"technicalNote\":\"So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR.\"},{\"moduleId\":\"mod.account_vault\",\"displayName\":\"Account Vault (Credential Manager)\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"credential_vault_access\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool.\"},{\"moduleId\":\"mod.proxy_network\",\"displayName\":\"SOCKS5/HTTP Application Proxy\",\"version\":\"1.0.0\",\"dependencies\":[],\"requiredCapabilities\":[\"outbound_proxy_connect\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding).\"},{\"moduleId\":\"mod.adb_port_forward\",\"displayName\":\"ADB Host-Device Socket Forwarding\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"adb_exec\",\"local_socket_bind\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game).\"},{\"moduleId\":\"mod.emulator_optimizer\",\"displayName\":\"Emulator Watchdog & Auto-Reconnect\",\"version\":\"1.0.0\",\"dependencies\":[\"mod.adb_core\"],\"requiredCapabilities\":[\"adb_exec\"],\"compiledInBinary\":true,\"packagedInRelease\":false,\"permittedToInitialize\":false,\"enabledByUserConfig\":false,\"activeAndInitialized\":false,\"technicalNote\":\"Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối.\"}],\"dependencyAudit\":{\"webview2EvergreenInstalled\":true,\"webview2VersionOrNote\":\"Evergreen Runtime v157.0.4341.60 (Fixed Version fallback supported if offline target lacks Evergreen)\",\"adbExePresent\":false,\"adbWinApiDllPresent\":false,\"adbWinUsbApiDllPresent\":false,\"winrtOcrPowershellAvailable\":true,\"exeDirWritable\":true,\"writeProbeError\":null,\"resolvedSqliteDbPath\":\"projects/alpha-harvester/releases/v1.0.0\\\\data\\\\runtime_alpha-harvester.db\",\"fallbackToLocalAppdataUsed\":false,\"offlineExecutionReady\":true}}",
+        "builtAt": "2026-11-22T11:17:39.564154400+00:00",
+        "lifecycleState": "Deprecated",
+        "releaseChannel": "stable",
+        "changelogMd": "",
+        "minRuntimeVersion": "0.1.0",
+        "workflowSchemaVersion": 1,
+        "uiSchemaVersion": 1,
+        "moduleApiVersion": "1.0.0",
+        "sqliteSchemaVersion": 4,
+        "gitCommit": "0f6692b",
+        "signatureStatus": "Unsigned Portable PE Binary (PE Icon + RT_RCDATA #7777 Ed25519 Root-of-Trust Public Key injected at Step 5; ready for optional signtool.exe Authenticode code-signing as final post-resource step)",
+        "promotedAt": "2026-11-22T11:17:39.575653300+00:00",
+        "rolledBackFromId": null
+      }
+    ],
+    "transA": [
+      {
+        "id": "rtr-0cb85dec-163a-4699-8ed2-913514fb091b",
+        "projectId": "proj-alpha-harvester-25685ee1",
+        "releaseId": "rel-15abcd2d-c681-4f4b-9a32-7e58b03c4ed1",
+        "fromState": "Published",
+        "toState": "Deprecated",
+        "note": "Superseded by release rel-f727d396-6d34-4ba9-a7ca-277380a160bc (Promote v1.1.0 GA)",
+        "transitionedAt": "2026-11-22T11:17:43.631189800+00:00"
+      },
+      {
+        "id": "rtr-50ce238c-3354-4541-9369-c568f3008312",
+        "projectId": "proj-alpha-harvester-25685ee1",
+        "releaseId": "rel-f727d396-6d34-4ba9-a7ca-277380a160bc",
+        "fromState": "RC",
+        "toState": "Published",
+        "note": "Promote v1.1.0 GA",
+        "transitionedAt": "2026-11-22T11:17:43.631189800+00:00"
+      },
+      {
+        "id": "rtr-e7eb18ca-d8d1-4d75-ba84-52d079ee7a00",
+        "projectId": "proj-alpha-harvester-25685ee1",
+        "releaseId": "rel-f727d396-6d34-4ba9-a7ca-277380a160bc",
+        "fromState": "Draft",
+        "toState": "RC",
+        "note": "P5.2 Upgrade RC",
+        "transitionedAt": "2026-11-22T11:17:43.626750100+00:00"
+      },
+      {
+        "id": "rtr-d4d0f48b-b42c-4ed5-afd8-6bc24f7d6b5b",
+        "projectId": "proj-alpha-harvester-25685ee1",
+        "releaseId": "rel-f727d396-6d34-4ba9-a7ca-277380a160bc",
+        "fromState": "None",
+        "toState": "Draft",
+        "note": "Created release v1.1.0 [stable]",
+        "transitionedAt": "2026-11-22T11:17:43.620796300+00:00"
+      },
+      {
+        "id": "rtr-7dbfeb26-617e-4d4e-a75b-d2aa167d75f7",
+        "projectId": "proj-alpha-harvester-25685ee1",
+        "releaseId": "rel-15abcd2d-c681-4f4b-9a32-7e58b03c4ed1",
+        "fromState": "RC",
+        "toState": "Published",
+        "note": "Release GA v1.0.0",
+        "transitionedAt": "2026-11-22T11:17:39.575653300+00:00"
+      },
+      {
+        "id": "rtr-73202158-8158-478c-9fe0-61a24f1b9ecf",
+        "projectId": "proj-alpha-harvester-25685ee1",
+        "releaseId": "rel-15abcd2d-c681-4f4b-9a32-7e58b03c4ed1",
+        "fromState": "Draft",
+        "toState": "RC",
+        "note": "QA Candidate",
+        "transitionedAt": "2026-11-22T11:17:39.572658300+00:00"
+      },
+      {
+        "id": "rtr-fcde508f-ee50-4de5-87e8-9ad70251d2c0",
+        "projectId": "proj-alpha-harvester-25685ee1",
+        "releaseId": "rel-15abcd2d-c681-4f4b-9a32-7e58b03c4ed1",
+        "fromState": "None",
+        "toState": "Draft",
+        "note": "Created release v1.0.0 [stable]",
+        "transitionedAt": "2026-11-22T11:17:39.564154400+00:00"
+      }
+    ]
+  },
+  "v1BeforeSnap": {
+    "cells": [
+      "Chưa có thiết bị kết nối",
+      "com.alpha.harvester",
+      "OFFLINE",
+      "Sector-B7TESTKIT · Mô phỏng",
+      "250TESTKIT · Mô phỏng",
+      "***REDACTED***TESTKIT · Mô phỏng"
+    ],
+    "title": "Alpha Harvester v1.0.0",
+    "badge": "",
+    "taskCount": 1
+  },
+  "guardsAndCrashRecovery": {
+    "runningExeLockBlocked": true,
+    "runningBlockErr": "Error: MINI_TOOL_PROCESS_RUNNING: active PID 36572 detected in E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\data\\.runtime_alpha-harvester.pid; stop the tool before updating\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\fp-updater.exe upgrade --install-root E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester --release-dir E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\projects\\alpha-harvester\\releases\\v1.1.0\nError: MINI_TOOL_PROCESS_RUNNING: active PID 36572 detected in E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\data\\.runtime_alpha-harvester.pid; stop the tool before updating",
+    "tamperBlocked": true,
+    "tamperBlockErr": "Error: INTEGRITY_HASH_MISMATCH: File 'ui-schema.json' SHA-256 mismatch (expected a079e7cce138c24fdbd25dc680fa62494ba473d0eacf425b904c331b441018dc, got 94c09080b629d72e04a6ae19317d3b38934fbb9c52bafe76e9986a26f4c544b5)\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\fp-updater.exe upgrade --install-root E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester --release-dir E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\tampered_v110\nError: INTEGRITY_HASH_MISMATCH: File 'ui-schema.json' SHA-256 mismatch (expected a079e7cce138c24fdbd25dc680fa62494ba473d0eacf425b904c331b441018dc, got 94c09080b629d72e04a6ae19317d3b38934fbb9c52bafe76e9986a26f4c544b5)",
+    "readOnlyPermissionBlocked": true,
+    "permBlockErr": "Error: INSTALL_DIR_NOT_WRITABLE: cannot create required directory E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\blocked_readonly_root\\.updater\n\nCaused by:\n    Cannot create a file when that file already exists. (os error 183)\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\fp-updater.exe install-initial --install-root E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\blocked_readonly_root --release-dir E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\projects\\alpha-harvester\\releases\\v1.1.0\nError: INSTALL_DIR_NOT_WRITABLE: cannot create required directory E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\blocked_readonly_root\\.updater\n\nCaused by:\n    Cannot create a file when that file already exists. (os error 183)",
+    "killAfterBackup": {
+      "killed": true,
+      "code": null,
+      "signal": "SIGKILL",
+      "marker": "PAUSED_AT:AfterBackup"
+    },
+    "recAfterBackup": {
+      "status": "RECOVERED_TO_PREVIOUS",
+      "actionTaken": "CLEANED_STAGING_PRESERVED_ACTIVE",
+      "recoveredFromStage": "quiesced_and_backed_up",
+      "activeVersion": "1.0.0",
+      "dbIntegrityOk": true,
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\.updater\\update-journal.json",
+      "detail": "Reconciled crash from stage QuiescedAndBackedUp; restored/preserved active version."
+    },
+    "killAfterStage": {
+      "killed": true,
+      "code": null,
+      "signal": "SIGKILL",
+      "marker": "PAUSED_AT:AfterStage"
+    },
+    "recAfterStage": {
+      "status": "RECOVERED_TO_PREVIOUS",
+      "actionTaken": "CLEANED_STAGING_PRESERVED_ACTIVE",
+      "recoveredFromStage": "staged",
+      "activeVersion": "1.0.0",
+      "dbIntegrityOk": true,
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\.updater\\update-journal.json",
+      "detail": "Reconciled crash from stage Staged; restored/preserved active version."
+    },
+    "migrationFailureRolledBack": true,
+    "migFailErr": "Error: SIMULATED_MIGRATION_FAILURE: SQLite v4 migration aborted intentionally\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\fp-updater.exe upgrade --install-root E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester --release-dir E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\projects\\alpha-harvester\\releases\\v1.1.0 --simulate-migration-failure\nError: SIMULATED_MIGRATION_FAILURE: SQLite v4 migration aborted intentionally"
+  },
+  "upgradeAndPreserve": {
+    "deployUpgradeResult": {
+      "operation": "upgrade",
+      "status": "COMPLETED",
+      "projectSlug": "alpha-harvester",
+      "previousVersion": "1.0.0",
+      "activeVersion": "1.1.0",
+      "stageReached": "completed",
+      "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261122_111757_111.db",
+      "backupVerifiedOk": true,
+      "signatureVerifiedOk": true,
+      "compatibilityVerifiedOk": true,
+      "postUpdateAutoResumeBlocked": false,
+      "blockedJobIds": [],
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\.updater\\update-journal.json",
+      "detail": "Upgraded Mini Tool safely with WAL backup and atomic version switch."
+    },
+    "alphaPtrAfterUpgrade": {
+      "projectSlug": "alpha-harvester",
+      "activeVersion": "1.1.0",
+      "previousVersion": "1.0.0",
+      "exeName": "Auto_AlphaHarvester.exe",
+      "sqliteSchemaVersion": 4,
+      "minRuntimeVersion": "0.1.0",
+      "postUpdateAutoResumeBlocked": false,
+      "blockedJobIds": [],
+      "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261122_111757_111.db",
+      "activatedAtUtc": "2026-11-22T11:17:58.412713300+00:00",
+      "journalId": "upd-9a5f92f1-0d04-4ce0-90a6-7624694b1313"
+    },
+    "v11UpgradedSnap": {
+      "title": "Alpha Harvester v1.1.0",
+      "badge": "",
+      "cells": [
+        "Chưa có thiết bị kết nối",
+        "com.alpha.harvester",
+        "OFFLINE",
+        "Sector-B7TESTKIT · Mô phỏng",
+        "250TESTKIT · Mô phỏng",
+        "***REDACTED***TESTKIT · Mô phỏng"
+      ],
+      "tasks": [
+        "\n            \n              \n              \n                FARM\n              \n              Thu hoạch Sector-B7 (v1.0)\n            \n            \n              Chưa làm\n              ▶\n              🧪\n              \n            \n          ",
+        "\n            \n              \n              \n                FARM\n              \n              Auto Event Boss Bonus (v1.1.0 New)\n            \n            \n              Chưa làm\n              ▶\n              🧪\n              \n            \n          "
+      ],
+      "preservedSectorB7": true,
+      "preservedResource250": true,
+      "preservedRedactedPin": true,
+      "hasNewV11Task": true
+    },
+    "betaPtrUntouched": {
+      "projectSlug": "beta-arena",
+      "activeVersion": "1.0.0",
+      "previousVersion": null,
+      "exeName": "Auto_BetaArena.exe",
+      "sqliteSchemaVersion": 4,
+      "minRuntimeVersion": "0.1.0",
+      "postUpdateAutoResumeBlocked": false,
+      "blockedJobIds": [],
+      "backupDbPath": null,
+      "activatedAtUtc": "2026-11-22T11:17:47.759658400+00:00",
+      "journalId": "upd-cbe69a96-d798-44b6-b364-8fa1832a0d16"
+    }
+  },
+  "rollbackVerification": {
+    "rollbackOut": {
+      "operation": "rollback",
+      "status": "ROLLED_BACK",
+      "projectSlug": "alpha-harvester",
+      "previousVersion": "1.1.0",
+      "activeVersion": "1.0.0",
+      "stageReached": "rolled_back",
+      "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261122_111757_111.db",
+      "backupVerifiedOk": true,
+      "signatureVerifiedOk": true,
+      "compatibilityVerifiedOk": true,
+      "postUpdateAutoResumeBlocked": true,
+      "blockedJobIds": [],
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\.updater\\update-journal.json",
+      "detail": "Rolled back safely to verified previous version."
+    },
+    "rolledBackSnap": {
+      "title": "Alpha Harvester v1.0.0",
+      "badge": "",
+      "cells": [
+        "Chưa có thiết bị kết nối",
+        "com.alpha.harvester",
+        "OFFLINE",
+        "Sector-B7TESTKIT · Mô phỏng",
+        "250TESTKIT · Mô phỏng",
+        "***REDACTED***TESTKIT · Mô phỏng"
+      ],
+      "taskCount": 1,
+      "preservedSectorB7": true,
+      "preservedRedactedPin": false
+    },
+    "finalAlphaPtr": {
+      "projectSlug": "alpha-harvester",
+      "activeVersion": "1.0.0",
+      "previousVersion": null,
+      "exeName": "Auto_AlphaHarvester.exe",
+      "sqliteSchemaVersion": 4,
+      "minRuntimeVersion": "0.1.0",
+      "postUpdateAutoResumeBlocked": true,
+      "blockedJobIds": [],
+      "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261122_111757_111.db",
+      "activatedAtUtc": "2026-11-22T11:18:03.290263300+00:00",
+      "journalId": "rbk-df98afdc-3fd9-4741-83ef-51cff78d4bfc"
+    },
+    "finalAlphaJournal": {
+      "journalId": "rbk-df98afdc-3fd9-4741-83ef-51cff78d4bfc",
+      "operation": "rollback",
+      "projectSlug": "alpha-harvester",
+      "sourceVersion": "1.1.0",
+      "targetVersion": "1.0.0",
+      "sourceReleaseDir": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\versions\\v1.0.0",
+      "stage": "rolled_back",
+      "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261122_111757_111.db",
+      "liveDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\data\\runtime_alpha-harvester.db",
+      "stagedStagingDir": null,
+      "stagedVersionDir": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\versions\\v1.0.0",
+      "previousActivePointer": {
+        "projectSlug": "alpha-harvester",
+        "activeVersion": "1.1.0",
+        "previousVersion": "1.0.0",
+        "exeName": "Auto_AlphaHarvester.exe",
+        "sqliteSchemaVersion": 4,
+        "minRuntimeVersion": "0.1.0",
+        "postUpdateAutoResumeBlocked": false,
+        "blockedJobIds": [],
+        "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p5_2_evidence\\sandbox\\installed\\Auto_AlphaHarvester\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261122_111757_111.db",
+        "activatedAtUtc": "2026-11-22T11:17:58.412713300+00:00",
+        "journalId": "upd-9a5f92f1-0d04-4ce0-90a6-7624694b1313"
+      },
+      "targetCompat": {
+        "projectSchemaVersion": 1,
+        "workflowSchemaVersion": 1,
+        "uiSchemaVersion": 1,
+        "moduleApiVersion": "1.0.0",
+        "minRuntimeVersion": "0.1.0",
+        "sqliteSchemaVersion": 4
+      },
+      "autoResumeBlockedJobs": [],
+      "lastError": null,
+      "updatedAtUtc": "2026-11-22T11:18:03.292058800+00:00"
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "FARMERPRO_P5_2_ACCEPTANCE_REPORT.html": {
+    "bytes": 427487,
+    "sha256": "f79e380879ebc515c3c37879cb1a0319f5e8cb737d187322947b9f600a1e43a3"
+  },
+  "FARMERPRO_P5_2_ACCEPTANCE_REPORT.pdf": {
+    "bytes": 404213,
+    "sha256": "78b2128dd72a43947c555031be015af7deb6c890d5c7232ef7d0acb138f07b67"
+  },
+  "cargo_test_workspace_p5_2.log": {
+    "bytes": 14775,
+    "sha256": "e9ed9f22493145276c5c184cae3c523cfe4964c78e333ef1feca85b0de95d79b"
+  },
+  "p5_2_e2e_report.json": {
+    "bytes": 32923,
+    "sha256": "f42a187426b6a3625807fa37ecd2d250ac0d6fa67361c44cb8c92828cd611798"
+  },
+  "p5_2_minitool_rolled_back.png": {
+    "bytes": 44775,
+    "sha256": "13868bcc0d8fd2af0f5fb2a961085dfaca05a179b83b7260f584265d513e699b"
+  },
+  "p5_2_minitool_v1_1_upgraded.png": {
+    "bytes": 48991,
+    "sha256": "89abd9101816b1b27dac9c42e88fdbd06fd882a480baade1f714169aa81c4632"
+  },
+  "p5_2_minitool_v1_before.png": {
+    "bytes": 47080,
+    "sha256": "025d0fac432c5e5113d92828c71ae6fbba657026825592dcb7dcd57ec83f95df"
+  },
+  "p5_2_pdf_qa.json": {
+    "bytes": 512,
+    "sha256": "13baea100fb1adb1f244fbe09edf7c08cb4818c7d61e7f6ab79239978ff83dce"
+  },
+  "p5_2_studio_release_lifecycle.png": {
+    "bytes": 166246,
+    "sha256": "b41c46521e3183206da8b85e134c025190e5795424b4789761465cef7c895267"
+  },
+  "pdf_p5_2_rendered_pages/p5_2_page_01.png": {
+    "bytes": 253148,
+    "sha256": "b919b66507802633868de70b492a7b94dce06a36c2416d3a9da781d9f915240e"
+  },
+  "pdf_p5_2_rendered_pages/p5_2_page_02.png": {
+    "bytes": 265885,
+    "sha256": "690b5eacb5c014bdda947759b5a55cd55d4d36a222d2de6e32f93f681ceff79d"
+  },
+  "pdf_p5_2_rendered_pages/p5_2_page_03.png": {
+    "bytes": 167647,
+    "sha256": "eca89ba136342face2b3b98d1b537b277311cfb1519c510c00bdb9c6623f4231"
+  },
+  "pdf_p5_2_rendered_pages/p5_2_page_04.png": {
+    "bytes": 180437,
+    "sha256": "9217ce9922ae3606e3788e5d4c41dde817213a88fe8edec96e86bf868b4bfb30"
+  }
+}
