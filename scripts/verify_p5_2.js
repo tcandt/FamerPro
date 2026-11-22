@@ -608,9 +608,9 @@ async function main() {
 
   await new Promise((r) => setTimeout(r, 700));
 
-  // STEP 6: Roll back Alpha from v1.1.0 -> v1.0.0 cleanly and launch v1.0.0 EXE again!
+  // STEP 6: Binary-only Rollback Alpha from v1.1.0 -> v1.0.0 cleanly (preserving data) and launch v1.0.0 EXE again!
   const rollbackOut = JSON.parse(
-    runCommandChecked(updaterExe, ['rollback', '--install-root', installAlpha, '--restore-backup'], SANDBOX)
+    runCommandChecked(updaterExe, ['rollback', '--install-root', installAlpha], SANDBOX)
   );
   let rolledBackSnap = null;
   const alphaChild3 = spawn(alphaV1Exe, [], {
@@ -631,7 +631,7 @@ async function main() {
         cells,
         taskCount: tasks.length,
         preservedSectorB7: cells.some(c => c.includes('Sector-B7')),
-        preservedRedactedPin: cells.some(c => c.includes('[REDACTED]') && !c.includes('482910'))
+        preservedRedactedPin: cells.some(c => c.includes('***REDACTED***') && !c.includes('482910'))
       };
     })()`);
     await snap('p5_2_minitool_rolled_back.png', 740, 500);

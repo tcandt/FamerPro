@@ -1798,7 +1798,7 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
                     disabled={busyAction !== null}
                     className="w-full mt-1 py-1 rounded bg-[#381E24] hover:bg-[#4B2630] border border-[#F27883]/50 text-[#F27883] font-bold cursor-pointer"
                   >
-                    Rollback về v{installInspection.activePointer.previousVersion} (Restore WAL Backup)
+                    Rollback Binary về v{installInspection.activePointer.previousVersion} (Giữ dữ liệu mới)
                   </button>
                 )}
               </div>

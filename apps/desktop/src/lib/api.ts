@@ -752,7 +752,7 @@ export const api = {
 
   async studioRollbackMinitoolInstall(
     installRoot: string,
-    restoreBackup = true
+    restoreBackup = false
   ): Promise<UpdateOutcome> {
     requireTauri('studio_rollback_minitool_install');
     return await invoke<UpdateOutcome>('studio_rollback_minitool_install', {

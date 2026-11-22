@@ -1099,7 +1099,7 @@ pub fn studio_rollback_minitool_install(
 ) -> Result<UpdateOutcome, String> {
     let updater = MiniToolUpdater::new(&install_root);
     updater
-        .rollback_to_previous(restore_backup.unwrap_or(true), false)
+        .rollback_to_previous(restore_backup.unwrap_or(false), false)
         .map_err(|e| e.to_string())
 }
 

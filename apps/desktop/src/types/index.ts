@@ -424,6 +424,9 @@ export interface UpdateOutcome {
   compatibilityVerifiedOk: boolean;
   postUpdateAutoResumeBlocked: boolean;
   blockedJobIds: string[];
+  binaryRollbackOnly?: boolean;
+  databaseRestored?: boolean;
+  preRollbackSafetyDbPath?: string | null;
   journalPath: string;
   detail: string;
 }
