@@ -8,7 +8,7 @@
 
   <rect x="40" y="86" width="430" height="76" rx="8" fill="#0F2942" stroke="#3B82F6" stroke-width="1.8"/>
   <text x="255" y="109" text-anchor="middle" fill="#F8FAFC" font-size="14.5" font-weight="700">apps/desktop/src-tauri (studio_p2.rs)</text>
-  <text x="255" y="130" text-anchor="middle" fill="#CBD5E1" font-size="13">26 Tauri IPC: Project CRUD/Clone, Tasks, UI Schema</text>
+  <text x="255" y="130" text-anchor="middle" fill="#CBD5E1" font-size="13">29 Tauri IPC: Project CRUD/Clone, Tasks, UI Schema</text>
   <text x="255" y="149" text-anchor="middle" fill="#93C5FD" font-size="12.8">Vault Namespaces + DPAPI Keystore + DB Backup</text>
 
   <rect x="490" y="86" width="295" height="76" rx="8" fill="#132D24" stroke="#10B981" stroke-width="1.8"/>
@@ -35,7 +35,7 @@
   <text x="42" y="296" fill="#E2E8F0" font-size="13.2">• jx2_seed.rs: Non-destructive 10 workflows + 8 PNGs</text>
   <text x="42" y="317" fill="#E2E8F0" font-size="13.2">• Project CRUD, Clone &amp; PROJECT_ISOLATION_VIOLATION</text>
   <text x="42" y="338" fill="#93C5FD" font-size="12.8">• Deps: fp-domain, fp-workflow-schema, fp-bundle-contract</text>
-  <text x="42" y="357" fill="#6EE7B7" font-size="12.8">• Tests: 8/8 PASS (Idempotency, Rollback, Backup, Isolation)</text>
+  <text x="42" y="357" fill="#6EE7B7" font-size="12.8">• Tests: 9/9 PASS (Idempotency, Rollback, Backup, Isolation)</text>
 
   <rect x="570" y="206" width="526" height="162" rx="10" fill="#2E1065" stroke="#A855F7" stroke-width="2"/>
   <text x="588" y="230" fill="#E9D5FF" font-size="15" font-weight="700">crates/fp-security (Win32 Credential Manager + DPAPI)</text>
@@ -65,8 +65,8 @@
   <text x="926" y="421" text-anchor="middle" fill="#F8FAFC" font-size="14" font-weight="700">crates/fp-workflow-runtime</text>
   <text x="926" y="443" text-anchor="middle" fill="#6EE7B7" font-size="13">ZERO Hardcoded Game Names</text>
   <text x="926" y="463" text-anchor="middle" fill="#CBD5E1" font-size="12.8">Gỡ bỏ hardcode games/jx2mobile</text>
-  <text x="926" y="482" text-anchor="middle" fill="#94A3B8" font-size="12.8">Quét động bundle/ + projects/*/templates</text>
-  <text x="926" y="500" text-anchor="middle" fill="#6EE7B7" font-size="12.8">3/3 Unit Tests PASS (44/44 Total)</text>
+  <text x="926" y="482" text-anchor="middle" fill="#94A3B8" font-size="12.8">Scoped project_dir + bundle/templates</text>
+  <text x="926" y="500" text-anchor="middle" fill="#6EE7B7" font-size="12.8">4/4 Unit Tests PASS (46/46 Total)</text>
 
   <line x1="210" y1="368" x2="194" y2="396" stroke="#60A5FA" stroke-width="1.8" marker-end="url(#arr)"/>
   <line x1="720" y1="368" x2="560" y2="396" stroke="#C084FC" stroke-width="1.8" marker-end="url(#arr)"/>

@@ -49,7 +49,7 @@ with open(sql_path, "w", encoding="utf-8") as f:
 sandbox_rep = json.loads(open(os.path.join(EV_DIR, "p2_verify_dist_portable_sandbox.json"), encoding="utf-8-sig").read())
 prod_mig_rep = json.loads(open(os.path.join(EV_DIR, "p2_dist_portable_migration_report.json"), encoding="utf-8-sig").read())
 test_log = open(os.path.join(EV_DIR, "cargo_test_workspace_p2_clean.log"), encoding="utf-8", errors="ignore").read()
-git_diff_stat = subprocess.check_output(["git", "diff", "--stat", "fab1a1a..HEAD"], cwd=ROOT).decode("utf-8")
+git_diff_stat = subprocess.check_output(["git", "diff", "--stat", "fab1a1a..HEAD", "--", ".", ":!artifacts/p2_evidence/pdf_rendered_pages"], cwd=ROOT).decode("utf-8")
 git_log_txt = subprocess.check_output(["git", "-c", "i18n.logOutputEncoding=utf-8", "log", "-n", "3", "--oneline"], cwd=ROOT).decode("utf-8")
 with open(os.path.join(EV_DIR, "git_log_p2.txt"), "w", encoding="utf-8") as f:
     f.write(git_log_txt)

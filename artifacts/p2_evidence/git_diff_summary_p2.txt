@@ -1,21 +1,43 @@
  Cargo.lock                                         |   14 +
  Cargo.toml                                         |    2 +-
+ FARMERPRO_P2_ACCEPTANCE_REPORT.html                |  874 +++++++
+ FARMERPRO_P2_ACCEPTANCE_REPORT.pdf                 |  Bin 0 -> 553237 bytes
  apps/cli/Cargo.toml                                |    4 +
  apps/cli/src/main.rs                               |  423 ++++
  apps/desktop/src-tauri/Cargo.toml                  |    1 +
  apps/desktop/src-tauri/src/main.rs                 |   58 +-
- apps/desktop/src-tauri/src/studio_p2.rs            |  485 +++++
+ apps/desktop/src-tauri/src/studio_p2.rs            |  550 +++++
  .../FARMERPRO_P1_2_STUDIO_BLUEPRINT.md             |    6 +-
+ .../p2_evidence/EVIDENCE_MANIFEST_SHA256.json      |  126 +
+ .../p2_evidence/FARMERPRO_P2_ACCEPTANCE_REPORT.pdf |  Bin 0 -> 553237 bytes
+ .../p2_evidence/cargo_test_workspace_p2_clean.log  |  Bin 0 -> 13042 bytes
+ artifacts/p2_evidence/cargo_tree_workspace_p2.txt  |  Bin 0 -> 10732 bytes
+ .../p2_evidence/diagrams/01_p2_rust_crates_map.mmd |   21 +
+ .../p2_evidence/diagrams/01_p2_rust_crates_map.svg |   79 +
+ .../diagrams/02_p2_sqlite_v2_er_schema.mmd         |   15 +
+ .../diagrams/02_p2_sqlite_v2_er_schema.svg         |   83 +
+ .../03_p2_migration_backup_rollback_flow.mmd       |    7 +
+ .../03_p2_migration_backup_rollback_flow.svg       |   69 +
+ .../diagrams/04_p2_wincred_dpapi_isolation.mmd     |   12 +
+ .../diagrams/04_p2_wincred_dpapi_isolation.svg     |   52 +
+ artifacts/p2_evidence/git_diff_summary_p2.txt      |   21 +
+ artifacts/p2_evidence/git_log_p2.txt               |    3 +
+ .../p2_dist_portable_migration_report.json         |   54 +
+ artifacts/p2_evidence/p2_pdf_qa_report.json        |   12 +
+ .../p2_verify_dist_portable_sandbox.json           |  292 +++
+ .../p2_evidence/p2_verify_root_db_sandbox.json     |  283 +++
+ artifacts/p2_evidence/sqlite_v1_v2_migration.sql   |  187 ++
  crates/fp-builder/src/security.rs                  |  132 +-
  crates/fp-security/Cargo.toml                      |    6 +
  crates/fp-security/src/dpapi.rs                    |  208 ++
  crates/fp-security/src/keystore.rs                 |  398 ++++
- crates/fp-security/src/lib.rs                      |  458 ++++-
+ crates/fp-security/src/lib.rs                      |  458 +++-
  crates/fp-security/src/wincred.rs                  |  327 +++
  crates/fp-storage/Cargo.toml                       |    3 +
- crates/fp-storage/src/jx2_seed.rs                  |  478 +++++
- crates/fp-storage/src/lib.rs                       | 2163 +++++++++++++++++++-
- crates/fp-storage/src/migrations.rs                |  370 ++++
+ crates/fp-storage/src/jx2_seed.rs                  |  478 ++++
+ crates/fp-storage/src/lib.rs                       | 2404 +++++++++++++++++++-
+ crates/fp-storage/src/migrations.rs                |  370 +++
  crates/fp-storage/src/models.rs                    |  259 +++
- crates/fp-workflow-runtime/src/lib.rs              |   33 +-
- 20 files changed, 5598 insertions(+), 230 deletions(-)
+ crates/fp-workflow-runtime/src/lib.rs              |  195 +-
+ scripts/generate_p2_acceptance_report.py           | 1276 +++++++++++
+ 42 files changed, 9512 insertions(+), 250 deletions(-)
