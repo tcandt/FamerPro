@@ -1,0 +1,49 @@
+{
+  "milestone": "P4.1",
+  "executedAtUtc": "2026-11-22T04:55:15.597Z",
+  "uiRenderedRealSqliteProjects": true,
+  "crudAndIsolation": {
+    "p1Id": "proj-dragon-arena-4a1de411",
+    "p2Id": "proj-farm-valley-1fa0c10a",
+    "p3Id": "proj-dragon-arena-sea-c0b03035",
+    "p3Version": "1.2.5",
+    "p1Workflows": 1,
+    "p2Workflows": 0,
+    "countBeforeDelete": 3,
+    "deletedTemp": true,
+    "countAfterDelete": 3,
+    "integrityOk": true,
+    "fkViolations": 0
+  },
+  "consoleErrors": [],
+  "screenshots": [
+    {
+      "filename": "p4_1_projects_1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "scrollWidth": 1280,
+      "clientWidth": 1280
+    },
+    {
+      "filename": "p4_1_projects_1600x900.png",
+      "width": 1600,
+      "height": 900,
+      "scrollWidth": 1600,
+      "clientWidth": 1600
+    },
+    {
+      "filename": "p4_1_projects_1920x1080.png",
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920,
+      "clientWidth": 1920
+    },
+    {
+      "filename": "p4_1_create_modal_1600x900.png",
+      "width": 1600,
+      "height": 900,
+      "scrollWidth": 1600,
+      "clientWidth": 1600
+    }
+  ]
+}
