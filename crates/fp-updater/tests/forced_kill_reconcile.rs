@@ -239,7 +239,93 @@ fn test_real_os_forced_kill_at_stage_and_reconcile_recovery() {
         let journal = inspector.read_journal().unwrap().unwrap();
         assert_eq!(active.active_version, expected_active_after);
         assert_eq!(journal.stage, expected_journal_stage);
+        eprintln!(
+            "[OS SIGKILL Reconcile {}] stdout={}",
+            stage_arg,
+            String::from_utf8_lossy(&rec_out.stdout).trim()
+        );
     }
+
+    // Concurrent Dual Updater Process Lock Test on same install_root:
+    let lock_root = tmp.join("install_concurrent_lock");
+    let init_st = Command::new(updater_bin)
+        .args([
+            "install-initial",
+            "--install-root",
+            lock_root.to_str().unwrap(),
+            "--release-dir",
+            rel_100.to_str().unwrap(),
+            "--skip-child-verify-exec",
+        ])
+        .status()
+        .unwrap();
+    assert!(init_st.success());
+
+    let mut updater1 = Command::new(updater_bin)
+        .args([
+            "upgrade",
+            "--install-root",
+            lock_root.to_str().unwrap(),
+            "--release-dir",
+            rel_110.to_str().unwrap(),
+            "--pause-at",
+            "AfterBackup",
+            "--pause-ms",
+            "15000",
+            "--skip-child-verify-exec",
+        ])
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut r1 = BufReader::new(updater1.stdout.take().unwrap());
+    let mut l1 = String::new();
+    r1.read_line(&mut l1).unwrap();
+    assert!(l1.contains("PAUSED_AT:AfterBackup"));
+
+    // Spawn 2nd updater targeting same install_root while 1st holds updater.lock!
+    let updater2_out = Command::new(updater_bin)
+        .args([
+            "upgrade",
+            "--install-root",
+            lock_root.to_str().unwrap(),
+            "--release-dir",
+            rel_110.to_str().unwrap(),
+            "--skip-child-verify-exec",
+        ])
+        .output()
+        .unwrap();
+    assert!(!updater2_out.status.success());
+    let u2_err = format!(
+        "{} {}",
+        String::from_utf8_lossy(&updater2_out.stdout),
+        String::from_utf8_lossy(&updater2_out.stderr)
+    );
+    assert!(
+        u2_err.contains("CONCURRENT_UPDATER_LOCKED"),
+        "Expected concurrent lock error, got: {}",
+        u2_err
+    );
+
+    updater1.kill().unwrap();
+    let _ = updater1.wait();
+    let rec_lock = Command::new(updater_bin)
+        .args([
+            "reconcile",
+            "--install-root",
+            lock_root.to_str().unwrap(),
+            "--skip-child-verify-exec",
+        ])
+        .output()
+        .unwrap();
+    assert!(rec_lock.status.success());
+    assert_eq!(
+        MiniToolUpdater::new(&lock_root)
+            .read_active_pointer()
+            .unwrap()
+            .unwrap()
+            .active_version,
+        "1.0.0"
+    );
 
     let _ = fs::remove_dir_all(&tmp);
 }
