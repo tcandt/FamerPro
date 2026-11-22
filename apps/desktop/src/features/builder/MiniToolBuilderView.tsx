@@ -91,7 +91,7 @@ const buildDefaultSchema = (
     versionBadge: `v${version}`,
     themeAccentHex: '#1878F5',
     headerBgHex: '#121E2A',
-    layoutPreset: 'compact_2_col',
+    layoutPreset: 'compact2_col',
     defaultWindowSize: [960, 620],
     sectionsOrder: ALL_SECTIONS.map((s) => s.id),
     hiddenComponents: [],
@@ -437,7 +437,7 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
     visibleSections.includes('quick_log') || visibleSections.includes('task_and_log_split');
   const showFooter =
     visibleSections.includes('status_footer') || visibleSections.includes('footer_controls');
-  const previewCompact2Col = syncedSchema.layoutPreset === 'compact_2_col';
+  const previewCompact2Col = syncedSchema.layoutPreset === 'compact2_col';
   const previewExpanded = syncedSchema.layoutPreset === 'expanded';
 
   return (
@@ -615,7 +615,7 @@ export const MiniToolBuilderView: React.FC<MiniToolBuilderViewProps> = ({ onNavi
             </div>
 
             <div className="grid grid-cols-3 gap-1.5">
-              {(['compact_1_col', 'compact_2_col', 'expanded'] as MiniLayoutPreset[]).map((p) => (
+              {(['compact1_col', 'compact2_col', 'expanded'] as MiniLayoutPreset[]).map((p) => (
                 <button
                   key={p}
                   type="button"

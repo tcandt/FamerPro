@@ -135,7 +135,7 @@ export interface ScanRangeResult {
 // P2 Multi-Project, Bundle Contract & Security Types
 // =========================================================================
 
-export type MiniLayoutPreset = 'compact_1_col' | 'compact_2_col' | 'expanded';
+export type MiniLayoutPreset = 'compact1_col' | 'compact2_col' | 'expanded';
 
 export interface RuntimeColumnBinding {
   id: string;

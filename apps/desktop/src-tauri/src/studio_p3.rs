@@ -883,10 +883,12 @@ pub fn studio_list_project_releases(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fp_adb::AdbRunner;
     use fp_proxy::ProxyProtocol;
     use fp_security::CredentialVault;
     use fp_storage::CreateProjectRequest;
     use fp_testkit::FakeDeviceDriver;
+    use fp_workflow_runtime::coordinator::RuntimeCoordinator;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
 

@@ -1,0 +1,80 @@
+{
+  "milestone": "P4.6",
+  "executedAtUtc": "2026-11-22T05:20:56.100Z",
+  "studioClosedBeforeLaunch": true,
+  "studioShot1920": {
+    "filename": "p4_6_studio_dashboard_1920x1080.png",
+    "width": 1920,
+    "height": 1080
+  },
+  "studioConsoleErrors": [],
+  "alphaExport": {
+    "projectId": "proj-alpha-strategy-3eb34bcf",
+    "slug": "alpha-strategy",
+    "exePath": "E:\\DATA\\FarmerPro\\artifacts\\p4_evidence\\p4_6_sandbox\\projects\\alpha-strategy\\releases\\v1.0.0\\Auto_AlphaStrategy.exe",
+    "exeSha256": "a14e51c349fbcf2a335c8e7fe2dc740546ed6abc44443af0f9ac0f1d39b7175a",
+    "keyId": "fp-ed25519-acb43ebd9ab4",
+    "signatureVerifiedOnExport": true,
+    "totalDurationMs": 2230
+  },
+  "betaExport": {
+    "projectId": "proj-beta-arena-43ea5e46",
+    "slug": "beta-arena",
+    "exePath": "E:\\DATA\\FarmerPro\\artifacts\\p4_evidence\\p4_6_sandbox\\projects\\beta-arena\\releases\\v2.4.0\\Auto_BetaArena.exe",
+    "exeSha256": "757e6adb3cc3cd735c7a1efb1d667ac6e10320ea3e69b4c67112f44ed7ed5db8",
+    "keyId": "fp-ed25519-acb43ebd9ab4",
+    "signatureVerifiedOnExport": true,
+    "totalDurationMs": 2646
+  },
+  "alphaStandalone": {
+    "runtimeInfo": {
+      "windowTitle": "Auto Alpha Strategy v1.0.0",
+      "projectSlug": "alpha-strategy",
+      "layoutPreset": "compact2_col",
+      "accentHex": "#1878F5",
+      "signatureVerified": true,
+      "keyId": "fp-ed25519-acb43ebd9ab4",
+      "isDemoMode": false,
+      "devicesCount": 0,
+      "tasks": [
+        "Thu hoạch Mỏ Alpha"
+      ],
+      "columns": [
+        "Mỏ Khoáng",
+        "Năng lượng"
+      ],
+      "renderedTextSnippet": "Alpha Strategy Auto • v1.0.0\nADB: 0 ONLINE (OFFLINE)\n✓ Ed25519 Signed\n1/2 Cột ⇄\n[✓] THIẾT BỊ ADB\tPACKAGE GAME\tTRẠNG THÁI\tMỎ KHOÁNG\tNĂNG LƯỢNG\nChưa có thiết bị kết nối\tcom.alpha.strategy\tOFFLINE\t0/4\t100%\nĐIỀU KHIỂN\nTIỆN ÍCH\nMODULES (5-STATE)\nRES\nThu hoạch Mỏ Alpha\nChưa làm\n▶\nNHẬT KÝ\nCÀI ĐẶT (⚙)\n[12:20:51]Trạng thái ADB thực tế: 0 máy kết nối.\n[12:20:51]Chữ ký RFC 8032 (Ed25519-RFC8032-SHA256): HỢP "
+    },
+    "consoleErrors": [],
+    "shot": {
+      "filename": "p4_6_minitool_alpha.png",
+      "width": 920,
+      "height": 660
+    }
+  },
+  "betaStandalone": {
+    "runtimeInfo": {
+      "windowTitle": "Auto Beta Arena v2.4.0",
+      "projectSlug": "beta-arena",
+      "layoutPreset": "expanded",
+      "accentHex": "#22C55E",
+      "signatureVerified": true,
+      "keyId": "fp-ed25519-acb43ebd9ab4",
+      "isDemoMode": false,
+      "devicesCount": 0,
+      "tasks": [
+        "Đấu trường PvP Beta"
+      ],
+      "columns": [
+        "Hạng Arena"
+      ],
+      "renderedTextSnippet": "Beta Arena Bot • v2.4.0\nADB: 0 ONLINE (OFFLINE)\n✓ Ed25519 Signed\n1/2 Cột ⇄\n[✓] THIẾT BỊ ADB\tPACKAGE GAME\tTRẠNG THÁI\tHẠNG ARENA\nChưa có thiết bị kết nối\tcom.beta.arena\tOFFLINE\tTier-A\nĐIỀU KHIỂN\nTIỆN ÍCH\nMODULES (5-STATE)\nPVP\nĐấu trường PvP Beta\nChưa làm\n▶\nNHẬT KÝ\nCÀI ĐẶT (⚙)\n[12:20:54]Trạng thái ADB thực tế: 0 máy kết nối.\n[12:20:54]Chữ ký RFC 8032 (Ed25519-RFC8032-SHA256): HỢP LỆ\n[12:20:54]Khởi độ"
+    },
+    "consoleErrors": [],
+    "shot": {
+      "filename": "p4_6_minitool_beta.png",
+      "width": 920,
+      "height": 660
+    }
+  }
+}
