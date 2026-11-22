@@ -92,11 +92,12 @@ crash_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 340" fo
 
   <rect x="24" y="202" width="1072" height="118" rx="8" fill="#1E293B" stroke="#475569" stroke-width="1.6"/>
   <text x="42" y="227" fill="#FBBF24" font-size="13.5" font-weight="700">CHỨNG CỨ KIỂM THỬ CRASH CONSISTENCY &amp; SQLITE ISOLATION HARDENING (THỰC THI TRÊN SANDBOX &amp; CARGO TEST)</text>
-  <text x="42" y="250" fill="#E2E8F0" font-size="12.5">• SQLite Triggers ({trigger_count} triggers) + Composite FK (project_id, workflow_id): Chặn 100% lệnh SQL trực tiếp conn.execute() chéo project hoặc project_id IS NULL.</text>
+  <text x="42" y="250" fill="#E2E8F0" font-size="12.5">• SQLite Triggers (__TRIGGER_COUNT__ triggers) + Composite FK (project_id, workflow_id): Chặn 100% lệnh SQL trực tiếp conn.execute() chéo project hoặc project_id IS NULL.</text>
   <text x="42" y="271" fill="#E2E8F0" font-size="12.5">• Template Containment: Canonicalize + check FILE_ATTRIBUTE_REPARSE_POINT chặn đường dẫn tuyệt đối ngoài project, '..', và NTFS Junction (mklink /J).</text>
   <text x="42" y="292" fill="#6EE7B7" font-size="12.5">• Portable Key Recovery: PBKDF2-HMAC-SHA256 (200,000 vòng) + SHA-256-CTR + Encrypt-then-MAC (HMAC-SHA256) giải quyết chuyển máy/user ngoài DPAPI.</text>
   <text x="42" y="311" fill="#93C5FD" font-size="12.5">• Tổng kết kiểm thử: 53/53 workspace tests PASS | verify-p2 (pre-v2, dist-portable, root) PASS | verify-rollback-runbook PASS | apps/desktop/src = 0 dòng sửa.</text>
 </svg>"""
+crash_svg = crash_svg.replace("__TRIGGER_COUNT__", str(trigger_count))
 with open(os.path.join(DIAG_DIR, "05_p2_1_crash_safe_and_hardening.svg"), "w", encoding="utf-8") as f:
     f.write(crash_svg)
 crash_svg_b64 = "data:image/svg+xml;base64," + base64.b64encode(crash_svg.encode("utf-8")).decode("ascii")
@@ -333,7 +334,7 @@ pages.append(page_wrap(6, "HẠNG MỤC 6 · BẢO MẬT PRODUCER KEY", "Đánh 
     <div class="card" style="padding:2.2mm 2.8mm;">
       <div class="card-h" style="margin-bottom:1.2mm;">2. GIẢI PHÁP PORTABLE RECOVERY BỔ SUNG Ở P2.1</div>
       <table class="tbl-tight">
-        <tr><th style="width:46%;">Kiểm chứng Cross-Machine Recovery</th><th style="width:16%;">Kết quả</th><th style="width:38%;">Chi tiết Xác minh</th></tr>
+        <tr><th style="width:36%;">Kiểm chứng Cross-Machine Recovery</th><th style="width:12%;">Kết quả</th><th style="width:52%;">Chi tiết Xác minh</th></tr>
         <tr><td>Scheme <code>export_portable_recovery_bundle</code></td><td><span class="tag-pass">PASS</span></td><td><code>{port_info['protectionScheme']}</code></td></tr>
         <tr><td>KDF &amp; Authenticated Encryption</td><td><span class="tag-pass">PASS</span></td><td>PBKDF2-HMAC-SHA256 (<code>{port_info['kdfIterations']}</code> vòng) + SHA-256-CTR + Encrypt-then-MAC</td></tr>
         <tr><td>Không lộ plaintext seed trên đĩa/log/bundle</td><td><span class="tag-pass">PASS</span></td><td><code>noPlaintextSeedInBundle = {port_info['noPlaintextSeedInBundle']}</code></td></tr>
@@ -443,7 +444,7 @@ html_doc = f"""<!DOCTYPE html>
   table.tbl-tight th, table.tbl-tight td {{ padding: 0.85mm 1.35mm; font-size: 7.9pt; }}
   th {{ background: #EFF6FF; color: #1E3A8A; font-weight: 700; }}
   tr:nth-child(even) td {{ background: #F8FAFC; }}
-  code {{ font-family: Consolas, "Courier New", monospace; font-size: 7.7pt; background: #F1F5F9; padding: 0.15mm 0.8mm; border-radius: 3px; color: #0F172A; }}
+  code {{ font-family: Consolas, "Courier New", monospace; font-size: 7.7pt; background: #F1F5F9; padding: 0.15mm 0.8mm; border-radius: 3px; color: #0F172A; overflow-wrap: anywhere; }}
   pre.code-box {{ margin: 0; background: #0F172A; color: #E2E8F0; font-family: Consolas, "Courier New", monospace; border-radius: 5px; overflow: hidden; white-space: pre-wrap; word-break: break-word; }}
   .tag-pass {{ display: inline-block; background: #DCFCE7; color: #166534; font-weight: 700; font-size: 7.5pt; padding: 0.3mm 1.5mm; border-radius: 3px; border: 1px solid #86EFAC; }}
   .tag-plan {{ display: inline-block; background: #FEF3C7; color: #92400E; font-weight: 700; font-size: 7.5pt; padding: 0.3mm 1.5mm; border-radius: 3px; border: 1px solid #FDE68A; }}
