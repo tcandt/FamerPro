@@ -45,7 +45,7 @@ async function waitForCdp(port, timeoutMs = 22000) {
   throw new Error(`Timed out waiting for WebView2 CDP on port ${port}`);
 }
 
-async function connectCdp(page) {
+async function connectCdp(page, waitSelector = null) {
   const ws = new WebSocket(page.webSocketDebuggerUrl);
   let idCounter = 1;
   const pending = new Map();
@@ -93,10 +93,13 @@ async function connectCdp(page) {
     return { filename, width, height };
   };
 
-  for (let i = 0; i < 40; i++) {
-    const ready = await evalJs('Boolean(window.__TAURI_INTERNALS__)');
+  for (let i = 0; i < 60; i++) {
+    const checkExpr = waitSelector
+      ? `Boolean(window.__TAURI_INTERNALS__ && document.querySelector(${JSON.stringify(waitSelector)}))`
+      : 'Boolean(window.__TAURI_INTERNALS__)';
+    const ready = await evalJs(checkExpr);
     if (ready) break;
-    await new Promise((r) => setTimeout(r, 250));
+    await new Promise((r) => setTimeout(r, 200));
   }
 
   return { ws, evalJs, snap, consoleErrors };
@@ -358,7 +361,7 @@ async function main() {
 
   try {
     const page = await waitForCdp(9261, 22000);
-    const { ws, evalJs, snap, consoleErrors } = await connectCdp(page);
+    const { ws, evalJs, snap, consoleErrors } = await connectCdp(page, '#device-tbody td');
     alphaConsoleErrors = consoleErrors;
 
     // Step 1: Verify boot state shows 'Chưa xác minh' & fail-closed on Live ADB click
@@ -567,8 +570,8 @@ async function main() {
   });
   try {
     const page = await waitForCdp(9262, 20000);
-    const { ws, evalJs, snap } = await connectCdp(page);
-    await new Promise((r) => setTimeout(r, 600));
+    const { ws, evalJs, snap } = await connectCdp(page, '#device-tbody td');
+    await new Promise((r) => setTimeout(r, 300));
     restartRecovery = await evalJs(`(() => {
       const cells = Array.from(document.querySelectorAll('#device-tbody td')).map(t => t.textContent);
       return {
@@ -600,9 +603,9 @@ async function main() {
   });
   try {
     const page = await waitForCdp(9263, 20000);
-    const { ws, evalJs, snap, consoleErrors } = await connectCdp(page);
+    const { ws, evalJs, snap, consoleErrors } = await connectCdp(page, '#device-tbody td');
     betaConsoleErrors = consoleErrors;
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 300));
     const initialBeta = await evalJs(`Array.from(document.querySelectorAll('#device-tbody td')).map(t => t.textContent)`);
 
     // TEST C Showcase on clean Beta before running TestKit: LIVE_ADB_OCR (conf 0.94, unverified) + LEGACY_UNVERIFIED
@@ -644,6 +647,13 @@ async function main() {
     })()`);
     testCReport.liveUnverifiedAndLegacyLabels = provenanceLabelsProbe;
     await snap('p5_1_minitool_provenance_variants.png', 900, 540);
+
+    // Clear in-memory Test C display-only probe before running Beta's genuine TestKit workflow
+    await evalJs(`(() => {
+      STATE.liveEnvelopes = {};
+      if (STATE.bootstrap) STATE.bootstrap.runtimeVars = {};
+      renderDeviceTable();
+    })()`);
 
     await evalJs(`document.getElementById('btn-run-testkit').click()`);
     await new Promise((r) => setTimeout(r, 1500));

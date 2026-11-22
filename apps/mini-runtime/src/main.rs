@@ -281,6 +281,28 @@ fn apply_delta_event_to_state(st: &mut MiniRuntimeState, delta_ev: &RuntimeVarDe
     }
 }
 
+fn sanitize_workflow_json_for_job_store(wf: &WorkflowDocument) -> String {
+    let mut scrubbed = wf.clone();
+    for node in &mut scrubbed.graph.nodes {
+        if let Some(var_key) = node
+            .config
+            .get("varKey")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+        {
+            if let Some(raw_v) = node.config.get("value").cloned() {
+                let (clean_v, _) = fp_security::sanitize_runtime_variable(&var_key, &raw_v);
+                node.config["value"] = clean_v;
+            }
+        }
+        let (clean_cfg, _) = fp_security::sanitize_runtime_variable(&node.id, &node.config);
+        node.config = clean_cfg;
+    }
+    serde_json::to_string(&scrubbed).unwrap_or_default()
+}
+
 async fn execute_task_internal(
     st_arc: Arc<Mutex<MiniRuntimeState>>,
     task_id: &str,
@@ -393,7 +415,7 @@ async fn execute_task_internal(
         };
 
     let job_id = format!("mini-job-{}", uuid::Uuid::new_v4());
-    let wf_json = serde_json::to_string(&workflow_doc).unwrap_or_default();
+    let wf_json = sanitize_workflow_json_for_job_store(&workflow_doc);
     let _ = storage.ensure_job_exists(
         &job_id,
         &device_id,
