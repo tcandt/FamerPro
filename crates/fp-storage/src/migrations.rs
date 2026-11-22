@@ -497,15 +497,34 @@ pub fn list_applied_versions(conn: &Connection) -> Result<Vec<i64>> {
 }
 
 pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
-    conn.execute_batch("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;")?;
+    conn.execute_batch("PRAGMA foreign_keys = ON; PRAGMA synchronous = NORMAL;")?;
+    let current_mode: String = conn
+        .query_row("PRAGMA journal_mode;", [], |r| r.get(0))
+        .unwrap_or_default();
+    if !current_mode.eq_ignore_ascii_case("wal") {
+        conn.execute_batch("PRAGMA journal_mode = WAL;")?;
+    }
 
-    // Ensure schema_migrations exists before querying applied versions
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);",
-        [],
-    )?;
+    // Fast-path: if schema_migrations already exists and has all v1..v4 applied,
+    // avoid taking unnecessary DDL write locks during concurrent multi-worker startups.
+    let has_mig_tbl: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='schema_migrations';",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(0);
+    if has_mig_tbl == 0 {
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);",
+            [],
+        )?;
+    }
 
     let applied: HashSet<i64> = list_applied_versions(conn)?.into_iter().collect();
+    if applied.contains(&1) && applied.contains(&2) && applied.contains(&3) && applied.contains(&4) {
+        return list_applied_versions(conn);
+    }
     let now = Utc::now().to_rfc3339();
 
     // Migration v1: Baseline tables (idempotent even on pre-tracking v1 DBs)

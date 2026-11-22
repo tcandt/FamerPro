@@ -292,12 +292,27 @@ impl StorageManager {
             }
         }
         let conn = Connection::open(db_path)?;
-        let _ = conn.busy_timeout(Duration::from_millis(300));
+        let _ = conn.busy_timeout(Duration::from_millis(1200));
         let sm = Self {
             conn: Arc::new(Mutex::new(conn)),
             crash_hook: Arc::new(Mutex::new(None)),
         };
-        sm.run_migrations()?;
+        let mut backoff_ms = 20u64;
+        for attempt in 0..=6 {
+            match sm.run_migrations() {
+                Ok(()) => return Ok(sm),
+                Err(e)
+                    if e.downcast_ref::<rusqlite::Error>()
+                        .map(is_sqlite_busy_err)
+                        .unwrap_or(false)
+                        && attempt < 6 =>
+                {
+                    std::thread::sleep(Duration::from_millis(backoff_ms));
+                    backoff_ms = (backoff_ms * 2).min(200);
+                }
+                Err(e) => return Err(e),
+            }
+        }
         Ok(sm)
     }
 
@@ -442,10 +457,10 @@ impl StorageManager {
             loop {
                 match conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate) {
                     Ok(t) => break t,
-                    Err(e) if is_sqlite_busy_err(&e) && attempt < 5 => {
+                    Err(e) if is_sqlite_busy_err(&e) && attempt < 12 => {
                         attempt += 1;
                         std::thread::sleep(Duration::from_millis(backoff_ms));
-                        backoff_ms = (backoff_ms * 2).min(120);
+                        backoff_ms = (backoff_ms * 2).min(150);
                     }
                     Err(e) => return Err(e.into()),
                 }
@@ -778,22 +793,39 @@ impl StorageManager {
     /// Compacts `runtime_var_events` keeping only the latest `keep_last_n` sequenced rows per stream,
     /// while leaving `runtime_var_streams.last_seq` and `runtime_variable_envelopes` completely intact.
     pub fn compact_runtime_var_events(&self, stream_id: &str, keep_last_n: usize) -> Result<usize> {
-        let conn = self.conn.lock().unwrap();
+        let mut conn = self.conn.lock().unwrap();
+        let mut backoff_ms = 15u64;
+        let tx = {
+            let mut attempt = 0u32;
+            loop {
+                match conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate) {
+                    Ok(t) => break t,
+                    Err(e) if is_sqlite_busy_err(&e) && attempt < 8 => {
+                        attempt += 1;
+                        std::thread::sleep(Duration::from_millis(backoff_ms));
+                        backoff_ms = (backoff_ms * 2).min(150);
+                    }
+                    Err(e) => return Err(e.into()),
+                }
+            }
+        };
         let cutoff_seq: Option<i64> = {
-            let mut st = conn.prepare(
+            let mut st = tx.prepare(
                 "SELECT seq FROM runtime_var_events WHERE stream_id = ?1 ORDER BY seq DESC LIMIT 1 OFFSET ?2;",
             )?;
             let mut rows = st.query(params![stream_id, keep_last_n as i64])?;
             rows.next()?.map(|r| r.get(0)).transpose()?
         };
-        if let Some(cut) = cutoff_seq {
-            let deleted = conn.execute(
+        let deleted = if let Some(cut) = cutoff_seq {
+            tx.execute(
                 "DELETE FROM runtime_var_events WHERE stream_id = ?1 AND seq <= ?2;",
                 params![stream_id, cut],
-            )?;
-            return Ok(deleted);
-        }
-        Ok(0)
+            )?
+        } else {
+            0
+        };
+        tx.commit()?;
+        Ok(deleted)
     }
 
     /// Queries highest applied migration version directly on the DB (used for downgrade safety checks).
@@ -1588,10 +1620,10 @@ impl StorageManager {
             loop {
                 match conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate) {
                     Ok(t) => break t,
-                    Err(e) if is_sqlite_busy_err(&e) && attempt < 5 => {
+                    Err(e) if is_sqlite_busy_err(&e) && attempt < 12 => {
                         attempt += 1;
                         std::thread::sleep(Duration::from_millis(backoff_ms));
-                        backoff_ms = (backoff_ms * 2).min(120);
+                        backoff_ms = (backoff_ms * 2).min(150);
                     }
                     Err(e) => return Err(e.into()),
                 }
@@ -3805,10 +3837,10 @@ impl StorageManager {
             loop {
                 match conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate) {
                     Ok(t) => break t,
-                    Err(e) if is_sqlite_busy_err(&e) && attempt < 5 => {
+                    Err(e) if is_sqlite_busy_err(&e) && attempt < 12 => {
                         attempt += 1;
                         std::thread::sleep(Duration::from_millis(backoff_ms));
-                        backoff_ms = (backoff_ms * 2).min(120);
+                        backoff_ms = (backoff_ms * 2).min(150);
                     }
                     Err(e) => return Err(e.into()),
                 }
@@ -3920,10 +3952,10 @@ impl StorageManager {
             loop {
                 match conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate) {
                     Ok(t) => break t,
-                    Err(e) if is_sqlite_busy_err(&e) && attempt < 5 => {
+                    Err(e) if is_sqlite_busy_err(&e) && attempt < 12 => {
                         attempt += 1;
                         std::thread::sleep(Duration::from_millis(backoff_ms));
-                        backoff_ms = (backoff_ms * 2).min(120);
+                        backoff_ms = (backoff_ms * 2).min(150);
                     }
                     Err(e) => return Err(e.into()),
                 }
@@ -6268,6 +6300,239 @@ mod tests {
         let history = storage.list_project_release_transitions(&proj.id).unwrap();
         assert!(history.len() >= 5);
 
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p5_1_long_run_multi_worker_wal_stress_compaction_metrics() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_p5_1_long_stress_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let db_path = temp_dir.join("wal_long_stress.db");
+        let setup = StorageManager::new(&db_path).unwrap();
+        setup
+            .create_project(
+                CreateProjectRequest {
+                    slug: "long-stress".to_string(),
+                    name: "Long Stress".to_string(),
+                    game_package_id: "com.stress.long".to_string(),
+                    version: None,
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                    enabled_modules: None,
+                },
+                &temp_dir.join("projects"),
+            )
+            .unwrap();
+        drop(setup);
+
+        #[cfg(windows)]
+        fn sample_proc_resources() -> (u64, u64, usize) {
+            #[repr(C)]
+            struct FileTime {
+                dw_low: u32,
+                dw_high: u32,
+            }
+            #[repr(C)]
+            struct Pmc {
+                cb: u32,
+                page_fault_count: u32,
+                peak_ws: usize,
+                ws: usize,
+                quota_peak_pp: usize,
+                quota_pp: usize,
+                quota_peak_npp: usize,
+                quota_npp: usize,
+                pf_usage: usize,
+                peak_pf_usage: usize,
+            }
+            #[link(name = "kernel32")]
+            unsafe extern "system" {
+                fn GetCurrentProcess() -> *mut core::ffi::c_void;
+                fn GetProcessTimes(
+                    h: *mut core::ffi::c_void,
+                    c: *mut FileTime,
+                    e: *mut FileTime,
+                    k: *mut FileTime,
+                    u: *mut FileTime,
+                ) -> i32;
+                fn K32GetProcessMemoryInfo(
+                    h: *mut core::ffi::c_void,
+                    pmc: *mut Pmc,
+                    cb: u32,
+                ) -> i32;
+            }
+            unsafe {
+                let h = GetCurrentProcess();
+                let mut c = FileTime { dw_low: 0, dw_high: 0 };
+                let mut e = FileTime { dw_low: 0, dw_high: 0 };
+                let mut k = FileTime { dw_low: 0, dw_high: 0 };
+                let mut u = FileTime { dw_low: 0, dw_high: 0 };
+                GetProcessTimes(h, &mut c, &mut e, &mut k, &mut u);
+                let cpu_100ns = ((k.dw_high as u64) << 32 | k.dw_low as u64)
+                    + ((u.dw_high as u64) << 32 | u.dw_low as u64);
+                let mut pmc = std::mem::zeroed::<Pmc>();
+                pmc.cb = std::mem::size_of::<Pmc>() as u32;
+                K32GetProcessMemoryInfo(h, &mut pmc, pmc.cb);
+                (cpu_100ns / 10_000, pmc.ws as u64, pmc.peak_ws)
+            }
+        }
+        #[cfg(not(windows))]
+        fn sample_proc_resources() -> (u64, u64, usize) {
+            (0, 0, 0)
+        }
+
+        let (cpu_before_ms, ws_before, _) = sample_proc_resources();
+        let wall_t0 = std::time::Instant::now();
+
+        // Spawn 4 concurrent writer threads (4 * 750 = 3,000 events), 1 persistent ExternalWalReader thread,
+        // and concurrent compaction executions while writes happen!
+        const WORKERS: usize = 4;
+        const EVENTS_PER_WORKER: usize = 750;
+        const TOTAL_EVENTS: usize = WORKERS * EVENTS_PER_WORKER;
+
+        let writers_done = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let all_latencies = std::sync::Arc::new(std::sync::Mutex::new(Vec::<u64>::with_capacity(TOTAL_EVENTS)));
+        let reader_seen_seqs = std::sync::Arc::new(std::sync::Mutex::new(Vec::<u64>::with_capacity(TOTAL_EVENTS)));
+
+        let r_done = writers_done.clone();
+        let r_seqs = reader_seen_seqs.clone();
+        let r_db = db_path.clone();
+        let reader_handle = std::thread::spawn(move || {
+            let mut reader = ExternalWalReader::open(&r_db).unwrap();
+            let mut seen_map: HashMap<String, u64> = HashMap::new();
+            let mut total_polls = 0u64;
+            loop {
+                total_polls += 1;
+                if let Ok((changed, evs)) = reader.poll_deltas("mini:long-stress", &seen_map) {
+                    if changed && !evs.is_empty() {
+                        let mut g = r_seqs.lock().unwrap();
+                        for ev in evs {
+                            let cur = seen_map.entry(ev.stream_id.clone()).or_insert(0);
+                            if ev.seq > *cur {
+                                assert_eq!(ev.seq, *cur + 1, "Lost or out-of-order seq during concurrent compaction!");
+                                *cur = ev.seq;
+                                g.push(ev.seq);
+                            }
+                        }
+                    }
+                }
+                if r_done.load(std::sync::atomic::Ordering::Relaxed)
+                    && seen_map.get("mini:long-stress::testkit").copied().unwrap_or(0) >= TOTAL_EVENTS as u64
+                {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(2));
+            }
+            (total_polls, reader.busy_retry_count)
+        });
+
+        let c_done = writers_done.clone();
+        let c_db = db_path.clone();
+        let compact_handle = std::thread::spawn(move || {
+            let compactor = StorageManager::new(&c_db).unwrap();
+            let mut total_deleted = 0usize;
+            while !c_done.load(std::sync::atomic::Ordering::Relaxed) {
+                if let Ok(d) = compactor.compact_runtime_var_events("mini:long-stress::testkit", 300) {
+                    total_deleted += d;
+                }
+                std::thread::sleep(Duration::from_millis(25));
+            }
+            total_deleted
+        });
+
+        let mut writer_handles = Vec::with_capacity(WORKERS);
+        for w in 0..WORKERS {
+            let w_db = db_path.clone();
+            let w_lats = all_latencies.clone();
+            writer_handles.push(std::thread::spawn(move || {
+                let st = StorageManager::new(&w_db).unwrap();
+                for i in 0..EVENTS_PER_WORKER {
+                    let t0 = std::time::Instant::now();
+                    let env = RuntimeVariableEnvelope {
+                        project_id: "long-stress".to_string(),
+                        session_id: format!("w{}", w),
+                        job_id: format!("j{}-{}", w, i),
+                        name: format!("worker_{}_val", w),
+                        value: serde_json::json!(i),
+                        value_type: "number".to_string(),
+                        source: VariableSource::TestkitMock,
+                        verified: false,
+                        confidence: None,
+                        updated_at_utc: Utc::now().to_rfc3339(),
+                        workflow_version: "wf@v1".to_string(),
+                        seq: 0,
+                        redacted: false,
+                    };
+                    st.record_runtime_var_deltas(
+                        "mini:long-stress",
+                        "long-stress",
+                        &format!("w{}", w),
+                        &format!("j{}", w),
+                        "wf@v1",
+                        vec![env],
+                    )
+                    .unwrap();
+                    w_lats.lock().unwrap().push(t0.elapsed().as_micros() as u64);
+                }
+            }));
+        }
+
+        for h in writer_handles {
+            h.join().unwrap();
+        }
+        writers_done.store(true, std::sync::atomic::Ordering::Relaxed);
+        let total_compacted_midflight = compact_handle.join().unwrap();
+        let (total_polls, reader_busy_retries) = reader_handle.join().unwrap();
+
+        let wal_peak_bytes = std::fs::metadata(temp_dir.join("wal_long_stress.db-wal"))
+            .map(|m| m.len())
+            .unwrap_or(0);
+        let verifier = StorageManager::new(&db_path).unwrap();
+        let deleted_final = verifier
+            .compact_runtime_var_events("mini:long-stress::testkit", 100)
+            .unwrap();
+        let snap = verifier
+            .load_runtime_snapshot_with_recovery("mini:long-stress", None)
+            .unwrap();
+        assert_eq!(snap.stream_seqs.get("mini:long-stress::testkit"), Some(&(TOTAL_EVENTS as u64)));
+        assert_eq!(reader_seen_seqs.lock().unwrap().len(), TOTAL_EVENTS);
+        assert!(verifier.check_integrity().unwrap().is_healthy);
+
+        let wall_ms = wall_t0.elapsed().as_millis();
+        let (cpu_after_ms, ws_after, ws_peak) = sample_proc_resources();
+        let mut lats = all_latencies.lock().unwrap().clone();
+        lats.sort_unstable();
+        let p50_us = lats[lats.len() / 2];
+        let p95_us = lats[(lats.len() * 95) / 100];
+        let p99_us = lats[(lats.len() * 99) / 100];
+        let max_us = *lats.last().unwrap_or(&0);
+        eprintln!(
+            "[P5.1 Long-Run Stress JSON] {{\"events\":{},\"workers\":{},\"wallMs\":{},\"cpuDeltaMs\":{},\"wsBeforeKb\":{},\"wsAfterKb\":{},\"wsPeakKb\":{},\"p50Us\":{},\"p95Us\":{},\"p99Us\":{},\"maxUs\":{},\"walBytesPeak\":{},\"compactedMidflight\":{},\"compactedFinal\":{},\"readerPolls\":{},\"readerBusyRetries\":{}}}",
+            TOTAL_EVENTS,
+            WORKERS,
+            wall_ms,
+            cpu_after_ms.saturating_sub(cpu_before_ms),
+            ws_before / 1024,
+            ws_after / 1024,
+            ws_peak / 1024,
+            p50_us,
+            p95_us,
+            p99_us,
+            max_us,
+            wal_peak_bytes,
+            total_compacted_midflight,
+            deleted_final,
+            total_polls,
+            reader_busy_retries
+        );
+
+        drop(verifier);
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }
