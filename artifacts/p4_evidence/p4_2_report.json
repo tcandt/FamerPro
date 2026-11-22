@@ -1,0 +1,25 @@
+{
+  "milestone": "P4.2",
+  "executedAtUtc": "2026-11-22T04:58:49.953Z",
+  "offlineHealthProbeVerified": true,
+  "liveHardwareAdbStatus": "BLOCKED (0 devices attached on host)",
+  "testkitRoiSaveAndMatchVerified": true,
+  "consoleErrors": [],
+  "screenshots": [
+    {
+      "filename": "p4_2_devicelab_health_1600x900.png",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "filename": "p4_2_devicelab_1280x720.png",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "filename": "p4_2_devicelab_roi_1600x900.png",
+      "width": 1600,
+      "height": 900
+    }
+  ]
+}

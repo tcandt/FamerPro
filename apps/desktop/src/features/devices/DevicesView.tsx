@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Camera,
   RefreshCw,
-  Battery,
-  Monitor,
   Search,
-  Play,
   ExternalLink,
   Copy,
   Wifi,
@@ -13,9 +9,9 @@ import {
   Power,
   RotateCw,
   Trash2,
+  Play,
   Square as StopSquare,
   Radio,
-  Layers,
   Sparkles,
   CheckCircle2,
   AlertCircle,
@@ -23,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useDeviceStore } from '../../stores/deviceStore';
 import { formatAndroidVersion, ConnectionState } from '../../types';
+import { DeviceLabInspector } from './DeviceLabInspector';
 
 interface DevicesViewProps {
   onNavigate?: (view: string) => void;
@@ -32,17 +29,11 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
   const {
     devices,
     selectedDeviceId,
-    selectedDeviceDetail,
-    packages,
-    selectedPackageName,
     ldInstances,
     ldPath,
     isLoadingDevices,
-    isLoadingPackages,
     isLoadingLd,
-    capturedScreenshot,
     selectDevice,
-    setSelectedPackageName,
     fetchDevices,
     fetchLdInstances,
     ldAction,
@@ -50,15 +41,11 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
     disconnectEndpoint,
     scanRange,
     autoDiscover,
-    launchApp,
-    stopApp,
-    captureCurrentDevice,
   } = useDeviceStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterState, setFilterState] = useState<'all' | 'ready' | 'unauthorized'>('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isCapturing, setIsCapturing] = useState(false);
 
   // Direct connect form
   const [connectIpPort, setConnectIpPort] = useState('127.0.0.1:5555');
@@ -74,9 +61,6 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
 
   // Action status message
   const [actionMessage, setActionMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
-
-  // Package filter: user apps vs all apps
-  const [showAllSystemPackages, setShowAllSystemPackages] = useState(false);
 
   useEffect(() => {
     fetchDevices();
@@ -146,53 +130,6 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
     }
   };
 
-  const handleLaunchSelectedApp = async () => {
-    if (!currentDevice) {
-      showNotice('Vui lòng chọn thiết bị trước', 'error');
-      return;
-    }
-    if (!selectedPackageName) {
-      showNotice('Vui lòng chọn ứng dụng trước', 'error');
-      return;
-    }
-    try {
-      const res = await launchApp(currentDevice.id, selectedPackageName);
-      showNotice(res, 'success');
-    } catch (err: any) {
-      showNotice(`Lỗi khởi chạy: ${err.message || err}`, 'error');
-    }
-  };
-
-  const handleStopSelectedApp = async () => {
-    if (!currentDevice) {
-      showNotice('Vui lòng chọn thiết bị trước', 'error');
-      return;
-    }
-    if (!selectedPackageName) {
-      showNotice('Vui lòng chọn ứng dụng trước', 'error');
-      return;
-    }
-    try {
-      const res = await stopApp(currentDevice.id, selectedPackageName);
-      showNotice(res, 'info');
-    } catch (err: any) {
-      showNotice(`Lỗi tắt app: ${err.message || err}`, 'error');
-    }
-  };
-
-  const handleCaptureSnapshot = async () => {
-    if (!currentDevice) return;
-    setIsCapturing(true);
-    try {
-      await captureCurrentDevice();
-      showNotice('Đã chụp khung hình thực tế từ thiết bị', 'success');
-    } catch (err: any) {
-      showNotice(`Lỗi chụp màn hình: ${err.message || err}`, 'error');
-    } finally {
-      setIsCapturing(false);
-    }
-  };
-
   const handleLdAction = async (action: string, idx?: number) => {
     try {
       const res = await ldAction(action, idx);
@@ -244,23 +181,24 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
     switch (state) {
       case 'ready':
         return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#133528] text-[#3BC38D] border border-[#3BC38D]/40 flex items-center gap-1 w-fit">
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold fp-badge-live flex items-center gap-1 w-fit">
             <span className="w-1.5 h-1.5 rounded-full bg-[#3BC38D]" />
-            <span>Sẵn sàng</span>
+            <span>LIVE</span>
           </span>
         );
       case 'unauthorized':
+      case 'blocked':
         return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#3B2D17] text-[#E7B15B] border border-[#E7B15B]/40 flex items-center gap-1 w-fit">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#E7B15B]" />
-            <span>Chưa ủy quyền</span>
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold fp-badge-error flex items-center gap-1 w-fit">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#F27883]" />
+            <span>ERROR ({state})</span>
           </span>
         );
       default:
         return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#202B3B] text-[#74869D] border border-[#2A3647] flex items-center gap-1 w-fit">
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold fp-badge-offline flex items-center gap-1 w-fit">
             <span className="w-1.5 h-1.5 rounded-full bg-[#74869D]" />
-            <span>{state}</span>
+            <span>OFFLINE ({state})</span>
           </span>
         );
     }
@@ -641,196 +579,12 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Right: Selected Device Details, App Launch/Stop & Live Snapshot */}
-      <div className="w-[390px] bg-[#141C28] flex flex-col overflow-y-auto p-4 space-y-4 shrink-0">
-        {currentDevice ? (
-          <>
-            <div className="border-b border-[#2A3647] pb-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-[#74869D] uppercase font-mono">
-                  {currentDevice.adb_serial}
-                </span>
-                <span className="text-[10px] px-1.5 rounded bg-[#133528] text-[#3BC38D] font-bold">
-                  THIẾT BỊ THỰC
-                </span>
-              </div>
-              <h3 className="text-sm font-bold text-[#EDF3FC] mt-0.5">
-                {currentDevice.alias}
-              </h3>
-              <p className="text-[11px] text-[#74869D]">
-                {formatAndroidVersion(currentDevice.android_api)} · {currentDevice.width_px}×{currentDevice.height_px}px
-              </p>
-            </div>
-
-            {/* Quick Metrics */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="p-2.5 bg-[#17202E] border border-[#2A3647] rounded-lg flex items-center gap-2.5">
-                <Battery size={18} className="text-[#3BC38D] shrink-0" />
-                <div>
-                  <div className="text-[10px] text-[#74869D]">Pin & Nguồn</div>
-                  <div className="font-bold text-[#EDF3FC]">
-                    {selectedDeviceDetail?.battery_level !== undefined && selectedDeviceDetail?.battery_level !== null
-                      ? `${selectedDeviceDetail.battery_level}%`
-                      : 'Đang cấp nguồn USB'}
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-2.5 bg-[#17202E] border border-[#2A3647] rounded-lg flex items-center gap-2.5">
-                <Monitor size={18} className="text-[#38BDF8] shrink-0" />
-                <div>
-                  <div className="text-[10px] text-[#74869D]">Màn hình</div>
-                  <div className="font-bold text-[#EDF3FC]">
-                    {selectedDeviceDetail?.is_screen_on ? 'Đang bật' : 'Chế độ chờ'}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Application Launcher & Manager */}
-            <div className="p-3 bg-[#17202E] border border-[#2A3647] rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 font-bold text-xs text-[#EDF3FC]">
-                  <Layers size={14} className="text-[#38BDF8]" />
-                  <span>Quản lý & Khởi chạy Ứng dụng</span>
-                </div>
-                <button
-                  onClick={() => setShowAllSystemPackages(!showAllSystemPackages)}
-                  className="text-[10px] text-[#74869D] hover:text-[#38BDF8] cursor-pointer"
-                >
-                  {showAllSystemPackages ? 'Chỉ app cài thêm' : 'Hiện app hệ thống'}
-                </button>
-              </div>
-
-              {isLoadingPackages ? (
-                <div className="text-xs text-[#74869D] italic py-2">
-                  Đang tải danh sách packages từ thiết bị...
-                </div>
-              ) : packages.length === 0 ? (
-                <div className="text-xs text-[#74869D] italic py-2">
-                  Chưa phát hiện ứng dụng nào. Nhấn kiểm tra thiết bị.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <label className="text-[11px] text-[#74869D] block">Chọn ứng dụng để điều khiển:</label>
-                  <select
-                    value={selectedPackageName || ''}
-                    onChange={(e) => setSelectedPackageName(e.target.value)}
-                    className="w-full bg-[#101722] border border-[#2A3647] rounded-md p-2 text-xs text-[#EDF3FC] outline-none font-medium cursor-pointer"
-                  >
-                    {packages.map((pkg) => (
-                      <option key={pkg.package_name} value={pkg.package_name}>
-                        {pkg.is_game ? '🎮 ' : '📱 '}
-                        {pkg.display_name}
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <button
-                      onClick={handleLaunchSelectedApp}
-                      className="py-1.5 bg-[#1878F5] hover:bg-[#2F8CFF] text-white rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
-                    >
-                      <Play size={12} fill="currentColor" />
-                      <span>Mở App</span>
-                    </button>
-                    <button
-                      onClick={handleStopSelectedApp}
-                      className="py-1.5 bg-[#3B1717] hover:bg-[#F27883] text-[#F27883] hover:text-white rounded text-xs font-semibold flex items-center justify-center gap-1.5 border border-[#F27883]/30 transition-colors cursor-pointer"
-                    >
-                      <StopSquare size={12} fill="currentColor" />
-                      <span>Đóng App (Kill)</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* On Demand Snapshot Frame Viewer */}
-            <div className="p-3 bg-[#17202E] border border-[#2A3647] rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 font-bold text-xs text-[#EDF3FC]">
-                  <Camera size={14} className="text-[#1878F5]" />
-                  <span>Ảnh chụp theo yêu cầu</span>
-                </div>
-                <span className="text-[10px] text-[#74869D] font-mono">On-Demand PNG</span>
-              </div>
-
-              <div className="w-full h-52 bg-[#101722] border border-[#2A3647] rounded-lg flex flex-col items-center justify-center text-[#74869D] text-xs relative overflow-hidden">
-                {capturedScreenshot ? (
-                  <div className="w-full h-full p-2 flex flex-col items-center justify-center bg-[#0C121B] relative">
-                    <img
-                      src={capturedScreenshot}
-                      alt={`Snapshot ${currentDevice.alias}`}
-                      className="max-h-46 max-w-full rounded border border-[#2A3647] object-contain shadow-md"
-                    />
-                    <div className="absolute bottom-2.5 right-3 px-2 py-0.5 rounded bg-[#101722]/90 border border-[#2A3647] text-[9px] font-mono text-[#3BC38D] shadow">
-                      {currentDevice.width_px}×{currentDevice.height_px} PNG
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <Camera size={28} className="mb-2 text-[#5A6D85]" />
-                    <span className="text-xs">Chưa có ảnh chụp khung hình</span>
-                    <span className="text-[10px] text-[#5A6D85] mt-0.5">
-                      Nhấn nút bên dưới để lấy snapshot thực tế từ ADB
-                    </span>
-                  </>
-                )}
-              </div>
-
-              <button
-                onClick={handleCaptureSnapshot}
-                disabled={isCapturing}
-                className="w-full py-2 bg-[#1878F5] hover:bg-[#2F8CFF] text-white text-xs font-semibold rounded-md flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
-              >
-                <Camera size={14} className={isCapturing ? 'animate-pulse' : ''} />
-                <span>{isCapturing ? 'Đang trích xuất qua ADB...' : 'Chụp khung hình thực tế'}</span>
-              </button>
-            </div>
-
-            {/* Device Diagnostics & Actions */}
-            <div className="p-3 bg-[#17202E] border border-[#2A3647] rounded-lg space-y-2.5 text-xs">
-              <span className="font-bold text-[#EDF3FC] text-xs block">
-                Thông số Kỹ thuật & Bảo vệ
-              </span>
-
-              <div className="space-y-1.5 text-[11px]">
-                <div className="flex justify-between py-1 border-b border-[#2A3647]/50">
-                  <span className="text-[#74869D]">IP Thiết bị:</span>
-                  <span className="font-mono text-[#EDF3FC]">
-                    {selectedDeviceDetail?.ip_address || '127.0.0.1'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#2A3647]/50">
-                  <span className="text-[#74869D]">Độ phân giải thực:</span>
-                  <span className="font-mono text-[#EDF3FC]">
-                    {currentDevice.width_px}×{currentDevice.height_px}px
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#2A3647]/50">
-                  <span className="text-[#74869D]">Gói ứng dụng đã quét:</span>
-                  <span className="font-mono text-[#38BDF8]">
-                    {packages.length} packages
-                  </span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => handleOpenInStudio(currentDevice.id)}
-                className="w-full py-1.5 mt-2 bg-[#192434] hover:bg-[#202E42] text-[#38BDF8] border border-[#2A3647] rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Play size={12} fill="currentColor" />
-                <span>Mở trong Studio để tạo Workflow</span>
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="p-6 text-center text-[#74869D] text-xs">
-            Chưa có thiết bị nào được chọn. Hãy kết nối hoặc mở LDPlayer.
-          </div>
-        )}
-      </div>
+      {/* Right: Device Lab Inspector (Health, Reconnect, ROI Capture/Templates, Port Map) */}
+      <DeviceLabInspector
+        currentDevice={currentDevice}
+        onNotice={showNotice}
+        onOpenInStudio={handleOpenInStudio}
+      />
 
       {/* Scan Range Modal */}
       {showScanModal && (
