@@ -8,7 +8,9 @@ license.workspace = true
 fp-domain = { path = "../fp-domain" }
 tokio.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
+sha2 = "0.10.9"
 tracing.workspace = true

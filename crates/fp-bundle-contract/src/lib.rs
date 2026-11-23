@@ -8,7 +8,7 @@ pub const CURRENT_RUNTIME_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const SUPPORTED_WORKFLOW_SCHEMA_VERSION: u32 = 1;
 pub const SUPPORTED_UI_SCHEMA_VERSION: u32 = 1;
 pub const SUPPORTED_MODULE_API_VERSION: &str = "1.0.0";
-pub const CURRENT_SQLITE_SCHEMA_VERSION: u32 = 5;
+pub const CURRENT_SQLITE_SCHEMA_VERSION: u32 = 6;
 
 fn default_sqlite_schema_version() -> u32 {
     3

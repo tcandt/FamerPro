@@ -244,11 +244,27 @@ fn load_and_verify_bundle(bundle_dir: &Path, is_demo_mode: bool) -> Result<MiniR
     );
 
     // 4. Resolve Writable SQLite Database Path (supports versioned external data/ & ACL fallback)
+    // Fail closed if database cannot be opened/migrated cleanly or schema is incompatible.
     let db_path = resolve_runtime_db_path(&exe_dir, &manifest.project.slug);
-    let storage = StorageManager::new(&db_path)
-        .unwrap_or_else(|_| StorageManager::new_in_memory().expect("In-memory DB fallback"));
+    let storage = StorageManager::new(&db_path).with_context(|| {
+        format!(
+            "SQLITE_COMPATIBILITY_OR_OPEN_ERROR: Failed opening runtime SQLite database at {}",
+            db_path.display()
+        )
+    })?;
     let db_schema_ver = storage.highest_applied_migration_version().unwrap_or(0);
     check_sqlite_downgrade_compatibility(db_schema_ver, CURRENT_SQLITE_SCHEMA_VERSION)?;
+
+    let scheduler = Arc::new(fp_scheduler::MultiDeviceScheduler::new(4));
+    let _ = storage.recover_interrupted_jobs_on_startup(|dev_id| {
+        let canon = fp_adb::infer_local_emulator_canonical_key(dev_id);
+        match scheduler.inspect_os_lock_holder(dev_id, canon.as_deref()) {
+            Ok(Some(_)) => true,
+            Ok(None) => false,
+            // Fail safe: if lock state cannot be inspected, assume locked and avoid touching job row
+            Err(_) => true,
+        }
+    });
 
     // 5. Load optional branding PNG as base64 for window header
     let icon_png_path = bundle_dir.join("branding").join("icon.png");
@@ -289,7 +305,7 @@ fn load_and_verify_bundle(bundle_dir: &Path, is_demo_mode: bool) -> Result<MiniR
         storage,
         sqlite_db_path: db_path.to_string_lossy().to_string(),
         adb_runner: AdbRunner::default(),
-        scheduler: Arc::new(fp_scheduler::MultiDeviceScheduler::new(4)),
+        scheduler,
         signature_algorithm: envelope.algorithm,
         key_id: envelope.key_id,
         publisher_public_key_hex: envelope.publisher_public_key_hex,
@@ -493,23 +509,23 @@ async fn execute_task_internal(
         };
 
     let job_id = format!("mini-job-{}", uuid::Uuid::new_v4());
-    let lease_acquired = if !is_sim {
+    let mut lease_guard = if !is_sim {
         let canonical_id = if fp_adb::infer_local_emulator_canonical_key(&device_id).is_none()
-            && std::path::Path::new(&runner.adb_path).is_file()
+            && !runner.adb_path.trim().is_empty()
         {
             runner.probe_canonical_device_identity(&device_id).await
         } else {
             None
         };
-        scheduler_ref.acquire_device_lease_canonical(
+        Some(scheduler_ref.acquire_device_lease_guarded(
             &device_id,
             canonical_id.as_deref(),
             &job_id,
             chrono::Duration::seconds(180),
-        )?;
-        true
+            fp_scheduler::ConflictPolicy::FailImmediately,
+        )?)
     } else {
-        false
+        None
     };
     let wf_json = sanitize_workflow_json_for_job_store(&workflow_doc);
     let _ = storage.ensure_job_exists(
@@ -613,10 +629,16 @@ async fn execute_task_internal(
             })),
         )
         .await;
-    if lease_acquired {
-        scheduler_ref.release_device_lease(&device_id, &job_id);
+    if let Some(guard) = lease_guard.take() {
+        guard.release();
     }
-    let job_state = exec_result?;
+    let job_state = match exec_result {
+        Ok(state) => state,
+        Err(err) => {
+            let _ = storage.complete_job(&job_id, "Failed");
+            return Err(err);
+        }
+    };
 
     let _ = storage.complete_job(&job_id, &format!("{:?}", job_state));
     let point_tapped = ctx.last_receipt.as_ref().and_then(|r| r.point_tapped);

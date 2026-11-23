@@ -339,22 +339,51 @@ async fn execute_workflow(
 ) -> Result<ExecuteWorkflowResponse, String> {
     let doc = WorkflowValidator::parse_and_validate(&workflow_json).map_err(|e| e.to_string())?;
 
-    let (adb_path, storage) = {
+    let (adb_path, storage, scheduler) = {
         let st = state.lock().unwrap();
-        (st.adb_runner.adb_path.clone(), st.storage.clone())
+        (
+            st.adb_runner.adb_path.clone(),
+            st.storage.clone(),
+            st.coordinator.scheduler.clone(),
+        )
     };
 
-    let driver: Arc<dyn DeviceDriver> =
-        if mock || device_id.is_empty() || device_id.starts_with("fake") {
-            Arc::new(FakeDeviceDriver::new(&device_id, 1080, 1920))
-        } else {
-            Arc::new(fp_adb::AdbDeviceDriver::new(
-                device_id.clone(),
-                AdbRunner::new(Some(adb_path)),
-            ))
-        };
+    let is_synthetic = mock || device_id.is_empty() || device_id.starts_with("fake");
+    let driver: Arc<dyn DeviceDriver> = if is_synthetic {
+        Arc::new(FakeDeviceDriver::new(&device_id, 1080, 1920))
+    } else {
+        Arc::new(fp_adb::AdbDeviceDriver::new(
+            device_id.clone(),
+            AdbRunner::new(Some(adb_path.clone())),
+        ))
+    };
 
     let job_id = format!("job-{}", uuid::Uuid::new_v4());
+    let mut lease_guard = if !is_synthetic {
+        let canon = if fp_adb::infer_local_emulator_canonical_key(&device_id).is_none()
+            && !adb_path.trim().is_empty()
+        {
+            AdbRunner::new(Some(adb_path))
+                .probe_canonical_device_identity(&device_id)
+                .await
+        } else {
+            None
+        };
+        Some(
+            scheduler
+                .acquire_device_lease_guarded(
+                    &device_id,
+                    canon.as_deref(),
+                    &job_id,
+                    chrono::Duration::seconds(180),
+                    fp_scheduler::ConflictPolicy::FailImmediately,
+                )
+                .map_err(|e| e.to_string())?,
+        )
+    } else {
+        None
+    };
+
     let _ = storage.ensure_job_exists(
         &job_id,
         &device_id,
@@ -371,7 +400,7 @@ async fn execute_workflow(
     let counter_clone = events_counter.clone();
 
     let storage_clone = storage.clone();
-    let job_state = executor
+    let exec_res = executor
         .execute_workflow(
             &doc,
             &mut ctx,
@@ -380,8 +409,17 @@ async fn execute_workflow(
                 let _ = storage_clone.insert_step_event(&evt);
             })),
         )
-        .await
-        .map_err(|e| e.to_string())?;
+        .await;
+    if let Some(guard) = lease_guard.take() {
+        guard.release();
+    }
+    let job_state = match exec_res {
+        Ok(s) => s,
+        Err(e) => {
+            let _ = storage.complete_job(&job_id, "Failed");
+            return Err(e.to_string());
+        }
+    };
 
     let _ = storage.complete_job(&job_id, &format!("{:?}", job_state));
 
@@ -498,16 +536,20 @@ async fn adb_disconnect_endpoint(
     endpoint: String,
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<String, String> {
-    let adb_path = {
+    let (adb_path, scheduler) = {
         let st = state.lock().unwrap();
-        st.adb_runner.adb_path.clone()
+        (
+            st.adb_runner.adb_path.clone(),
+            st.coordinator.scheduler.clone(),
+        )
     };
     let runner = AdbRunner::new(Some(adb_path));
-    let cleaned = endpoint.trim();
+    let cleaned = endpoint.trim().to_string();
     if cleaned.is_empty() {
         return Err("Địa chỉ IP:Port không được để trống".to_string());
     }
-    let res = runner.disconnect(cleaned).await.map_err(|e| e.to_string())?;
+    let res = runner.disconnect(&cleaned).await.map_err(|e| e.to_string())?;
+    let _ = scheduler.release_leases_for_disconnected_device(&cleaned);
     Ok(res)
 }
 
@@ -1137,16 +1179,34 @@ fn main() {
     let db_path_str = db_path_buf.to_string_lossy().to_string();
     let projects_root = resolve_projects_root(&db_path_buf);
 
-    let storage = Arc::new(
-        StorageManager::new(&db_path_buf)
-            .unwrap_or_else(|_| StorageManager::new_in_memory().expect("Failed to initialize storage")),
-    );
+    let storage = match StorageManager::new(&db_path_buf) {
+        Ok(s) => Arc::new(s),
+        Err(err) => {
+            eprintln!(
+                "CRITICAL SQLITE DATABASE INITIALIZATION FAILURE ({}): {:#}",
+                db_path_buf.display(),
+                err
+            );
+            std::process::exit(4);
+        }
+    };
     let _ = storage.reconcile_projects_storage(&projects_root);
     let adb_runner = AdbRunner::default();
     let coordinator = RuntimeCoordinator::new(
         Arc::clone(&storage),
         std::path::PathBuf::from(&adb_runner.adb_path),
     );
+    let _ = storage.recover_interrupted_jobs_on_startup(|dev_id| {
+        let canon = fp_adb::infer_local_emulator_canonical_key(dev_id);
+        match coordinator
+            .scheduler
+            .inspect_os_lock_holder(dev_id, canon.as_deref())
+        {
+            Ok(Some(_)) => true,
+            Ok(None) => false,
+            Err(_) => true,
+        }
+    });
     let vault = CredentialVault::new();
 
     let app_state = Arc::new(Mutex::new(AppState {

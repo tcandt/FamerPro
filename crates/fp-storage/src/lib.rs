@@ -939,6 +939,52 @@ impl StorageManager {
         })
     }
 
+    /// Creates a pre-migration consistent SQLite Online Backup from `src_db_path` WITHOUT running migrations first,
+    /// preserving the exact source schema version in `dest_path`.
+    pub fn online_backup_raw_file_to<P: AsRef<Path>, Q: AsRef<Path>>(
+        src_db_path: P,
+        dest_path: Q,
+    ) -> Result<BackupReport> {
+        let src = src_db_path.as_ref();
+        let dest = dest_path.as_ref();
+        if let Some(parent) = dest.parent() {
+            if !parent.as_os_str().is_empty() {
+                std::fs::create_dir_all(parent)?;
+            }
+        }
+        if dest.exists() {
+            std::fs::remove_file(dest)?;
+        }
+
+        {
+            let src_conn = Connection::open(src)?;
+            let mut dst_conn = Connection::open(dest)?;
+            let backup = rusqlite::backup::Backup::new(&src_conn, &mut dst_conn)?;
+            backup.run_to_completion(100, Duration::from_millis(5), None)?;
+        }
+
+        let verify_conn = Connection::open(dest)?;
+        let integrity = check_integrity_on_conn(&verify_conn)?;
+        if !integrity.is_healthy {
+            bail!(
+                "Pre-migration raw backup failed integrity verification: integrity='{}', fk_violations={}",
+                integrity.integrity_check,
+                integrity.foreign_key_violations
+            );
+        }
+        drop(verify_conn);
+
+        let bytes = std::fs::read(dest)?;
+        let sha = sha256_hex(&bytes);
+        Ok(BackupReport {
+            backup_path: dest.to_string_lossy().to_string(),
+            backup_size_bytes: bytes.len() as u64,
+            backup_sha256: sha,
+            integrity,
+            backed_up_at_utc: Utc::now().to_rfc3339(),
+        })
+    }
+
     /// Restores a SQLite database file from a verified backup using Online Backup API.
     pub fn restore_from_backup<P: AsRef<Path>>(
         backup_path: P,
@@ -3891,6 +3937,56 @@ impl StorageManager {
         Ok(rows > 0)
     }
 
+    /// Reconciles stale `running` / `verifying` / `queued` jobs left behind by a crashed or
+    /// forcibly-killed process when no live OS lock still owns that device.
+    pub fn recover_interrupted_jobs_on_startup<F>(
+        &self,
+        mut is_device_locked_by_live_owner: F,
+    ) -> Result<usize>
+    where
+        F: FnMut(&str) -> bool,
+    {
+        let mut conn = self.conn.lock().unwrap();
+        let candidates: Vec<(String, String, Option<i64>)> = {
+            let mut st = conn.prepare(
+                "SELECT id, device_id, fencing_generation
+                 FROM jobs
+                 WHERE LOWER(state) IN ('running', 'verifying', 'queued');",
+            )?;
+            let mut rows = st.query([])?;
+            let mut list = Vec::new();
+            while let Some(r) = rows.next()? {
+                list.push((r.get(0)?, r.get(1)?, r.get(2)?));
+            }
+            list
+        };
+
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let now = Utc::now().to_rfc3339();
+        let mut recovered = 0usize;
+        for (job_id, device_id, gen_opt) in candidates {
+            if is_device_locked_by_live_owner(&device_id) {
+                continue;
+            }
+            tx.execute(
+                "UPDATE jobs
+                 SET state = 'interrupted',
+                     fencing_generation = COALESCE(fencing_generation, 0) + 1,
+                     updated_at = ?1
+                 WHERE id = ?2 AND LOWER(state) IN ('running', 'verifying', 'queued');",
+                params![now, job_id],
+            )?;
+            tx.execute(
+                "DELETE FROM device_leases WHERE device_id = ?1 OR job_id = ?2;",
+                params![device_id, job_id],
+            )?;
+            let _ = gen_opt;
+            recovered += 1;
+        }
+        tx.commit()?;
+        Ok(recovered)
+    }
+
     pub fn record_project_release(&self, release: ProjectReleaseRecord) -> Result<()> {
         if release.project_id.trim().is_empty() {
             bail!("PROJECT_ISOLATION_VIOLATION: project_id cannot be empty");
@@ -4742,13 +4838,13 @@ mod tests {
             ).unwrap();
         }
 
-        // 2. Open with StorageManager -> runs v1..v5 migrations atomically
+        // 2. Open with StorageManager -> runs v1..v6 migrations atomically
         let storage = StorageManager::new(&db_file).unwrap();
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5]);
+        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
 
-        // 3. Verify idempotency: running migrations again causes zero errors and keeps versions [1, 2, 3, 4, 5]
+        // 3. Verify idempotency: running migrations again causes zero errors and keeps versions [1, 2, 3, 4, 5, 6]
         storage.run_migrations().unwrap();
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5]);
+        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
 
         // 4. Verify 100% data preservation + attachment to default GameProject
         let integrity = storage.check_integrity().unwrap();
@@ -4780,15 +4876,15 @@ mod tests {
             .save_workflow_draft("wf-keep", "Keep Me", "{}")
             .unwrap();
 
-        let bad_v6_sql = "
+        let bad_v7_sql = "
             CREATE TABLE should_not_exist (id TEXT PRIMARY KEY);
             INSERT INTO nonexistent_table_triggering_rollback VALUES (1);
         ";
-        let res = storage.apply_transactional_migration(6, bad_v6_sql);
+        let res = storage.apply_transactional_migration(7, bad_v7_sql);
         assert!(res.is_err());
 
-        // Version 6 must NOT be recorded and `should_not_exist` table must NOT exist
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5]);
+        // Version 7 must NOT be recorded and `should_not_exist` table must NOT exist
+        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
         let integrity = storage.check_integrity().unwrap();
         assert!(integrity.is_healthy);
         assert!(!integrity.table_counts.contains_key("should_not_exist"));
@@ -5959,7 +6055,7 @@ mod tests {
         // 2. Upgrade live DB to latest and write project data
         {
             let storage = StorageManager::new(&live_db).unwrap();
-            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5]);
+            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
             let _ = storage
                 .create_project(
                     CreateProjectRequest {
@@ -5984,7 +6080,7 @@ mod tests {
         let report =
             StorageManager::rollback_database_from_backup(&live_db, &pre_v2_backup, &safety_snap)
                 .unwrap();
-        assert_eq!(report.pre_rollback_versions, vec![1, 2, 3, 4, 5]);
+        assert_eq!(report.pre_rollback_versions, vec![1, 2, 3, 4, 5, 6]);
         assert!(report.post_rollback_versions.is_empty());
         assert!(report.post_rollback_integrity.is_healthy);
         assert_eq!(report.post_rollback_integrity.foreign_key_violations, 0);
@@ -6212,10 +6308,10 @@ mod tests {
             bk.run_to_completion(100, Duration::from_millis(5), None).unwrap();
         }
 
-        // 2. Open with v5 StorageManager -> migrates legacy P4 snapshots to LEGACY_UNVERIFIED + scrubs secrets
+        // 2. Open with v6 StorageManager -> migrates legacy P4 snapshots to LEGACY_UNVERIFIED + scrubs secrets
         {
             let storage = StorageManager::new(&db_file).unwrap();
-            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5]);
+            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
             let snap = storage
                 .load_runtime_snapshot_with_recovery("mini:jx2-mobile", None)
                 .unwrap();
@@ -6233,7 +6329,7 @@ mod tests {
         // 3. Verify rollback back to pre-v3 backup cleanly restores pre-v3 schema versions [1, 2]
         let rb = StorageManager::rollback_database_from_backup(&db_file, &pre_v3_backup, &safety_snap)
             .unwrap();
-        assert_eq!(rb.pre_rollback_versions, vec![1, 2, 3, 4, 5]);
+        assert_eq!(rb.pre_rollback_versions, vec![1, 2, 3, 4, 5, 6]);
         assert_eq!(rb.post_rollback_versions, vec![1, 2]);
         assert!(rb.post_rollback_integrity.is_healthy);
 
@@ -6833,13 +6929,13 @@ mod tests {
         let storage = StorageManager::new_in_memory().unwrap();
         assert_eq!(
             storage.applied_migration_versions().unwrap(),
-            vec![1, 2, 3, 4, 5]
+            vec![1, 2, 3, 4, 5, 6]
         );
         // Re-running migrations is idempotent
         storage.run_migrations().unwrap();
         assert_eq!(
             storage.applied_migration_versions().unwrap(),
-            vec![1, 2, 3, 4, 5]
+            vec![1, 2, 3, 4, 5, 6]
         );
 
         let prof_a = storage
@@ -6875,5 +6971,328 @@ mod tests {
 
         assert!(storage.delete_publisher_profile(&prof_a.id).unwrap());
         assert!(storage.list_publisher_profiles().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_p6_rc4_sqlite_v5_rc2_upgrade_to_v6_preserves_data_and_backfills_safely() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_rc4_v5_upgrade_{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let db_file = temp_dir.join("rc2_v5.db");
+        let now = "2026-11-22T18:00:00Z";
+
+        // 1. Construct a genuine RC.2 v5 SQLite database WITHOUT the 4 v6 provenance columns
+        {
+            let conn = Connection::open(&db_file).unwrap();
+            conn.execute_batch(
+                "PRAGMA journal_mode = WAL;
+                 PRAGMA foreign_keys = ON;",
+            )
+            .unwrap();
+            conn.execute_batch(migrations::MIGRATION_V1_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_TABLES_SQL).unwrap();
+            conn.execute_batch(
+                "ALTER TABLE workflows ADD COLUMN project_id TEXT REFERENCES projects(id);
+                 ALTER TABLE workflows ADD COLUMN category TEXT NOT NULL DEFAULT 'Chung';
+                 ALTER TABLE accounts ADD COLUMN project_id TEXT REFERENCES projects(id);
+                 ALTER TABLE jobs ADD COLUMN project_id TEXT REFERENCES projects(id);",
+            )
+            .unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_INDEXES_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_ISOLATION_TRIGGERS_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V3_RUNTIME_PROVENANCE_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V4_RELEASE_LIFECYCLE_SQL).unwrap();
+            conn.execute_batch(
+                "ALTER TABLE project_releases ADD COLUMN lifecycle_state TEXT NOT NULL DEFAULT 'Published';
+                 ALTER TABLE project_releases ADD COLUMN release_channel TEXT NOT NULL DEFAULT 'internal';
+                 ALTER TABLE project_releases ADD COLUMN changelog_md TEXT NOT NULL DEFAULT '';
+                 ALTER TABLE project_releases ADD COLUMN min_runtime_version TEXT NOT NULL DEFAULT '0.1.0';
+                 ALTER TABLE project_releases ADD COLUMN workflow_schema_version INTEGER NOT NULL DEFAULT 1;
+                 ALTER TABLE project_releases ADD COLUMN ui_schema_version INTEGER NOT NULL DEFAULT 1;
+                 ALTER TABLE project_releases ADD COLUMN module_api_version TEXT NOT NULL DEFAULT '1.0.0';
+                 ALTER TABLE project_releases ADD COLUMN sqlite_schema_version INTEGER NOT NULL DEFAULT 5;
+                 ALTER TABLE project_releases ADD COLUMN git_commit TEXT NOT NULL DEFAULT '';
+                 ALTER TABLE project_releases ADD COLUMN signature_status TEXT NOT NULL DEFAULT 'Ed25519-Verified';
+                 ALTER TABLE project_releases ADD COLUMN promoted_at TEXT;
+                 ALTER TABLE project_releases ADD COLUMN rolled_back_from_id TEXT;",
+            )
+            .unwrap();
+            conn.execute_batch(migrations::MIGRATION_V5_PUBLISHER_PROFILES_SQL).unwrap();
+            conn.execute_batch(
+                "ALTER TABLE projects ADD COLUMN publisher_profile_id TEXT;
+                 ALTER TABLE projects ADD COLUMN signing_mode TEXT NOT NULL DEFAULT 'unsigned_internal';
+                 ALTER TABLE projects ADD COLUMN version_info_json TEXT;
+                 ALTER TABLE project_releases ADD COLUMN publisher_profile_id TEXT;
+                 ALTER TABLE project_releases ADD COLUMN signing_mode TEXT NOT NULL DEFAULT 'unsigned_internal';
+                 ALTER TABLE project_releases ADD COLUMN authenticode_trust_status TEXT NOT NULL DEFAULT 'unsigned';
+                 ALTER TABLE project_releases ADD COLUMN authenticode_thumbprint TEXT;
+                 ALTER TABLE project_releases ADD COLUMN authenticode_subject TEXT;
+                 ALTER TABLE project_releases ADD COLUMN trusted_public_release INTEGER NOT NULL DEFAULT 0;",
+            )
+            .unwrap();
+            for v in 1..=5 {
+                conn.execute(
+                    "INSERT INTO schema_migrations (version, applied_at) VALUES (?1, ?2);",
+                    params![v, now],
+                )
+                .unwrap();
+            }
+
+            // Seed RC.2 records across all key domain tables
+            conn.execute(
+                "INSERT INTO projects (id, slug, name, game_package_id, version, exe_name, window_title, icon_rel_path, target_width_px, target_height_px, bundle_adb, project_dir_path, created_at, updated_at, signing_mode)
+                 VALUES ('proj-rc2', 'rc2-game', 'RC2 Game', 'com.rc2.game', '1.0.0', 'Auto_RC2.exe', 'Auto RC2', 'branding/icon.ico', 1280, 720, 1, 'projects/rc2-game', ?1, ?1, 'unsigned_internal');",
+                params![now],
+            ).unwrap();
+            conn.execute(
+                "INSERT INTO workflows (id, project_id, category, name, draft_json, draft_updated_at)
+                 VALUES ('wf-rc2', 'proj-rc2', 'Daily', 'RC2 Daily', '{\"schemaVersion\":1}', ?1);",
+                params![now],
+            ).unwrap();
+            conn.execute(
+                "INSERT INTO task_definitions (id, project_id, workflow_id, category_id, category_short_tag, category_name, category_color_hex, title, priority, estimate_sec, default_enabled, settings_schema_json, updated_at)
+                 VALUES ('task-rc2', 'proj-rc2', 'wf-rc2', 'daily', 'DL', 'Daily', '#1878F5', 'Run Daily', 1, 30, 1, '[]', ?1);",
+                params![now],
+            ).unwrap();
+            conn.execute(
+                "INSERT INTO accounts (id, project_id, alias, game_profile_id, secret_ref, state, updated_at)
+                 VALUES ('acc-rc2', 'proj-rc2', 'rc2_acc', 'rc2-game', 'dpapi_ref_rc2_token', 'Ready', ?1);",
+                params![now],
+            ).unwrap();
+            conn.execute(
+                "INSERT INTO publisher_profiles (id, publisher_id, display_name, organization, copyright, created_at, updated_at)
+                 VALUES ('pub-1', 'pub-rc2', 'RC2 Org', 'RC2 Org', 'Copyright 2026', ?1, ?1);",
+                params![now],
+            ).unwrap();
+            conn.execute(
+                "INSERT INTO project_releases (id, project_id, version, output_dir_path, exe_path, exe_size_bytes, exe_sha256, key_id, publisher_public_key_hex, signature_ed25519_hex, build_report_json, built_at, lifecycle_state, release_channel, sqlite_schema_version)
+                 VALUES ('rel-rc2', 'proj-rc2', '1.0.0', 'dist/rc2', 'dist/rc2/Auto_RC2.exe', 1024, 'abcd', 'k1', 'pk1', 'sig1', '{}', ?1, 'Published', 'internal', 5);",
+                params![now],
+            ).unwrap();
+            conn.execute(
+                "INSERT INTO runtime_var_streams (stream_id, project_id, last_seq, updated_at)
+                 VALUES ('proj-rc2', 'proj-rc2', 7, ?1);",
+                params![now],
+            ).unwrap();
+            // Insert legacy unverified + malformed empty-source row + historical RC.2 LIVE_STATE row
+            conn.execute(
+                "INSERT INTO runtime_variable_envelopes (scope_key, var_name, project_id, session_id, job_id, value_type, value_json, source, verified, confidence, updated_at_utc, workflow_version, seq, redacted)
+                 VALUES ('proj-rc2', 'legacy_ocr_val', 'proj-rc2', 's-rc2', 'j-rc2', 'string', '\"Settings\"', 'LEGACY_UNVERIFIED', 1, 0.94, ?1, 'wf-rc2@v1', 7, 0);",
+                params![now],
+            ).unwrap();
+            conn.execute(
+                "INSERT INTO runtime_variable_envelopes (scope_key, var_name, project_id, session_id, job_id, value_type, value_json, source, verified, confidence, updated_at_utc, workflow_version, seq, redacted)
+                 VALUES ('proj-rc2', 'legacy_blank_src', 'proj-rc2', 's-rc2', 'j-rc2', 'number', '42', '', 1, 0.88, ?1, 'wf-rc2@v1', 7, 0);",
+                params![now],
+            ).unwrap();
+        }
+
+        // Verify raw pre-upgrade DB has only 14 columns (missing the 4 v6 provenance columns)
+        {
+            let pre_conn = Connection::open(&db_file).unwrap();
+            let pre_cols = migrations::list_table_columns(&pre_conn, "runtime_variable_envelopes").unwrap();
+            assert!(!pre_cols.contains(&"confidence_source".to_string()));
+        }
+
+        // 2. Open with v6 StorageManager (and reopen a second time for idempotency)
+        {
+            let storage = StorageManager::new(&db_file).unwrap();
+            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
+
+            // Query runtime vars (exact path that failed with `no such column: confidence_source` on RC.3!)
+            let vars = storage.load_runtime_variables("proj-rc2").unwrap();
+            assert_eq!(vars.envelopes.len(), 2);
+            let leg = vars.envelopes.get("legacy_ocr_val").unwrap();
+            assert_eq!(leg.value, serde_json::json!("Settings"));
+            assert_eq!(leg.source, VariableSource::LegacyUnverified);
+            assert!(!leg.verified, "Legacy rows must NOT claim verified=true");
+            assert_eq!(leg.confidence, None, "Legacy rows must NOT claim fake confidence");
+            assert_eq!(leg.confidence_source, None);
+            assert_eq!(leg.measured_confidence, None);
+
+            let blank = vars.envelopes.get("legacy_blank_src").unwrap();
+            assert_eq!(blank.source, VariableSource::LegacyUnverified);
+            assert!(!blank.verified);
+            assert_eq!(blank.confidence_source, None);
+
+            // Domain rows preserved
+            assert_eq!(storage.list_projects().unwrap().len(), 1);
+            assert_eq!(storage.list_project_workflows("proj-rc2").unwrap().len(), 1);
+            assert_eq!(storage.list_project_tasks("proj-rc2").unwrap().len(), 1);
+            assert_eq!(storage.list_project_accounts("proj-rc2").unwrap().len(), 1);
+            assert_eq!(storage.list_publisher_profiles().unwrap().len(), 1);
+            assert_eq!(storage.list_project_releases("proj-rc2").unwrap().len(), 1);
+
+            let integrity = storage.check_integrity().unwrap();
+            assert!(integrity.is_healthy);
+            assert_eq!(integrity.foreign_key_violations, 0);
+
+            // Writing new OCR provenance envelope succeeds cleanly on upgraded v6 DB
+            storage
+                .record_runtime_var_deltas(
+                    "proj-rc2",
+                    "proj-rc2",
+                    "s-rc4",
+                    "j-rc4",
+                    "wf-rc2@v1",
+                    vec![RuntimeVariableEnvelope {
+                        project_id: "proj-rc2".to_string(),
+                        session_id: "s-rc4".to_string(),
+                        job_id: "j-rc4".to_string(),
+                        name: "ocr_status_text".to_string(),
+                        value: serde_json::json!("Network & internet"),
+                        value_type: "string".to_string(),
+                        source: VariableSource::LiveAdbOcr,
+                        verified: true,
+                        confidence: None,
+                        confidence_source: Some(fp_domain::ConfidenceSource::Heuristic),
+                        measured_confidence: None,
+                        rule_matched: Some(true),
+                        device_id: Some("emulator-5554".to_string()),
+                        updated_at_utc: now.to_string(),
+                        workflow_version: "wf-rc2@v1".to_string(),
+                        seq: 0,
+                        redacted: false,
+                    }],
+                )
+                .unwrap();
+        }
+
+        // 3. Reopen again -> strictly idempotent
+        {
+            let storage2 = StorageManager::new(&db_file).unwrap();
+            assert_eq!(storage2.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
+            let vars2 = storage2.load_runtime_variables("proj-rc2").unwrap();
+            let ocr_env = vars2.envelopes.get("ocr_status_text").unwrap();
+            assert_eq!(ocr_env.confidence_source, Some(fp_domain::ConfidenceSource::Heuristic));
+            assert_eq!(ocr_env.device_id.as_deref(), Some("emulator-5554"));
+            assert_eq!(ocr_env.rule_matched, Some(true));
+        }
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p6_rc4_sqlite_incompatible_future_or_missing_column_fails_closed() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fp_rc4_incompat_{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        // 1. Future schema version (v99) blocked with SQLITE_DOWNGRADE_INCOMPATIBLE
+        let future_db = temp_dir.join("future_v99.db");
+        {
+            let _ = StorageManager::new(&future_db).unwrap();
+            let conn = Connection::open(&future_db).unwrap();
+            conn.execute(
+                "INSERT INTO schema_migrations (version, applied_at) VALUES (99, '2026-11-23T00:00:00Z');",
+                [],
+            ).unwrap();
+        }
+        let err_future = match StorageManager::new(&future_db) {
+            Ok(_) => panic!("Expected SQLITE_DOWNGRADE_INCOMPATIBLE error"),
+            Err(e) => e.to_string(),
+        };
+        assert!(err_future.contains("SQLITE_DOWNGRADE_INCOMPATIBLE"), "got: {}", err_future);
+
+        // 2. Corrupt/incomplete DB claiming v6 while missing required provenance column -> blocked with SQLITE_SCHEMA_INCOMPATIBLE
+        let missing_col_db = temp_dir.join("missing_col_v6.db");
+        {
+            let conn = Connection::open(&missing_col_db).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V1_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_TABLES_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V3_RUNTIME_PROVENANCE_SQL).unwrap();
+            for v in 1..=6 {
+                conn.execute(
+                    "INSERT INTO schema_migrations (version, applied_at) VALUES (?1, '2026-11-23T00:00:00Z');",
+                    params![v],
+                ).unwrap();
+            }
+        }
+        let err_missing = match StorageManager::new(&missing_col_db) {
+            Ok(_) => panic!("Expected SQLITE_SCHEMA_INCOMPATIBLE error"),
+            Err(e) => e.to_string(),
+        };
+        assert!(err_missing.contains("SQLITE_SCHEMA_INCOMPATIBLE"), "got: {}", err_missing);
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_p6_rc4_startup_recover_interrupted_jobs() {
+        let storage = StorageManager::new_in_memory().unwrap();
+        let proj = storage
+            .create_project(
+                CreateProjectRequest {
+                    slug: "rec-proj".to_string(),
+                    name: "Rec Proj".to_string(),
+                    game_package_id: "com.rec".to_string(),
+                    version: None,
+                    exe_name: None,
+                    window_title: None,
+                    icon_rel_path: None,
+                    target_width_px: None,
+                    target_height_px: None,
+                    bundle_adb: None,
+                    enabled_modules: None,
+                },
+                &std::env::temp_dir().join(format!("fp_rec_proj_{}", uuid::Uuid::new_v4())),
+            )
+            .unwrap();
+        let wf = storage
+            .save_project_workflow(&proj.id, "wf-rec", "Rec WF", "Daily", "{\"schemaVersion\":1,\"workflowId\":\"wf-rec\",\"name\":\"Rec\",\"status\":\"published\",\"graph\":{\"nodes\":[{\"id\":\"n1\",\"type\":\"flow.start\",\"position\":{\"x\":0,\"y\":0}},{\"id\":\"n2\",\"type\":\"flow.end\",\"position\":{\"x\":100,\"y\":0}}],\"edges\":[{\"id\":\"e1\",\"source\":\"n1\",\"sourcePort\":\"flow\",\"target\":\"n2\",\"targetPort\":\"flow\"}]}}")
+            .unwrap();
+        let _ = wf;
+
+        let _ = storage
+            .create_or_update_project_job(ProjectJobInput {
+                project_id: proj.id.clone(),
+                job_id: "job-dead-crash".to_string(),
+                device_id: "emulator-5554".to_string(),
+                account_id: None,
+                workflow_id: "wf-rec".to_string(),
+                workflow_name: "Rec WF".to_string(),
+                graph_json: "{}".to_string(),
+                priority: 1,
+                state: "running".to_string(),
+                fencing_generation: 3,
+                current_node_id: Some("n1".to_string()),
+            })
+            .unwrap();
+        storage
+            .upsert_device_lease_record("emulator-5554", "job-dead-crash", 3, "2026-11-23T23:59:59Z")
+            .unwrap();
+
+        let _ = storage
+            .create_or_update_project_job(ProjectJobInput {
+                project_id: proj.id.clone(),
+                job_id: "job-live-other".to_string(),
+                device_id: "emulator-5556".to_string(),
+                account_id: None,
+                workflow_id: "wf-rec".to_string(),
+                workflow_name: "Rec WF".to_string(),
+                graph_json: "{}".to_string(),
+                priority: 1,
+                state: "running".to_string(),
+                fencing_generation: 1,
+                current_node_id: Some("n1".to_string()),
+            })
+            .unwrap();
+
+        let recovered = storage
+            .recover_interrupted_jobs_on_startup(|dev_id| dev_id == "emulator-5556")
+            .unwrap();
+        assert_eq!(recovered, 1);
+
+        let dead_job = storage.get_job("job-dead-crash").unwrap().unwrap();
+        assert_eq!(dead_job.state, "interrupted");
+        assert_eq!(dead_job.fencing_generation, 4);
+
+        let live_job = storage.get_job("job-live-other").unwrap().unwrap();
+        assert_eq!(live_job.state, "running");
+        let _ = std::fs::remove_dir_all(&proj.project_dir_path);
     }
 }

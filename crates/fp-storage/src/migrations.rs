@@ -1,6 +1,7 @@
 use crate::models::{DEFAULT_LEGACY_PROJECT_ID, DEFAULT_LEGACY_PROJECT_SLUG};
 use anyhow::{bail, Context, Result};
 use chrono::Utc;
+use fp_bundle_contract::CURRENT_SQLITE_SCHEMA_VERSION;
 use rusqlite::{params, Connection};
 use std::collections::HashSet;
 
@@ -403,6 +404,25 @@ BEGIN
 END;
 "#;
 
+const V6_PROVENANCE_COLUMNS: &[(&str, &str)] = &[
+    (
+        "confidence_source",
+        "ALTER TABLE runtime_variable_envelopes ADD COLUMN confidence_source TEXT;",
+    ),
+    (
+        "measured_confidence",
+        "ALTER TABLE runtime_variable_envelopes ADD COLUMN measured_confidence REAL;",
+    ),
+    (
+        "rule_matched",
+        "ALTER TABLE runtime_variable_envelopes ADD COLUMN rule_matched INTEGER;",
+    ),
+    (
+        "device_id",
+        "ALTER TABLE runtime_variable_envelopes ADD COLUMN device_id TEXT;",
+    ),
+];
+
 fn table_has_column(conn: &Connection, table: &str, col_name: &str) -> Result<bool> {
     let pragma_sql = format!("PRAGMA table_info({});", table);
     let mut stmt = conn.prepare(&pragma_sql)?;
@@ -413,6 +433,30 @@ fn table_has_column(conn: &Connection, table: &str, col_name: &str) -> Result<bo
         }
     }
     Ok(false)
+}
+
+pub fn list_table_columns(conn: &Connection, table: &str) -> Result<Vec<String>> {
+    let pragma_sql = format!("PRAGMA table_info({});", table);
+    let mut stmt = conn.prepare(&pragma_sql)?;
+    let cols = stmt
+        .query_map([], |row| row.get::<_, String>(1))?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok(cols)
+}
+
+pub fn verify_v6_provenance_columns(conn: &Connection) -> Result<()> {
+    let cols: HashSet<String> = list_table_columns(conn, "runtime_variable_envelopes")?
+        .into_iter()
+        .collect();
+    for (col, _) in V6_PROVENANCE_COLUMNS {
+        if !cols.contains(*col) {
+            bail!(
+                "SQLITE_SCHEMA_INCOMPATIBLE: table 'runtime_variable_envelopes' is missing required v6 column '{}' — refusing to operate on incomplete schema",
+                col
+            );
+        }
+    }
+    Ok(())
 }
 
 pub const MIGRATION_V3_RUNTIME_PROVENANCE_SQL: &str = r#"
@@ -549,12 +593,24 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
     }
 
     let applied: HashSet<i64> = list_applied_versions(conn)?.into_iter().collect();
+    if let Some(max_applied) = applied.iter().copied().max() {
+        if max_applied > CURRENT_SQLITE_SCHEMA_VERSION as i64 {
+            bail!(
+                "SQLITE_DOWNGRADE_INCOMPATIBLE: Database schema v{} exceeds runtime supported max v{}. Upgrade application or restore pre-update backup!",
+                max_applied,
+                CURRENT_SQLITE_SCHEMA_VERSION
+            );
+        }
+    }
+
     if applied.contains(&1)
         && applied.contains(&2)
         && applied.contains(&3)
         && applied.contains(&4)
         && applied.contains(&5)
+        && applied.contains(&6)
     {
+        verify_v6_provenance_columns(conn)?;
         return list_applied_versions(conn);
     }
     let now = Utc::now().to_rfc3339();
@@ -832,20 +888,69 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
         tx.commit()?;
     }
 
-    // Additive Gate 2 OCR & device provenance columns on `runtime_variable_envelopes`
-    // (compatible with SQLite schema version 5 without breaking compatibility gates).
-    {
-        let env_alters: &[(&str, &str)] = &[
-            ("confidence_source", "ALTER TABLE runtime_variable_envelopes ADD COLUMN confidence_source TEXT;"),
-            ("measured_confidence", "ALTER TABLE runtime_variable_envelopes ADD COLUMN measured_confidence REAL;"),
-            ("rule_matched", "ALTER TABLE runtime_variable_envelopes ADD COLUMN rule_matched INTEGER;"),
-            ("device_id", "ALTER TABLE runtime_variable_envelopes ADD COLUMN device_id TEXT;"),
-        ];
-        for (col, sql) in env_alters {
-            if !table_has_column(conn, "runtime_variable_envelopes", col)? {
-                conn.execute(sql, [])?;
+    // Migration v6: Formal transactional RC.4 OCR & Device Provenance columns on `runtime_variable_envelopes`.
+    // Upgrades pre-existing RC.1/RC.2/RC.3 v5 databases safely without relying on unversioned post-fast-path code.
+    if !applied.contains(&6) {
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let cols_before: HashSet<String> =
+            list_table_columns(&tx, "runtime_variable_envelopes")?
+                .into_iter()
+                .collect();
+
+        for (col, sql) in V6_PROVENANCE_COLUMNS {
+            if !cols_before.contains(*col) {
+                tx.execute(sql, [])
+                    .with_context(|| format!("Migration v6 failed adding column '{}'", col))?;
             }
         }
+
+        // Legacy safety backfill: unknown or blank-source rows become LEGACY_UNVERIFIED (`verified = 0`)
+        // and no legacy/unverified row is ever stamped with LIVE provenance or measured confidence.
+        tx.execute(
+            "UPDATE runtime_variable_envelopes
+             SET source = 'LEGACY_UNVERIFIED',
+                 verified = 0,
+                 confidence = NULL,
+                 confidence_source = NULL,
+                 measured_confidence = NULL,
+                 rule_matched = NULL
+             WHERE source IS NULL
+                OR TRIM(source) = ''
+                OR source NOT IN ('LIVE_ADB_OCR', 'LIVE_STATE', 'TESTKIT_MOCK', 'LEGACY_UNVERIFIED', 'UNVERIFIED');",
+            [],
+        )?;
+        tx.execute(
+            "UPDATE runtime_variable_envelopes
+             SET verified = 0,
+                 confidence = NULL,
+                 confidence_source = NULL,
+                 measured_confidence = NULL,
+                 rule_matched = NULL
+             WHERE source IN ('LEGACY_UNVERIFIED', 'UNVERIFIED');",
+            [],
+        )?;
+
+        // Verify actual schema via PRAGMA table_info & zero foreign-key violations BEFORE recording v6
+        verify_v6_provenance_columns(&tx)?;
+        let fk_violations: i64 = {
+            let mut stmt = tx.prepare("PRAGMA foreign_key_check;")?;
+            let rows = stmt.query_map([], |_| Ok(1i64))?;
+            rows.count() as i64
+        };
+        if fk_violations > 0 {
+            bail!(
+                "Migration v6 aborted: detected {} foreign key violation(s)",
+                fk_violations
+            );
+        }
+
+        tx.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (6, ?1);",
+            params![now],
+        )?;
+        tx.commit()?;
+    } else {
+        verify_v6_provenance_columns(conn)?;
     }
 
     list_applied_versions(conn)

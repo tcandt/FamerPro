@@ -796,7 +796,7 @@ print(json.dumps({"jobs": jobs, "stepEventsCount": ev_cnt, "runtimeVariableEnvel
   const report = {
     executedAtUtc: new Date().toISOString(),
     gitHead: runCommandChecked('git', ['rev-parse', 'HEAD'], ROOT),
-    rcCodeTag: 'v0.1.0-p6-rc.3',
+    rcCodeTag: 'v0.1.0-p6-rc.4',
     adbTargetSerial: TARGET_SERIAL,
     adbTargetModel: 'sdk_gphone16k_x86_64 (Android SDK Emulator fp_gate2_avd, WHPX)',
     canonicalDeviceIdentityProof: {

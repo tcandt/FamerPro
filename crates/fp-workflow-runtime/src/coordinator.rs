@@ -333,7 +333,7 @@ impl RuntimeCoordinator {
         let canonical_identity = if custom_driver.is_none()
             && classify_device_adapter(&req.device_id, None) != DeviceAdapterKind::Synthetic
             && fp_adb::infer_local_emulator_canonical_key(&req.device_id).is_none()
-            && std::path::Path::new(&self.adb_runner.adb_path).is_file()
+            && !self.adb_runner.adb_path.trim().is_empty()
         {
             self.adb_runner.probe_canonical_device_identity(&req.device_id).await
         } else {
@@ -440,6 +440,41 @@ impl RuntimeCoordinator {
     async fn execute_prepared(&self, mut prep: PreparedExecution) -> Result<RunWorkflowExecutionSummary> {
         let storage = Arc::clone(&self.storage);
         let scheduler = Arc::clone(&self.scheduler);
+
+        struct CoordinatorLeaseDropGuard {
+            scheduler: Arc<MultiDeviceScheduler>,
+            storage: Arc<StorageManager>,
+            active_jobs: Arc<RwLock<HashMap<String, watch::Sender<ExecutionSignal>>>>,
+            device_id: String,
+            account_id: Option<String>,
+            job_id: String,
+            released: bool,
+        }
+
+        impl Drop for CoordinatorLeaseDropGuard {
+            fn drop(&mut self) {
+                if !self.released {
+                    self.active_jobs.write().unwrap().remove(&self.job_id);
+                    if let Some(ref acc_id) = self.account_id {
+                        self.scheduler.release_account_lease(acc_id, &self.job_id);
+                    }
+                    self.scheduler.release_device_lease(&self.device_id, &self.job_id);
+                    let _ = self
+                        .storage
+                        .delete_device_lease_record(&self.device_id, &self.job_id);
+                }
+            }
+        }
+
+        let mut lease_guard = CoordinatorLeaseDropGuard {
+            scheduler: Arc::clone(&scheduler),
+            storage: Arc::clone(&storage),
+            active_jobs: Arc::clone(&self.active_jobs),
+            device_id: prep.device_id.clone(),
+            account_id: prep.account_id.clone(),
+            job_id: prep.job_id.clone(),
+            released: false,
+        };
 
         let latest_checkpoint_id: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
         let last_node_id: Arc<Mutex<Option<String>>> =
@@ -557,6 +592,7 @@ impl RuntimeCoordinator {
         }
         scheduler.release_device_lease(&prep.device_id, &prep.job_id);
         let _ = storage.delete_device_lease_record(&prep.device_id, &prep.job_id);
+        lease_guard.released = true;
 
         let final_node = last_node_id.lock().unwrap().clone();
         let checkpoint_id = latest_checkpoint_id.lock().unwrap().clone();
@@ -770,7 +806,7 @@ impl RuntimeCoordinator {
         let canonical_identity = if custom_driver.is_none()
             && classify_device_adapter(&resume_ctx.job.device_id, None) != DeviceAdapterKind::Synthetic
             && fp_adb::infer_local_emulator_canonical_key(&resume_ctx.job.device_id).is_none()
-            && std::path::Path::new(&self.adb_runner.adb_path).is_file()
+            && !self.adb_runner.adb_path.trim().is_empty()
         {
             self.adb_runner
                 .probe_canonical_device_identity(&resume_ctx.job.device_id)
@@ -969,7 +1005,11 @@ mod tests {
         let (storage, proj, _db) =
             setup_test_project(&tmp, "game-a", "com.test.gamea", "wf-p3-basic", &wf_json);
 
-        let coord = RuntimeCoordinator::new(storage.clone(), PathBuf::from("adb"));
+        let coord = RuntimeCoordinator::with_scheduler(
+            storage.clone(),
+            Arc::new(MultiDeviceScheduler::with_lock_dir(4, tmp.join("locks"))),
+            PathBuf::from("adb"),
+        );
         let driver = Arc::new(FakeDeviceDriver::new("emulator-5554", 1080, 1920));
 
         let summary = coord
@@ -1035,7 +1075,11 @@ mod tests {
 
         let (storage, proj, _db) =
             setup_test_project(&tmp, "game-2dev", "com.test.two", "wf-slow", &wf_slow);
-        let coord = RuntimeCoordinator::new(storage.clone(), PathBuf::from("adb"));
+        let coord = RuntimeCoordinator::with_scheduler(
+            storage.clone(),
+            Arc::new(MultiDeviceScheduler::with_lock_dir(4, tmp.join("locks"))),
+            PathBuf::from("adb"),
+        );
 
         let drv1 = Arc::new(FakeDeviceDriver::new("emulator-5554", 1080, 1920));
         let drv2 = Arc::new(FakeDeviceDriver::new("127.0.0.1:62001", 720, 1280));
@@ -1173,7 +1217,11 @@ mod tests {
             .save_project_workflow(&proj_a.id, "wf-alpha-escape", "Escape", "daily", &wf_escape)
             .unwrap();
 
-        let coord = RuntimeCoordinator::new(storage.clone(), PathBuf::from("adb"));
+        let coord = RuntimeCoordinator::with_scheduler(
+            storage.clone(),
+            Arc::new(MultiDeviceScheduler::with_lock_dir(4, tmp.join("locks"))),
+            PathBuf::from("adb"),
+        );
         let drv = Arc::new(FakeDeviceDriver::new("fake-xproj", 1080, 1920));
 
         let res = coord
@@ -1255,7 +1303,11 @@ mod tests {
 
         let (storage, proj, db_path) =
             setup_test_project(&tmp, "game-cp", "com.cp.game", "wf-cp-test", &wf_json);
-        let coord = RuntimeCoordinator::new(storage.clone(), PathBuf::from("adb"));
+        let coord = RuntimeCoordinator::with_scheduler(
+            storage.clone(),
+            Arc::new(MultiDeviceScheduler::with_lock_dir(4, tmp.join("locks"))),
+            PathBuf::from("adb"),
+        );
         let drv = Arc::new(FakeDeviceDriver::new("dev-cp", 1080, 1920));
 
         // 1. Start job, then suspend to checkpoint cleanly before n-key runs
@@ -1386,7 +1438,11 @@ mod tests {
 
         let (storage, proj, _) =
             setup_test_project(&tmp, "game-ctrl", "com.ctrl", "wf-ctrl", &wf_slow);
-        let coord = RuntimeCoordinator::new(storage.clone(), PathBuf::from("adb"));
+        let coord = RuntimeCoordinator::with_scheduler(
+            storage.clone(),
+            Arc::new(MultiDeviceScheduler::with_lock_dir(4, tmp.join("locks"))),
+            PathBuf::from("adb"),
+        );
         let drv = Arc::new(FakeDeviceDriver::new("dev-ctrl", 1080, 1920));
 
         // Pause -> Resume -> Succeed

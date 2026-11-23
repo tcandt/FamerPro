@@ -361,8 +361,12 @@ impl MiniToolPackager {
             key_rotation: options.key_rotation_delegation.clone(),
         };
 
+        let mut export_compat = project.compatibility.clone();
+        if export_compat.sqlite_schema_version < CURRENT_SQLITE_SCHEMA_VERSION {
+            export_compat.sqlite_schema_version = CURRENT_SQLITE_SCHEMA_VERSION;
+        }
         let release_manifest = ReleaseBundleManifest {
-            compatibility: project.compatibility.clone(),
+            compatibility: export_compat,
             project: project.clone(),
             module_states: module_states.clone(),
             workflows_count: validated_workflows.len(),

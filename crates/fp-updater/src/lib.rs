@@ -1553,8 +1553,7 @@ impl MiniToolUpdater {
         ));
         let mut unverified_checkpoint_jobs = Vec::new();
         if live_db_path.exists() {
-            let st = StorageManager::new(&live_db_path)?;
-            let _rep = st.online_backup_to(&backup_path)?;
+            let _rep = StorageManager::online_backup_raw_file_to(&live_db_path, &backup_path)?;
             unverified_checkpoint_jobs = find_unverified_checkpoint_jobs(&live_db_path)?;
             journal.backup_db_path = Some(backup_path.to_string_lossy().to_string());
         } else {
