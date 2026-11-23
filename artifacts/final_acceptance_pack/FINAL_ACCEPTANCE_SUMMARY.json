@@ -1,13 +1,14 @@
 {
   "branch": "feat/p6-final-validation",
   "verifiedCodeCommit": "802f3162df7fe3ab8fd6c7085c9d9e34caca6648",
-  "developmentGateDecision": "ACCEPTED_WITH_CONDITIONS",
+  "rcGitTag": "v0.1.0-p6-rc.1",
+  "developmentGateDecision": "APPROVED_P6_CLOSEOUT",
   "productionReleaseDecision": "NOT_APPROVED_BLOCKED",
   "developmentStatuses": {
     "BUILD_PASS": "PASS",
     "STANDALONE_LAUNCH_PASS": "PASS",
     "UPDATE_ROLLBACK_PASS": "PASS",
-    "LIVE_WORKFLOW_EXECUTION_PASS": "BLOCKED",
+    "LIVE_WORKFLOW_EXECUTION_PASS": "PASS",
     "PRODUCTION_ACCEPTANCE_PASS": "BLOCKED"
   },
   "provenance": {
@@ -16,6 +17,7 @@
     "cargoWorkspaceTestsFailed": 0,
     "cargoTestLog": "artifacts/p6_evidence/cargo_test_workspace_p6.log",
     "e2eReport": "artifacts/p6_evidence/p6_e2e_report.json",
+    "gate2LiveAdbReport": "artifacts/final_acceptance_pack/gate2_live_adb/gate2_live_adb_report.json",
     "pdfReportPath": "FARMERPRO_P6_ACCEPTANCE_REPORT.pdf",
     "pdfSizeBytes": 708938,
     "pdfSha256": "87d46378b1d1d915182d0ef4bd8808e66f434fc99bd548997333cd43eb8e67c6",
@@ -53,7 +55,7 @@
   },
   "externalGates": {
     "gate1CleanWindowsVm": "BLOCKED",
-    "gate2LiveAndroidAdb": "BLOCKED",
+    "gate2LiveAndroidAdb": "PASS",
     "gate3CommercialAuthenticode": "BLOCKED"
   }
 }

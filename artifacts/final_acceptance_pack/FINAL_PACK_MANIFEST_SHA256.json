@@ -1,0 +1,58 @@
+{
+  "ACCEPTANCE_MATRIX.md": {
+    "bytes": 4595,
+    "sha256": "8af0c39bf65f8f0a5349844adb04142cd942bd2b32287f0e08c64793113e80c1"
+  },
+  "EXTERNAL_GATES_STATUS.md": {
+    "bytes": 3744,
+    "sha256": "e0c53b4a2372b8fde403cc687cbe86a3d46e1a34ce368f3acfa4788ab8d33a74"
+  },
+  "FINAL_ACCEPTANCE_SUMMARY.json": {
+    "bytes": 2488,
+    "sha256": "7b2d967dd63dd27ece8774937178c59702df1759eed916d9d6ef571db51d015e"
+  },
+  "GATE2_LIVE_ANDROID_ADB_REPORT.md": {
+    "bytes": 6579,
+    "sha256": "61a0d4b8cf0c202ae78e9f270059f30e6489a74517f13fe66dc91f354bdecece"
+  },
+  "SECURITY_RISK_REGISTER_AND_THREAT_MODEL.md": {
+    "bytes": 6821,
+    "sha256": "872f6808889e02966f3f8a93f16f17dc58fe7ba80f66fc09f9df5c4ef49f5073"
+  },
+  "gate2_live_adb\\gate2_device_after_mini.png": {
+    "bytes": 25776,
+    "sha256": "e1e2c5ec6b946899b95b39adce0751dfcad28d472871354f95352c1fa8b969a2"
+  },
+  "gate2_live_adb\\gate2_device_after_studio.png": {
+    "bytes": 50358,
+    "sha256": "3b8e53fafc0e5c4b11788ada9d3f28bfb2fb186ef78964d6210bea8c26f056fe"
+  },
+  "gate2_live_adb\\gate2_device_before_mini.png": {
+    "bytes": 25680,
+    "sha256": "76bd7d2e287e7f2e35860090f2d73e6393ec3f795b081945e4a656cb05036e8a"
+  },
+  "gate2_live_adb\\gate2_device_before_studio.png": {
+    "bytes": 59537,
+    "sha256": "14fed0ef3f1064a596803372c063b4878bddf0ecc7962cfc5eaa39624a17d978"
+  },
+  "gate2_live_adb\\gate2_live_adb_report.json": {
+    "bytes": 125528,
+    "sha256": "095200cdafffcc12d36ba95d540ea0aac258476c325fde20db3b9d4fff6e622b"
+  },
+  "gate2_live_adb\\gate2_mini_after.png": {
+    "bytes": 88395,
+    "sha256": "c60b7434b7897530b11112a327052a32fb670352d5538d89992a957009e4077a"
+  },
+  "gate2_live_adb\\gate2_mini_before.png": {
+    "bytes": 55076,
+    "sha256": "70ec888468f1dc2885fa3f3bb45f96d23a02f9b87e8b6e53af5e4d4dedd8fda7"
+  },
+  "gate2_live_adb\\gate2_studio_device_lab.png": {
+    "bytes": 126333,
+    "sha256": "f68e3bb41df90b69def1a8096de871d4822f0afb369ff6b5de86d7537515e41c"
+  },
+  "gate2_live_adb\\gate2_studio_runtime_vars.png": {
+    "bytes": 144463,
+    "sha256": "47864134362d532f833bddbec55bff4775a4792aa5a1b52d23cbf7b1bee3aca8"
+  }
+}
