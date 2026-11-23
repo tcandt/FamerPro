@@ -1,0 +1,59 @@
+{
+  "branch": "feat/p6-final-validation",
+  "verifiedCodeCommit": "802f3162df7fe3ab8fd6c7085c9d9e34caca6648",
+  "developmentGateDecision": "ACCEPTED_WITH_CONDITIONS",
+  "productionReleaseDecision": "NOT_APPROVED_BLOCKED",
+  "developmentStatuses": {
+    "BUILD_PASS": "PASS",
+    "STANDALONE_LAUNCH_PASS": "PASS",
+    "UPDATE_ROLLBACK_PASS": "PASS",
+    "LIVE_WORKFLOW_EXECUTION_PASS": "BLOCKED",
+    "PRODUCTION_ACCEPTANCE_PASS": "BLOCKED"
+  },
+  "provenance": {
+    "os": "Microsoft Windows 11 Pro (Build 26200, AMD64)",
+    "cargoWorkspaceTestsPassed": 99,
+    "cargoWorkspaceTestsFailed": 0,
+    "cargoTestLog": "artifacts/p6_evidence/cargo_test_workspace_p6.log",
+    "e2eReport": "artifacts/p6_evidence/p6_e2e_report.json",
+    "pdfReportPath": "FARMERPRO_P6_ACCEPTANCE_REPORT.pdf",
+    "pdfSizeBytes": 708938,
+    "pdfSha256": "87d46378b1d1d915182d0ef4bd8808e66f434fc99bd548997333cd43eb8e67c6",
+    "pdfQaPassed": true,
+    "evidenceManifestPath": "artifacts/p6_evidence/EVIDENCE_MANIFEST_SHA256.json",
+    "evidenceManifestFileCount": 64
+  },
+  "releaseArtifacts": {
+    "installer": {
+      "path": "artifacts/p6_evidence/dist_releases/FarmerPro_0.1.0_x64-setup.exe",
+      "bytes": 15172294,
+      "sha256": "87984447ec5475c391b44715e93757e1178e6d128f736d26cd7be8a4604468c3"
+    },
+    "portableAlphaZip": {
+      "path": "artifacts/p6_evidence/dist_releases/P6_Alpha_v1.0.0_win-x64.zip",
+      "bytes": 11911813,
+      "sha256": "19de97cbabe0cc82110e57851f641105dd7922213153ffe680a4d920373123ef",
+      "prePostZipExeShaMatch": true
+    },
+    "portableBetaZip": {
+      "path": "artifacts/p6_evidence/dist_releases/P6_Beta_v1.0.0_win-x64.zip",
+      "bytes": 11913469,
+      "sha256": "4879dc71e4c4c984d56e379fec80389a38985c0309e1092d694ee6b804bce2aa",
+      "prePostZipExeShaMatch": true
+    }
+  },
+  "securityRegressionChecks": {
+    "trustedKeyReUpgradeAfterRollback": "PASS",
+    "untrustedNonceReplayBlocked": "PASS",
+    "revokedPreviouslyTrustedKeyBlocked": "PASS",
+    "policyAndCompatGateEnforcementOnAlreadyTrustedKey": "PASS",
+    "fullTriadPartialTamperBlocked": "PASS",
+    "sameUser6ComponentBoundaryObservedEpoch": 1,
+    "windowsAtomicWriteRetryExhaustionAndJournalRecovery": "PASS"
+  },
+  "externalGates": {
+    "gate1CleanWindowsVm": "BLOCKED",
+    "gate2LiveAndroidAdb": "BLOCKED",
+    "gate3CommercialAuthenticode": "BLOCKED"
+  }
+}

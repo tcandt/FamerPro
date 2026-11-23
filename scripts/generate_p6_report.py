@@ -53,7 +53,7 @@ test_log = raw_log_bytes.decode("utf-16" if b"\x00" in raw_log_bytes else "utf-8
 passed_matches = re.findall(r"test result: ok\. (\d+) passed; (\d+) failed;", test_log)
 total_passed = sum(int(p) for p, _ in passed_matches)
 total_failed = sum(int(f) for _, f in passed_matches)
-assert total_passed >= 97 and total_failed == 0, f"Unexpected tests: {total_passed}/{total_failed}"
+assert total_passed >= 99 and total_failed == 0, f"Unexpected tests: {total_passed}/{total_failed}"
 
 head_sha = (
     subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT)
@@ -285,6 +285,7 @@ html = f"""<!DOCTYPE html>
 [6] Revoked &amp; Rogue Dir : Dropped v9.9.9 (revoked) &amp; v9.9.8 (altered pub) -&gt; REJECTED ({h_esc(p63["rogueRevokedDirAttackErr"].splitlines()[0])} | ROGUE_OR_CORRUPT_VERSION_DIR)
 [7] Manifest Tamper     : Modified THIRD_PARTY_NOTICES.txt in v1.1.0 -&gt; REJECTED: {h_esc(p63["manifestTamperErr"].splitlines()[0])}
 [8] 6-Comp User Bound   : ACL=({h_esc(p63["threatModelAcls"]["hkcuWriteAcl"])}; Ext=AuthUsers:(I)(M)) -&gt; replacing all 6 user-writable stores resets trustEpoch={p63["sameUser6CompResult"]["trustEpoch"]}
+[9] Closeout Regression : Revoked previously-trusted key/policy/compat gates PASS; Win32 atomic_write retry exhaustion + journal recovery PASS (99/99 Cargo)
   </pre>
   <div class="sec-h">II. Đối chiếu Toàn vẹn Binary Phát hành (Pre-ZIP Manifest == Post-ZIP Extracted Binary)</div>
   <table>
@@ -313,7 +314,7 @@ html = f"""<!DOCTYPE html>
     <thead><tr><th>Vấn đề P5.4</th><th>Cách P6 Đã Xử lý &amp; Bằng chứng Thực tế</th><th>Trạng thái P6</th></tr></thead>
     <tbody>
       <tr><td><strong>3.1 Chứng minh Windows sạch &amp; Offline WebView2</strong></td><td>Bổ sung trường <code>requiresInternetIfWebview2Missing=true</code>, kiểm tra <code>detect_webview2_runtime_at([], None)</code> trong unit test (<code>offlineExecutionReady=false</code>), fail-fast code 3 nếu thiếu WebView2; giữ honest <code>BLOCKED</code> cho Clean VM vì host thiếu Windows Sandbox &amp; Hyper-V cần Admin.</td><td><span class="b-pass">CONTRACT FIXED</span> / <span class="b-blk">VM BLOCKED</span></td></tr>
-      <tr><td><strong>3.2 Thay thế Trust Ledger, Re-Upgrade &amp; Ranh giới ACL</strong></td><td><code>ExternalTrustAnchor</code> (<code>%LOCALAPPDATA%</code> + <code>HKCU</code>) chặn thay thế 3 tệp <code>.updater/*</code>, thư mục giả, key thu hồi &amp; sửa manifest; cho phép re-upgrade 1.0→1.1 sau rollback khi key đã trusted trong khi Cargo test vẫn chặn untrusted replay; kiểm thử thực tế thay cả 6 vùng user-writable (đều thuộc ACL user) đưa <code>trustEpoch</code> về 1.</td><td><span class="b-pass">CLOSED (ACL BOUNDARY)</span></td></tr>
+      <tr><td><strong>3.2 Trust Ledger, Gates &amp; Atomic Write Boundary</strong></td><td><code>ExternalTrustAnchor</code> chặn thay 3 tệp <code>.updater/*</code>, thư mục giả &amp; sửa manifest; cho phép re-upgrade key đã trusted (nhưng Cargo test chặn tuyệt đối nếu key bị thu hồi, sai release policy hoặc sai compat gate); kiểm chứng Win32 <code>atomic_write_file</code> cạn retry trả lỗi thật + phục hồi journal; xác nhận 6 vùng user-writable cùng ACL user đưa <code>trustEpoch</code> về 1 (không dùng nhãn tamper-proof).</td><td><span class="b-pass">CLOSED (ACL BOUNDARY)</span></td></tr>
       <tr><td><strong>3.3 Read-Only NTFS ACL thực tế</strong></td><td>Dùng <code>icacls /inheritance:r /grant:r USER:(OI)(CI)(RX)</code> tạo thư mục chỉ đọc/thực thi giống Program Files; Windows trả về <code>os error 5</code>, Portable Mini Tool tự chuyển sang <code>%LOCALAPPDATA%</code> và updater chặn cài đặt ghi.</td><td><span class="b-pass">CLOSED &amp; PROVEN</span></td></tr>
       <tr><td><strong>3.4 Mini Tool Gameplay &amp; UI 3 Độ phân giải</strong></td><td>Kiểm thử toàn bộ Studio qua 27 phép đo (9 tabs × 1280×720 / 1600×900 / 1920×1080), 0 lỗi tràn ngang; 2 Portable Tools hiển thị 4–5 tasks và chạy TestKit đa luồng. Live ADB vẫn tách riêng ở trạng thái <code>BLOCKED</code>.</td><td><span class="b-sim">UI/TESTKIT OK</span> / <span class="b-blk">ADB BLOCKED</span></td></tr>
       <tr><td><strong>3.5 Đối chiếu Binary &amp; Toàn bộ Evidence Pack</strong></td><td>Ghi nhận đầy đủ SHA-256 của Installer, 2 ZIP, EXE trước &amp; sau giải nén ZIP (<code>100% match</code>), kèm toàn bộ manifest SHA-256 tại <code>artifacts/p6_evidence/EVIDENCE_MANIFEST_SHA256.json</code>.</td><td><span class="b-pass">CLOSED &amp; MATCHED</span></td></tr>

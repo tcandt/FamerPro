@@ -5,8 +5,8 @@
   "productName": "Zenith Harvester Pro",
   "version": "1.0.0",
   "exeName": "Auto_P6Alpha.exe",
-  "finalExeSha256": "24be91b7a60338376fd0d6c0c2a662a90b15d7c4be277483c1a3feffb7446572",
-  "builtAtUtc": "2026-11-23T02:06:56.709410100+00:00",
+  "finalExeSha256": "1e3d6745665bc54e2c70344e476331c3709347f733fee4d007de41416314141b",
+  "builtAtUtc": "2026-11-23T02:51:14.720982700+00:00",
   "requirements": {
     "requiresRust": false,
     "requiresCargo": false,
@@ -56,7 +56,7 @@
     {
       "relPath": "Auto_P6Alpha.exe",
       "sizeBytes": 15759872,
-      "sha256": "24be91b7a60338376fd0d6c0c2a662a90b15d7c4be277483c1a3feffb7446572"
+      "sha256": "1e3d6745665bc54e2c70344e476331c3709347f733fee4d007de41416314141b"
     },
     {
       "relPath": "THIRD_PARTY_NOTICES.txt",
@@ -86,27 +86,27 @@
     {
       "relPath": "bundle/checksums.sha256",
       "sizeBytes": 260,
-      "sha256": "a66de73494b2013117475541873302200ab2cda20f3cc8a0d3eb054fbdc90d25"
+      "sha256": "ddda5e2f9967518b2ad5fcc134ca4c4164b2f298567326ec44a51473c9b934c7"
     },
     {
       "relPath": "bundle/manifest.fpbundle.json",
       "sizeBytes": 5727,
-      "sha256": "7e59b83b056d54cc4dd281eefb45c8e3c3975eae73b4170bb7b1de3bd61d394a"
+      "sha256": "93c54471abce6b5f5e7157fc1c92b048b57e82d241895a708f145307a27f1162"
     },
     {
       "relPath": "bundle/signature.fpbundle.json",
       "sizeBytes": 883,
-      "sha256": "5f31a4f5b2a0991c3008d807d55e6f135a75fa94536a85ccb1daa7551ce54234"
+      "sha256": "cec89352865776cfeb731e8505f30ae3d9d4380307cf256599b330acf5ba9c6f"
     },
     {
       "relPath": "bundle/trusted_publisher.pub",
       "sizeBytes": 64,
-      "sha256": "977336ca2f206deb04feb061d54ef2eb005aa374b937d8ce54b969be9f3f8128"
+      "sha256": "f6d3f50ad27ad86a6957fd97d627da4dae018ba948007945f42713cbd2d038fa"
     },
     {
       "relPath": "bundle/ui-schema.json",
       "sizeBytes": 2883,
-      "sha256": "dd0d81546fe32443a766db9f2343791ff3a8d0194c63d038c30a78333028771f"
+      "sha256": "9436a12d51475e5562b7c9526845c6bc4d8a1535b085fe84822215db96139e8a"
     },
     {
       "relPath": "bundle/workflows.fpbundle.json",
@@ -116,7 +116,7 @@
     {
       "relPath": "updater/fp-updater.exe",
       "sizeBytes": 5659136,
-      "sha256": "8f66e11c9d058f6ed700d7599774bf175e77159ec12c2ea3e8139c4ea0e32865"
+      "sha256": "885f14c56e1bb9652cb0f0bf3f300624ac9bfb186f24b183a9d38ea2d4975faa"
     }
   ],
   "thirdPartyNotices": [

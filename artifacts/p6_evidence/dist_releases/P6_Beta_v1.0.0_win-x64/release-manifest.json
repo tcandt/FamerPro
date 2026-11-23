@@ -5,8 +5,8 @@
   "productName": "Orion Citadel Automator",
   "version": "1.0.0",
   "exeName": "Auto_P6Beta.exe",
-  "finalExeSha256": "03c0ffc680d0a7eda3bdfe06b5b9b000382917605735fdeccbd7b78d56b45f8b",
-  "builtAtUtc": "2026-11-23T02:06:59.787660500+00:00",
+  "finalExeSha256": "0719d207958f54a3ff533f803ba8a882ccc3557ae785cbf04680b5869746b3d2",
+  "builtAtUtc": "2026-11-23T02:51:17.402928900+00:00",
   "requirements": {
     "requiresRust": false,
     "requiresCargo": false,
@@ -27,7 +27,7 @@
     "copyright": "Copyright (C) 2026 Orion Citadel Studio QA",
     "ed25519KeyId": "",
     "ed25519PubkeyHex": "",
-    "authenticodeCertRef": "CERT_STORE://CurrentUser/My/BE3B302FB9FCA5B026973C6B3CDA7D9CC467703D",
+    "authenticodeCertRef": "CERT_STORE://CurrentUser/My/9153907A89C34F188E64ED74B4316D3A998B29E1",
     "releaseChannel": "qa",
     "signingPolicy": "self_signed_qa"
   },
@@ -38,7 +38,7 @@
     "releaseChannel": "qa",
     "authenticodeTrustStatus": "self_signed_untrusted_root",
     "trustedPublicRelease": false,
-    "signerThumbprint": "BE3B302FB9FCA5B026973C6B3CDA7D9CC467703D",
+    "signerThumbprint": "9153907A89C34F188E64ED74B4316D3A998B29E1",
     "signerSubject": "Orion Citadel Studio QA",
     "versionInfo": {
       "companyName": "Orion Citadel Studio QA",
@@ -56,7 +56,7 @@
     {
       "relPath": "Auto_P6Beta.exe",
       "sizeBytes": 15761368,
-      "sha256": "03c0ffc680d0a7eda3bdfe06b5b9b000382917605735fdeccbd7b78d56b45f8b"
+      "sha256": "0719d207958f54a3ff533f803ba8a882ccc3557ae785cbf04680b5869746b3d2"
     },
     {
       "relPath": "THIRD_PARTY_NOTICES.txt",
@@ -86,27 +86,27 @@
     {
       "relPath": "bundle/checksums.sha256",
       "sizeBytes": 260,
-      "sha256": "b1fa5ee2215f2198d2e75ea00edaa38c66071e984df33695b0581862521939cd"
+      "sha256": "f8f68d1f63f332932f4ab5a0d7c59f19bf3782628a4b6c1a236cad61b00a0fc9"
     },
     {
       "relPath": "bundle/manifest.fpbundle.json",
-      "sizeBytes": 5823,
-      "sha256": "dba08ccd67d1ef605102da9b29a206e4d30a6f1549a42847fc078783b41c23ff"
+      "sizeBytes": 5820,
+      "sha256": "6f0febad7147bc6ed3c1bb2f510192c78dace7303f699d611f43e52b3d99fa14"
     },
     {
       "relPath": "bundle/signature.fpbundle.json",
       "sizeBytes": 883,
-      "sha256": "981c6fb382af73db68bf60d4bfc9158c9f45e689cd9810dbe9563f664cfedc92"
+      "sha256": "35067041c7fceafe6ec4cca1c499eff018cf396bcdc786f0b8c47bbd2b7a7ae4"
     },
     {
       "relPath": "bundle/trusted_publisher.pub",
       "sizeBytes": 64,
-      "sha256": "977336ca2f206deb04feb061d54ef2eb005aa374b937d8ce54b969be9f3f8128"
+      "sha256": "f6d3f50ad27ad86a6957fd97d627da4dae018ba948007945f42713cbd2d038fa"
     },
     {
       "relPath": "bundle/ui-schema.json",
       "sizeBytes": 3284,
-      "sha256": "f039655feed55bb85c19ac04c97068bb56464fc2ed1d2c56ba199351a2337be0"
+      "sha256": "a5ffbd6e9fd601337e23e5fee30da9deb4a1a1627d4f03fdd1b6b148e545c360"
     },
     {
       "relPath": "bundle/workflows.fpbundle.json",
@@ -116,7 +116,7 @@
     {
       "relPath": "updater/fp-updater.exe",
       "sizeBytes": 5659136,
-      "sha256": "8f66e11c9d058f6ed700d7599774bf175e77159ec12c2ea3e8139c4ea0e32865"
+      "sha256": "885f14c56e1bb9652cb0f0bf3f300624ac9bfb186f24b183a9d38ea2d4975faa"
     }
   ],
   "thirdPartyNotices": [

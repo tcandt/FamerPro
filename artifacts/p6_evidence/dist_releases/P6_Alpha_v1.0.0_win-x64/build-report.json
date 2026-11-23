@@ -1,10 +1,10 @@
 {
-  "projectId": "proj-p6-alpha-harvester-61a44b9a",
+  "projectId": "proj-p6-alpha-harvester-5fc5bf10",
   "projectSlug": "p6-alpha-harvester",
   "toolExeName": "Auto_P6Alpha.exe",
   "toolExePath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Alpha_v1.0.0_win-x64\\Auto_P6Alpha.exe",
   "toolExeSizeBytes": 15759872,
-  "toolExeSha256": "24be91b7a60338376fd0d6c0c2a662a90b15d7c4be277483c1a3feffb7446572",
+  "toolExeSha256": "1e3d6745665bc54e2c70344e476331c3709347f733fee4d007de41416314141b",
   "peIconLayersInjected": 1,
   "peIconGroupResourceBytes": 20,
   "peIconFirstLayerBytes": 4264,
@@ -34,12 +34,12 @@
     "timestampStatus": "NONE",
     "detail": "Unsigned Internal Build (TRUST_E_NOSIGNATURE 0x800B0100)."
   },
-  "keyId": "fp-ed25519-29bc0b8e4bac",
-  "publisherPublicKeyHex": "29bc0b8e4baccb1f7fe73fd4fedf30339f167aabe05568ec86f953423d20191a",
+  "keyId": "fp-ed25519-3852ed2f732b",
+  "publisherPublicKeyHex": "3852ed2f732bc35ca9dd159c6fb1bdd1f2a709deaf1b5d41cfcf2f6054c5b292",
   "externalKeystorePath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\AppData\\Local\\FarmerPro\\ProducerKeys\\active_producer_ed25519.json",
   "signatureAlgorithm": "Ed25519-RFC8032-SHA256",
-  "signatureEd25519Hex": "0c237d4d10eea4e18352cc4cee66dc9880928b0962c58678a36a1bc7aca99307cf9ce98cc84606d32e9764faeee03118525d9e08caa75b9cf7ba3d48a802d30e",
-  "totalDurationMs": 2154,
+  "signatureEd25519Hex": "f70a13b6a627ba597cfc0ae2ba6c6e6effa5eefd0095a3bbe7464c3b4a488b44ed3dcc04300a2dde3d4d75e33d0715cce410d13672639dbed940882a1b960a09",
+  "totalDurationMs": 2053,
   "steps": [
     {
       "stepNo": 1,
@@ -72,30 +72,30 @@
     {
       "stepNo": 5,
       "name": "PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection",
-      "durationMs": 1601,
+      "durationMs": 1554,
       "status": "PASS",
-      "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Zenith Harvester Pro', Company='Zenith Automation Group Ltd.'), PE RT_RCDATA #7777=29bc0b8e4baccb1f"
+      "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Zenith Harvester Pro', Company='Zenith Automation Group Ltd.'), PE RT_RCDATA #7777=3852ed2f732bc35c"
     },
     {
       "stepNo": 6,
       "name": "Package Bundle Assets, Notices & Standalone Updater/ADB",
-      "durationMs": 29,
+      "durationMs": 30,
       "status": "PASS",
       "detail": "Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=true"
     },
     {
       "stepNo": 7,
       "name": "Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature",
-      "durationMs": 3,
+      "durationMs": 2,
       "status": "PASS",
-      "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-29bc0b8e4bac, PubKey: 29bc0b8e4baccb1f7fe73fd4fedf30339f167aabe05568ec86f953423d20191a)"
+      "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-3852ed2f732b, PubKey: 3852ed2f732bc35ca9dd159c6fb1bdd1f2a709deaf1b5d41cfcf2f6054c5b292)"
     },
     {
       "stepNo": 8,
       "name": "Authenticode Sign/Verify (WinVerifyTrust) & Final Release Manifest Check",
-      "durationMs": 494,
+      "durationMs": 440,
       "status": "PASS",
-      "detail": "Mode=UnsignedInternal, Trust=Unsigned, FilesChecked=13, PubCertMatch=false, exe SHA-256=24be91b7a6033837"
+      "detail": "Mode=UnsignedInternal, Trust=Unsigned, FilesChecked=13, PubCertMatch=false, exe SHA-256=1e3d6745665bc54e"
     }
   ],
   "modules": [
