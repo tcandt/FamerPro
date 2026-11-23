@@ -16,7 +16,7 @@
   ],
   "verifiedCodeCommit": "629cce236e173f91642684858e44638948773b9e",
   "rcGitTag": "v0.1.0-p6-rc.3",
-  "developmentGateDecision": "APPROVED_P6_CLOSEOUT_WITH_GATE2_PLATFORM_ADDENDUM",
+  "developmentGateDecision": "APPROVED_RC3_WITH_SUPPLEMENTAL_FINDINGS_LOGGED",
   "productionReleaseDecision": "NOT_APPROVED_BLOCKED",
   "developmentStatuses": {
     "BUILD_PASS": "PASS",
@@ -24,7 +24,11 @@
     "UPDATE_ROLLBACK_PASS": "PASS",
     "GATE2_PLATFORM_LIVE_ADB": "PASS",
     "GATE2_SETTINGS_LIVE_WORKFLOW": "PASS",
+    "CROSS_PROCESS_LEASE": "NOT_VERIFIED_IN_PROCESS_ONLY",
+    "SQLITE_V5_UPGRADE_COMPATIBILITY": "FAIL_EARLY_RETURN_AT_MIGRATIONS_552_559",
     "GATE2_GAME_SPECIFIC_WORKFLOW": "NOT_TESTED",
+    "CLEAN_WINDOWS_VM": "BLOCKED",
+    "COMMERCIAL_AUTHENTICODE": "BLOCKED",
     "PRODUCTION_ACCEPTANCE_PASS": "BLOCKED"
   },
   "provenance": {
@@ -36,6 +40,8 @@
     "e2eReport": "artifacts/p6_evidence/p6_e2e_report.json",
     "gate2LiveAdbReport": "artifacts/final_acceptance_pack/gate2_live_adb/gate2_live_adb_report.json",
     "gate2AcceptanceAddendumPath": "artifacts/final_acceptance_pack/GATE2_ACCEPTANCE_ADDENDUM.md",
+    "rc3SupplementalReportPath": "artifacts/final_acceptance_pack/RC3_SUPPLEMENTAL_VERIFICATION_REPORT.md",
+    "rc3SupplementalJsonPath": "artifacts/final_acceptance_pack/rc3_supplement_evidence/rc3_supplement_verification.json",
     "pdfReportPath": "FARMERPRO_P6_ACCEPTANCE_REPORT.pdf",
     "pdfSizeBytes": 712963,
     "pdfSha256": "ed6e66a930df0b730c56724a46d70555337bf5fff9457c68c9503b48c16c8836",
@@ -71,7 +77,9 @@
   "gate2VerificationChecks": {
     "canonicalDualTransportDedup": "PASS (emulator-5554 + 127.0.0.1:5555 -> LIVE ADB: 1 ONLINE)",
     "canonicalIdentityRegressionCases": "PASS (7 scenarios: dual serials, 2 devices, USB+TCP, reboot boot_id change, disconnect, competing leases, unknown identity)",
-    "miniRuntimeCanonicalSchedulerLease": "PASS (MultiDeviceScheduler integrated in MiniRuntimeState)",
+    "miniRuntimeCanonicalSchedulerLease": "PASS (in-process MultiDeviceScheduler integrated in MiniRuntimeState)",
+    "crossProcessDeviceLease": "NOT_VERIFIED (Job B in Auto_CrossMini.exe succeeded while Studio Job A was running; same-process conflict blocked; forced-kill recovery succeeded)",
+    "sqliteV5UpgradeCompatibility": "FAIL (pre-existing RC.2 v5 DB records & integrity_check=ok preserved, but migrations.rs:552-559 early-return skipped adding confidence_source, measured_confidence, rule_matched, device_id -> varsError: no such column: confidence_source)",
     "adbForwardReverseCreateListRemove": "PASS (tcp:19555->tcp:19556, tcp:19557->tcp:19558 + parser/empty/host-token regressions)",
     "ocrProvenanceSeparation": "PASS (ConfidenceSource=HEURISTIC, measuredConfidence=null, ruleMatched=true, UI badge='LIVE · Đã khớp quy tắc', 0 unmeasured % shown)",
     "miniStandaloneZeroTestkitBadge": "PASS (anyTestkitBadge=false, 22 SQLite step_events)"

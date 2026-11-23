@@ -1,21 +1,23 @@
 # FARMERPRO — FINAL ACCEPTANCE PACK & STAGE-GATE MATRIX
 
 **Branch:** `feat/p6-final-validation`  
-**Verified RC Code Baseline:** `629cce236e173f91642684858e44638948773b9e` (Git Tag: `v0.1.0-p6-rc.3`)  
-**Decision:** **P6 Development Closeout = APPROVED · Gate 2 Platform/Settings Live ADB = PASS · Game Workflows = NOT TESTED · Production Release = NOT APPROVED (`BLOCKED` at Gate 1 & Gate 3)**
+**Verified RC Code Baseline:** `629cce236e173f91642684858e44638948773b9e` (Git Tag: `v0.1.0-p6-rc.3`, frozen untouched)  
+**Decision:** **RC.3 Development & Gate 2 Platform Live ADB = ACCEPTED · Supplemental Checks Found Cross-Process Lease Scope Limit & Pre-Existing v5 DB Upgrade Bug · Production Release = `BLOCKED`**
 
 ---
 
 ## 1. Authoritative Development & Gate Statuses
 | Gate Identifier | Status | Evidence Scope & Honest Boundaries |
 |---|---|---|
-| `BUILD_PASS` | **PASS** | `101 / 101` Cargo workspace tests PASS across `38` suites ([cargo_test_workspace_p6.log](file:///e:/DATA/FarmerPro/artifacts/p6_evidence/cargo_test_workspace_p6.log)), release binaries (`fp-updater`, `fp-mini-runtime`, NSIS `FarmerPro_0.1.0_x64-setup.exe`) rebuilt cleanly on `629cce2` (`v0.1.0-p6-rc.3`). |
+| `BUILD_PASS` | **PASS** | `101 / 101` Cargo workspace tests PASS across `38` suites ([cargo_test_workspace_p6.log](file:///e:/DATA/FarmerPro/artifacts/p6_evidence/cargo_test_workspace_p6.log)), release binaries (`fp-updater`, `fp-mini-runtime`, NSIS `FarmerPro_0.1.0_x64-setup.exe`) built cleanly on `629cce2` (`v0.1.0-p6-rc.3`). |
 | `STANDALONE_LAUNCH_PASS` | **PASS** | Portable Mini Tools (`Auto_P6Alpha.exe`, `Auto_P6Beta.exe`) launched after Studio uninstall; plus `Auto_Gate2Live.exe` launched standalone against live ADB (`LIVE ADB: 1 ONLINE` on `emulator-5554`, OCR badge `LIVE · Đã khớp quy tắc`). |
 | `UPDATE_ROLLBACK_PASS` | **PASS** | Upgrade `v1.0.0 -> v1.1.0`, WAL backup & data preservation, rollback `v1.1.0 -> v1.0.0`, re-upgrade `v1.0.0 -> v1.1.0` with trusted key, revoked-key/policy/compat gates, real NTFS `icacls (RX)` fallback, Win32 `atomic_write_file` retry exhaustion & journal reconciliation PASS. *Full 6-component same-user overwrite resets `trustEpoch` to `1` per Threat Model.* |
 | `GATE2_PLATFORM_LIVE_ADB` | **PASS** | Canonical single-AVD deduplication + 7 canonical regression tests + Mini Runtime canonical scheduler lease, `adb forward`/`reverse` create/list/remove & parser regressions, `capture_device`, template match (`0.931`), OCR provenance (`ConfidenceSource::Heuristic`, `measuredConfidence=null`, badge `LIVE · Đã khớp quy tắc`), `Pause/Resume`, `Suspend/Resume Checkpoint`, `Cancel`, and standalone `Auto_Gate2Live.exe` (`22` events). See [GATE2_ACCEPTANCE_ADDENDUM.md](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/GATE2_ACCEPTANCE_ADDENDUM.md). |
 | `GATE2_SETTINGS_LIVE_WORKFLOW` | **PASS** | Executed end-to-end on Android SDK AVD (`fp_gate2_avd` / `emulator-5554`, API 37 WHPX) against `com.android.settings` with real `Windows.Media.Ocr` text extraction, `SafeTap`, `Swipe`, `BACK`, and clean before/after device screenshots. |
+| `CROSS_PROCESS_LEASE` | **NOT VERIFIED (IN-PROCESS ONLY)** | Live test ([RC3_SUPPLEMENTAL_VERIFICATION_REPORT.md](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/RC3_SUPPLEMENTAL_VERIFICATION_REPORT.md)) confirmed same-process concurrent job is rejected in Studio, **but** separate `Auto_CrossMini.exe` Job B ran to `Succeeded` on `emulator-5554` while `FarmerPro.exe` Job A was `running` (in-process RAM scheduler + separate DBs). Minimal OS lockfile remediation proposed. |
+| `SQLITE_V5_UPGRADE_COMPATIBILITY` | **FAIL (ON `629cce2`)** | Opening a genuine RC.2 (`b5a0567`) v5 DB with frozen RC.3 `FarmerPro.exe` kept existing projects/workflows/accounts intact (`integrity_check=ok`, `fk=0`), **but** `migrations.rs:552-559` early-return fast-path skipped adding `confidence_source`, `measured_confidence`, `rule_matched`, `device_id`, causing `no such column: confidence_source` on `studio_get_project_runtime_vars`. Requires versioned `v6` migration before upgrading pre-RC.3 DBs. |
 | `GATE2_GAME_SPECIFIC_WORKFLOW` | **NOT TESTED** | **0 game APKs / game-specific workflows tested on live ADB** (accepted per GameProject acceptance later, not merged into platform Gate 2). |
-| `PRODUCTION_ACCEPTANCE_PASS` | **BLOCKED** | **2 External Gates Remain `BLOCKED`:** Gate 1 (Clean Windows VM / Standard User / WebView2 missing) and Gate 3 (Commercial Authenticode PublicSigned CA Certificate). |
+| `PRODUCTION_ACCEPTANCE_PASS` | **BLOCKED** | **External Gates Remain `BLOCKED`:** Gate 1 (`CLEAN_WINDOWS_VM = BLOCKED`) and Gate 3 (`COMMERCIAL_AUTHENTICODE = BLOCKED`). |
 
 ---
 
@@ -34,7 +36,8 @@
 ---
 
 ## 3. Acceptance Pack Checklist
-- **Gate 2 Acceptance Addendum:** [GATE2_ACCEPTANCE_ADDENDUM.md](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/GATE2_ACCEPTANCE_ADDENDUM.md) (**PRESENT — PASS**)
+- **RC.3 Supplemental Verification Report (Tests A & B):** [RC3_SUPPLEMENTAL_VERIFICATION_REPORT.md](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/RC3_SUPPLEMENTAL_VERIFICATION_REPORT.md) (**PRESENT — Test A NOT VERIFIED / Test B FAIL DOCUMENTED**)
+- **Gate 2 Acceptance Addendum:** [GATE2_ACCEPTANCE_ADDENDUM.md](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/GATE2_ACCEPTANCE_ADDENDUM.md) (**PRESENT**)
 - **Final Acceptance Matrix:** [ACCEPTANCE_MATRIX.md](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/ACCEPTANCE_MATRIX.md) (**PRESENT**)
 - **Security Risk Register & Threat Model:** [SECURITY_RISK_REGISTER_AND_THREAT_MODEL.md](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/SECURITY_RISK_REGISTER_AND_THREAT_MODEL.md) (**PRESENT**)
 - **External Gates Tracker:** [EXTERNAL_GATES_STATUS.md](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/EXTERNAL_GATES_STATUS.md) (**PRESENT**)

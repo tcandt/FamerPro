@@ -1,15 +1,15 @@
 {
   "ACCEPTANCE_MATRIX.md": {
-    "bytes": 5714,
-    "sha256": "0695702bb41e15e3051c3f2765f3de420fb8f449ad6eade7a95eca6f538ba332"
+    "bytes": 6947,
+    "sha256": "a3c35ca2ef7b6a796d88ec492cf75153850b6f33f3d2109bf4f743a553c8cb92"
   },
   "EXTERNAL_GATES_STATUS.md": {
-    "bytes": 2425,
-    "sha256": "a7842daa745b256c6caf5fbae55bb0bf8a18aac7933408023b9a7280c2846a15"
+    "bytes": 3272,
+    "sha256": "d2c639434520a7b2862b0cff4c0d7d8c32f9a82df05f6b4267c043bcd38ab77f"
   },
   "FINAL_ACCEPTANCE_SUMMARY.json": {
-    "bytes": 4375,
-    "sha256": "c0e51010a5d59e8c0e1816564c57a3456b90cb93b9ee761b9cacb069a0a37969"
+    "bytes": 5289,
+    "sha256": "59cc71b976e82749649cda838cc3008f99d3d278b6504080f2acdbe1da357f95"
   },
   "GATE2_ACCEPTANCE_ADDENDUM.md": {
     "bytes": 9891,
@@ -18,6 +18,10 @@
   "GATE2_LIVE_ANDROID_ADB_REPORT.md": {
     "bytes": 5219,
     "sha256": "93c3ee81e8c6b3ee9205cdcc8d08dcd6a56111a12b5a16a897de0dd349172a7a"
+  },
+  "RC3_SUPPLEMENTAL_VERIFICATION_REPORT.md": {
+    "bytes": 6711,
+    "sha256": "5a526f6496dc1c1e45e723d05740ce147b8c33e3d738f6200e6d63ce3c2b8def"
   },
   "SECURITY_RISK_REGISTER_AND_THREAT_MODEL.md": {
     "bytes": 6821,
@@ -58,5 +62,9 @@
   "gate2_live_adb\\gate2_studio_runtime_vars.png": {
     "bytes": 145746,
     "sha256": "b0fd8e208472688386a5af6cfd6836f55944d76a3788c8cc016b4132b26540b4"
+  },
+  "rc3_supplement_evidence\\rc3_supplement_verification.json": {
+    "bytes": 5429,
+    "sha256": "712f1a6d4548b32dd4862365eb2cbca90281e35d4332a1c2d583072dcc7b277d"
   }
 }

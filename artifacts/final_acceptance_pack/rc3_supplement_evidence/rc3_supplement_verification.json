@@ -1,0 +1,143 @@
+{
+  "executedAtUtc": "2026-11-23T05:39:19.616Z",
+  "rcCodeBaselineCommit": "629cce236e173f91642684858e44638948773b9e",
+  "rcCodeTag": "v0.1.0-p6-rc.3",
+  "testA_CrossProcessDeviceLease": {
+    "targetSerial": "emulator-5554",
+    "adbDevicesRaw": "List of devices attached\r\nemulator-5554          device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:1",
+    "status": "NOT_VERIFIED_IN_PROCESS_LEASE_ONLY",
+    "sameProcessSecondJobRejected": true,
+    "sameProcessRejectError": "Device 'emulator-5554' (canonical 'local-emu:5554') is currently leased by job 'job-65c0c282-0193-4ab0-8d96-e46cce0b103e' (transport 'emulator-5554') until 2026-11-23 05:39:37.342075900 UTC",
+    "studioJobAStart": {
+      "jobId": "job-65c0c282-0193-4ab0-8d96-e46cce0b103e",
+      "deviceId": "emulator-5554",
+      "state": "running"
+    },
+    "studioMidDuringA": {
+      "jobAState": "running",
+      "activeLeasesCount": 1
+    },
+    "jobBAttemptAtUtc": "2026-11-23T05:39:08.063Z",
+    "miniToolJobBOutcome": {
+      "blocked": false,
+      "receipt": {
+        "jobId": "mini-job-0847c536-9215-4eac-a802-7a4520b42538",
+        "deviceId": "emulator-5554",
+        "state": "Succeeded",
+        "driverUsed": "LIVE_ADB(emulator-5554)"
+      }
+    },
+    "studioStateRightAfterB": {
+      "leasesCount": 1,
+      "jobAStateRightAfterB": "running"
+    },
+    "jobAFinalState": "succeeded",
+    "leasesAfterJobADoneCount": 0,
+    "forcedKillRecovery": {
+      "killedStudioPid": 8188,
+      "killedInFlightJobId": "job-88bd5793-8675-419f-aed9-6eff5a954d00",
+      "leasesOnRestart": [],
+      "jobDStartState": "running",
+      "jobDFinalState": "succeeded"
+    },
+    "empiricalConclusion": "FarmerPro.exe (in-process MultiDeviceScheduler + AppData/farmerpro.db) and Auto_CrossMini.exe (separate in-process MultiDeviceScheduler + release/data/runtime.db) DO NOT share an OS-wide lock; Job B succeeded on emulator-5554 while Studio Job A was still running.",
+    "recommendedMinimalFix": "Add canonical OS-level advisory lockfile (%LOCALAPPDATA%/FarmerPro/locks/dev_<canon_sha256>.lock holding {pid,exe,job_id,lease_expires_at}) acquired via Win32 CreateFile/LockFileEx inside a shared fp-scheduler lock guard, releasing on normal drop and reclaiming expired or dead-PID locks after forced kill while keeping distinct canonical devices independent."
+  },
+  "testB_SqliteV5UpgradeCompatibility": {
+    "status": "FAIL",
+    "testedAgainstRealFrozenRc3Binary": "FarmerPro.exe (v0.1.0-p6-rc.3)",
+    "sourceDbSchemaCommit": "b5a0567 (v0.1.0-p6-rc.2)",
+    "preUpgradeInspection": {
+      "colsBefore": [
+        "scope_key",
+        "var_name",
+        "project_id",
+        "session_id",
+        "job_id",
+        "value_type",
+        "value_json",
+        "source",
+        "verified",
+        "confidence",
+        "updated_at_utc",
+        "workflow_version",
+        "seq",
+        "redacted"
+      ],
+      "schemaVersionsBefore": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    "studioIpcReadbackAfterSecondLaunch": {
+      "projectsCount": 1,
+      "workflowsCount": 1,
+      "tasksCount": 1,
+      "releasesCount": 1,
+      "accountsCount": 1,
+      "accountAlias": "rc2_test_account",
+      "varsScopeKey": null,
+      "varsError": "no such column: confidence_source in SELECT project_id, session_id, job_id, var_name, value_type, value_json,\n                    source, verified, confidence, confidence_source, measured_confidence,\n                    rule_matched, device_id, updated_at_utc, workflow_version, seq, redacted\n             FROM runtime_variable_envelopes\n             WHERE scope_key = ?1\n             ORDER BY var_name ASC; at offset 123"
+    },
+    "postUpgradeInspection": {
+      "colsAfter": [
+        "scope_key",
+        "var_name",
+        "project_id",
+        "session_id",
+        "job_id",
+        "value_type",
+        "value_json",
+        "source",
+        "verified",
+        "confidence",
+        "updated_at_utc",
+        "workflow_version",
+        "seq",
+        "redacted"
+      ],
+      "addedProvenanceColsPresent": false,
+      "schemaVersionsAfter": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "integrityCheck": [
+        "ok"
+      ],
+      "foreignKeyCheckCount": 0,
+      "keptEnvelopeRows": {
+        "queryError": "no such column: confidence_source",
+        "legacyRows": [
+          [
+            "legacy_ocr_val",
+            "\"Settings\"",
+            "LIVE_ADB_OCR",
+            1,
+            0.94,
+            7
+          ]
+        ]
+      },
+      "keptTableCounts": {
+        "projects": 1,
+        "workflows": 1,
+        "workflow_versions": 1,
+        "task_definitions": 1,
+        "project_releases": 1,
+        "accounts": 1,
+        "publisher_profiles": 1
+      },
+      "simulatedFaultRollbackTested": true
+    },
+    "backupRestoreSha256Match": true,
+    "backupSha256": "731379fb247f512824816fad70cef42060d2fda46562c35efe7b5a2c37d9fc31",
+    "restoredSha256": "731379fb247f512824816fad70cef42060d2fda46562c35efe7b5a2c37d9fc31",
+    "atomicRollbackNote": "Note: the 4 additive ALTER TABLE statements in apply_migrations run per-column with idempotent table_has_column checks outside an explicit transaction; on SQLite a per-column ALTER TABLE ADD COLUMN is atomic at SQLite statement level, and full pre-upgrade WAL backup + restore protects pre-existing v5 copies."
+  }
+}
