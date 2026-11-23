@@ -133,26 +133,31 @@
       vertical-align: middle;
       white-space: nowrap;
     }
+
     .prov-live-ok {
       background: rgba(59, 195, 141, 0.16);
       color: #3bc38d;
       border: 1px solid rgba(59, 195, 141, 0.5);
     }
+
     .prov-live-unverified {
       background: rgba(56, 189, 248, 0.14);
       color: #38bdf8;
       border: 1px solid rgba(56, 189, 248, 0.5);
     }
+
     .prov-testkit {
       background: rgba(245, 158, 11, 0.16);
       color: #fbbf24;
       border: 1px solid rgba(245, 158, 11, 0.55);
     }
+
     .prov-legacy {
       background: rgba(148, 163, 184, 0.14);
       color: #94a3b8;
       border: 1px solid rgba(148, 163, 184, 0.4);
     }
+
     .btn-testkit {
       background: rgba(245, 158, 11, 0.16);
       color: #fbbf24;
@@ -163,6 +168,7 @@
       cursor: pointer;
       font-size: 11px;
     }
+
     .btn-testkit:hover {
       background: rgba(245, 158, 11, 0.28);
     }
@@ -574,7 +580,8 @@
   <div id="footer-root" class="footer">
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
       <button class="btn-primary" onclick="runAllEnabledTasks(false)">▶ CHẠY NHIỆM VỤ (ADB THẬT)</button>
-      <button id="btn-run-testkit" class="btn-testkit" onclick="runAllEnabledTasks(true)">🧪 CHẠY TESTKIT (MÔ PHỎNG)</button>
+      <button id="btn-run-testkit" class="btn-testkit" onclick="runAllEnabledTasks(true)">🧪 CHẠY TESTKIT (MÔ
+        PHỎNG)</button>
       <button class="btn-secondary" onclick="refreshDevices()">🔄 Quét ADB</button>
     </div>
     <div id="footer-meta" style="color:var(--text-muted);font-size:11px;">
@@ -651,9 +658,10 @@
     function provenanceBadgeHtml(env) {
       if (!env) return '';
       if (env.source === 'LIVE_ADB_OCR' || env.source === 'LIVE_STATE') {
-        const confTxt = typeof env.confidence === 'number' ? ` ${Math.round(env.confidence * 100)}%` : '';
+        const hasMeasured = env.confidenceSource === 'MEASURED' && typeof env.measuredConfidence === 'number';
+        const confTxt = hasMeasured ? ` ${Math.round(env.measuredConfidence * 100)}%` : '';
         if (env.verified) {
-          return `<span class="prov-pill prov-live-ok">LIVE ✓${confTxt}</span>`;
+          return `<span class="prov-pill prov-live-ok">LIVE · Đã khớp quy tắc${confTxt}</span>`;
         }
         return `<span class="prov-pill prov-live-unverified">LIVE · Chưa xác minh${confTxt}</span>`;
       }
@@ -906,7 +914,7 @@
             const valColor = env.source === 'TESTKIT_MOCK'
               ? '#fbbf24'
               : (env.verified ? (c.badgeColor || '#3bc38d') : 'var(--accent)');
-            const metaTitle = `Biến: ${c.runtimeVarKey} | Nguồn: ${env.source} | Verified: ${env.verified} | Seq: ${env.seq || 0} | Job: ${env.jobId || '-'} | Lúc: ${env.updatedAtUtc || '-'}`;
+            const metaTitle = `Biến: ${c.runtimeVarKey} | Nguồn: ${env.source} | Verified: ${env.verified} | RuleMatched: ${env.ruleMatched ?? '-'} | ConfSrc: ${env.confidenceSource || 'NONE'} | Device: ${env.deviceId || '-'} | Session: ${env.sessionId || '-'} | Seq: ${env.seq || 0} | Lúc: ${env.updatedAtUtc || '-'}`;
             return `<td data-var-key="${escapeHtml(c.runtimeVarKey)}" data-var-source="${escapeHtml(env.source)}" style="color:${valColor};font-weight:700;" title="${escapeHtml(metaTitle)}"><span>${disp}</span>${provenanceBadgeHtml(env)}</td>`;
           }).join('')}
         </tr>`;
@@ -929,7 +937,7 @@
             const valColor = env.source === 'TESTKIT_MOCK'
               ? '#fbbf24'
               : (env.verified ? (c.badgeColor || '#3bc38d') : 'var(--accent)');
-            const metaTitle = `Key: ${c.runtimeVarKey} | Nguồn: ${env.source} | Verified: ${env.verified} | Seq: ${env.seq || 0}`;
+            const metaTitle = `Key: ${c.runtimeVarKey} | Nguồn: ${env.source} | Verified: ${env.verified} | RuleMatched: ${env.ruleMatched ?? '-'} | ConfSrc: ${env.confidenceSource || 'NONE'} | Device: ${env.deviceId || '-'} | Session: ${env.sessionId || '-'} | Seq: ${env.seq || 0} | Lúc: ${env.updatedAtUtc || '-'}`;
             bodyHtml += `<td data-var-key="${escapeHtml(c.runtimeVarKey)}" data-var-source="${escapeHtml(env.source)}" style="color:${valColor};font-weight:700;" title="${escapeHtml(metaTitle)}"><span>${disp}</span>${provenanceBadgeHtml(env)}</td>`;
           }
         }

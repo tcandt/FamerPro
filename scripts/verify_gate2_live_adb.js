@@ -741,9 +741,14 @@ async function main() {
           txt: td.innerText
         })),
         taskStatus: document.querySelector('#left-body .task-row')?.innerText || '',
-        anyTestkitBadge: document.body.innerText.includes('TESTKIT · Mô phỏng')
+        anyTestkitBadge: document.body.innerText.includes('TESTKIT · Mô phỏng'),
+        anyUnmeasuredPercentBadge: document.body.innerText.includes('94%') || document.body.innerText.includes('LIVE ✓'),
+        ruleMatchBadgePresent: document.body.innerText.includes('LIVE · Đã khớp quy tắc')
       })`);
       if (doneState.liveEnvelopes && doneState.liveEnvelopes.mini_live_result) break;
+    }
+    if (doneState.anyUnmeasuredPercentBadge || !doneState.ruleMatchBadgePresent) {
+      throw new Error(`OCR Provenance UI badge check failed: ${JSON.stringify(doneState)}`);
     }
     await new Promise((r) => setTimeout(r, 500));
     const snapMiniAfter = await snap('gate2_mini_after.png', 980, 720);
@@ -774,7 +779,7 @@ async function main() {
 c = sqlite3.connect(sys.argv[1])
 jobs = c.execute("SELECT id, device_id, state FROM jobs").fetchall()
 ev_cnt = c.execute("SELECT count(*) FROM step_events").fetchone()[0]
-vars_rows = c.execute("SELECT var_name, value_json, source, verified, confidence, seq FROM runtime_variable_envelopes").fetchall()
+vars_rows = c.execute("SELECT var_name, value_json, source, verified, confidence, confidence_source, measured_confidence, rule_matched, device_id, seq FROM runtime_variable_envelopes").fetchall()
 print(json.dumps({"jobs": jobs, "stepEventsCount": ev_cnt, "runtimeVariableEnvelopes": vars_rows}))`,
         miniDb,
       ],
@@ -791,7 +796,7 @@ print(json.dumps({"jobs": jobs, "stepEventsCount": ev_cnt, "runtimeVariableEnvel
   const report = {
     executedAtUtc: new Date().toISOString(),
     gitHead: runCommandChecked('git', ['rev-parse', 'HEAD'], ROOT),
-    rcCodeTag: 'v0.1.0-p6-rc.2',
+    rcCodeTag: 'v0.1.0-p6-rc.3',
     adbTargetSerial: TARGET_SERIAL,
     adbTargetModel: 'sdk_gphone16k_x86_64 (Android SDK Emulator fp_gate2_avd, WHPX)',
     canonicalDeviceIdentityProof: {

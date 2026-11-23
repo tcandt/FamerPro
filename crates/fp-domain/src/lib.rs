@@ -271,7 +271,37 @@ pub fn infer_json_value_type(val: &serde_json::Value) -> String {
     }
 }
 
-/// Canonical provenance-tracked Runtime Variable envelope (P5.1).
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ConfidenceSource {
+    Measured,
+    Heuristic,
+    Simulated,
+    Uncalibrated,
+}
+
+impl ConfidenceSource {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Measured => "MEASURED",
+            Self::Heuristic => "HEURISTIC",
+            Self::Simulated => "SIMULATED",
+            Self::Uncalibrated => "UNCALIBRATED",
+        }
+    }
+
+    pub fn from_db_str(s: &str) -> Option<Self> {
+        match s.trim() {
+            "MEASURED" => Some(Self::Measured),
+            "HEURISTIC" => Some(Self::Heuristic),
+            "SIMULATED" => Some(Self::Simulated),
+            "UNCALIBRATED" => Some(Self::Uncalibrated),
+            _ => None,
+        }
+    }
+}
+
+/// Canonical provenance-tracked Runtime Variable envelope (P5.1 / Gate 2 OCR Provenance).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RuntimeVariableEnvelope {
@@ -285,6 +315,14 @@ pub struct RuntimeVariableEnvelope {
     pub verified: bool,
     #[serde(default)]
     pub confidence: Option<f32>,
+    #[serde(default)]
+    pub confidence_source: Option<ConfidenceSource>,
+    #[serde(default)]
+    pub measured_confidence: Option<f32>,
+    #[serde(default)]
+    pub rule_matched: Option<bool>,
+    #[serde(default)]
+    pub device_id: Option<String>,
     pub updated_at_utc: String,
     pub workflow_version: String,
     #[serde(default)]

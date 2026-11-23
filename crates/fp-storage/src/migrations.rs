@@ -832,6 +832,22 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
         tx.commit()?;
     }
 
+    // Additive Gate 2 OCR & device provenance columns on `runtime_variable_envelopes`
+    // (compatible with SQLite schema version 5 without breaking compatibility gates).
+    {
+        let env_alters: &[(&str, &str)] = &[
+            ("confidence_source", "ALTER TABLE runtime_variable_envelopes ADD COLUMN confidence_source TEXT;"),
+            ("measured_confidence", "ALTER TABLE runtime_variable_envelopes ADD COLUMN measured_confidence REAL;"),
+            ("rule_matched", "ALTER TABLE runtime_variable_envelopes ADD COLUMN rule_matched INTEGER;"),
+            ("device_id", "ALTER TABLE runtime_variable_envelopes ADD COLUMN device_id TEXT;"),
+        ];
+        for (col, sql) in env_alters {
+            if !table_has_column(conn, "runtime_variable_envelopes", col)? {
+                conn.execute(sql, [])?;
+            }
+        }
+    }
+
     list_applied_versions(conn)
 }
 

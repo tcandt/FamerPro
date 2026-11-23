@@ -449,6 +449,23 @@ impl AdbRunner {
         Ok(())
     }
 
+    pub async fn forward_remove_all_for_serial(&self, serial: &str) -> Result<usize> {
+        let s = validate_adb_token("serial", serial)?;
+        let active = self.forward_list(Some(&s)).await?;
+        let mut removed = 0usize;
+        for m in active {
+            self.forward_remove(&s, &m.local).await?;
+            removed += 1;
+        }
+        Ok(removed)
+    }
+
+    pub async fn reverse_remove_all(&self, serial: &str) -> Result<()> {
+        let s = validate_adb_token("serial", serial)?;
+        self.run_args(&["-s", &s, "reverse", "--remove-all"]).await?;
+        Ok(())
+    }
+
     pub async fn probe_health(&self, serial: &str) -> DeviceHealthReport {
         let start = Instant::now();
         let s = match validate_adb_token("serial", serial) {
@@ -890,6 +907,12 @@ emulator-5554          device product:sdk_gphone64_x86_64 model:Pixel_6 device:e
         assert_eq!(rev_parsed.len(), 1);
         assert_eq!(rev_parsed[0].remote, "tcp:19557");
         assert_eq!(rev_parsed[0].local, "tcp:19558");
+        assert_eq!(rev_parsed[0].serial, "host-22");
+
+        // Empty port mapping output and filtered serial mismatch return cleanly
+        assert!(AdbRunner::parse_port_mappings("", "reverse", None).is_empty());
+        assert!(AdbRunner::parse_port_mappings("   \n\n", "forward", Some("emulator-5554")).is_empty());
+        assert!(AdbRunner::parse_port_mappings(fwd, "forward", Some("host-22")).is_empty());
 
         assert!(validate_adb_token("local", "tcp:18080").is_ok());
         assert!(validate_adb_token("local", "tcp:8080; calc.exe").is_err());
@@ -949,5 +972,19 @@ USB-PIXEL-9            device product:tokay model:Pixel_9 transport_id:4
             infer_local_emulator_canonical_key("emulator-5554"),
             infer_local_emulator_canonical_key("emulator-5556")
         );
+
+        // Two distinct devices sharing identical model/product or lacking boot_id MUST NEVER coalesce
+        let unknown_out = r#"
+List of devices attached
+192.168.1.80:5555      device product:phone model:SameModel transport_id:10
+192.168.1.81:5555      device product:phone model:SameModel transport_id:11
+        "#;
+        let unknown_raw = AdbRunner::parse_devices_output(unknown_out).unwrap();
+        let unknown_dedup = coalesce_device_summaries(
+            unknown_raw.into_iter().map(|d| (d, None)).collect(),
+        );
+        assert_eq!(unknown_dedup.len(), 2);
+        assert_eq!(unknown_dedup[0].adb_serial, "192.168.1.80:5555");
+        assert_eq!(unknown_dedup[1].adb_serial, "192.168.1.81:5555");
     }
 }

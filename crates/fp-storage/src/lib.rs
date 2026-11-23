@@ -539,8 +539,9 @@ impl StorageManager {
                 "INSERT INTO runtime_variable_envelopes (
                     scope_key, var_name, project_id, session_id, job_id,
                     value_type, value_json, source, verified, confidence,
+                    confidence_source, measured_confidence, rule_matched, device_id,
                     updated_at_utc, workflow_version, seq, redacted
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
                  ON CONFLICT(scope_key, var_name) DO UPDATE SET
                     project_id = excluded.project_id,
                     session_id = excluded.session_id,
@@ -550,6 +551,10 @@ impl StorageManager {
                     source = excluded.source,
                     verified = excluded.verified,
                     confidence = excluded.confidence,
+                    confidence_source = excluded.confidence_source,
+                    measured_confidence = excluded.measured_confidence,
+                    rule_matched = excluded.rule_matched,
+                    device_id = excluded.device_id,
                     updated_at_utc = excluded.updated_at_utc,
                     workflow_version = excluded.workflow_version,
                     seq = excluded.seq,
@@ -565,6 +570,10 @@ impl StorageManager {
                     env.source.as_str(),
                     if env.verified { 1 } else { 0 },
                     env.confidence,
+                    env.confidence_source.map(|c| c.as_str().to_string()),
+                    env.measured_confidence,
+                    env.rule_matched.map(|b| if b { 1i64 } else { 0i64 }),
+                    env.device_id,
                     env.updated_at_utc,
                     env.workflow_version,
                     next_seq as i64,
@@ -668,7 +677,8 @@ impl StorageManager {
         let mut out = BTreeMap::new();
         let mut st = conn.prepare(
             "SELECT project_id, session_id, job_id, var_name, value_type, value_json,
-                    source, verified, confidence, updated_at_utc, workflow_version, seq, redacted
+                    source, verified, confidence, confidence_source, measured_confidence,
+                    rule_matched, device_id, updated_at_utc, workflow_version, seq, redacted
              FROM runtime_variable_envelopes
              WHERE scope_key = ?1
              ORDER BY var_name ASC;",
@@ -687,6 +697,10 @@ impl StorageManager {
             let var_name: String = r.get(3)?;
             let value: serde_json::Value =
                 serde_json::from_str(&val_str).unwrap_or(serde_json::Value::Null);
+            let conf_src = r
+                .get::<_, Option<String>>(9)?
+                .as_deref()
+                .and_then(fp_domain::ConfidenceSource::from_db_str);
             let env = RuntimeVariableEnvelope {
                 project_id: r.get(0)?,
                 session_id: r.get(1)?,
@@ -697,10 +711,14 @@ impl StorageManager {
                 source,
                 verified: r.get::<_, i64>(7)? != 0,
                 confidence: r.get::<_, Option<f64>>(8)?.map(|v| v as f32),
-                updated_at_utc: r.get(9)?,
-                workflow_version: r.get(10)?,
-                seq: r.get::<_, i64>(11)?.max(0) as u64,
-                redacted: r.get::<_, i64>(12)? != 0,
+                confidence_source: conf_src,
+                measured_confidence: r.get::<_, Option<f64>>(10)?.map(|v| v as f32),
+                rule_matched: r.get::<_, Option<i64>>(11)?.map(|v| v != 0),
+                device_id: r.get(12)?,
+                updated_at_utc: r.get(13)?,
+                workflow_version: r.get(14)?,
+                seq: r.get::<_, i64>(15)?.max(0) as u64,
+                redacted: r.get::<_, i64>(16)? != 0,
             };
             out.insert(var_name, env);
         }
@@ -6238,6 +6256,10 @@ mod tests {
             source: VariableSource::LiveAdbOcr,
             verified: true,
             confidence: Some(0.96),
+            confidence_source: Some(fp_domain::ConfidenceSource::Measured),
+            measured_confidence: Some(0.96),
+            rule_matched: Some(true),
+            device_id: Some("emulator-5554".to_string()),
             updated_at_utc: now.clone(),
             workflow_version: "wf@v1".to_string(),
             seq: 0,
@@ -6274,6 +6296,10 @@ mod tests {
             source: VariableSource::TestkitMock,
             verified: false,
             confidence: None,
+            confidence_source: None,
+            measured_confidence: None,
+            rule_matched: None,
+            device_id: None,
             updated_at_utc: now.clone(),
             workflow_version: "wf@v1".to_string(),
             seq: 0,
@@ -6302,6 +6328,10 @@ mod tests {
             source: VariableSource::TestkitMock,
             verified: false,
             confidence: None,
+            confidence_source: None,
+            measured_confidence: None,
+            rule_matched: None,
+            device_id: None,
             updated_at_utc: now,
             workflow_version: "wf@v1".to_string(),
             seq: 0,
@@ -6377,6 +6407,10 @@ mod tests {
                     source: VariableSource::TestkitMock,
                     verified: false,
                     confidence: None,
+                    confidence_source: None,
+                    measured_confidence: None,
+                    rule_matched: None,
+                    device_id: None,
                     updated_at_utc: Utc::now().to_rfc3339(),
                     workflow_version: "wf@v1".to_string(),
                     seq: 0,
@@ -6400,6 +6434,10 @@ mod tests {
                     source: VariableSource::TestkitMock,
                     verified: false,
                     confidence: None,
+                    confidence_source: None,
+                    measured_confidence: None,
+                    rule_matched: None,
+                    device_id: None,
                     updated_at_utc: Utc::now().to_rfc3339(),
                     workflow_version: "wf@v1".to_string(),
                     seq: 0,
@@ -6714,6 +6752,10 @@ mod tests {
                         source: VariableSource::TestkitMock,
                         verified: false,
                         confidence: None,
+                        confidence_source: None,
+                        measured_confidence: None,
+                        rule_matched: None,
+                        device_id: None,
                         updated_at_utc: Utc::now().to_rfc3339(),
                         workflow_version: "wf@v1".to_string(),
                         seq: 0,

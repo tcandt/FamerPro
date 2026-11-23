@@ -91,6 +91,7 @@ pub struct MiniRuntimeState {
     pub storage: StorageManager,
     pub sqlite_db_path: String,
     pub adb_runner: AdbRunner,
+    pub scheduler: Arc<fp_scheduler::MultiDeviceScheduler>,
     pub signature_algorithm: String,
     pub key_id: String,
     pub publisher_public_key_hex: String,
@@ -288,6 +289,7 @@ fn load_and_verify_bundle(bundle_dir: &Path, is_demo_mode: bool) -> Result<MiniR
         storage,
         sqlite_db_path: db_path.to_string_lossy().to_string(),
         adb_runner: AdbRunner::default(),
+        scheduler: Arc::new(fp_scheduler::MultiDeviceScheduler::new(4)),
         signature_algorithm: envelope.algorithm,
         key_id: envelope.key_id,
         publisher_public_key_hex: envelope.publisher_public_key_hex,
@@ -383,7 +385,7 @@ async fn execute_task_internal(
     cancel_after_ms: Option<u64>,
     app_handle: Option<tauri::AppHandle>,
 ) -> Result<MiniTaskRunReceipt> {
-    let (workflow_doc, adb_path, storage, slug, project_id, project_version, seeded_vars) = {
+    let (scheduler_ref, workflow_doc, adb_path, storage, slug, project_id, project_version, seeded_vars) = {
         let st = st_arc.lock().unwrap();
         st.module_registry
             .assert_capability_granted("mod.adb_core", &ModuleCapability::AdbExec)?;
@@ -424,6 +426,7 @@ async fn execute_task_internal(
         }
 
         (
+            st.scheduler.clone(),
             wf,
             st.adb_runner.adb_path.clone(),
             st.storage.clone(),
@@ -451,11 +454,14 @@ async fn execute_task_internal(
             )
         } else {
             let target_serial = if let Some(s) = adb_serial_override {
-                if live_devices
-                    .iter()
-                    .any(|d| d.id == s && d.connection_state == ConnectionState::Ready)
-                {
-                    s
+                let s_canon = fp_adb::infer_local_emulator_canonical_key(&s);
+                if let Some(matched) = live_devices.iter().find(|d| {
+                    d.connection_state == ConnectionState::Ready
+                        && (d.id == s
+                            || (s_canon.is_some()
+                                && fp_adb::infer_local_emulator_canonical_key(&d.id) == s_canon))
+                }) {
+                    matched.id.clone()
                 } else {
                     bail!(
                         "REAL_ADB_DEVICE_NOT_READY: Requested real ADB device '{}' is not online (detected devices: {:?}). Fail-closed: refusing to fall back to FakeDeviceDriver!",
@@ -479,7 +485,7 @@ async fn execute_task_internal(
             };
 
             (
-                Arc::new(fp_adb::AdbDeviceDriver::new(target_serial.clone(), runner)),
+                Arc::new(fp_adb::AdbDeviceDriver::new(target_serial.clone(), runner.clone())),
                 format!("LIVE_ADB({})", target_serial),
                 target_serial,
                 false,
@@ -487,6 +493,24 @@ async fn execute_task_internal(
         };
 
     let job_id = format!("mini-job-{}", uuid::Uuid::new_v4());
+    let lease_acquired = if !is_sim {
+        let canonical_id = if fp_adb::infer_local_emulator_canonical_key(&device_id).is_none()
+            && std::path::Path::new(&runner.adb_path).is_file()
+        {
+            runner.probe_canonical_device_identity(&device_id).await
+        } else {
+            None
+        };
+        scheduler_ref.acquire_device_lease_canonical(
+            &device_id,
+            canonical_id.as_deref(),
+            &job_id,
+            chrono::Duration::seconds(180),
+        )?;
+        true
+    } else {
+        false
+    };
     let wf_json = sanitize_workflow_json_for_job_store(&workflow_doc);
     let _ = storage.ensure_job_exists(
         &job_id,
@@ -534,7 +558,7 @@ async fn execute_task_internal(
     let wf_ver_cb = workflow_version.clone();
     let task_cb = task_id.to_string();
 
-    let job_state = executor
+    let exec_result = executor
         .execute_workflow(
             &workflow_doc,
             &mut ctx,
@@ -588,7 +612,11 @@ async fn execute_task_internal(
                 cap_clone.lock().unwrap().push(evt);
             })),
         )
-        .await?;
+        .await;
+    if lease_acquired {
+        scheduler_ref.release_device_lease(&device_id, &job_id);
+    }
+    let job_state = exec_result?;
 
     let _ = storage.complete_job(&job_id, &format!("{:?}", job_state));
     let point_tapped = ctx.last_receipt.as_ref().and_then(|r| r.point_tapped);
@@ -610,6 +638,10 @@ async fn execute_task_internal(
             source: source_mode,
             verified: !is_sim,
             confidence: None,
+            confidence_source: None,
+            measured_confidence: None,
+            rule_matched: None,
+            device_id: Some(device_id.clone()),
             updated_at_utc: now_utc.clone(),
             workflow_version: workflow_version.clone(),
             seq: 0,
@@ -632,6 +664,10 @@ async fn execute_task_internal(
             source: source_mode,
             verified: !is_sim,
             confidence: None,
+            confidence_source: None,
+            measured_confidence: None,
+            rule_matched: None,
+            device_id: Some(device_id.clone()),
             updated_at_utc: now_utc.clone(),
             workflow_version: workflow_version.clone(),
             seq: 0,

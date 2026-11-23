@@ -4,7 +4,7 @@ use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use fp_actions::{SafeRegionSampler, SafeTapPolicy};
 use fp_domain::{
-    infer_json_value_type, ActionReceipt, Bounds, DeviceDriver, Frame, JobState,
+    infer_json_value_type, ActionReceipt, Bounds, ConfidenceSource, DeviceDriver, Frame, JobState,
     RuntimeVariableEnvelope, StepEvent, StepEventType, SwipePath, VariableSource, VisionTarget,
 };
 use fp_vision::VisionEngine;
@@ -136,6 +136,41 @@ impl ExecutionContext {
         verified: bool,
         confidence: Option<f32>,
     ) -> RuntimeVariableEnvelope {
+        let inferred_source = confidence.map(|_| {
+            if source_override
+                .unwrap_or(self.runtime_source_mode)
+                .is_simulated()
+            {
+                ConfidenceSource::Simulated
+            } else {
+                ConfidenceSource::Uncalibrated
+            }
+        });
+        self.record_variable_with_provenance(
+            workflow_version,
+            var_name,
+            raw_value,
+            source_override,
+            verified,
+            confidence,
+            inferred_source,
+            None,
+            None,
+        )
+    }
+
+    pub fn record_variable_with_provenance(
+        &mut self,
+        workflow_version: &str,
+        var_name: &str,
+        raw_value: serde_json::Value,
+        source_override: Option<VariableSource>,
+        verified: bool,
+        confidence: Option<f32>,
+        confidence_source: Option<ConfidenceSource>,
+        measured_confidence: Option<f32>,
+        rule_matched: Option<bool>,
+    ) -> RuntimeVariableEnvelope {
         let (clean_val, redacted) = fp_security::sanitize_runtime_variable(var_name, &raw_value);
         self.variables.insert(var_name.to_string(), clean_val.clone());
         let src = source_override.unwrap_or(self.runtime_source_mode);
@@ -157,6 +192,10 @@ impl ExecutionContext {
             source: src,
             verified: effective_verified,
             confidence,
+            confidence_source,
+            measured_confidence,
+            rule_matched,
+            device_id: Some(self.device_id.clone()),
             updated_at_utc: Utc::now().to_rfc3339(),
             workflow_version: workflow_version.to_string(),
             seq: 0,
@@ -786,20 +825,30 @@ impl WorkflowExecutor {
                         } else {
                             trimmed.to_lowercase().contains(&expected.to_lowercase())
                         };
-                        let ocr_conf: f32 = node
+                        let simulated_conf_opt = node
                             .config
                             .get("simulatedConfidence")
                             .and_then(|v| v.as_f64())
-                            .map(|c| c as f32)
-                            .unwrap_or_else(|| {
-                                if words.is_empty() || trimmed.is_empty() {
-                                    0.40
-                                } else if matched && !expected.is_empty() {
-                                    0.94
-                                } else {
-                                    0.72
-                                }
-                            });
+                            .map(|c| c as f32);
+                        let is_simulated_ocr =
+                            !ctx.runtime_source_mode.is_live() || simulated_conf_opt.is_some();
+                        let ocr_rule_score: f32 = simulated_conf_opt.unwrap_or_else(|| {
+                            if words.is_empty() || trimmed.is_empty() {
+                                0.40
+                            } else if matched && !expected.is_empty() {
+                                0.94
+                            } else {
+                                0.72
+                            }
+                        });
+                        // Windows.Media.Ocr provides word bounding boxes without native float confidence,
+                        // so rule scoring is strictly marked `HEURISTIC` and `measured_confidence` stays `None`.
+                        let conf_source = if is_simulated_ocr {
+                            ConfidenceSource::Simulated
+                        } else {
+                            ConfidenceSource::Heuristic
+                        };
+                        let measured_confidence: Option<f32> = None;
 
                         let (parsed_val, type_valid) = if expect_type == "number" {
                             if let Ok(n) = trimmed.replace(',', "").parse::<i64>() {
@@ -819,21 +868,30 @@ impl WorkflowExecutor {
                             VariableSource::TestkitMock
                         };
 
-                        // OCR confidence alone (e.g. 0.94) NEVER guarantees verified=true:
-                        // requires live driver, non-empty output, matched workflow expectation,
-                        // confidence >= min_confidence, and valid typed parsing!
+                        // OCR rule evaluation requires live driver, non-empty output, matched workflow
+                        // expectation, internal rule threshold >= min_conf, and valid typed parsing.
                         let verified_ok = ctx.runtime_source_mode.is_live()
                             && matched
                             && type_valid
-                            && ocr_conf >= min_conf;
+                            && ocr_rule_score >= min_conf;
 
-                        ctx.record_variable(
+                        if !expected.is_empty() {
+                            ctx.variables.insert(
+                                "ocr_expected_text".to_string(),
+                                serde_json::Value::String(expected.to_string()),
+                            );
+                        }
+
+                        ctx.record_variable_with_provenance(
                             &wf_ver,
                             "ocr_matched",
                             serde_json::Value::Bool(matched),
                             Some(ocr_src),
                             verified_ok,
-                            Some(ocr_conf),
+                            None,
+                            Some(conf_source),
+                            measured_confidence,
+                            Some(matched),
                         );
                         if let Some(out_var) = node
                             .config
@@ -842,22 +900,28 @@ impl WorkflowExecutor {
                             .map(str::trim)
                             .filter(|s| !s.is_empty())
                         {
-                            ctx.record_variable(
+                            ctx.record_variable_with_provenance(
                                 &wf_ver,
                                 out_var,
                                 parsed_val,
                                 Some(ocr_src),
                                 verified_ok,
-                                Some(ocr_conf),
+                                None,
+                                Some(conf_source),
+                                measured_confidence,
+                                Some(matched),
                             );
                         }
-                        ctx.record_variable(
+                        ctx.record_variable_with_provenance(
                             &wf_ver,
                             "ocr_text",
                             serde_json::Value::String(full_text),
                             Some(ocr_src),
                             verified_ok,
-                            Some(ocr_conf),
+                            None,
+                            Some(conf_source),
+                            measured_confidence,
+                            Some(matched),
                         );
 
                         if matched && !expected.is_empty() {
@@ -868,7 +932,7 @@ impl WorkflowExecutor {
                             }) {
                                 ctx.last_target = Some(VisionTarget {
                                     bounds: *bounds,
-                                    confidence: ocr_conf,
+                                    confidence: ocr_rule_score,
                                     geometry: frame_geometry.clone(),
                                 });
                             }
@@ -876,13 +940,16 @@ impl WorkflowExecutor {
                     }
                     Err(err) => {
                         // Never fabricate a positive OCR match on engine failure
-                        ctx.record_variable(
+                        ctx.record_variable_with_provenance(
                             &wf_ver,
                             "ocr_matched",
                             serde_json::Value::Bool(false),
                             Some(ctx.runtime_source_mode),
                             false,
-                            Some(0.0),
+                            None,
+                            Some(ConfidenceSource::Uncalibrated),
+                            None,
+                            Some(false),
                         );
                         ctx.variables.insert(
                             "ocr_error".to_string(),
@@ -1717,6 +1784,16 @@ mod tests {
         assert_eq!(
             ctx.variables.get("ocr_matched"),
             Some(&serde_json::Value::Bool(false))
+        );
+        let ocr_env = ctx.variable_envelopes.get("ocr_text").unwrap();
+        assert_eq!(ocr_env.confidence, None);
+        assert_eq!(ocr_env.measured_confidence, None);
+        assert_eq!(ocr_env.confidence_source, Some(ConfidenceSource::Simulated));
+        assert_eq!(ocr_env.rule_matched, Some(false));
+        assert_eq!(ocr_env.device_id.as_deref(), Some("fake-ocr"));
+        assert_eq!(
+            ctx.variables.get("ocr_expected_text"),
+            Some(&serde_json::Value::String("Hello".to_string()))
         );
     }
 

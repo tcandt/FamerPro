@@ -126,14 +126,33 @@ impl MultiDeviceScheduler {
         job_id: &str,
         lease_duration: Duration,
     ) -> Result<DeviceLease> {
-        if let Some(canon) = canonical_identity {
-            self.register_device_canonical_identity(device_id, canon);
-        }
-        let lease_key = canonical_identity
+        let trimmed_dev = device_id.trim();
+        let new_canon_opt = canonical_identity
             .map(str::trim)
             .filter(|v| !v.is_empty())
-            .map(str::to_string)
-            .unwrap_or_else(|| self.resolve_lease_key(device_id));
+            .map(str::to_string);
+
+        // If device rebooted with a new boot/canonical identity on the same transport serial,
+        // automatically release any stale pre-reboot lease bound to that device before re-acquiring.
+        if let Some(ref new_canon) = new_canon_opt {
+            let prev_canon_opt = {
+                let aliases = self.canonical_aliases.lock().unwrap();
+                aliases.get(trimmed_dev).cloned()
+            };
+            if let Some(prev_canon) = prev_canon_opt {
+                if prev_canon != *new_canon {
+                    let mut leases = self.device_leases.lock().unwrap();
+                    if let Some(old_lease) = leases.get(&prev_canon) {
+                        if old_lease.device_id == trimmed_dev {
+                            leases.remove(&prev_canon);
+                        }
+                    }
+                }
+            }
+            self.register_device_canonical_identity(trimmed_dev, new_canon);
+        }
+
+        let lease_key = new_canon_opt.unwrap_or_else(|| self.resolve_lease_key(trimmed_dev));
 
         let mut leases = self.device_leases.lock().unwrap();
         let now = Utc::now();
@@ -175,7 +194,51 @@ impl MultiDeviceScheduler {
                 return true;
             }
         }
+        // Fallback scan in case canonical alias changed after a reboot/reconnect before release
+        let matched_key = leases
+            .iter()
+            .find(|(_, l)| l.job_id == job_id && l.device_id == device_id.trim())
+            .map(|(k, _)| k.clone());
+        if let Some(k) = matched_key {
+            leases.remove(&k);
+            return true;
+        }
         false
+    }
+
+    /// Invalidates & releases active leases bound to a disconnected transport/device and clears cached identity.
+    pub fn release_leases_for_disconnected_device(&self, device_id: &str) -> Vec<DeviceLease> {
+        let trimmed = device_id.trim();
+        let mut aliases = self.canonical_aliases.lock().unwrap();
+        let removed_canon = aliases.remove(trimmed);
+        drop(aliases);
+
+        let fallback_key = canonical_device_lease_key(trimmed);
+        let mut leases = self.device_leases.lock().unwrap();
+        let mut keys_to_remove = Vec::new();
+        for (k, l) in leases.iter() {
+            if l.device_id == trimmed
+                || *k == fallback_key
+                || removed_canon.as_deref() == Some(k.as_str())
+            {
+                keys_to_remove.push(k.clone());
+            }
+        }
+        keys_to_remove
+            .into_iter()
+            .filter_map(|k| leases.remove(&k))
+            .collect()
+    }
+
+    /// Reconciles device reboot (`boot_id` changed): invalidates prior lease(s) and binds fresh canonical identity.
+    pub fn reconcile_device_reboot(
+        &self,
+        device_id: &str,
+        new_canonical_identity: &str,
+    ) -> Vec<DeviceLease> {
+        let released = self.release_leases_for_disconnected_device(device_id);
+        self.register_device_canonical_identity(device_id, new_canonical_identity);
+        released
     }
 
     pub fn acquire_account_lease(
@@ -415,5 +478,50 @@ mod tests {
             Duration::seconds(60),
         );
         assert!(wifi_conflict.is_err());
+
+        // 3. Two distinct devices with same hardware serial string pattern or TCP port must NOT collide
+        let l_dev_a = scheduler
+            .acquire_device_lease_canonical(
+                "192.168.1.60:5555",
+                Some("android-boot:SHARED_SN:boot-dev-a"),
+                "job-a",
+                Duration::seconds(60),
+            )
+            .unwrap();
+        let l_dev_b = scheduler
+            .acquire_device_lease_canonical(
+                "192.168.1.61:5555",
+                Some("android-boot:SHARED_SN:boot-dev-b"),
+                "job-b",
+                Duration::seconds(60),
+            )
+            .unwrap();
+        assert_eq!(l_dev_a.device_id, "192.168.1.60:5555");
+        assert_eq!(l_dev_b.device_id, "192.168.1.61:5555");
+
+        // 4. Device reboot changes boot_id: reconciles & releases stale pre-reboot lease cleanly
+        let l_reboot = scheduler
+            .acquire_device_lease_canonical(
+                "USB-SERIAL-99",
+                Some("android-boot:3A19:boot-uuid-after-reboot"),
+                "job-post-reboot",
+                Duration::seconds(60),
+            )
+            .unwrap();
+        assert_eq!(l_reboot.generation, 1);
+
+        // 5. Device disconnect while holding lease frees lease & clears cached canonical alias
+        let dropped = scheduler.release_leases_for_disconnected_device("USB-SERIAL-99");
+        assert_eq!(dropped.len(), 1);
+        assert_eq!(dropped[0].job_id, "job-post-reboot");
+
+        // 6. Unknown / unidentifiable canonical identity falls back to per-serial isolation (never conflated)
+        let u1 = scheduler
+            .acquire_device_lease_canonical("10.0.0.10:5555", None, "job-u1", Duration::seconds(60))
+            .unwrap();
+        let u2 = scheduler
+            .acquire_device_lease_canonical("10.0.0.11:5555", None, "job-u2", Duration::seconds(60))
+            .unwrap();
+        assert_ne!(u1.device_id, u2.device_id);
     }
 }
