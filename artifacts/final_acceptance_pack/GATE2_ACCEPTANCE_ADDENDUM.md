@@ -1,102 +1,77 @@
-# FARMERPRO — GATE 2 ACCEPTANCE ADDENDUM (LIVE ANDROID ADB & CANONICAL IDENTITY HOTFIX)
+# FARMERPRO — GATE 2 ACCEPTANCE ADDENDUM (LIVE ANDROID ADB, OCR PROVENANCE & REGRESSION FREEZE)
 
 **Active Branch:** `feat/p6-final-validation`  
-**Verified RC Code Baseline (Updated After Gate 2 Defect Fix):** `b5a05673b1c0ad10dd4c6ce4463eaabbd3be40fe` (Git Tag: `v0.1.0-p6-rc.2`)  
-**Previous Frozen RC Baseline:** `802f3162df7fe3ab8fd6c7085c9d9e34caca6648` (Git Tag: `v0.1.0-p6-rc.1`)  
+**Final Frozen RC Code Baseline:** `629cce236e173f91642684858e44638948773b9e` (Git Tag: `v0.1.0-p6-rc.3`)  
+**Previous Checkpoints:** `802f316` (`v0.1.0-p6-rc.1`, pre-Gate-2 `BLOCKED (0 ADB)`) → `a149e8e` (initial Gate 2 evidence, 0 code diff) → `b5a0567` (`v0.1.0-p6-rc.2`, canonical dedup & `adb reverse` fix) → `3b05d17` (RC.2 docs)  
 **Overall Development Decision:** **P6 Closeout + Gate 2 Platform/Settings Live ADB = PASS**  
 **Overall Production Decision:** **NOT APPROVED (`PRODUCTION_ACCEPTANCE_PASS = BLOCKED` at Gate 1 & Gate 3)**
 
 ---
 
-## I. Đồng bộ PDF P6 Pre-Gate-2 & Addendum Gate 2
+## I. Chốt Baseline RC.3 & Chuỗi Truy xuất (`RC.1 → RC.2 → RC.3`)
 
-1. **Vì sao bản PDF P6 ban đầu (`87d46378...`) ghi `BLOCKED (0 ADB)`:**
-   - Báo cáo `FARMERPRO_P6_ACCEPTANCE_REPORT.pdf` tại baseline `802f3162df7fe3ab8fd6c7085c9d9e34caca6648` (`v0.1.0-p6-rc.1`, `708,938` bytes, SHA-256 `87d46378b1d1d915182d0ef4bd8808e66f434fc99bd548997333cd43eb8e67c6`) phản ánh đúng trạng thái trước Gate 2 khi `LDPlayer14` / `LDPlayer9` VM tự tắt dưới Windows Hypervisor Platform (`VBox.log`: `HM: HMR3Init: Attempting fall back to NEM: VT-x is not available` → `Heartbeat flatlined` → `PDMR3PowerOff` / `VERR_INTERRUPTED`), dẫn tới `0` thiết bị ADB kết nối tại thời điểm nghiệm thu P6.
-   - Commit `a149e8e67d099233841b9a40cd161b3d49b57670` chỉ bổ sung tài liệu và bằng chứng Gate 2 ban đầu trên Google Android SDK AVD (`fp_gate2_avd`), **0 thay đổi mã nguồn** (`git diff --stat 802f316..a149e8e -- crates apps Cargo.toml Cargo.lock` = trống).
-2. **Tại sao phát sinh Hotfix RC.2 (`b5a0567` / `v0.1.0-p6-rc.2`) & Đồng bộ Tài liệu:**
-   - Trong quá trình kiểm chứng mục II và IV của Gate 2 trên thiết bị thật `fp_gate2_avd`, log và test thực tế đã chứng minh **2 lỗi thật ở tầng platform**:
-     1. Cùng một AVD duy nhất `fp_gate2_avd` xuất hiện đồng thời dưới 2 transport `emulator-5554` và `127.0.0.1:5555`, làm Discovery/UI đếm thành **`LIVE ADB: 2 ONLINE`** và `MultiDeviceScheduler` không khóa xung đột lease giữa hai transport của cùng một thiết bị.
-     2. `adb reverse --list` trên thiết bị thật trả về thứ tự cột `<host_transport> <remote_device> <local_host>` (`host-22 tcp:19557 tcp:19558`), khác với `adb forward --list` (`<serial> <local_host> <remote_device>`), làm `AdbRunner::parse_port_mappings` đảo ngược `local`/`remote` và giữ token nội bộ `host-22` thay vì `serial` thật khi UI gọi `studio_remove_device_reverse`.
-   - Sau khi vá tối thiểu 2 lỗi trên tại commit `b5a0567` (`v0.1.0-p6-rc.2`), toàn bộ bộ test Rust (`101/101` PASS), release binaries (`fp-updater.exe`, `fp-mini-runtime.exe`, NSIS `FarmerPro_0.1.0_x64-setup.exe`), E2E P6 (`scripts/verify_p6.js`), Gate 2 Live ADB (`scripts/verify_gate2_live_adb.js`), PDF báo cáo ([FARMERPRO_P6_ACCEPTANCE_REPORT.pdf](file:///e:/DATA/FarmerPro/FARMERPRO_P6_ACCEPTANCE_REPORT.pdf), `712,030` bytes, SHA-256 `79821bec5b38028c3a86dc2cadb193a1d99358c061d912d0ddf6fa884e986651`) và `EVIDENCE_MANIFEST_SHA256.json` (`64` files) đã được tạo lại đồng bộ từ chính `b5a0567`.
-
----
-
-## II. Bằng chứng Danh tính Thiết bị Live ADB (`LIVE ADB: 1 ONLINE` — Không Trùng 2 Transport)
-
-1. **Bằng chứng thô trên `fp_gate2_avd` (`gate2_live_adb_report.json` → `canonicalDeviceIdentityProof`):**
-   - Trước khi gắn loopback: `adb devices -l` chỉ có `emulator-5554 device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:1`.
-   - Khi cố tình kết nối `adb connect 127.0.0.1:5555` trước khi khởi chạy Studio, `adb devices -l` thô liệt kê **2 dòng**:
-     - `127.0.0.1:5555 device ... device:emu64xa16k transport_id:2`
-     - `emulator-5554 device ... device:emu64xa16k transport_id:1`
-   - Kiểm tra trực tiếp kernel & build props trên cả hai serial xác nhận **cùng một thực thể AVD đang chạy**:
-     - `ro.boot.serialno` = `EMULATOR37X1X11X0`
-     - `emulator-5554` `/proc/sys/kernel/random/boot_id` = `5ddf4574-9b3f-450f-9550-b39f4c1a95bf`
-     - `127.0.0.1:5555` `/proc/sys/kernel/random/boot_id` = `5ddf4574-9b3f-450f-9550-b39f4c1a95bf` (`identicalInstanceConfirmed = true`)
-2. **Cách khắc phục đã áp dụng & kiểm thử:**
-   - [crates/fp-adb/src/lib.rs](file:///e:/DATA/FarmerPro/crates/fp-adb/src/lib.rs): Bổ sung `infer_local_emulator_canonical_key`, `serial_transport_priority`, `coalesce_device_summaries`, `list_devices_raw`, `probe_canonical_device_identity` (`ro.boot.serialno` + `/proc/sys/kernel/random/boot_id`) và hợp nhất kết quả trong `AdbRunner::list_devices` (ưu tiên `Ready` và transport chuẩn: USB < `emulator-<n>` < LAN TCP < loopback TCP).
-   - [apps/desktop/src-tauri/src/main.rs](file:///e:/DATA/FarmerPro/apps/desktop/src-tauri/src/main.rs): `adb_scan_range` và `auto_discover_devices` loại trừ cổng loopback `even + 1` khi `emulator-<even>` đã gắn.
-   - [crates/fp-scheduler/src/lib.rs](file:///e:/DATA/FarmerPro/crates/fp-scheduler/src/lib.rs) & [crates/fp-workflow-runtime/src/coordinator.rs](file:///e:/DATA/FarmerPro/crates/fp-workflow-runtime/src/coordinator.rs): Bổ sung `canonical_device_lease_key`, `acquire_device_lease_canonical`, và kiểm tra lease theo canonical identity trên `MultiDeviceScheduler` + `RuntimeCoordinator` (chống 2 job chiếm đồng thời 1 thiết bị qua 2 serial khác nhau).
-   - **Unit test hồi quy mới (PASS):** `test_coalesce_duplicate_emulator_and_multitransport_identities` (`fp-adb`), `test_canonical_device_identity_lease_exclusion_across_transports` (`fp-scheduler`), nâng tổng số test workspace lên **`101 / 101 PASS`** ([cargo_test_workspace_p6.log](file:///e:/DATA/FarmerPro/artifacts/p6_evidence/cargo_test_workspace_p6.log)).
-   - **Xác minh Runtime thật sau hotfix:** Ngay cả khi `127.0.0.1:5555` đã được gắn sẵn cạnh `emulator-5554`, `auto_discover_devices` và `list_devices` trả về **`adbDiscoveredCount = 1` (`listedDevices = ["emulator-5554"]`)**, Mini Runtime `#adb-mode-pill` hiển thị chính xác **`LIVE ADB: 1 ONLINE`** và chỉ render 1 dòng thiết bị (`LIVE_ADB(emulator-5554)`). Xem [gate2_studio_device_lab.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_studio_device_lab.png) và [gate2_mini_before.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_mini_before.png).
+1. **`v0.1.0-p6-rc.1` (`802f316`):** Baseline P6 Closeout cũ trước Gate 2 (PDF `708,938` B, SHA-256 `87d46378b1d1d915182d0ef4bd8808e66f434fc99bd548997333cd43eb8e67c6`, ghi nhận `BLOCKED (0 ADB)` khi `LDPlayer` dừng dưới WHv `VBox.log: HM -> NEM fallback / Heartbeat flatlined`). Không còn là baseline phát hành mới.
+2. **`a149e8e`:** Thêm báo cáo & bằng chứng Gate 2 ban đầu trên Google Android SDK AVD (`fp_gate2_avd`), `0` thay đổi mã nguồn (`crates/`, `apps/`, `Cargo.toml`, `Cargo.lock` trống).
+3. **`v0.1.0-p6-rc.2` (`b5a0567`) + `3b05d17`:** Vá 2 lỗi thực tế phát hiện từ Gate 2 (trùng 2 transport `emulator-5554`/`127.0.0.1:5555` trên cùng AVD và parser `adb reverse --list` đảo cột/`host-22`).
+4. **`v0.1.0-p6-rc.3` (`629cce2` — Final Frozen Code Baseline):** Hoàn thiện chỉ đạo Gate 2 Closeout:
+   - Tách bạch **OCR Provenance** (`ConfidenceSource`, `measuredConfidence`, `ruleMatched`, `deviceId`) và bỏ hiển thị `LIVE ✓ 94%` giả tạo trên UI Mini Tool (thay bằng **`LIVE · Đã khớp quy tắc`** / **`LIVE · Chưa xác minh`**).
+   - Mở rộng bộ **regression tests Canonical Device Identity (7 kịch bản)**, đồng bộ scheduler canonical lease vào `apps/mini-runtime`, và bổ sung **regression tests `adb forward`/`reverse`** (parser `reverse`, `host-22` isolation, empty output, session cleanup).
+   - Toàn bộ `101 / 101` tests (`38` suites), release binaries, NSIS Setup, Portable ZIPs, `verify_p6.js`, `verify_gate2_live_adb.js`, PDF báo cáo và SHA-256 manifests đã được tạo lại và đối chiếu khớp với đúng `629cce2`.
 
 ---
 
-## III. Bằng chứng Trực tiếp Vision/OCR, Safe Tap, Biến Runtime, Checkpoint & Provenance
+## II. Hoàn thiện OCR Provenance & UI Mini Runtime (`LIVE · Đã khớp quy tắc`)
 
-1. **Template Matching & Safe Random Tap (Studio):**
-   - `capture_device` chụp ảnh PNG thật từ `emulator-5554` (`78,728` bytes), `studio_capture_and_crop_template` cắt vùng nút `Search Settings` (`260×56` tại `x=50, y=76`, SHA-256 `1574e3529a704ab21a76797bca61cdf94697cadf89a0e89bb75618671acad19b`).
-   - `studio_test_project_template_match` khớp với **`matched = true`**, **`confidence = 0.93104136`**, `bounds = {x: 54, y: 78, width: 221, height: 48}`, `suggestedTapPoint = {x: 128.63554, y: 99.694275}`.
-2. **OCR Thật & Quy tắc `verified = true`:**
-   - Thực thi qua `Windows.Media.Ocr.OcrEngine` ([crates/fp-workflow-runtime/src/lib.rs](file:///e:/DATA/FarmerPro/crates/fp-workflow-runtime/src/lib.rs#L780-L830)):
-     - Công thức kiểm chứng chính xác: `verified_ok = ctx.runtime_source_mode.is_live() && matched && type_valid && ocr_conf >= min_conf`.
-     - Ghi nhận trung thực kỹ thuật: UWP `Windows.Media.Ocr` trả về text/từ theo bounding box mà không cung cấp float confidence gốc từng từ, nên engine gán điểm xác định `ocr_conf = 0.94` khi text không rỗng và khớp `expectedText` (`"Search"`), `0.72` khi không khớp `expectedText`, và `0.40` khi rỗng.
-   - **Văn bản OCR thu được trực tiếp từ màn hình `emulator-5554` (`minConfidence = 0.70`, `expectedText = "Search"`):**
-     - **Studio Job 1 (`n3`):** `"11:26 Q Search Settings G Google Services & preferences Network & internet Mobile, Wi-Fi, hotspot Connected devices Bluetooth, pairing Apps Assistant, recent apps, default apps"` → `ocr_matched = true`, `confidence = 0.94`, `source = "LIVE_ADB_OCR"`, `verified = true`.
-     - **Mini Tool (`Auto_Gate2Live.exe`, Studio đã tắt & gỡ):** `"11:27 Q Search Settings G Google Services & preferences Network & internet Mobile, Wi-Fi, hotspot Connected devices Bluetooth, pairing Apps Assistant, recent apps, default apps"` → `ocr_matched = true`, `confidence = 0.94`, `source = "LIVE_ADB_OCR"`, `verified = true`.
-3. **Vòng đời Job, Điều khiển Coordinator, SQLite & Ảnh Trước/Sau:**
-   - **Studio Job 1 (`job-19f46ff3-b257-4122-8716-991742e37c26`):** `Pause` giữa luồng (`job1PausedState = "paused"`) → `Resume` → `vision.capture` → `vision.ocr` → `vision.find_image` → `action.random_safe_tap` (`marginRatio=0.15`) → `action.swipe` (`640,500 -> 640,260`) → `state.checkpoint` → `state.set_var("studio_live_status", "STUDIO_LIVE_OK")` → `state = "succeeded"`, **`24` `step_events`** ([gate2_studio_runtime_vars.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_studio_runtime_vars.png)). Thiết bị chuyển từ Settings Home ([gate2_device_before_studio.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_before_studio.png), `59,095` B) sang Search settings + bàn phím ([gate2_device_after_studio.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_after_studio.png), `50,040` B).
-   - **Studio Job 2 (`job-51284b9e-7825-4b73-ae1c-aaa2f422cde5`):** `studio_suspend_job_to_checkpoint` → `jobState = "paused"`, `checkpointId = "cp-854fc17a-62fb-4bbe-8d2e-902f21108ff1"` (`hasCheckpoint = true`) → `studio_resume_job_from_checkpoint` khôi phục từ `resumedFromNodeId = "c3"` (`fencingGeneration = 3`) → `state = "succeeded"`, `eventsRecorded = 13`, `checkpoint_resumed = "SETTINGS_HOME_RESTORED"`.
-   - **Studio Job 3:** `studio_cancel_job` → `job3FinalState = "cancelled"`.
-   - **Mini Tool Độc lập (`Auto_Gate2Live.exe` sau `uninstall.exe /S`):** Thực thi qua nút `CHẠY NHIỆM VỤ (ADB THẬT)`, `anyTestkitBadge = false`, không có `FakeDeviceDriver`, SQLite `runtime_live-gate2-android.db` ghi job `mini-job-f773ccb7-e695-4c4d-928a-498a317dd58f` trên `emulator-5554` (`Succeeded`), **`22` `step_events`**, `9` biến trong `runtime_variable_envelopes` với `verified = 1`, `source ∈ {LIVE_ADB_OCR, LIVE_STATE}`. Thiết bị chuyển từ Settings Home ([gate2_device_before_mini.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_before_mini.png), `58,886` B) sang Search settings ([gate2_device_after_mini.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_after_mini.png), `25,119` B), UI Mini Tool cập nhật từ [gate2_mini_before.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_mini_before.png) sang [gate2_mini_after.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_mini_after.png).
+- **Schema & Engine ([crates/fp-domain/src/lib.rs](file:///e:/DATA/FarmerPro/crates/fp-domain/src/lib.rs), [crates/fp-workflow-runtime/src/lib.rs](file:///e:/DATA/FarmerPro/crates/fp-workflow-runtime/src/lib.rs), [crates/fp-storage/src/lib.rs](file:///e:/DATA/FarmerPro/crates/fp-storage/src/lib.rs)):**
+  - Bổ sung `ConfidenceSource` (`MEASURED` | `HEURISTIC` | `SIMULATED` | `UNCALIBRATED`) và các trường `confidenceSource`, `measuredConfidence`, `ruleMatched`, `deviceId` trên `RuntimeVariableEnvelope` và SQLite `runtime_variable_envelopes` (tương thích ngược schema v5).
+  - Với `Windows.Media.Ocr` (không có native per-word float confidence), engine gán `confidenceSource = "HEURISTIC"`, `measuredConfidence = null`, `confidence = null` (chỉ dùng điểm nội bộ so ngưỡng `minConfidence`), tách riêng `ocr_text` (raw OCR), `ocr_expected_text` (`"Search"`), `ruleMatched` (`true`/`false`), `verified` (`true`/`false`), `deviceId` (`"emulator-5554"`), `sessionId` và `updatedAtUtc`.
+- **Giao diện Mini Runtime ([apps/mini-runtime/ui/index.html](file:///e:/DATA/FarmerPro/apps/mini-runtime/ui/index.html)):**
+  - `provenanceBadgeHtml(env)` **chỉ** hiển thị phần trăm `%` khi `env.confidenceSource === 'MEASURED' && typeof env.measuredConfidence === 'number'`. Khi chưa có metric đo hiệu chuẩn, badge hiển thị **`LIVE · Đã khớp quy tắc`** (`verified=true`) hoặc **`LIVE · Chưa xác minh`** (`verified=false`).
+  - Xác minh thực tế trên `Auto_Gate2Live.exe` (`629cce2`): `anyUnmeasuredPercentBadge = false` (không còn `94%` hay `LIVE ✓`), `ruleMatchBadgePresent = true`, ảnh chụp [gate2_mini_after.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_mini_after.png).
+  - Raw OCR thu thật trên `emulator-5554`: `"12:14 Q Search Settings G Google Services & preferences Network & internet Mobile, Wi-Fi, hotspot Connected devices Bluetooth, pairing Apps Assistant, recent apps, default apps"` (`LIVE_ADB_OCR`, `confidenceSource = "HEURISTIC"`, `measuredConfidence = null`, `ruleMatched = true`, `verified = true`).
 
 ---
 
-## IV. Kiểm thử Thật `adb forward` & `adb reverse` trên `emulator-5554`
+## III. Canonical Device Identity & Regression Tests (7 Kịch bản)
 
-Thực hiện đầy đủ **Create → List → Remove** qua Tauri IPC của Studio trên `emulator-5554`:
-- `studio_add_device_forward`: tạo `tcp:19555 -> tcp:19556` (`serial: emulator-5554`).
-- `studio_add_device_reverse`: tạo `tcp:19557 -> tcp:19558` (`serial: emulator-5554`).
-- `studio_list_device_ports` sau tạo (`portsAfterCreate`): xác nhận có mặt đủ `forwards: [{local: "tcp:19555", remote: "tcp:19556"}]` và `reverses: [{serial: "emulator-5554", local: "tcp:19558", remote: "tcp:19557"}]`.
-- `studio_remove_device_forward` & `studio_remove_device_reverse` dùng chính `serial` & `local`/`remote` trả về từ danh sách (như UI thực tế gọi): xóa sạch về `portsAfterRemove = {forwards: [], reverses: []}`.
-- **Lỗi đã phát hiện và vá trong Gate 2:** `adb reverse --list` trả về `host-22 tcp:19557 tcp:19558` (đảo cột remote/local và thay `serial` bằng `host-XX`). Đã sửa trong [crates/fp-adb/src/lib.rs](file:///e:/DATA/FarmerPro/crates/fp-adb/src/lib.rs) kèm unit test `test_parse_forward_reverse_and_validate_specs`.
+1. **Hợp nhất Discovery, Scheduler & Mini Runtime:**
+   - [crates/fp-adb/src/lib.rs](file:///e:/DATA/FarmerPro/crates/fp-adb/src/lib.rs), [crates/fp-scheduler/src/lib.rs](file:///e:/DATA/FarmerPro/crates/fp-scheduler/src/lib.rs), [crates/fp-workflow-runtime/src/coordinator.rs](file:///e:/DATA/FarmerPro/crates/fp-workflow-runtime/src/coordinator.rs), [apps/desktop/src-tauri/src/main.rs](file:///e:/DATA/FarmerPro/apps/desktop/src-tauri/src/main.rs), và [apps/mini-runtime/src/main.rs](file:///e:/DATA/FarmerPro/apps/mini-runtime/src/main.rs) dùng chung chính sách canonical identity + `MultiDeviceScheduler::acquire_device_lease_canonical`.
+   - `MultiDeviceScheduler` bổ sung `release_leases_for_disconnected_device` và `reconcile_device_reboot` (khi `boot_id` đổi sau reboot, tự động giải phóng lease cũ của phiên trước khi reboot và cập nhật canonical identity mới; `release_device_lease` có fallback theo `(device_id, job_id)`).
+2. **Đủ 7 ca hồi quy được phủ trong `cargo test --workspace` (`101 / 101 PASS`):**
+   - (1) Hai serial trỏ cùng 1 Android (`emulator-5554` + `127.0.0.1:5555`); (2) Hai thiết bị thật khác nhau (cùng pattern hardware serial nhưng khác `boot_id`); (3) Một thiết bị nối đồng thời USB + TCP (`USB-PIXEL-9` + `192.168.1.44:5555`); (4) Thiết bị reboot đổi `boot_id` giải phóng lease cũ; (5) Thiết bị disconnect khi đang giữ lease; (6) Hai job tranh chấp 1 thiết bị vật lý qua 2 transport khác nhau bị từ chối; (7) Unknown identity không tự hợp nhất nhầm (`192.168.1.80:5555` và `192.168.1.81:5555` cùng model nhưng thiếu `boot_id` vẫn giữ 2 thiết bị riêng).
+- **Xác minh Runtime thật trên `fp_gate2_avd`:** Cố tình `adb connect 127.0.0.1:5555` (`identicalInstanceConfirmed = true` theo `ro.boot.serialno=EMULATOR37X1X11X0` và `boot_id`) → Studio `adbDiscoveredCount = 1` (`emulator-5554`), Mini Tool **`LIVE ADB: 1 ONLINE`**.
 
 ---
 
-## V. Ranh giới Phạm vi Kiểm chứng Gate 2 (Tách bạch 3 Tầng)
+## IV. Chốt ADB Forward / Reverse trên `emulator-5554`
 
-| Tầng Phạm vi | Trạng thái | Ghi chú Trung thực |
+- **Live Test Create → List → Remove:** `studio_add_device_forward` (`tcp:19555 -> tcp:19556`), `studio_add_device_reverse` (`tcp:19557 -> tcp:19558`, `serial: emulator-5554`), `studio_list_device_ports` → xóa sạch về `forwards: [], reverses: []`.
+- **Regression Tests & Cleanup (`crates/fp-adb/src/lib.rs`):** Kiểm thử parser `reverse --list` (`host-22 tcp:19557 tcp:19558`), thay `host-22` thành target `serial` trong `reverse_list` (không bao giờ coi `host-22` là Android device serial), output rỗng `""`, và bổ sung `forward_remove_all_for_serial` / `reverse_remove_all` cho cleanup cuối phiên.
+
+---
+
+## V. Phạm vi Kiểm chứng Gate 2 (Tách bạch)
+
+| Tầng | Trạng thái | Ghi chú |
 |---|---|---|
-| **1. Live Android ADB Platform Integration** | **PASS** | Discovery canonical deduplication (`LIVE ADB: 1 ONLINE`), `capture_device`, template crop/match, `Pause/Resume`, `Suspend/Resume Checkpoint`, `Cancel`, `adb forward`/`reverse`, và `Mini Tool` độc lập chạy `LIVE_ADB(emulator-5554)` không có Studio/TestKit. |
-| **2. Live Workflow Execution (Android System UI — `com.android.settings`)** | **PASS** | Đã kiểm chứng trên Android SDK AVD `fp_gate2_avd` (API 37, WHPX) với nút Search Settings, OCR, Safe Random Tap, Swipe, Key `BACK` và khôi phục Home. |
-| **3. Live Game-Specific Workflow Execution (JX2 Mobile / SLG / Game thật)** | **NOT TESTED / PENDING** | Chưa cài hoặc chạy quy trình trên APK game cụ thể nào; không tuyên bố đã nghiệm thu automation cho game cụ thể. |
+| **Platform Live ADB Integration** | **PASS** | Canonical dedup (`LIVE ADB: 1 ONLINE`), Lease exclusion, Forward/Reverse, Capture/Template/OCR Provenance, Checkpoint/Pause/Resume/Cancel, Mini Tool độc lập (`22` events, `anyTestkitBadge=false`). |
+| **Live Workflow — Android Settings (`com.android.settings`)** | **PASS** | Ảnh trước/sau Studio ([before](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_before_studio.png) `59,064` B → [after](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_after_studio.png) `61,447` B) và Mini Tool ([before](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_before_mini.png) `58,919` B → [after](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_after_mini.png) `49,826` B). |
+| **Live Game-Specific Workflow (JX2 Mobile / Game thật)** | **NOT TESTED** | Nghiệm thu riêng theo từng hồ sơ GameProject; không gộp với Gate 2 nền tảng. |
 
 ---
 
-## VI. Đối chiếu Release Candidate Provenance (`RC.1` → `a149e8e` → `RC.2`)
+## VI. Checksums Phát hành Chính thức (`629cce2` / Tag `v0.1.0-p6-rc.3`)
 
-1. `802f3162df7fe3ab8fd6c7085c9d9e34caca6648` (`v0.1.0-p6-rc.1`): Code baseline P6 Closeout ban đầu (`99/99` tests, pre-Gate-2 PDF `708,938` B, SHA-256 `87d46378...`).
-2. `a149e8e67d099233841b9a40cd161b3d49b57670`: Chỉ thêm Gate 2 report & bằng chứng trên `fp_gate2_avd`, **`0` thay đổi code** trong `crates/`, `apps/`, `Cargo.toml`, `Cargo.lock`.
-3. `b5a05673b1c0ad10dd4c6ce4463eaabbd3be40fe` (`v0.1.0-p6-rc.2`): Hotfix tối thiểu từ 2 lỗi chứng minh được ở Gate 2 (`apps/desktop/src-tauri/src/main.rs`, `crates/fp-adb/src/lib.rs`, `crates/fp-scheduler/src/lib.rs`, `crates/fp-workflow-runtime/src/coordinator.rs`), **`101/101` Cargo workspace tests**, rebuild toàn bộ release & NSIS, chạy lại `verify_p6.js`, `verify_gate2_live_adb.js` và xuất lại báo cáo PDF:
-   - **NSIS Setup (`FarmerPro_0.1.0_x64-setup.exe`):** `15,223,807` bytes · SHA-256 `4ffc3fc3d49d9b6f4b3ab82bf035a82dfb6e4411319bbec416c3412567d4d0fa`
-   - **Portable Alpha ZIP (`P6_Alpha_v1.0.0_win-x64.zip`):** `11,929,011` bytes · SHA-256 `7b46389bed95c08678a24455d9b1e1c6215c5a61385508b8bddac35b4e9bce05`
-   - **Portable Beta ZIP (`P6_Beta_v1.0.0_win-x64.zip`):** `11,930,781` bytes · SHA-256 `cf77b69ad5fcd5bf893f73ae0d4732a01957d31243b555af55ce065c1e6b1db2`
-   - **Gate 2 Portable Mini ZIP (`Gate2_LiveMini_v1.0.0_win-x64.zip`):** `11,944,570` bytes · SHA-256 `ddb899b491df8697cc7fe817987e9a13ae2d1f2819da77568c46290afbae9424`
-   - **PDF Report ([FARMERPRO_P6_ACCEPTANCE_REPORT.pdf](file:///e:/DATA/FarmerPro/FARMERPRO_P6_ACCEPTANCE_REPORT.pdf)):** `712,030` bytes · SHA-256 `79821bec5b38028c3a86dc2cadb193a1d99358c061d912d0ddf6fa884e986651` (`QA passed: true`, `64` manifest files).
+- **NSIS Setup (`FarmerPro_0.1.0_x64-setup.exe`):** `15,268,397` B · `ab36da44ccdd50f33994bf9fc88f2b81635e5747bdd2dcc154bcc6bc4b57d7f1`
+- **Portable Alpha ZIP (`P6_Alpha_v1.0.0_win-x64.zip`):** `11,971,510` B · `e94279949710eca5baf0bd0ced6bd58fd92227fd2b8af6df60313bc8021b8339`
+- **Portable Beta ZIP (`P6_Beta_v1.0.0_win-x64.zip`):** `11,973,272` B · `99512f43ddc10ab8cdcc55171929e230042a58b5a831f4b30e82c1bbacb24771`
+- **Gate 2 Portable Mini ZIP (`Gate2_LiveMini_v1.0.0_win-x64.zip`):** `11,987,054` B · `2de448a5e263cbbc84b5aa16acfa4a13ce0e78f0c989d8150f3d5cfcfb1aaa73`
+- **PDF Report ([FARMERPRO_P6_ACCEPTANCE_REPORT.pdf](file:///e:/DATA/FarmerPro/FARMERPRO_P6_ACCEPTANCE_REPORT.pdf)):** `712,963` B · `ed6e66a930df0b730c56724a46d70555337bf5fff9457c68c9503b48c16c8836` (`QA passed = true`, `64` manifest files)
 
 ---
 
 ## VII. Hai Gate Hạ tầng Ngoài Còn Lại (`BLOCKED`)
 
-- **Gate 1 — Clean Windows VM:** **`BLOCKED`** (`WindowsSandbox.exe = False`, Hyper-V yêu cầu quyền Administrator; chưa test môi trường sạch không dev SDK / WebView2 missing).
+- **Gate 1 — Clean Windows VM:** **`BLOCKED`** (`WindowsSandbox.exe = False`, Hyper-V cần quyền Administrator).
 - **Gate 3 — Commercial Authenticode PublicSigned:** **`BLOCKED`** (`0` Commercial CA code-signing certs trong `Cert:\CurrentUser\My`).
-- **Quyết định Phát hành Thương mại (`PRODUCTION_ACCEPTANCE_PASS`):** **`BLOCKED`**.
+- **`PRODUCTION_ACCEPTANCE_PASS`:** **`BLOCKED` / `NOT APPROVED`**.

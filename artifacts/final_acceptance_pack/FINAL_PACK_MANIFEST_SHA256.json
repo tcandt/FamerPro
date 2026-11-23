@@ -1,62 +1,62 @@
 {
   "ACCEPTANCE_MATRIX.md": {
-    "bytes": 5913,
-    "sha256": "ddd67e97c68e6ed85aabce937dbcc0577f4e98d4042ae67b46f698039533e92b"
+    "bytes": 5714,
+    "sha256": "0695702bb41e15e3051c3f2765f3de420fb8f449ad6eade7a95eca6f538ba332"
   },
   "EXTERNAL_GATES_STATUS.md": {
-    "bytes": 2961,
-    "sha256": "476778a05a7e142189fcd8e43d033c78d4aefc46fe65ceeda1abe2c2d9e01111"
+    "bytes": 2425,
+    "sha256": "a7842daa745b256c6caf5fbae55bb0bf8a18aac7933408023b9a7280c2846a15"
   },
   "FINAL_ACCEPTANCE_SUMMARY.json": {
-    "bytes": 3891,
-    "sha256": "e6b910ea650f77ce33e5dbf1ec403dfdd336f6225ea604bf25c22b040024f322"
+    "bytes": 4375,
+    "sha256": "c0e51010a5d59e8c0e1816564c57a3456b90cb93b9ee761b9cacb069a0a37969"
   },
   "GATE2_ACCEPTANCE_ADDENDUM.md": {
-    "bytes": 15771,
-    "sha256": "ad8a8cb5e74a35c87ca76b1edcb4b9590aa1907dadc069868551332f36122dd8"
+    "bytes": 9891,
+    "sha256": "0c8673128d78d037c2f0172a5b4e5c5b31527dd58fa10b48e0b85c7c21ebfa48"
   },
   "GATE2_LIVE_ANDROID_ADB_REPORT.md": {
-    "bytes": 6168,
-    "sha256": "33595b8dff89c050f56237744246bfc12360305804ae917db5c362e0fc2f2b85"
+    "bytes": 5219,
+    "sha256": "93c3ee81e8c6b3ee9205cdcc8d08dcd6a56111a12b5a16a897de0dd349172a7a"
   },
   "SECURITY_RISK_REGISTER_AND_THREAT_MODEL.md": {
     "bytes": 6821,
     "sha256": "872f6808889e02966f3f8a93f16f17dc58fe7ba80f66fc09f9df5c4ef49f5073"
   },
   "gate2_live_adb\\gate2_device_after_mini.png": {
-    "bytes": 25119,
-    "sha256": "44ba4b50d6f9c57dd5d1fb2e4fa321cafc7edcd5f0428ff7ce64e35f8e2294c6"
+    "bytes": 49826,
+    "sha256": "989474c70fb3bdf615e4db8bedd05ec4583b62e1aa20b80e3269b115c17d9ea7"
   },
   "gate2_live_adb\\gate2_device_after_studio.png": {
-    "bytes": 50040,
-    "sha256": "20126afeddf59f891085f67d1c6ae2a6e2d0b39af80d172489672adc608ddf4a"
+    "bytes": 61447,
+    "sha256": "c4586882a5a173c93d23f4d5fbcaf7fb3caf29a2d4eb1f461fcf6be2f85b6805"
   },
   "gate2_live_adb\\gate2_device_before_mini.png": {
-    "bytes": 58886,
-    "sha256": "187b5246d87b2ff56bc3b83d68e1196d7968030bc25a267bee53f60aa249af8e"
+    "bytes": 58919,
+    "sha256": "0543fd70b96ac9dd17b7d3d6e7f38533f54e526946e9ee1c71e46b6f75a32cda"
   },
   "gate2_live_adb\\gate2_device_before_studio.png": {
-    "bytes": 59095,
-    "sha256": "d4eddd6ada46be339bfa493b74bcccfb087267a2430c3c9af5e1869a008f5679"
+    "bytes": 59064,
+    "sha256": "fd16fcef56cc11aa94b0d256e5d56d6abd9791f9a064de06f512db669a163a95"
   },
   "gate2_live_adb\\gate2_live_adb_report.json": {
-    "bytes": 130862,
-    "sha256": "2e4f1506223ae9d15cf6c4430a5717f46dc46bdaca7a81aa48b71cef52c31c36"
+    "bytes": 136778,
+    "sha256": "2612cd87f0b360395e4ea034ca6c254ee5cf32a74f9fcd51a871db8ab666d676"
   },
   "gate2_live_adb\\gate2_mini_after.png": {
-    "bytes": 87601,
-    "sha256": "b79fc0a197c2c743b4c479f6edc395e3916bed96f0f3f912d50757e366be7fb9"
+    "bytes": 88972,
+    "sha256": "f869620540045e0f78f30558b8e6c3584212205e801b24fa20a01a95bb29e5fd"
   },
   "gate2_live_adb\\gate2_mini_before.png": {
-    "bytes": 49317,
-    "sha256": "955c62de3b57df4cc0387b365c189862dfd7f6319e177feaf920ede35c56edb5"
+    "bytes": 49337,
+    "sha256": "1d7d16e087240f5ea3d4f0c50f1938f4eb5f278d6d4ab1ca49161188a78e5d7e"
   },
   "gate2_live_adb\\gate2_studio_device_lab.png": {
-    "bytes": 116725,
-    "sha256": "1780e68b3d415b4494b55b58503c0a13a4b42f54da6b2002bbf039032d13be68"
+    "bytes": 116817,
+    "sha256": "a4fbdf805d2c74dab92a7e14c0782e494fd2ebab46bbe1f3e726296b07738439"
   },
   "gate2_live_adb\\gate2_studio_runtime_vars.png": {
-    "bytes": 143842,
-    "sha256": "562c22a615e29b024264911e3a8bf56e95126a3cbdef7d5b9b456f9999c0edac"
+    "bytes": 145746,
+    "sha256": "b0fd8e208472688386a5af6cfd6836f55944d76a3788c8cc016b4132b26540b4"
   }
 }

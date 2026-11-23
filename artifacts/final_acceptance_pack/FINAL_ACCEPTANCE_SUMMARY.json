@@ -1,11 +1,21 @@
 {
   "branch": "feat/p6-final-validation",
-  "previousBaselineCommit": "802f3162df7fe3ab8fd6c7085c9d9e34caca6648",
-  "previousRcGitTag": "v0.1.0-p6-rc.1",
-  "preGate2PdfSha256": "87d46378b1d1d915182d0ef4bd8808e66f434fc99bd548997333cd43eb8e67c6",
-  "gate2InitialEvidenceCommit": "a149e8e67d099233841b9a40cd161b3d49b57670",
-  "verifiedCodeCommit": "b5a05673b1c0ad10dd4c6ce4463eaabbd3be40fe",
-  "rcGitTag": "v0.1.0-p6-rc.2",
+  "supersededBaselines": [
+    {
+      "tag": "v0.1.0-p6-rc.1",
+      "commit": "802f3162df7fe3ab8fd6c7085c9d9e34caca6648",
+      "status": "PRE_GATE2_OLD_BASELINE_0_ADB",
+      "pdfSha256": "87d46378b1d1d915182d0ef4bd8808e66f434fc99bd548997333cd43eb8e67c6"
+    },
+    {
+      "tag": "v0.1.0-p6-rc.2",
+      "commit": "b5a05673b1c0ad10dd4c6ce4463eaabbd3be40fe",
+      "status": "INTERMEDIATE_GATE2_ADB_HOTFIX",
+      "docsCommit": "3b05d17de991af4615dfca305f92e425d8459196"
+    }
+  ],
+  "verifiedCodeCommit": "629cce236e173f91642684858e44638948773b9e",
+  "rcGitTag": "v0.1.0-p6-rc.3",
   "developmentGateDecision": "APPROVED_P6_CLOSEOUT_WITH_GATE2_PLATFORM_ADDENDUM",
   "productionReleaseDecision": "NOT_APPROVED_BLOCKED",
   "developmentStatuses": {
@@ -14,7 +24,7 @@
     "UPDATE_ROLLBACK_PASS": "PASS",
     "GATE2_PLATFORM_LIVE_ADB": "PASS",
     "GATE2_SETTINGS_LIVE_WORKFLOW": "PASS",
-    "GATE2_GAME_SPECIFIC_WORKFLOW": "NOT_TESTED_PENDING",
+    "GATE2_GAME_SPECIFIC_WORKFLOW": "NOT_TESTED",
     "PRODUCTION_ACCEPTANCE_PASS": "BLOCKED"
   },
   "provenance": {
@@ -27,8 +37,8 @@
     "gate2LiveAdbReport": "artifacts/final_acceptance_pack/gate2_live_adb/gate2_live_adb_report.json",
     "gate2AcceptanceAddendumPath": "artifacts/final_acceptance_pack/GATE2_ACCEPTANCE_ADDENDUM.md",
     "pdfReportPath": "FARMERPRO_P6_ACCEPTANCE_REPORT.pdf",
-    "pdfSizeBytes": 712030,
-    "pdfSha256": "79821bec5b38028c3a86dc2cadb193a1d99358c061d912d0ddf6fa884e986651",
+    "pdfSizeBytes": 712963,
+    "pdfSha256": "ed6e66a930df0b730c56724a46d70555337bf5fff9457c68c9503b48c16c8836",
     "pdfQaPassed": true,
     "evidenceManifestPath": "artifacts/p6_evidence/EVIDENCE_MANIFEST_SHA256.json",
     "evidenceManifestFileCount": 64,
@@ -37,32 +47,33 @@
   "releaseArtifacts": {
     "installer": {
       "path": "artifacts/p6_evidence/dist_releases/FarmerPro_0.1.0_x64-setup.exe",
-      "bytes": 15223807,
-      "sha256": "4ffc3fc3d49d9b6f4b3ab82bf035a82dfb6e4411319bbec416c3412567d4d0fa"
+      "bytes": 15268397,
+      "sha256": "ab36da44ccdd50f33994bf9fc88f2b81635e5747bdd2dcc154bcc6bc4b57d7f1"
     },
     "portableAlphaZip": {
       "path": "artifacts/p6_evidence/dist_releases/P6_Alpha_v1.0.0_win-x64.zip",
-      "bytes": 11929011,
-      "sha256": "7b46389bed95c08678a24455d9b1e1c6215c5a61385508b8bddac35b4e9bce05",
+      "bytes": 11971510,
+      "sha256": "e94279949710eca5baf0bd0ced6bd58fd92227fd2b8af6df60313bc8021b8339",
       "prePostZipExeShaMatch": true
     },
     "portableBetaZip": {
       "path": "artifacts/p6_evidence/dist_releases/P6_Beta_v1.0.0_win-x64.zip",
-      "bytes": 11930781,
-      "sha256": "cf77b69ad5fcd5bf893f73ae0d4732a01957d31243b555af55ce065c1e6b1db2",
+      "bytes": 11973272,
+      "sha256": "99512f43ddc10ab8cdcc55171929e230042a58b5a831f4b30e82c1bbacb24771",
       "prePostZipExeShaMatch": true
     },
     "gate2MiniZip": {
       "file": "Gate2_LiveMini_v1.0.0_win-x64.zip",
-      "bytes": 11944570,
-      "sha256": "ddb899b491df8697cc7fe817987e9a13ae2d1f2819da77568c46290afbae9424"
+      "bytes": 11987054,
+      "sha256": "2de448a5e263cbbc84b5aa16acfa4a13ce0e78f0c989d8150f3d5cfcfb1aaa73"
     }
   },
   "gate2VerificationChecks": {
     "canonicalDualTransportDedup": "PASS (emulator-5554 + 127.0.0.1:5555 -> LIVE ADB: 1 ONLINE)",
-    "schedulerCanonicalLeaseExclusion": "PASS (unit test + RuntimeCoordinator integration)",
-    "adbForwardReverseCreateListRemove": "PASS (tcp:19555->tcp:19556, tcp:19557->tcp:19558)",
-    "liveOcrAndTemplateMatch": "PASS (confidence=0.93104136, LIVE_ADB_OCR=0.94, verified=true)",
+    "canonicalIdentityRegressionCases": "PASS (7 scenarios: dual serials, 2 devices, USB+TCP, reboot boot_id change, disconnect, competing leases, unknown identity)",
+    "miniRuntimeCanonicalSchedulerLease": "PASS (MultiDeviceScheduler integrated in MiniRuntimeState)",
+    "adbForwardReverseCreateListRemove": "PASS (tcp:19555->tcp:19556, tcp:19557->tcp:19558 + parser/empty/host-token regressions)",
+    "ocrProvenanceSeparation": "PASS (ConfidenceSource=HEURISTIC, measuredConfidence=null, ruleMatched=true, UI badge='LIVE · Đã khớp quy tắc', 0 unmeasured % shown)",
     "miniStandaloneZeroTestkitBadge": "PASS (anyTestkitBadge=false, 22 SQLite step_events)"
   },
   "securityRegressionChecks": {
@@ -77,7 +88,7 @@
   "externalGates": {
     "gate1CleanWindowsVm": "BLOCKED",
     "gate2PlatformAndSettingsLiveAdb": "PASS",
-    "gate2GameSpecificWorkflows": "NOT_TESTED_PENDING",
+    "gate2GameSpecificWorkflows": "NOT_TESTED",
     "gate3CommercialAuthenticode": "BLOCKED"
   }
 }
