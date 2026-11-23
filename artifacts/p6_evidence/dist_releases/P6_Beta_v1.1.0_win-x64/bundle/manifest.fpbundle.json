@@ -16,7 +16,7 @@
       "minRuntimeVersion": "0.1.0",
       "sqliteSchemaVersion": 5
     },
-    "projectId": "proj-p6-beta-citadel-529dc014",
+    "projectId": "proj-p6-beta-citadel-a52b21e0",
     "slug": "p6-beta-citadel",
     "name": "Orion Citadel Automator",
     "gamePackageId": "com.orion.citadel",
@@ -139,7 +139,7 @@
   ],
   "workflowsCount": 1,
   "templatesCount": 0,
-  "builtAtUtc": "2026-11-23T02:51:19.070946700+00:00",
+  "builtAtUtc": "2026-11-23T04:24:52.822218900+00:00",
   "publisher": {
     "publisherId": "pub-p6-beta",
     "displayName": "Orion Citadel Studio QA",
@@ -149,7 +149,7 @@
     "copyright": "Copyright (C) 2026 Orion Citadel Studio QA",
     "ed25519KeyId": "",
     "ed25519PubkeyHex": "",
-    "authenticodeCertRef": "CERT_STORE://CurrentUser/My/9153907A89C34F188E64ED74B4316D3A998B29E1",
+    "authenticodeCertRef": "CERT_STORE://CurrentUser/My/F6A6DADC34DC0BBA0D66B793DACAEE9EAECF1689",
     "releaseChannel": "qa",
     "signingPolicy": "self_signed_qa"
   },
@@ -160,7 +160,7 @@
     "releaseChannel": "qa",
     "authenticodeTrustStatus": "self_signed_untrusted_root",
     "trustedPublicRelease": false,
-    "signerThumbprint": "CERT_STORE://CurrentUser/My/9153907A89C34F188E64ED74B4316D3A998B29E1",
+    "signerThumbprint": "CERT_STORE://CurrentUser/My/F6A6DADC34DC0BBA0D66B793DACAEE9EAECF1689",
     "signerSubject": null,
     "versionInfo": {
       "companyName": "Orion Citadel Studio QA",
@@ -175,12 +175,12 @@
     "keyRotation": {
       "publisherId": "pub-p6-beta",
       "productSlug": "p6-beta-citadel",
-      "oldPubkeyHex": "3852ed2f732bc35ca9dd159c6fb1bdd1f2a709deaf1b5d41cfcf2f6054c5b292",
-      "newPubkeyHex": "4b00499e46bb77f4eedad3fa84caf454a2d1f3a576a1fc245d774b2ad6967d3d",
-      "issuedAtUtc": "2026-11-23T02:51:17.565571600+00:00",
-      "expiresAtUtc": "2027-02-21T02:51:17.565571600+00:00",
-      "nonce": "rot-5591c9687fa54ef081c825dc805b8009",
-      "signatureByOldKeyHex": "eca60a337bf633fb72e219392fcd1d64742a2fc4db7518c900f8d92ee4b252e91c710efaf5f0379301c6142ef003c6026e6ec83a00891b17f0935817ce918e08"
+      "oldPubkeyHex": "af4985b57c073da2fef38577f9000ac3d5dca61d746b0d779aa40485b30b0d6a",
+      "newPubkeyHex": "9b27f764a915f6e7dbf414ab17965b5a8a6ae29a223e335da1703a56de0890b1",
+      "issuedAtUtc": "2026-11-23T04:24:48.412109500+00:00",
+      "expiresAtUtc": "2027-02-21T04:24:48.412109500+00:00",
+      "nonce": "rot-252b779056aa4ab983bc6ec9b782251b",
+      "signatureByOldKeyHex": "8b6abfe3dbd3a90c427c986f6a164bc89bcdea0d73107375514a65901a4b40e51a6d21aa2b5dcece1dc1e340f995b5ac2a7dbc62f47b345d298fd9ddcf578d05"
     }
   }
 }

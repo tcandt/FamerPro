@@ -1,14 +1,14 @@
 {
   "algorithm": "Ed25519-RFC8032-SHA256",
-  "keyId": "fp-ed25519-3852ed2f732b",
-  "publisherPublicKeyHex": "3852ed2f732bc35ca9dd159c6fb1bdd1f2a709deaf1b5d41cfcf2f6054c5b292",
-  "manifestSha256": "6f0febad7147bc6ed3c1bb2f510192c78dace7303f699d611f43e52b3d99fa14",
-  "checksumsTableSha256": "debd691f0bcd1b0a42909fd2f3320ad7e2b20018203eb68d476acf713b64aa05",
+  "keyId": "fp-ed25519-af4985b57c07",
+  "publisherPublicKeyHex": "af4985b57c073da2fef38577f9000ac3d5dca61d746b0d779aa40485b30b0d6a",
+  "manifestSha256": "aa1c6e19f6386ba77f6bf3c4719cbb11da3eb6098b37cb0e50ef3567678e0310",
+  "checksumsTableSha256": "33c03b773e0b5bef99a4b39b95b91eb1c90217a34c04beb09ff408265d1cea3e",
   "fileChecksums": {
-    "manifest.fpbundle.json": "6f0febad7147bc6ed3c1bb2f510192c78dace7303f699d611f43e52b3d99fa14",
-    "ui-schema.json": "a5ffbd6e9fd601337e23e5fee30da9deb4a1a1627d4f03fdd1b6b148e545c360",
+    "manifest.fpbundle.json": "aa1c6e19f6386ba77f6bf3c4719cbb11da3eb6098b37cb0e50ef3567678e0310",
+    "ui-schema.json": "e2db8656e57440162f806370906748b650704edb4432942e644746ad4bb1c140",
     "workflows.fpbundle.json": "a34c44ff0cdfa4cab00717301e6e918cb003765ed8510260fd80bd2e5f3dd9dc"
   },
-  "signatureEd25519Hex": "3a2c07e485a489c60fd93c2039edc0d365935357338f48ad0761d952929961f037e4d1a3d3fd5fb28747742b0224bcf6c998cf9c5821ea1d19b086dac39c6d0e",
-  "signedAtUtc": "2026-11-23T02:51:16.587303900+00:00"
+  "signatureEd25519Hex": "761d1c8d52ac275793d6b98eea9de7b43820b96681b7af3ffefed84df1a6b51a6fbd6e3d1ab597a760d8b00d029c023ca2be2a56986fe29d8340bc43134ae202",
+  "signedAtUtc": "2026-11-23T04:24:45.998106200+00:00"
 }

@@ -123,8 +123,8 @@
     }
   ],
   "initialRuntimeVars": {
-    "gold_collected": 18400,
     "target_server": "SEA-01",
+    "gold_collected": 18400,
     "farm_cycles": 42
   }
 }

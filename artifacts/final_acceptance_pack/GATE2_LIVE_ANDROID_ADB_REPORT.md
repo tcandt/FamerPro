@@ -1,53 +1,49 @@
 # FARMERPRO — GATE 2: LIVE ANDROID ADB VALIDATION REPORT
 
-**Status:** `PASS (LIVE_ANDROID_ADB_VERIFIED)`  
-**Frozen RC Code Baseline:** `802f3162df7fe3ab8fd6c7085c9d9e34caca6648` (Git tag `v0.1.0-p6-rc.1`)  
+**Status:** `PASS (LIVE_ANDROID_ADB_VERIFIED — PLATFORM & ANDROID SETTINGS)` · **Game-Specific Workflows:** `NOT TESTED / PENDING`  
+**Verified RC Code Baseline:** `b5a05673b1c0ad10dd4c6ce4463eaabbd3be40fe` (Git Tag: `v0.1.0-p6-rc.2`; hotfix từ `v0.1.0-p6-rc.1` `802f316` sau khi phát hiện trùng transport `emulator-5554`/`127.0.0.1:5555` và lỗi parse `adb reverse --list`)  
+**Addendum:** [GATE2_ACCEPTANCE_ADDENDUM.md](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/GATE2_ACCEPTANCE_ADDENDUM.md)  
 **Verification Harness:** [scripts/verify_gate2_live_adb.js](file:///e:/DATA/FarmerPro/scripts/verify_gate2_live_adb.js)  
 **Machine-Readable Evidence:** [gate2_live_adb_report.json](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_live_adb_report.json)
 
 ---
 
-## 1. Chẩn đoán Nguyên nhân LDPlayer14 / LDPlayer9 Tự Dừng & Phương án Thay thế
+## 1. Chẩn đoán LDPlayer & Khởi chạy Android SDK AVD (`fp_gate2_avd`)
 
-1. **Chẩn đoán trực tiếp từ `VBox.log` (`C:\LDPlayer\LDPlayer9\vms\leidian0\Logs\VBox.log`):**
-   - VirtualBox backend của LDPlayer ghi nhận:
-     - `00:00:00.250446 HM: HMR3Init: Attempting fall back to NEM: VT-x is not available` (`UseNEMInstead = 0`)
-     - `00:00:00.253537 NEM: WHvCapabilityCodeHypervisorPresent is TRUE, so this might work...` (do Hyper-V / Windows Hypervisor Platform đang giữ VT-x)
-     - Sau khi guest kernel khởi chạy dưới chế độ NEM/WHv, tới `00:01:34.771087` phát sinh `Heartbeat flatlined` và VM đi vào `PDMR3PowerOff` / `VBoxHeadless: processEventQueue: VERR_INTERRUPTED, termination requested` (bổ sung cho trường hợp tiến trình con khởi chạy trong sub-shell bị thu hồi theo Windows JobObject khi shell thoát).
-2. **Chuyển sang Giả lập Hoạt động Theo Chỉ đạo (Gate 2 Fallback):**
-   - Kiểm tra công cụ chuẩn của máy phát triển: `emulator-check.exe accel` xác nhận **`WHPX(10.0.26200) is installed and usable`**.
-   - Tạo và khởi chạy AVD chuẩn Android SDK (`fp_gate2_avd`, `system-images\android-37.2-beta3\google_apis_ps16k\x86_64`, `1280×720` landscape, `WHPX`).
-   - Kết nối ổn định với `E:\DATA\FarmerPro\bin\adb.exe` (`emulator-5554 device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k`).
+1. **Nguyên nhân `LDPlayer9` / `LDPlayer14` dừng trên máy chủ:**
+   - `C:\LDPlayer\LDPlayer9\vms\leidian0\Logs\VBox.log`: `00:00:00.250446 HM: HMR3Init: Attempting fall back to NEM: VT-x is not available` khi WHv đang kích hoạt (`WHvCapabilityCodeHypervisorPresent is TRUE`), dẫn đến `00:01:34.771087 Heartbeat flatlined` → `PDMR3PowerOff` / `VERR_INTERRUPTED`.
+2. **Android SDK AVD (`fp_gate2_avd`, `1280×720` WHPX):**
+   - `emulator-check.exe accel` xác nhận `WHPX(10.0.26200) is installed and usable`.
+   - `adb devices -l` kết nối ổn định: `emulator-5554 device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:1`.
+   - Kiểm chứng đồng nhất `boot_id` (`5ddf4574-9b3f-450f-9550-b39f4c1a95bf`) và `ro.boot.serialno` (`EMULATOR37X1X11X0`) giữa `emulator-5554` và `127.0.0.1:5555` xác nhận cả hai là cùng 1 thực thể AVD; hotfix `b5a0567` hợp nhất về 1 bản ghi duy nhất `emulator-5554`.
 
 ---
 
-## 2. Kết quả Kiểm chứng Trực tiếp từ FarmerPro Studio (`FarmerPro.exe`, RC `802f316`)
+## 2. Kết quả Kiểm chứng FarmerPro Studio (`FarmerPro.exe`, `v0.1.0-p6-rc.2`)
 
-Chạy bộ cài `FarmerPro_0.1.0_x64-setup.exe` trong sandbox cô lập hoàn toàn khỏi DB sản xuất:
-- **ADB Discovery & Device Lab:** `auto_discover_devices` + `list_devices` phát hiện thiết bị trực tuyến (`adbDiscoveredCount = 2`: `emulator-5554` & `127.0.0.1:5555`, `connection_state: "ready"`, Android API `37`). Xem [gate2_studio_device_lab.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_studio_device_lab.png).
-- **Live Screenshot & Vision Template Match:** `capture_device` (`79,368` bytes base64 PNG) + `studio_capture_and_crop_template` cắt vùng nút `Search Settings` (`x=50, y=76, 260×56`) -> `studio_test_project_template_match` khớp trực tiếp với độ tin cậy **`0.93104136`** (`bounds: {x: 54, y: 78, width: 221, height: 48}`, `suggestedTapPoint: {x: 168.95, y: 108.90}`).
-- **Job 1 — Live Workflow (OCR + FindImage + SafeTap + Swipe + Pause/Resume + Checkpoint):**
-  - `job-4314bc3f-2f24-4431-9b55-4742fb7bc1cc`: Tạm dừng thành công khi đang chạy (`job1PausedState = "paused"`), sau đó Resume (`studio_resume_job`) chạy tiếp tới `state = "succeeded"` với `24` step events trong SQLite WAL ([gate2_studio_runtime_vars.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_studio_runtime_vars.png)).
-  - Thiết bị thật trước (`gate2_device_before_studio.png`, Settings Home) chuyển rõ rệt sang sau (`gate2_device_after_studio.png`, màn hình Search settings + bàn phím Gboard bật lên sau Safe Random Tap).
-- **Job 2 — Suspend to Checkpoint & Resume from Checkpoint:**
-  - `job-eb8b6611-2f53-4265-b0a4-eb5b3df04ba6`: `studio_suspend_job_to_checkpoint` -> `studio_resume_job_from_checkpoint` khôi phục từ `resumedFromNodeId = "c3"` (`checkpointId = "cp-7afeb446-d67c-4b9c-9e0d-631d6de32e01"`, `fencingGeneration = 3`) -> `state = "succeeded"`, ghi biến `checkpoint_resumed = "SETTINGS_HOME_RESTORED"`.
-- **Job 3 — Cancel Control:**
-  - `studio_cancel_job` dừng tác vụ đang chạy và kết thúc ở `job3FinalState = "cancelled"`.
+- **Canonical Discovery & Device Lab:** Dù `127.0.0.1:5555` được gắn trước khi chạy Studio, `auto_discover_devices` và `list_devices` trả về **`adbDiscoveredCount = 1`** (`emulator-5554`, API `37`, `ready`). Xem [gate2_studio_device_lab.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_studio_device_lab.png).
+- **Live ADB Forward & Reverse (Create → List → Remove):**
+  - `studio_add_device_forward` (`tcp:19555 -> tcp:19556`) & `studio_add_device_reverse` (`tcp:19557 -> tcp:19558`).
+  - `studio_list_device_ports` ghi nhận cả `forwards` và `reverses` với đúng `serial = "emulator-5554"`, `local = "tcp:19558"`, `remote = "tcp:19557"`.
+  - `studio_remove_device_forward` & `studio_remove_device_reverse` xóa sạch về `forwards: [], reverses: []`.
+- **Live Screenshot, Template Match & Workflow Lifecycle:**
+  - `capture_device` (`78,728` B PNG), template crop (`260×56`), match confidence **`0.93104136`** (`bounds: {x: 54, y: 78, w: 221, h: 48}`, `suggestedTapPoint: {x: 128.64, y: 99.69}`).
+  - **Job 1 (`job-19f46ff3-b257-4122-8716-991742e37c26`):** `Pause` (`paused`) → `Resume` → OCR (`"11:26 Q Search Settings..."`, `ocr_matched = true`, `confidence = 0.94`, `source = LIVE_ADB_OCR`, `verified = true`) → `random_safe_tap` → `swipe` → `checkpoint` → `state.set_var` → `succeeded` (`24` events). Xem [gate2_studio_runtime_vars.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_studio_runtime_vars.png).
+  - **Job 2 (`job-51284b9e-7825-4b73-ae1c-aaa2f422cde5`):** `suspend_job_to_checkpoint` (`paused`, `cp-854fc17a-62fb-4bbe-8d2e-902f21108ff1`) → `resume_job_from_checkpoint` (`resumedFromNodeId = "c3"`, `fencingGeneration = 3`) → `succeeded` (`13` events, `checkpoint_resumed = "SETTINGS_HOME_RESTORED"`).
+  - **Job 3:** `studio_cancel_job` → `cancelled`.
 
 ---
 
-## 3. Kết quả Kiểm chứng Trực tiếp từ Mini Tool Độc lập (`Auto_Gate2Live.exe`, Đã Đóng & Gỡ Studio)
+## 3. Kết quả Mini Tool Độc lập (`Auto_Gate2Live.exe`, Đã Đóng & Gỡ Studio)
 
-Studio đóng và chạy `uninstall.exe /S` khỏi sandbox trước khi khởi chạy `Auto_Gate2Live.exe` (giải nén từ `Gate2_LiveMini_v1.0.0_win-x64.zip`, `11,927,370` bytes, SHA-256 `a8d0bd4925bf1caf643b4e676f4fc12b918d6d1acf20ff5698362c8365c920ec`):
-- **Trạng thái Kết nối ADB Độc lập:** `#adb-mode-pill` hiển thị **`LIVE ADB: 2 ONLINE`** (cả trước và sau khi chạy). Xem [gate2_mini_before.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_mini_before.png) và [gate2_mini_after.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_mini_after.png).
-- **Chạy Nhiệm vụ Qua Nút `CHẠY NHIỆM VỤ (ADB THẬT)`:**
-  - Không có bất kỳ nhãn `TESTKIT · Mô phỏng` nào (`anyTestkitBadge = false`).
-  - Các biến cập nhật realtime với provenance thực:
-    - `ocr_matched = true` (`LIVE_ADB_OCR`, `verified = true`, `confidence = 0.94`)
-    - `ocr_screen_label = "10:29 bearch settings No recent search results"` (`LIVE_ADB_OCR`, `verified = true`)
-    - `mini_live_result = "SEARCH_SETTINGS_OPENED"` (`LIVE_STATE`, `verified = true`, `seq = 2`)
-    - `last_data_source = "LIVE_ADB(127.0.0.1:5555)"`, `last_task_state = "Succeeded"`, `task_completed_count = 1` (`LIVE_STATE`, `verified = true`, `seq = 3`)
-  - SQLite độc lập của Mini Tool (`runtime_live-gate2-android.db`) ghi nhận job `mini-job-d6c2c9ab-6b07-4170-9429-629819cfd0be` ở trạng thái `Succeeded` với `22` `step_events`.
+Sau khi chạy `uninstall.exe /S` gỡ Studio khỏi sandbox, giải nén `Gate2_LiveMini_v1.0.0_win-x64.zip` (`11,944,570` B, SHA-256 `ddb899b491df8697cc7fe817987e9a13ae2d1f2819da77568c46290afbae9424`):
+- **Device Pill:** `#adb-mode-pill` hiển thị chính xác **`LIVE ADB: 1 ONLINE`** cả trước và sau chạy. Xem [gate2_mini_before.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_mini_before.png) và [gate2_mini_after.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_mini_after.png).
+- **Chạy qua `CHẠY NHIỆM VỤ (ADB THẬT)`:** `anyTestkitBadge = false`, không có `FakeDeviceDriver`:
+  - `ocr_matched = true` (`LIVE_ADB_OCR`, `verified = true`, `confidence = 0.94`)
+  - `ocr_screen_label = "11:27 Q Search Settings G Google Services & preferences Network & internet Mobile, Wi-Fi, hotspot Connected devices Bluetooth, pairing Apps Assistant, recent apps, default apps"` (`LIVE_ADB_OCR`, `verified = true`)
+  - `mini_live_result = "SEARCH_SETTINGS_OPENED"` (`LIVE_STATE`, `verified = true`)
+  - `last_data_source = "LIVE_ADB(emulator-5554)"`, `last_task_state = "Succeeded"`, `task_completed_count = 1`
+  - SQLite độc lập (`runtime_live-gate2-android.db`): job `mini-job-f773ccb7-e695-4c4d-928a-498a317dd58f` trên `emulator-5554` (`Succeeded`), `22` `step_events`.
 - **Ảnh Trước / Sau Trên Thiết bị Android (`emulator-5554`):**
-  - Studio: [gate2_device_before_studio.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_before_studio.png) (`59,537` B) → [gate2_device_after_studio.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_after_studio.png) (`50,358` B)
-  - Mini Tool: [gate2_device_before_mini.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_before_mini.png) (`25,680` B) → [gate2_device_after_mini.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_after_mini.png) (`25,776` B, con trỏ focus vào ô Search settings sau `random_safe_tap`)
+  - Studio: [gate2_device_before_studio.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_before_studio.png) (`59,095` B, Settings Home) → [gate2_device_after_studio.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_after_studio.png) (`50,040` B, Search settings + Gboard).
+  - Mini Tool: [gate2_device_before_mini.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_before_mini.png) (`58,886` B, Settings Home) → [gate2_device_after_mini.png](file:///e:/DATA/FarmerPro/artifacts/final_acceptance_pack/gate2_live_adb/gate2_device_after_mini.png) (`25,119` B, Search settings opened).

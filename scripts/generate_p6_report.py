@@ -159,8 +159,8 @@ html = f"""<!DOCTYPE html>
     <div class="kpi kpi-ok"><div class="kpi-lbl">BUILD_PASS</div><div class="kpi-val">{total_passed} / {total_passed + total_failed} Cargo OK</div></div>
     <div class="kpi kpi-ok"><div class="kpi-lbl">STANDALONE_LAUNCH</div><div class="kpi-val">2 Portable EXEs PASS</div></div>
     <div class="kpi kpi-ok"><div class="kpi-lbl">UPDATE_ROLLBACK</div><div class="kpi-val">Full-Triad + ACL PASS</div></div>
-    <div class="kpi kpi-warn"><div class="kpi-lbl">LIVE_WORKFLOW_EXEC</div><div class="kpi-val">BLOCKED (0 ADB)</div></div>
-    <div class="kpi kpi-warn"><div class="kpi-lbl">PRODUCTION_ACCEPT</div><div class="kpi-val">BLOCKED (3 Gates)</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-lbl">LIVE_WORKFLOW_EXEC</div><div class="kpi-val">GATE 2 PASS (AVD)</div></div>
+    <div class="kpi kpi-warn"><div class="kpi-lbl">PRODUCTION_ACCEPT</div><div class="kpi-val">BLOCKED (2 Gates)</div></div>
   </div>
 
   <div class="sec-h">I. Bảng Kiểm định Toàn hệ thống P6.1 – P6.5 (Tách bạch PASS Cục bộ, TestKit Simulation và External BLOCKED)</div>
@@ -168,7 +168,7 @@ html = f"""<!DOCTYPE html>
     <thead><tr><th>Nhóm Kiểm định P6</th><th>Kịch bản Thực thi &amp; Bảo mật Thực tế</th><th>Kết quả Đo được từ Binary, Registry, NTFS &amp; Logs</th><th>Trạng thái</th></tr></thead>
     <tbody>
       <tr><td><strong>P6.1 NSIS &amp; WebView2 Policy</strong></td><td>Cài/gỡ <code>FarmerPro_0.1.0_x64-setup.exe</code> ({p61["installerBytes"]:,} B) ở Medium IL; kiểm tra WebView2 missing contract</td><td>Gỡ xong Studio: DB &amp; {p61["dbMetricsAfter"]["tasks"]} tasks còn nguyên (<code>dbPreserved={p61["dbPreserved"]}</code>). Khai báo rõ <code>requiresInternetIfWebview2Missing=true</code> + fail-fast code 3.</td><td><span class="b-pass">ISOLATED PASS</span> / <span class="b-blk">VM BLOCKED</span></td></tr>
-      <tr><td><strong>P6.2 Live Android ADB</strong></td><td>Thăm dò <code>adb.exe devices -l</code> và khởi chạy <code>LDPlayer14 vm0</code> (không bypass UAC)</td><td><code>LDPlayer14 vm0={h_esc(p62["ldplayer14Vm0IsRunning"])}</code> (dừng sau ~10s, không mở cổng ADB 5555; chưa chẩn đoán thêm); <code>onlineDevices={p62["onlineDevicesCount"]}</code>.</td><td><span class="b-blk">BLOCKED (0 ADB)</span></td></tr>
+      <tr><td><strong>P6.2 Live Android ADB</strong></td><td>Chẩn đoán <code>LDPlayer</code> (<code>HM→NEM Heartbeat flatlined</code>) và xác minh trên Android SDK AVD thật (<code>emulator-5554</code>)</td><td><code>onlineDevices={p62["onlineDevicesCount"]}</code> (<code>emulator-5554</code> WHPX); chi tiết Platform ADB &amp; Settings xem <code>GATE2_ACCEPTANCE_ADDENDUM.md</code>; Game workflow chưa kiểm thử.</td><td><span class="b-pass">GATE 2 PASS</span> / <span class="b-blk">GAME PENDING</span></td></tr>
       <tr><td><strong>P6.3 Full-Triad &amp; 6-Comp Boundary</strong></td><td>Thử rollback 3 tệp <code>.updater/</code> và thử thay đồng thời cả 6 vùng user-writable (HKCU + AppData + disk)</td><td>Chặn thay 3 tệp <code>.updater/</code> (<code>FULL_TRIAD_ROLLBACK_DETECTED</code>). Khi thay cả 6 thành phần cùng ACL user, <code>trustEpoch</code> về <code>{p63["sameUser6CompResult"]["trustEpoch"]}</code> (ranh giới same-user).</td><td><span class="b-pass">PASS (BOUNDARY PROVEN)</span></td></tr>
       <tr><td><strong>P6.3 Revoke, Rogue &amp; Manifest</strong></td><td>Thu hồi khóa cũ, thả thư mục <code>v9.9.9</code> (key revoked), <code>v9.9.8</code> (key giả), sửa <code>THIRD_PARTY_NOTICES.txt</code></td><td>Chặn đủ 3 lớp: <code>KEY_REVOKED in versions/v9.9.9</code>, <code>ROGUE_OR_CORRUPT_VERSION_DIR</code>, <code>RELEASE_MANIFEST_TAMPERED</code>.</td><td><span class="b-pass">PASS</span></td></tr>
       <tr><td><strong>P6.3 Final ZIP SHA-256 Match</strong></td><td>Đối chiếu SHA-256 EXE trước khi nén ZIP với EXE trích từ ZIP (Alpha {p63["zipAlphaBytes"]:,} B, Beta {p63["zipBetaBytes"]:,} B)</td><td><code>alphaPrePostZipShaMatch={p63["alphaPrePostZipShaMatch"]}</code>, <code>betaPrePostZipShaMatch={p63["betaPrePostZipShaMatch"]}</code>, 13/13 file khớp.</td><td><span class="b-pass">PASS</span> / <span class="b-blk">NO CA CERT</span></td></tr>
@@ -261,7 +261,7 @@ html = f"""<!DOCTYPE html>
     </div>
   </div>
   <div class="callout">
-    <strong>Phân tách Ranh giới Simulation vs Hardware:</strong> Các biến cập nhật từ nút <em>CHẠY TESTKIT (MÔ PHỎNG)</em> mang nhãn bắt buộc <code>[TESTKIT · Mô phỏng]</code> / <code>DEMO_SIMULATION(FakeDeviceDriver)</code>; <code>LIVE_WORKFLOW_EXECUTION_PASS</code> vẫn giữ nguyên <code>BLOCKED</code> cho đến khi có thiết bị Android thật/LDPlayer14 kết nối qua ADB.
+    <strong>Phân tách Ranh giới Simulation vs Hardware:</strong> Các biến cập nhật từ nút <em>CHẠY TESTKIT (MÔ PHỎNG)</em> mang nhãn bắt buộc <code>[TESTKIT · Mô phỏng]</code> / <code>DEMO_SIMULATION(FakeDeviceDriver)</code>. Bằng chứng chạy ADB thật (Platform &amp; Android Settings trên <code>emulator-5554</code>) được ghi nhận tách riêng tại <code>GATE2_ACCEPTANCE_ADDENDUM.md</code>; Game workflow vẫn giữ <code>NOT TESTED / PENDING</code>.
   </div>
   <div class="ftr"><span>FarmerPro P6 Final Validation Report (Commit {h_esc(head_sha[:12])})</span><span>Trang 3 / 5</span></div>
 </div>
@@ -316,19 +316,19 @@ html = f"""<!DOCTYPE html>
       <tr><td><strong>3.1 Chứng minh Windows sạch &amp; Offline WebView2</strong></td><td>Bổ sung trường <code>requiresInternetIfWebview2Missing=true</code>, kiểm tra <code>detect_webview2_runtime_at([], None)</code> trong unit test (<code>offlineExecutionReady=false</code>), fail-fast code 3 nếu thiếu WebView2; giữ honest <code>BLOCKED</code> cho Clean VM vì host thiếu Windows Sandbox &amp; Hyper-V cần Admin.</td><td><span class="b-pass">CONTRACT FIXED</span> / <span class="b-blk">VM BLOCKED</span></td></tr>
       <tr><td><strong>3.2 Trust Ledger, Gates &amp; Atomic Write Boundary</strong></td><td><code>ExternalTrustAnchor</code> chặn thay 3 tệp <code>.updater/*</code>, thư mục giả &amp; sửa manifest; cho phép re-upgrade key đã trusted (nhưng Cargo test chặn tuyệt đối nếu key bị thu hồi, sai release policy hoặc sai compat gate); kiểm chứng Win32 <code>atomic_write_file</code> cạn retry trả lỗi thật + phục hồi journal; xác nhận 6 vùng user-writable cùng ACL user đưa <code>trustEpoch</code> về 1 (không dùng nhãn tamper-proof).</td><td><span class="b-pass">CLOSED (ACL BOUNDARY)</span></td></tr>
       <tr><td><strong>3.3 Read-Only NTFS ACL thực tế</strong></td><td>Dùng <code>icacls /inheritance:r /grant:r USER:(OI)(CI)(RX)</code> tạo thư mục chỉ đọc/thực thi giống Program Files; Windows trả về <code>os error 5</code>, Portable Mini Tool tự chuyển sang <code>%LOCALAPPDATA%</code> và updater chặn cài đặt ghi.</td><td><span class="b-pass">CLOSED &amp; PROVEN</span></td></tr>
-      <tr><td><strong>3.4 Mini Tool Gameplay &amp; UI 3 Độ phân giải</strong></td><td>Kiểm thử toàn bộ Studio qua 27 phép đo (9 tabs × 1280×720 / 1600×900 / 1920×1080), 0 lỗi tràn ngang; 2 Portable Tools hiển thị 4–5 tasks và chạy TestKit đa luồng. Live ADB vẫn tách riêng ở trạng thái <code>BLOCKED</code>.</td><td><span class="b-sim">UI/TESTKIT OK</span> / <span class="b-blk">ADB BLOCKED</span></td></tr>
+      <tr><td><strong>3.4 Mini Tool Gameplay &amp; UI 3 Độ phân giải</strong></td><td>Kiểm thử toàn bộ Studio qua 27 phép đo (9 tabs × 1280×720 / 1600×900 / 1920×1080), 0 lỗi tràn ngang; 2 Portable Tools chạy TestKit + Gate 2 xác minh Live ADB Platform/Settings (Game workflow chưa kiểm thử).</td><td><span class="b-pass">UI/GATE2 OK</span> / <span class="b-blk">GAME PENDING</span></td></tr>
       <tr><td><strong>3.5 Đối chiếu Binary &amp; Toàn bộ Evidence Pack</strong></td><td>Ghi nhận đầy đủ SHA-256 của Installer, 2 ZIP, EXE trước &amp; sau giải nén ZIP (<code>100% match</code>), kèm toàn bộ manifest SHA-256 tại <code>artifacts/p6_evidence/EVIDENCE_MANIFEST_SHA256.json</code>.</td><td><span class="b-pass">CLOSED &amp; MATCHED</span></td></tr>
     </tbody>
   </table>
 
   <div class="callout-warn">
-    <strong>3 ĐIỀU KIỆN BẮT BUỘC GIỮ TRẠNG THÁI <code>BLOCKED</code> (CHƯA ĐẠT PRODUCTION ACCEPTANCE GATE):</strong><br/>
+    <strong>2 ĐIỀU KIỆN BẮT BUỘC GIỮ TRẠNG THÁI <code>BLOCKED</code> (CHƯA ĐẠT PRODUCTION ACCEPTANCE GATE):</strong><br/>
     1) <strong>Clean Windows VM (Online &amp; Offline + Thiếu WebView2):</strong> Host không bật Windows Sandbox và Hyper-V <code>Get-VM</code> đòi quyền Administrator.<br/>
-    2) <strong>Live Android Hardware ADB:</strong> 0 thiết bị kết nối (<code>LDPlayer14 vm0 = stop</code>, tự dừng sau ~10s không mở cổng ADB 5555; chưa chẩn đoán nguyên nhân bằng phiên tương tác/nâng quyền).<br/>
-    3) <strong>PublicSigned Commercial CA Certificate:</strong> 0 chứng thư thương mại trên máy; chế độ <code>PublicSigned</code> tiếp tục fail-closed.
+    2) <strong>PublicSigned Commercial CA Certificate:</strong> 0 chứng thư thương mại trên máy; chế độ <code>PublicSigned</code> tiếp tục fail-closed.<br/>
+    3) <strong>Ghi chú Gate 2 (Live Android ADB):</strong> Platform &amp; Android Settings đã PASS trên Android SDK AVD <code>emulator-5554</code> (xem <code>GATE2_ACCEPTANCE_ADDENDUM.md</code>); Game-specific workflow giữ <code>NOT TESTED / PENDING</code>.
   </div>
   <div class="callout">
-    <strong>QUYẾT ĐỊNH FINAL ACCEPTANCE GATE P6 (DỪNG CHỜ PHÊ DUYỆT — KHÔNG TỰ PHÁT HÀNH THƯƠNG MẠI):</strong> Toàn bộ kiểm định phần mềm ({total_passed}/{total_passed + total_failed} Cargo tests), đóng gói NSIS/Portable, re-upgrade sau rollback, NTFS ACL thực tế và UI đa độ phân giải đều đạt. Cơ chế <code>ExternalTrustAnchor</code> chống sửa xóa cục bộ trong <code>.updater/</code> và ghi nhận trung thực giới hạn cùng ACL user nếu cả 6 vùng user-writable bị thay đồng thời. Ba cổng phụ thuộc hạ tầng ngoài (Clean VM, Live ADB, Commercial CA) giữ nguyên <code>BLOCKED</code> để Auditor/Owner quyết định.
+    <strong>QUYẾT ĐỊNH FINAL ACCEPTANCE GATE P6 (DỪNG CHỜ PHÊ DUYỆT — KHÔNG TỰ PHÁT HÀNH THƯƠNG MẠI):</strong> Toàn bộ kiểm định phần mềm ({total_passed}/{total_passed + total_failed} Cargo tests), đóng gói NSIS/Portable, re-upgrade sau rollback, NTFS ACL thực tế, UI đa độ phân giải và Gate 2 Platform Live ADB đều đạt. Cơ chế <code>ExternalTrustAnchor</code> chống sửa xóa cục bộ trong <code>.updater/</code> và ghi nhận trung thực giới hạn cùng ACL user nếu cả 6 vùng user-writable bị thay đồng thời. Hai cổng hạ tầng ngoài (Clean Windows VM, Commercial CA) và Game-specific workflow giữ nguyên <code>BLOCKED / PENDING</code> để Auditor/Owner quyết định.
   </div>
   <div class="ftr"><span>FarmerPro P6 Final Validation Report (Commit {h_esc(head_sha[:12])})</span><span>Trang 5 / 5</span></div>
 </div>
