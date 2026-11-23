@@ -15,6 +15,18 @@ function sha256File(p) {
   return h.digest('hex');
 }
 
+function rmSyncRetry(target) {
+  for (let i = 0; i < 6; i++) {
+    try {
+      if (fs.existsSync(target)) fs.rmSync(target, { recursive: true, force: true });
+      return;
+    } catch (e) {
+      if (i === 5) throw e;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 300);
+    }
+  }
+}
+
 function copyDirSync(src, dst) {
   if (!fs.existsSync(src)) return;
   fs.mkdirSync(dst, { recursive: true });
@@ -772,34 +784,44 @@ async function main() {
   );
   const postRbNotes = JSON.parse(runCommandChecked('python', ['-c', notesQueryScript, liveDb], SANDBOX));
 
-  // Verify replaying the same v1.1.0 KeyRotationDelegation nonce after rollback fails cleanly!
-  const nonceReplayErr = runCommandExpectFail(
-    updaterBin,
-    ['upgrade', '--install-root', managedBeta, '--release-dir', factoryData.relOut2_11],
-    SANDBOX,
-    scrubbedEnv()
+  // P6 Closeout Fix 4.B: Legitimate Re-Upgrade v1.1.0 AFTER Rollback to v1.0.0 MUST SUCCEED
+  // without resetting Trust Ledger or losing user data (only untrusted/unregistered rotation replays fail)!
+  const reUpgOk = JSON.parse(
+    runCommandChecked(updaterBin, ['upgrade', '--install-root', managedBeta, '--release-dir', factoryData.relOut2_11], SANDBOX, scrubbedEnv())
   );
+  const afterReUpgNotes = JSON.parse(runCommandChecked('python', ['-c', notesQueryScript, liveDb], SANDBOX));
 
-  // Separate Security Install Root (`ManagedBetaSecP6_<runTag>`) for Revocation + Full-Triad Rollback + Rogue Dir + Manifest Tamper tests
+  // Separate Security Install Root (`ManagedBetaSecP6_<runTag>`) for Revocation + Full-Triad Rollback + 6-Comp Same-User Threat Model + Rogue Dir + Manifest Tamper tests
   const managedBetaSec = path.join(SANDBOX, `ManagedBetaSecP6_${runTag}`);
+  const secAnchorId = crypto
+    .createHash('sha256')
+    .update(managedBetaSec.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase())
+    .digest('hex')
+    .slice(0, 16);
+  const extAnchorFileSec = path.join(SANDBOX, 'ExternalTrustAnchors', `${secAnchorId}.json`);
+  const hkcuSecKey = `HKCU\\Software\\FarmerPro\\TrustAnchors\\${secAnchorId}`;
+
   runCommandChecked(updaterBin, ['install-initial', '--install-root', managedBetaSec, '--release-dir', factoryData.relOut2], SANDBOX, scrubbedEnv());
   const triadSecEpoch1Dir = path.join(SANDBOX, 'triad_sec_epoch1');
   copyDirSync(path.join(managedBetaSec, '.updater'), triadSecEpoch1Dir);
+  const extAnchorEpoch1Bytes = fs.readFileSync(extAnchorFileSec);
+  const ptrEpoch1Bytes = fs.readFileSync(path.join(managedBetaSec, 'active_version.json'));
+
   runCommandChecked(updaterBin, ['upgrade', '--install-root', managedBetaSec, '--release-dir', factoryData.relOut2_11], SANDBOX, scrubbedEnv());
 
   const oldPubHex = fs.readFileSync(path.join(factoryData.relOut2, 'bundle', 'trusted_publisher.pub'), 'utf8').trim();
   const revOut = JSON.parse(
     runCommandChecked(updaterBin, ['revoke-key', '--install-root', managedBetaSec, '--pubkey-hex', oldPubHex, '--reason', 'p6_security_audit'], SANDBOX, scrubbedEnv())
   );
-  fs.rmSync(path.join(managedBetaSec, 'versions', 'v1.0.0'), { recursive: true, force: true });
+  rmSyncRetry(path.join(managedBetaSec, 'versions', 'v1.0.0'));
   const secAuditOk = JSON.parse(
     runCommandChecked(updaterBin, ['verify-security', '--install-root', managedBetaSec], SANDBOX, scrubbedEnv())
   );
 
-  // Attack 1: Replace ENTIRE `.updater/` triad (`trust-state.json` + `.bak.json` + `trust-ledger.db`) back to epoch 1!
+  // Attack 1A (Partial Local Triad Rollback): Replace ENTIRE `.updater/` triad back to epoch 1 while External Anchor + HKCU stay at epoch 3 -> BLOCKED!
   const triadEpoch3Dir = path.join(SANDBOX, 'triad_epoch3_snapshot');
   copyDirSync(path.join(managedBetaSec, '.updater'), triadEpoch3Dir);
-  fs.rmSync(path.join(managedBetaSec, '.updater'), { recursive: true, force: true });
+  rmSyncRetry(path.join(managedBetaSec, '.updater'));
   copyDirSync(triadSecEpoch1Dir, path.join(managedBetaSec, '.updater'));
   const fullTriadAttackErr = runCommandExpectFail(
     updaterBin,
@@ -809,7 +831,7 @@ async function main() {
   );
 
   // Restore epoch 3, Attack 2A: Plant v9.9.9 dir signed by REVOKED key
-  fs.rmSync(path.join(managedBetaSec, '.updater'), { recursive: true, force: true });
+  rmSyncRetry(path.join(managedBetaSec, '.updater'));
   copyDirSync(triadEpoch3Dir, path.join(managedBetaSec, '.updater'));
   const rogueV999 = path.join(managedBetaSec, 'versions', 'v9.9.9');
   copyDirSync(factoryData.relOut1, rogueV999);
@@ -819,7 +841,7 @@ async function main() {
     SANDBOX,
     scrubbedEnv()
   );
-  fs.rmSync(rogueV999, { recursive: true, force: true });
+  rmSyncRetry(rogueV999);
 
   // Attack 2B: Plant rogue v9.9.8 dir with altered trusted_publisher.pub (untrusted/rogue binary)
   const rogueV998 = path.join(managedBetaSec, 'versions', 'v9.9.8');
@@ -831,16 +853,38 @@ async function main() {
     SANDBOX,
     scrubbedEnv()
   );
-  fs.rmSync(rogueV998, { recursive: true, force: true });
+  rmSyncRetry(rogueV998);
 
   // Attack 3: Tamper distributed file covered by release-manifest.json inside versions/v1.1.0/
   const v110Notice = path.join(managedBetaSec, 'versions', 'v1.1.0', 'THIRD_PARTY_NOTICES.txt');
+  const origNoticeBytes = fs.readFileSync(v110Notice);
   fs.writeFileSync(v110Notice, 'TAMPERED_NOTICE_BYTES');
   const manifestTamperErr = runCommandExpectFail(
     updaterBin,
     ['verify-security', '--install-root', managedBetaSec],
     SANDBOX,
     scrubbedEnv()
+  );
+  fs.writeFileSync(v110Notice, origNoticeBytes);
+
+  // Attack 4 (Honest Same-User 6-Component Threat-Model Boundary Test):
+  // Replace ALL 6 user-writable trust components simultaneously:
+  // (1) trust-state.json, (2) trust-state.bak.json, (3) trust-ledger.db, (4) External Anchor JSON, (5) HKCU Registry key, (6) old versions/v1.0.0
+  // Inspect ACLs first to prove HKCU + ExternalTrustAnchors + .updater are all writable by current standard user.
+  const threatModelAcls = runPsJson(`
+    $regAcl = (Get-Acl 'Registry::${hkcuSecKey}').Access | Where-Object { $_.IdentityReference -match 'TINH-NGUYEN|Users' } | Select-Object -First 2 | ForEach-Object { "$($_.IdentityReference):$($_.RegistryRights)" };
+    $fileAcl = (icacls '${extAnchorFileSec.replace(/'/g, "''")}' 2>&1) -join ' | ';
+    [PSCustomObject]@{ hkcuWriteAcl = ($regAcl -join '; '); extFileAcl = $fileAcl } | ConvertTo-Json -Compress
+  `);
+  rmSyncRetry(path.join(managedBetaSec, 'versions', 'v1.1.0'));
+  copyDirSync(factoryData.relOut2, path.join(managedBetaSec, 'versions', 'v1.0.0'));
+  rmSyncRetry(path.join(managedBetaSec, '.updater'));
+  copyDirSync(triadSecEpoch1Dir, path.join(managedBetaSec, '.updater'));
+  fs.writeFileSync(path.join(managedBetaSec, 'active_version.json'), ptrEpoch1Bytes);
+  fs.writeFileSync(extAnchorFileSec, extAnchorEpoch1Bytes);
+  try { execFileSync('reg', ['delete', hkcuSecKey, '/f'], { stdio: 'ignore' }); } catch (_) {}
+  const sameUser6CompResult = JSON.parse(
+    runCommandChecked(updaterBin, ['verify-security', '--install-root', managedBetaSec], SANDBOX, scrubbedEnv())
   );
 
   // Cleanup temp CNG cert & sandbox HKCU test trust anchor keys cleanly
@@ -868,7 +912,7 @@ async function main() {
       STANDALONE_LAUNCH_PASS: true,
       UPDATE_ROLLBACK_PASS: true,
       LIVE_WORKFLOW_EXECUTION_PASS:
-        userAndAdb.onlineDevices.length > 0 ? true : 'BLOCKED (0 online ADB devices; LDPlayer14 vm0 stopped in Medium IL non-elevated session)',
+        userAndAdb.onlineDevices.length > 0 ? true : 'BLOCKED (0 online ADB devices; LDPlayer14 vm0 stopped without opening ADB port 5555)',
       PRODUCTION_ACCEPTANCE_PASS:
         'BLOCKED (Clean Windows VM + Live Hardware ADB + Commercial PublicSigned CA Cert required before production sign-off)',
     },
@@ -900,12 +944,16 @@ async function main() {
       betaPrePostZipShaMatch: betaPreSha === betaPostZipSha,
       finalVerifyAlpha: factoryData.fv1,
       finalVerifyBeta: factoryData.fv2,
-      nonceReplayErr,
+      reUpgOk,
       secAuditOk,
       fullTriadAttackErr,
       rogueRevokedDirAttackErr,
       rogueDirAttackErr,
       manifestTamperErr,
+      threatModelAcls,
+      sameUser6CompResult,
+      sameUserThreatBoundaryNote:
+        'Partial local rollback (.updater triad only) is blocked by External Anchor + HKCU. However, under the same Windows User ACL where both HKCU and LocalAppData are writable by that user, replacing all 6 components simultaneously resets trustEpoch back to 1 (observed honestly without claiming absolute tamper-proofing).',
       commercialPublicSigned: 'BLOCKED (0 commercial CA code-signing certs on host)',
     },
     p6_4_ntfsAclAndDataRecovery: {
@@ -919,6 +967,7 @@ async function main() {
       instRes,
       upgRes,
       rbRes,
+      afterReUpgNotes,
       revOutEpoch: revOut.trustEpoch,
       preRbNotes,
       postRbNotes,
@@ -939,12 +988,16 @@ async function main() {
     dbPreserved,
     alphaPrePostZipShaMatch: report.p6_3_securityAndReleaseChecksums.alphaPrePostZipShaMatch,
     betaPrePostZipShaMatch: report.p6_3_securityAndReleaseChecksums.betaPrePostZipShaMatch,
+    reUpgradeAfterRollbackVersion: reUpgOk.activeVersion,
     fullTriadBlocked: fullTriadAttackErr.includes('FULL_TRIAD_ROLLBACK_DETECTED'),
     rogueRevokedDirBlocked: rogueRevokedDirAttackErr.includes('KEY_REVOKED'),
     rogueDirBlocked: rogueDirAttackErr.includes('ROGUE_OR_CORRUPT_VERSION_DIR') || rogueDirAttackErr.includes('ROGUE_VERSION_DIR_DETECTED'),
     manifestTamperBlocked: manifestTamperErr.includes('RELEASE_MANIFEST_TAMPERED'),
+    sameUser6CompEpochObserved: sameUser6CompResult.trustEpoch,
     ntfsAclFallbackUsed: report.p6_4_ntfsAclAndDataRecovery.ntfsDepsFallbackUsed,
-    notesPreservedAcrossRollback: postRbNotes.post_upgrade_v110 === 'kept_across_binary_rollback',
+    notesPreservedAcrossRollbackAndReupgrade:
+      postRbNotes.post_upgrade_v110 === 'kept_across_binary_rollback' &&
+      afterReUpgNotes.post_upgrade_v110 === 'kept_across_binary_rollback',
     uiChecksTotal: uiResolutionAudit.length,
     uiAnyOverflow,
     alphaTestkitLogs: alphaRunStats?.logsCount || 0,
@@ -956,12 +1009,15 @@ async function main() {
     !studioRemoved ||
     !report.p6_3_securityAndReleaseChecksums.alphaPrePostZipShaMatch ||
     !report.p6_3_securityAndReleaseChecksums.betaPrePostZipShaMatch ||
+    reUpgOk.activeVersion !== '1.1.0' ||
     !fullTriadAttackErr.includes('FULL_TRIAD_ROLLBACK_DETECTED') ||
     !rogueRevokedDirAttackErr.includes('KEY_REVOKED') ||
     !(rogueDirAttackErr.includes('ROGUE_OR_CORRUPT_VERSION_DIR') || rogueDirAttackErr.includes('ROGUE_VERSION_DIR_DETECTED')) ||
     !manifestTamperErr.includes('RELEASE_MANIFEST_TAMPERED') ||
+    sameUser6CompResult.trustEpoch !== 1 ||
     !report.p6_4_ntfsAclAndDataRecovery.ntfsDepsFallbackUsed ||
     postRbNotes.post_upgrade_v110 !== 'kept_across_binary_rollback' ||
+    afterReUpgNotes.post_upgrade_v110 !== 'kept_across_binary_rollback' ||
     (alphaRunStats?.logsCount || 0) === 0 ||
     (betaRunStats?.logsCount || 0) === 0
   ) {

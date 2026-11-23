@@ -1400,12 +1400,6 @@ impl MiniToolUpdater {
 
         let _ = self.verify_installed_exe_integrity()?;
 
-        let verified = Self::verify_candidate_release_dir_with_anchor(
-            candidate_release_dir,
-            &RuntimeCompatibilityProfile::default(),
-            Some(&installed_trusted_pubkey),
-        )?;
-
         let trust_state = self.read_trust_state()?.unwrap_or_else(|| PersistentTrustState {
             trust_epoch: 1,
             publisher_id: None,
@@ -1415,6 +1409,38 @@ impl MiniToolUpdater {
             previous_state_sha256: None,
             updated_at_utc: Utc::now().to_rfc3339(),
         });
+
+        let verified = match Self::verify_candidate_release_dir_with_anchor(
+            candidate_release_dir,
+            &RuntimeCompatibilityProfile::default(),
+            Some(&installed_trusted_pubkey),
+        ) {
+            Ok(v) => v,
+            Err(anchor_err) => {
+                // Allow upgrading to a release signed by a key ALREADY trusted in trust-state
+                // (e.g., after rolling back from v1.1.0 [NewKey] -> v1.0.0 [OldKey], then upgrading to v1.2.0 [NewKey]).
+                let Ok(unanchored) = Self::verify_candidate_release_dir_with_anchor(
+                    candidate_release_dir,
+                    &RuntimeCompatibilityProfile::default(),
+                    None,
+                ) else {
+                    return Err(anchor_err);
+                };
+                let in_trusted = trust_state
+                    .trusted_pubkeys
+                    .iter()
+                    .any(|k| k.eq_ignore_ascii_case(&unanchored.pe_pubkey_hex))
+                    && !trust_state
+                        .revoked_pubkeys
+                        .iter()
+                        .any(|r| r.eq_ignore_ascii_case(&unanchored.pe_pubkey_hex));
+                if !in_trusted {
+                    return Err(anchor_err);
+                }
+                unanchored
+            }
+        };
+
         if trust_state
             .revoked_pubkeys
             .iter()
@@ -1436,7 +1462,11 @@ impl MiniToolUpdater {
                 );
             }
         }
-        if verified.rotated_from_pubkey_hex.is_some() {
+        let key_already_trusted = trust_state
+            .trusted_pubkeys
+            .iter()
+            .any(|k| k.eq_ignore_ascii_case(&verified.pe_pubkey_hex));
+        if verified.rotated_from_pubkey_hex.is_some() && !key_already_trusted {
             if let Some(ref deleg) = verified
                 .manifest
                 .signing
@@ -1539,11 +1569,16 @@ impl MiniToolUpdater {
         self.write_journal(&mut journal)?;
         maybe_trigger_fault(FaultInjectionPoint::AfterStage, options);
 
-        // Step 5: Verify staged bundle strictly against installed trust anchor & SQLite migration validation
+        // Step 5: Verify staged bundle strictly against rotation anchor (if rotating) or authorized trusted key
+        let stage_anchor = if verified.rotated_from_pubkey_hex.is_some() {
+            installed_trusted_pubkey.as_str()
+        } else {
+            verified.pe_pubkey_hex.as_str()
+        };
         let staged_verified = Self::verify_candidate_release_dir_with_anchor(
             &staging_dir,
             &RuntimeCompatibilityProfile::default(),
-            Some(&installed_trusted_pubkey),
+            Some(stage_anchor),
         )?;
         if !options.skip_child_verify_exec {
             verify_staged_exe_bundle(&staged_verified.exe_path, &self.data_dir())?;
@@ -2539,15 +2574,31 @@ fn atomic_write_file(dest: &Path, content: &[u8]) -> Result<()> {
             .encode_wide()
             .chain(std::iter::once(0))
             .collect();
-        let ok = unsafe {
-            MoveFileExW(
-                src_w.as_ptr(),
-                dst_w.as_ptr(),
-                MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
-            )
-        };
-        if ok == 0 {
-            let code = unsafe { GetLastError() };
+        let mut last_err_code = 0u32;
+        let mut moved = false;
+        for attempt in 0..5 {
+            let ok = unsafe {
+                MoveFileExW(
+                    src_w.as_ptr(),
+                    dst_w.as_ptr(),
+                    MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+                )
+            };
+            if ok != 0 {
+                moved = true;
+                break;
+            }
+            last_err_code = unsafe { GetLastError() };
+            if (last_err_code == ERROR_SHARING_VIOLATION || last_err_code == ERROR_ACCESS_DENIED)
+                && attempt < 4
+            {
+                std::thread::sleep(std::time::Duration::from_millis(35));
+                continue;
+            }
+            break;
+        }
+        if !moved {
+            let code = last_err_code;
             let _ = fs::remove_file(&tmp_path);
             if code == ERROR_SHARING_VIOLATION || code == ERROR_ACCESS_DENIED {
                 bail!(
@@ -3880,6 +3931,132 @@ mod tests {
         fs::write(updater.versions_dir().join("v1.1.0").join("THIRD_PARTY_NOTICES.txt"), b"TAMPERED_NOTICE").unwrap();
         let rm_err = updater.verify_install_security_audit().unwrap_err().to_string();
         assert!(rm_err.contains("RELEASE_MANIFEST_TAMPERED"), "got: {}", rm_err);
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_p6_reupgrade_after_rollback_vs_replay_and_6comp_same_user_boundary() {
+        use fp_builder::security::ProducerKeyManager;
+        use fp_bundle_contract::{
+            KeyRotationDelegation, PeVersionInfoSpec, PublisherIdentitySpec, ReleaseSigningMetadata,
+        };
+
+        let tmp = std::env::temp_dir().join(format!("fp_updater_p6_reupg_{}", Uuid::new_v4()));
+        let rel_100 = tmp.join("rel_100");
+        let rel_110 = tmp.join("rel_110");
+        let rel_120_direct = tmp.join("rel_120_direct");
+        let anchor_dir = tmp.join("ext_anchors");
+
+        let key_old = SigningKey::from_bytes(&[81u8; 32]);
+        let key_new = SigningKey::from_bytes(&[82u8; 32]);
+        let pub_old: String = key_old.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let pub_new: String = key_new.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+
+        let attach = |dir: &Path, sk: &SigningKey, pk_hex: &str, rot: Option<KeyRotationDelegation>| {
+            let bdir = dir.join("bundle");
+            let mut m: ReleaseBundleManifest =
+                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap()).unwrap();
+            m.publisher = Some(PublisherIdentitySpec {
+                publisher_id: "pub-p6-reupg".to_string(),
+                display_name: "P6 Reupgrade Publisher".to_string(),
+                organization: "P6 Reupgrade Labs".to_string(),
+                website: None,
+                support_contact: None,
+                copyright: "Copyright (C) 2026 P6 Reupgrade Labs".to_string(),
+                ed25519_key_id: "k-p6r".to_string(),
+                ed25519_pubkey_hex: pk_hex.to_string(),
+                authenticode_cert_ref: None,
+                release_channel: "qa".to_string(),
+                signing_policy: SigningMode::UnsignedInternal,
+            });
+            m.signing = Some(ReleaseSigningMetadata {
+                signing_mode: SigningMode::UnsignedInternal,
+                publisher_id: "pub-p6-reupg".to_string(),
+                publisher_organization: "P6 Reupgrade Labs".to_string(),
+                release_channel: "qa".to_string(),
+                authenticode_trust_status: AuthenticodeTrustStatus::Unsigned,
+                trusted_public_release: false,
+                signer_thumbprint: None,
+                signer_subject: None,
+                version_info: PeVersionInfoSpec::default(),
+                key_rotation: rot,
+            });
+            let mb = serde_json::to_vec_pretty(&m).unwrap();
+            fs::write(bdir.join("manifest.fpbundle.json"), &mb).unwrap();
+            let mut sig_env: SignedBundleEnvelope =
+                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap()).unwrap();
+            sig_env.file_checksums.insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
+            let msha = sha256_hex(&mb);
+            let tjson = serde_json::to_string(&sig_env.file_checksums).unwrap();
+            let thash = sha256_hex(tjson.as_bytes());
+            let msg = fp_bundle_verify::canonical_signing_message(&sig_env.key_id, &msha, &thash);
+            let s = sk.sign(&msg);
+            sig_env.manifest_sha256 = msha;
+            sig_env.checksums_table_sha256 = thash;
+            sig_env.signature_ed25519_hex = s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+            fs::write(bdir.join("signature.fpbundle.json"), serde_json::to_vec_pretty(&sig_env).unwrap()).unwrap();
+        };
+
+        create_signed_test_release(&rel_100, "p6-reupg", "Auto_Reupg.exe", "1.0.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [81u8; 32]);
+        attach(&rel_100, &key_old, &pub_old, None);
+
+        let delegation = ProducerKeyManager::sign_key_rotation_delegation(&key_old, &pub_new, "pub-p6-reupg", "p6-reupg", 30);
+        create_signed_test_release(&rel_110, "p6-reupg", "Auto_Reupg.exe", "1.1.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [82u8; 32]);
+        attach(&rel_110, &key_new, &pub_new, Some(delegation.clone()));
+
+        create_signed_test_release(&rel_120_direct, "p6-reupg", "Auto_Reupg.exe", "1.2.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [82u8; 32]);
+        attach(&rel_120_direct, &key_new, &pub_new, None);
+
+        let install_root = tmp.join("installed/LegitReupg");
+        let updater = MiniToolUpdater::new_with_external_anchor(&install_root, &anchor_dir);
+        let opts = UpdateExecutionOptions { skip_child_verify_exec: true, ..Default::default() };
+
+        // 1. Install v1.0.0 -> Upgrade v1.1.0 -> Rollback v1.0.0 -> Legitimate Re-Upgrade v1.1.0 -> Rollback -> Direct v1.2.0 (already-trusted key)
+        updater.install_initial(&rel_100, &opts).unwrap();
+        updater.upgrade_from_release(&rel_110, &opts).unwrap();
+        let rb = updater.rollback_to_previous(false, true).unwrap();
+        assert_eq!(rb.active_version, "1.0.0");
+
+        let reupg = updater.upgrade_from_release(&rel_110, &opts).unwrap();
+        assert_eq!(reupg.active_version, "1.1.0");
+        updater.rollback_to_previous(false, true).unwrap();
+        let direct120 = updater.upgrade_from_release(&rel_120_direct, &opts).unwrap();
+        assert_eq!(direct120.active_version, "1.2.0");
+
+        // 2. Real Unauthorized Replay Attack on separate install where ONLY OldKey is trusted & nonce is already spent
+        let replay_root = tmp.join("installed/ReplayTarget");
+        let u_replay = MiniToolUpdater::new_with_external_anchor(&replay_root, &anchor_dir);
+        u_replay.install_initial(&rel_100, &opts).unwrap();
+        let mut ts_rep = u_replay.read_trust_state().unwrap().unwrap();
+        ts_rep.used_rotation_nonces.push(delegation.nonce.clone());
+        ts_rep.trust_epoch += 1;
+        u_replay.write_trust_state(&ts_rep).unwrap();
+        let rep_err = u_replay.upgrade_from_release(&rel_110, &opts).unwrap_err().to_string();
+        assert!(rep_err.contains("KEY_ROTATION_NONCE_REPLAYED"), "got: {}", rep_err);
+
+        // 3. Empirical 6-Component Same-User Simultaneous Compromise Demonstration
+        // Snapshot epoch 1 across ALL same-user writable artifacts (local .updater + external anchor + pointer + versions/)
+        let comp_root = tmp.join("installed/SameUser6Comp");
+        let u_comp = MiniToolUpdater::new_with_external_anchor(&comp_root, &anchor_dir);
+        u_comp.install_initial(&rel_100, &opts).unwrap();
+        let snap_updater = tmp.join("snap6_updater");
+        let snap_ptr = fs::read(u_comp.active_pointer_path()).unwrap();
+        let snap_ext = fs::read(u_comp.external_anchor_file_path().unwrap()).unwrap();
+        copy_dir_recursive(&u_comp.updater_dir(), &snap_updater).unwrap();
+
+        u_comp.upgrade_from_release(&rel_110, &opts).unwrap();
+        u_comp.revoke_pubkey(&pub_old, "retired").unwrap();
+        assert_eq!(u_comp.read_trust_state().unwrap().unwrap().trust_epoch, 3);
+
+        // Same user overwrites ALL local + external trust stores + removes v1.1.0 -> proves boundary limit transparently!
+        let _ = fs::remove_dir_all(u_comp.versions_dir().join("v1.1.0"));
+        let _ = fs::remove_dir_all(u_comp.updater_dir());
+        copy_dir_recursive(&snap_updater, &u_comp.updater_dir()).unwrap();
+        fs::write(u_comp.active_pointer_path(), &snap_ptr).unwrap();
+        fs::write(u_comp.external_anchor_file_path().unwrap(), &snap_ext).unwrap();
+        let after_6comp = u_comp.verify_install_security_audit().unwrap();
+        assert_eq!(after_6comp.trust_epoch, 1);
 
         let _ = fs::remove_dir_all(&tmp);
     }
