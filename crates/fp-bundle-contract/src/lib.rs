@@ -764,6 +764,8 @@ pub struct PortableDependencyAudit {
     pub third_party_notices_present: bool,
     #[serde(default)]
     pub updater_bundled: bool,
+    #[serde(default)]
+    pub requires_internet_if_webview2_missing: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -784,6 +786,8 @@ pub struct PortableRuntimeRequirements {
     pub requires_windows_sdk: bool,
     pub webview2_strategy: String,
     pub offline_ready: bool,
+    #[serde(default)]
+    pub requires_internet_if_webview2_missing: bool,
     pub data_isolation_policy: String,
 }
 
@@ -881,6 +885,15 @@ pub fn audit_portable_environment(
     project_slug: &str,
 ) -> PortableDependencyAudit {
     let (wv2_ok, wv2_note) = detect_webview2_runtime();
+    audit_portable_environment_with_webview2(release_dir, project_slug, wv2_ok, wv2_note)
+}
+
+pub fn audit_portable_environment_with_webview2(
+    release_dir: &Path,
+    project_slug: &str,
+    wv2_ok: bool,
+    wv2_note: String,
+) -> PortableDependencyAudit {
     let bin_dir = release_dir.join("bin");
     let adb_exe = bin_dir.join("adb.exe").exists();
     let adb_dll1 = bin_dir.join("AdbWinApi.dll").exists();
@@ -907,6 +920,7 @@ pub fn audit_portable_environment(
     let notices_ok = release_dir.join("THIRD_PARTY_NOTICES.txt").exists();
     let updater_ok = release_dir.join("updater").join("fp-updater.exe").exists()
         || release_dir.join("fp-updater.exe").exists();
+    let offline_execution_ready = wv2_ok && adb_exe && adb_dll1 && adb_dll2 && updater_ok;
 
     PortableDependencyAudit {
         webview2_evergreen_installed: wv2_ok,
@@ -919,9 +933,10 @@ pub fn audit_portable_environment(
         write_probe_error: probe_err,
         resolved_sqlite_db_path: db_path.to_string_lossy().to_string(),
         fallback_to_local_appdata_used: fallback_used,
-        offline_execution_ready: true,
+        offline_execution_ready,
         third_party_notices_present: notices_ok,
         updater_bundled: updater_ok,
+        requires_internet_if_webview2_missing: true,
     }
 }
 
@@ -1038,6 +1053,46 @@ mod tests {
         let db_str = db_path_2.to_string_lossy();
         assert!(db_str.contains("MiniTools"));
         assert!(db_str.ends_with("runtime_jx2-mobile.db"));
+
+        let _ = std::fs::remove_dir_all(&temp_base);
+    }
+
+    #[test]
+    fn test_p6_webview2_missing_reports_not_offline_ready() {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let temp_base = std::env::temp_dir().join(format!(
+            "fp_wv2_missing_test_{}_{}",
+            std::process::id(),
+            nanos
+        ));
+        std::fs::create_dir_all(temp_base.join("bin")).unwrap();
+        std::fs::create_dir_all(temp_base.join("updater")).unwrap();
+        std::fs::write(temp_base.join("bin").join("adb.exe"), b"adb").unwrap();
+        std::fs::write(temp_base.join("bin").join("AdbWinApi.dll"), b"dll1").unwrap();
+        std::fs::write(temp_base.join("bin").join("AdbWinUsbApi.dll"), b"dll2").unwrap();
+        std::fs::write(temp_base.join("updater").join("fp-updater.exe"), b"upd").unwrap();
+        std::fs::write(temp_base.join("THIRD_PARTY_NOTICES.txt"), b"notices").unwrap();
+
+        let missing_dir = temp_base.join("nonexistent_webview2");
+        let (wv2_ok, wv2_note) = detect_webview2_runtime_at(&[missing_dir.as_path()], None);
+        assert!(!wv2_ok);
+        assert!(wv2_note.contains("WEBVIEW2_MISSING"));
+
+        let audit = audit_portable_environment_with_webview2(
+            &temp_base,
+            "wv2-test",
+            wv2_ok,
+            wv2_note,
+        );
+        assert!(!audit.webview2_evergreen_installed);
+        assert!(!audit.offline_execution_ready);
+        assert!(audit.requires_internet_if_webview2_missing);
+        assert!(audit.adb_exe_present);
+        assert!(audit.updater_bundled);
+        assert!(audit.third_party_notices_present);
 
         let _ = std::fs::remove_dir_all(&temp_base);
     }

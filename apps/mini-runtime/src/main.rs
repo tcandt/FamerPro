@@ -1128,6 +1128,7 @@ fn main() {
     let (wv2_ok, wv2_msg) = fp_bundle_contract::detect_webview2_runtime();
     if !wv2_ok {
         eprintln!("WEBVIEW2_RUNTIME_MISSING: {}", wv2_msg);
+        std::process::exit(3);
     }
 
     let bundle_dir = resolve_bundle_dir();

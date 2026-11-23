@@ -567,6 +567,7 @@ impl MiniToolPackager {
                 requires_windows_sdk: false,
                 webview2_strategy: dep_audit.webview2_version_or_note.clone(),
                 offline_ready: dep_audit.offline_execution_ready,
+                requires_internet_if_webview2_missing: dep_audit.requires_internet_if_webview2_missing,
                 data_isolation_policy: "External data/ next to install root OR %LOCALAPPDATA%\\FarmerPro\\MiniTools\\<slug> fallback; never inside versions/v*".to_string(),
             },
             publisher: effective_publisher.clone(),

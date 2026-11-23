@@ -4,7 +4,7 @@ use fp_actions::{SafeRegionSampler, SafeTapPolicy};
 use fp_adb::{validate_adb_token, AdbDeviceDriver};
 use fp_builder::{
     authenticode::{
-        create_self_signed_qa_cert, discover_signing_toolchain, find_signtool_exe,
+        create_self_signed_qa_cert, discover_signing_toolchain,
         QaSelfSignedCertInfo, SigningToolchainStatus,
     },
     security::{ProducerKeyManager, ProducerKeyMetadata},

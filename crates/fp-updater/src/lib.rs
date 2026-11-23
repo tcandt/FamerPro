@@ -185,15 +185,230 @@ pub struct VerifiedCandidateRelease {
     pub publisher_id: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalTrustAnchorRecord {
+    pub anchor_schema_version: u32,
+    pub install_anchor_id: String,
+    pub trust_epoch: u64,
+    pub publisher_id: Option<String>,
+    pub trusted_pubkeys: Vec<String>,
+    pub revoked_pubkeys: Vec<String>,
+    pub used_rotation_nonces: Vec<String>,
+    pub trust_state_sha256: String,
+    pub updated_at_utc: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallSecurityAuditReport {
+    pub passed: bool,
+    pub install_root: String,
+    pub trust_epoch: u64,
+    pub active_version: String,
+    pub active_exe_sha256: String,
+    pub pe_root_pubkey_hex: String,
+    pub authenticode_trust_status: AuthenticodeTrustStatus,
+    pub external_anchor_verified: bool,
+    pub versions_scanned: Vec<String>,
+    pub rogue_or_tampered_versions: Vec<String>,
+    pub issues: Vec<String>,
+}
+
 pub struct MiniToolUpdater {
     pub install_root: PathBuf,
+    pub external_anchor_root: Option<PathBuf>,
+    pub enable_registry_anchor: bool,
+}
+
+fn default_external_anchor_root() -> PathBuf {
+    if let Ok(custom) = std::env::var("FP_TRUST_ANCHOR_DIR") {
+        let trimmed = custom.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed);
+        }
+    }
+    if let Ok(local) = std::env::var("LOCALAPPDATA") {
+        let trimmed = local.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed).join("FarmerPro").join("TrustAnchors");
+        }
+    }
+    std::env::temp_dir().join("FarmerProTrustAnchors")
 }
 
 impl MiniToolUpdater {
     pub fn new<P: AsRef<Path>>(install_root: P) -> Self {
         Self {
             install_root: install_root.as_ref().to_path_buf(),
+            external_anchor_root: Some(default_external_anchor_root()),
+            enable_registry_anchor: cfg!(all(windows, not(test))),
         }
+    }
+
+    pub fn new_with_external_anchor<P: AsRef<Path>, A: AsRef<Path>>(
+        install_root: P,
+        anchor_root: A,
+    ) -> Self {
+        Self {
+            install_root: install_root.as_ref().to_path_buf(),
+            external_anchor_root: Some(anchor_root.as_ref().to_path_buf()),
+            enable_registry_anchor: false,
+        }
+    }
+
+    pub fn install_anchor_id(&self) -> String {
+        let norm = self
+            .install_root
+            .to_string_lossy()
+            .replace('\\', "/")
+            .trim_end_matches('/')
+            .to_ascii_lowercase();
+        let digest = fp_bundle_verify::sha256_hex(norm.as_bytes());
+        digest.chars().take(16).collect()
+    }
+
+    pub fn external_anchor_file_path(&self) -> Option<PathBuf> {
+        self.external_anchor_root
+            .as_ref()
+            .map(|r| r.join(format!("{}.json", self.install_anchor_id())))
+    }
+
+    fn hkcu_registry_key(&self) -> String {
+        format!(
+            r"HKCU\Software\FarmerPro\TrustAnchors\{}",
+            self.install_anchor_id()
+        )
+    }
+
+    fn read_hkcu_trust_anchor(&self) -> Option<(u64, Vec<String>, Vec<String>)> {
+        if !self.enable_registry_anchor {
+            return None;
+        }
+        #[cfg(windows)]
+        {
+            let key = self.hkcu_registry_key();
+            let out = std::process::Command::new("reg")
+                .args(["query", &key])
+                .output()
+                .ok()?;
+            if !out.status.success() {
+                return None;
+            }
+            let txt = String::from_utf8_lossy(&out.stdout);
+            let mut epoch: Option<u64> = None;
+            let mut revoked: Vec<String> = Vec::new();
+            let mut nonces: Vec<String> = Vec::new();
+            for line in txt.lines() {
+                let t = line.trim();
+                if let Some(rest) = t.strip_prefix("TrustEpoch") {
+                    if let Some(val) = rest.split("REG_SZ").nth(1) {
+                        epoch = val.trim().parse::<u64>().ok();
+                    }
+                } else if let Some(rest) = t.strip_prefix("RevokedPubkeysJson") {
+                    if let Some(val) = rest.split("REG_SZ").nth(1) {
+                        revoked = serde_json::from_str(val.trim()).unwrap_or_default();
+                    }
+                } else if let Some(rest) = t.strip_prefix("UsedNoncesJson") {
+                    if let Some(val) = rest.split("REG_SZ").nth(1) {
+                        nonces = serde_json::from_str(val.trim()).unwrap_or_default();
+                    }
+                }
+            }
+            epoch.map(|e| (e, revoked, nonces))
+        }
+        #[cfg(not(windows))]
+        {
+            None
+        }
+    }
+
+    fn write_hkcu_trust_anchor(&self, record: &ExternalTrustAnchorRecord) {
+        if !self.enable_registry_anchor {
+            return;
+        }
+        #[cfg(windows)]
+        {
+            let key = self.hkcu_registry_key();
+            let epoch_str = record.trust_epoch.to_string();
+            let rev_json = serde_json::to_string(&record.revoked_pubkeys).unwrap_or_else(|_| "[]".into());
+            let nonces_json = serde_json::to_string(&record.used_rotation_nonces).unwrap_or_else(|_| "[]".into());
+            let _ = std::process::Command::new("reg")
+                .args(["add", &key, "/v", "TrustEpoch", "/t", "REG_SZ", "/d", &epoch_str, "/f"])
+                .output();
+            let _ = std::process::Command::new("reg")
+                .args(["add", &key, "/v", "StateSha256", "/t", "REG_SZ", "/d", &record.trust_state_sha256, "/f"])
+                .output();
+            let _ = std::process::Command::new("reg")
+                .args(["add", &key, "/v", "RevokedPubkeysJson", "/t", "REG_SZ", "/d", &rev_json, "/f"])
+                .output();
+            let _ = std::process::Command::new("reg")
+                .args(["add", &key, "/v", "UsedNoncesJson", "/t", "REG_SZ", "/d", &nonces_json, "/f"])
+                .output();
+        }
+    }
+
+    fn read_external_trust_hwm(&self) -> Option<(u64, Vec<String>, Vec<String>)> {
+        let mut max_epoch: Option<u64> = None;
+        let mut revoked: Vec<String> = Vec::new();
+        let mut nonces: Vec<String> = Vec::new();
+
+        if let Some(path) = self.external_anchor_file_path() {
+            if path.exists() {
+                if let Ok(bytes) = fs::read(&path) {
+                    if let Ok(rec) = serde_json::from_slice::<ExternalTrustAnchorRecord>(&bytes) {
+                        max_epoch = Some(max_epoch.map_or(rec.trust_epoch, |e| e.max(rec.trust_epoch)));
+                        for r in rec.revoked_pubkeys {
+                            if !revoked.iter().any(|x| x.eq_ignore_ascii_case(&r)) {
+                                revoked.push(r);
+                            }
+                        }
+                        for n in rec.used_rotation_nonces {
+                            if !nonces.contains(&n) {
+                                nonces.push(n);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if let Some((reg_ep, reg_rev, reg_nonces)) = self.read_hkcu_trust_anchor() {
+            max_epoch = Some(max_epoch.map_or(reg_ep, |e| e.max(reg_ep)));
+            for r in reg_rev {
+                if !revoked.iter().any(|x| x.eq_ignore_ascii_case(&r)) {
+                    revoked.push(r);
+                }
+            }
+            for n in reg_nonces {
+                if !nonces.contains(&n) {
+                    nonces.push(n);
+                }
+            }
+        }
+        max_epoch.map(|e| (e, revoked, nonces))
+    }
+
+    fn write_external_trust_anchor(&self, state: &PersistentTrustState, state_sha: &str) -> Result<()> {
+        let record = ExternalTrustAnchorRecord {
+            anchor_schema_version: 1,
+            install_anchor_id: self.install_anchor_id(),
+            trust_epoch: state.trust_epoch,
+            publisher_id: state.publisher_id.clone(),
+            trusted_pubkeys: state.trusted_pubkeys.clone(),
+            revoked_pubkeys: state.revoked_pubkeys.clone(),
+            used_rotation_nonces: state.used_rotation_nonces.clone(),
+            trust_state_sha256: state_sha.to_string(),
+            updated_at_utc: state.updated_at_utc.clone(),
+        };
+        if let Some(path) = self.external_anchor_file_path() {
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let bytes = serde_json::to_vec_pretty(&record)?;
+            atomic_write_file(&path, &bytes)?;
+        }
+        self.write_hkcu_trust_anchor(&record);
+        Ok(())
     }
 
     pub fn versions_dir(&self) -> PathBuf {
@@ -272,6 +487,31 @@ impl MiniToolUpdater {
     }
 
     fn sync_trust_ledger_db(&self, state: &PersistentTrustState, event_type: &str, detail: &str) -> Result<()> {
+        if let Some((ext_epoch, ext_revoked, ext_nonces)) = self.read_external_trust_hwm() {
+            if state.trust_epoch < ext_epoch {
+                bail!(
+                    "FULL_TRIAD_ROLLBACK_DETECTED: attempted to write trust_epoch {} < external anchor {}",
+                    state.trust_epoch,
+                    ext_epoch
+                );
+            }
+            for r in &ext_revoked {
+                if !state.revoked_pubkeys.iter().any(|x| x.eq_ignore_ascii_case(r)) {
+                    bail!(
+                        "FULL_TRIAD_ROLLBACK_DETECTED: externally revoked pubkey '{}' missing from proposed trust state",
+                        r
+                    );
+                }
+            }
+            for n in &ext_nonces {
+                if !state.used_rotation_nonces.contains(n) {
+                    bail!(
+                        "FULL_TRIAD_ROLLBACK_DETECTED: external anchor nonce '{}' missing from proposed trust state",
+                        n
+                    );
+                }
+            }
+        }
         let dir = self.updater_dir();
         fs::create_dir_all(&dir)?;
         let mut conn = Connection::open(self.trust_ledger_db_path())?;
@@ -342,6 +582,7 @@ impl MiniToolUpdater {
             ],
         )?;
         tx.commit()?;
+        self.write_external_trust_anchor(state, &state_sha)?;
         Ok(())
     }
 
@@ -359,10 +600,12 @@ impl MiniToolUpdater {
         };
 
         let ledger_path = self.trust_ledger_db_path();
+        let mut ledger_epoch_seen: Option<u64> = None;
         if ledger_path.exists() {
             let conn = Connection::open(&ledger_path)?;
             Self::ensure_trust_ledger_schema(&conn)?;
             if let Some((db_epoch, db_revoked, db_nonces)) = Self::read_trust_ledger_row(&conn)? {
+                ledger_epoch_seen = Some(db_epoch);
                 let Some(ref st) = state_opt else {
                     bail!(
                         "TRUST_STATE_MISSING_WITH_LEDGER: trust-state.json was deleted while trust-ledger.db records epoch {}",
@@ -395,7 +638,181 @@ impl MiniToolUpdater {
             }
         }
 
+        if let Some((ext_epoch, ext_revoked, ext_nonces)) = self.read_external_trust_hwm() {
+            let Some(ref st) = state_opt else {
+                bail!(
+                    "FULL_TRIAD_ROLLBACK_DETECTED: local .updater trust store missing while external trust anchor records epoch {}",
+                    ext_epoch
+                );
+            };
+            if st.trust_epoch < ext_epoch {
+                bail!(
+                    "FULL_TRIAD_ROLLBACK_DETECTED: local .updater triad (epoch {}, db_epoch {:?}) < external trust anchor (epoch {})",
+                    st.trust_epoch,
+                    ledger_epoch_seen,
+                    ext_epoch
+                );
+            }
+            for r in &ext_revoked {
+                if !st.revoked_pubkeys.iter().any(|x| x.eq_ignore_ascii_case(r)) {
+                    bail!(
+                        "FULL_TRIAD_ROLLBACK_DETECTED: revoked pubkey '{}' was stripped across local .updater triad vs external trust anchor",
+                        r
+                    );
+                }
+            }
+            for n in &ext_nonces {
+                if !st.used_rotation_nonces.contains(n) {
+                    bail!(
+                        "FULL_TRIAD_ROLLBACK_DETECTED: committed rotation nonce '{}' was stripped across local .updater triad vs external trust anchor",
+                        n
+                    );
+                }
+            }
+        }
+
         Ok(state_opt)
+    }
+
+    /// Full P6.3 security audit across Trust Triad + External Anchor + active EXE + release manifests + all `versions/v*` directories.
+    pub fn verify_install_security_audit(&self) -> Result<InstallSecurityAuditReport> {
+        let trust_state = self.read_trust_state()?.ok_or_else(|| {
+            anyhow::anyhow!("TRUST_STATE_MISSING: no persistent trust state found")
+        })?;
+        let active = self.read_active_pointer()?.ok_or_else(|| {
+            anyhow::anyhow!("ACTIVE_VERSION_MISSING: no active_version.json in {}", self.install_root.display())
+        })?;
+        let auth = self.verify_installed_exe_integrity()?;
+        let active_dir = self.versions_dir().join(format!("v{}", active.active_version));
+        let verified_active = Self::verify_candidate_release_dir_with_anchor(
+            &active_dir,
+            &RuntimeCompatibilityProfile::default(),
+            Some(&active.trusted_pubkey_hex.clone().unwrap_or_default()),
+        )?;
+
+        if trust_state
+            .revoked_pubkeys
+            .iter()
+            .any(|r| r.eq_ignore_ascii_case(&verified_active.pe_pubkey_hex))
+        {
+            bail!(
+                "KEY_REVOKED: active version '{}' is signed by revoked publisher key '{}'",
+                active.active_version,
+                verified_active.pe_pubkey_hex
+            );
+        }
+        if !trust_state
+            .trusted_pubkeys
+            .iter()
+            .any(|k| k.eq_ignore_ascii_case(&verified_active.pe_pubkey_hex))
+        {
+            bail!(
+                "UNTRUSTED_KEY_REJECTED: active version key '{}' is not in trusted_pubkeys",
+                verified_active.pe_pubkey_hex
+            );
+        }
+
+        Self::verify_optional_release_manifest(&active_dir, &verified_active.exe_path)?;
+
+        let mut versions_scanned = Vec::new();
+        let mut rogue_versions = Vec::new();
+        let mut issues = Vec::new();
+        if let Ok(entries) = fs::read_dir(self.versions_dir()) {
+            for ent in entries.flatten() {
+                if !ent.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                    continue;
+                }
+                let name = ent.file_name().to_string_lossy().to_string();
+                if name.contains("_staging_") {
+                    continue;
+                }
+                versions_scanned.push(name.clone());
+                let vpath = ent.path();
+                match Self::verify_candidate_release_dir_with_anchor(
+                    &vpath,
+                    &RuntimeCompatibilityProfile::default(),
+                    None,
+                ) {
+                    Ok(vrel) => {
+                        if trust_state
+                            .revoked_pubkeys
+                            .iter()
+                            .any(|r| r.eq_ignore_ascii_case(&vrel.pe_pubkey_hex))
+                        {
+                            rogue_versions.push(name.clone());
+                            issues.push(format!("KEY_REVOKED in versions/{}", name));
+                        } else if !trust_state
+                            .trusted_pubkeys
+                            .iter()
+                            .any(|k| k.eq_ignore_ascii_case(&vrel.pe_pubkey_hex))
+                        {
+                            rogue_versions.push(name.clone());
+                            issues.push(format!("ROGUE_VERSION_DIR_DETECTED: untrusted key in versions/{}", name));
+                        } else if let Err(e) = Self::verify_optional_release_manifest(&vpath, &vrel.exe_path) {
+                            rogue_versions.push(name.clone());
+                            issues.push(format!("RELEASE_MANIFEST_TAMPERED in versions/{}: {:#}", name, e));
+                        }
+                    }
+                    Err(e) => {
+                        rogue_versions.push(name.clone());
+                        issues.push(format!("ROGUE_OR_CORRUPT_VERSION_DIR versions/{}: {:#}", name, e));
+                    }
+                }
+            }
+        }
+        if !rogue_versions.is_empty() {
+            bail!("{}", issues.join(" | "));
+        }
+        let exe_sha = fp_bundle_verify::sha256_hex(&fs::read(&verified_active.exe_path)?);
+        let ext_ok = self.read_external_trust_hwm().is_some();
+
+        Ok(InstallSecurityAuditReport {
+            passed: true,
+            install_root: self.install_root.to_string_lossy().to_string(),
+            trust_epoch: trust_state.trust_epoch,
+            active_version: active.active_version,
+            active_exe_sha256: exe_sha,
+            pe_root_pubkey_hex: verified_active.pe_pubkey_hex,
+            authenticode_trust_status: auth.trust_status,
+            external_anchor_verified: ext_ok,
+            versions_scanned,
+            rogue_or_tampered_versions: rogue_versions,
+            issues,
+        })
+    }
+
+    fn verify_optional_release_manifest(version_dir: &Path, exe_path: &Path) -> Result<()> {
+        let rm_path = version_dir.join("release-manifest.json");
+        if !rm_path.exists() {
+            return Ok(());
+        }
+        let rm_bytes = fs::read(&rm_path)?;
+        let rm: fp_bundle_contract::ReleasePackageManifest = serde_json::from_slice(&rm_bytes)
+            .with_context(|| format!("RELEASE_MANIFEST_TAMPERED: invalid JSON in {}", rm_path.display()))?;
+        let actual_exe_sha = fp_bundle_verify::sha256_hex(&fs::read(exe_path)?);
+        if !actual_exe_sha.eq_ignore_ascii_case(&rm.final_exe_sha256) {
+            bail!(
+                "RELEASE_MANIFEST_TAMPERED: exe SHA-256 '{}' != release-manifest '{}'",
+                actual_exe_sha,
+                rm.final_exe_sha256
+            );
+        }
+        for entry in &rm.distributed_files {
+            let target = validate_safe_relative_path(version_dir, &entry.rel_path).with_context(|| {
+                format!("RELEASE_MANIFEST_TAMPERED: unsafe rel_path '{}'", entry.rel_path)
+            })?;
+            if !target.exists() {
+                bail!("RELEASE_MANIFEST_TAMPERED: missing file '{}'", entry.rel_path);
+            }
+            let actual = fp_bundle_verify::sha256_hex(&fs::read(&target)?);
+            if !actual.eq_ignore_ascii_case(&entry.sha256) {
+                bail!(
+                    "RELEASE_MANIFEST_TAMPERED: checksum mismatch for '{}'",
+                    entry.rel_path
+                );
+            }
+        }
+        Ok(())
     }
 
     pub fn write_trust_state(&self, state: &PersistentTrustState) -> Result<()> {
@@ -815,6 +1232,19 @@ impl MiniToolUpdater {
             &RuntimeCompatibilityProfile::default(),
             None,
         )?;
+        if let Some(prev_ts) = self.read_trust_state()? {
+            if prev_ts
+                .revoked_pubkeys
+                .iter()
+                .any(|r| r.eq_ignore_ascii_case(&verified.pe_pubkey_hex))
+            {
+                bail!(
+                    "KEY_REVOKED: candidate public key '{}' was previously revoked for install root {}",
+                    verified.pe_pubkey_hex,
+                    self.install_root.display()
+                );
+            }
+        }
         let slug = verified.manifest.project.slug.clone();
         let ver = verified.manifest.project.version.clone();
         let _ = SemVer::parse(&ver)?;
@@ -3271,6 +3701,185 @@ mod tests {
         let rec_ts = u3.read_trust_state().unwrap().unwrap();
         assert!(rec_ts.used_rotation_nonces.contains(&delegation.nonce));
         assert!(rec_ts.trusted_pubkeys.iter().any(|k| k.eq_ignore_ascii_case(&pub_new)));
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_p6_full_triad_trust_anchor_revocation_rogue_dir_and_manifest_attacks() {
+        use fp_builder::security::ProducerKeyManager;
+        use fp_bundle_contract::{
+            DistributedFileEntry, KeyRotationDelegation, PeVersionInfoSpec,
+            PortableRuntimeRequirements, PublisherIdentitySpec, ReleasePackageManifest,
+            ReleaseSigningMetadata,
+        };
+
+        let tmp = std::env::temp_dir().join(format!("fp_updater_p6_sec_{}", Uuid::new_v4()));
+        let rel_100 = tmp.join("rel_100");
+        let rel_110 = tmp.join("rel_110");
+        let rel_rogue = tmp.join("rel_rogue");
+        let anchor_dir = tmp.join("external_trust_anchors");
+
+        let key_old = SigningKey::from_bytes(&[61u8; 32]);
+        let key_new = SigningKey::from_bytes(&[72u8; 32]);
+        let key_rogue = SigningKey::from_bytes(&[99u8; 32]);
+        let pub_old: String = key_old.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let pub_new: String = key_new.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let pub_rogue: String = key_rogue.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+
+        let attach_with_manifest = |dir: &Path, sk: &SigningKey, pk_hex: &str, slug: &str, ver: &str, exe_name: &str, rot: Option<KeyRotationDelegation>| {
+            let bdir = dir.join("bundle");
+            let mut m: ReleaseBundleManifest =
+                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap()).unwrap();
+            m.publisher = Some(PublisherIdentitySpec {
+                publisher_id: "pub-p6-sec".to_string(),
+                display_name: "P6 Sec Publisher".to_string(),
+                organization: "P6 Sec Labs".to_string(),
+                website: None,
+                support_contact: None,
+                copyright: "Copyright (C) 2026 P6 Sec Labs".to_string(),
+                ed25519_key_id: "k-p6".to_string(),
+                ed25519_pubkey_hex: pk_hex.to_string(),
+                authenticode_cert_ref: None,
+                release_channel: "qa".to_string(),
+                signing_policy: SigningMode::UnsignedInternal,
+            });
+            m.signing = Some(ReleaseSigningMetadata {
+                signing_mode: SigningMode::UnsignedInternal,
+                publisher_id: "pub-p6-sec".to_string(),
+                publisher_organization: "P6 Sec Labs".to_string(),
+                release_channel: "qa".to_string(),
+                authenticode_trust_status: AuthenticodeTrustStatus::Unsigned,
+                trusted_public_release: false,
+                signer_thumbprint: None,
+                signer_subject: None,
+                version_info: PeVersionInfoSpec::default(),
+                key_rotation: rot,
+            });
+            let mb = serde_json::to_vec_pretty(&m).unwrap();
+            fs::write(bdir.join("manifest.fpbundle.json"), &mb).unwrap();
+            let mut sig_env: SignedBundleEnvelope =
+                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap()).unwrap();
+            sig_env.file_checksums.insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
+            let msha = sha256_hex(&mb);
+            let tjson = serde_json::to_string(&sig_env.file_checksums).unwrap();
+            let thash = sha256_hex(tjson.as_bytes());
+            let msg = fp_bundle_verify::canonical_signing_message(&sig_env.key_id, &msha, &thash);
+            let s = sk.sign(&msg);
+            sig_env.manifest_sha256 = msha;
+            sig_env.checksums_table_sha256 = thash;
+            sig_env.signature_ed25519_hex = s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+            fs::write(bdir.join("signature.fpbundle.json"), serde_json::to_vec_pretty(&sig_env).unwrap()).unwrap();
+
+            fs::write(dir.join("THIRD_PARTY_NOTICES.txt"), b"Rust/Tauri/SQLite notices").unwrap();
+            let exe_bytes = fs::read(dir.join(exe_name)).unwrap();
+            let notices_bytes = fs::read(dir.join("THIRD_PARTY_NOTICES.txt")).unwrap();
+            let rm = ReleasePackageManifest {
+                package_schema_version: 1,
+                package_type: "mini_tool_portable_win_x64".to_string(),
+                project_slug: slug.to_string(),
+                product_name: "P6 Security Tool".to_string(),
+                version: ver.to_string(),
+                exe_name: exe_name.to_string(),
+                final_exe_sha256: sha256_hex(&exe_bytes),
+                built_at_utc: Utc::now().to_rfc3339(),
+                requirements: PortableRuntimeRequirements {
+                    requires_rust: false,
+                    requires_cargo: false,
+                    requires_node: false,
+                    requires_python: false,
+                    requires_windows_sdk: false,
+                    webview2_strategy: "Evergreen".to_string(),
+                    offline_ready: true,
+                    requires_internet_if_webview2_missing: true,
+                    data_isolation_policy: "External data/".to_string(),
+                },
+                publisher: m.publisher.clone(),
+                signing: m.signing.clone(),
+                distributed_files: vec![
+                    DistributedFileEntry {
+                        rel_path: exe_name.to_string(),
+                        size_bytes: exe_bytes.len() as u64,
+                        sha256: sha256_hex(&exe_bytes),
+                    },
+                    DistributedFileEntry {
+                        rel_path: "THIRD_PARTY_NOTICES.txt".to_string(),
+                        size_bytes: notices_bytes.len() as u64,
+                        sha256: sha256_hex(&notices_bytes),
+                    },
+                ],
+                third_party_notices: vec!["Tauri MIT".to_string()],
+            };
+            fs::write(dir.join("release-manifest.json"), serde_json::to_vec_pretty(&rm).unwrap()).unwrap();
+        };
+
+        create_signed_test_release(&rel_100, "p6-sec", "Auto_P6Sec.exe", "1.0.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [61u8; 32]);
+        attach_with_manifest(&rel_100, &key_old, &pub_old, "p6-sec", "1.0.0", "Auto_P6Sec.exe", None);
+
+        let delegation = ProducerKeyManager::sign_key_rotation_delegation(&key_old, &pub_new, "pub-p6-sec", "p6-sec", 30);
+        create_signed_test_release(&rel_110, "p6-sec", "Auto_P6Sec.exe", "1.1.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [72u8; 32]);
+        attach_with_manifest(&rel_110, &key_new, &pub_new, "p6-sec", "1.1.0", "Auto_P6Sec.exe", Some(delegation));
+
+        create_signed_test_release(&rel_rogue, "p6-sec", "Auto_P6Sec.exe", "9.9.9", CURRENT_SQLITE_SCHEMA_VERSION, 1, [99u8; 32]);
+        attach_with_manifest(&rel_rogue, &key_rogue, &pub_rogue, "p6-sec", "9.9.9", "Auto_P6Sec.exe", None);
+
+        let install_root = tmp.join("installed/P6SecTool");
+        let updater = MiniToolUpdater::new_with_external_anchor(&install_root, &anchor_dir);
+        let opts = UpdateExecutionOptions { skip_child_verify_exec: true, ..Default::default() };
+
+        // 1. Install v1.0.0 (epoch 1) and snapshot ALL THREE `.updater` files (`trust-state.json`, `.bak.json`, `trust-ledger.db`)
+        updater.install_initial(&rel_100, &opts).unwrap();
+        let triad_epoch1 = tmp.join("triad_epoch1");
+        copy_dir_recursive(&updater.updater_dir(), &triad_epoch1).unwrap();
+
+        // 2. Upgrade v1.0.0 -> v1.1.0 (epoch 2) + Revoke old key (epoch 3)
+        updater.upgrade_from_release(&rel_110, &opts).unwrap();
+        let rev_st = updater.revoke_pubkey(&pub_old, "p6_key_retired").unwrap();
+        assert_eq!(rev_st.trust_epoch, 3);
+
+        // Clean up legacy v1.0.0 first vs test audit catches revoked v1.0.0 still on disk
+        let old_ver_err = updater.verify_install_security_audit().unwrap_err().to_string();
+        assert!(old_ver_err.contains("KEY_REVOKED"), "got: {}", old_ver_err);
+
+        fs::remove_dir_all(updater.versions_dir().join("v1.0.0")).unwrap();
+        let audit_ok = updater.verify_install_security_audit().unwrap();
+        assert!(audit_ok.passed);
+        assert!(audit_ok.external_anchor_verified);
+        assert_eq!(audit_ok.trust_epoch, 3);
+
+        let triad_epoch3 = tmp.join("triad_epoch3");
+        copy_dir_recursive(&updater.updater_dir(), &triad_epoch3).unwrap();
+        let active_ptr_saved = fs::read(updater.active_pointer_path()).unwrap();
+
+        // 3. Attack A: Full-Triad Replacement (`trust-state.json` + `.bak.json` + `trust-ledger.db`) back to epoch 1!
+        let _ = fs::remove_dir_all(updater.updater_dir());
+        copy_dir_recursive(&triad_epoch1, &updater.updater_dir()).unwrap();
+        let triad_err = updater.read_trust_state().unwrap_err().to_string();
+        assert!(triad_err.contains("FULL_TRIAD_ROLLBACK_DETECTED"), "got: {}", triad_err);
+        let audit_triad_err = updater.verify_install_security_audit().unwrap_err().to_string();
+        assert!(audit_triad_err.contains("FULL_TRIAD_ROLLBACK_DETECTED"), "got: {}", audit_triad_err);
+
+        // 4. Attack B: Total `.updater` & pointer deletion + attempt to reinstall old revoked key release!
+        let _ = fs::remove_dir_all(updater.updater_dir());
+        let _ = fs::remove_file(updater.active_pointer_path());
+        let wipe_err = updater.install_initial(&rel_100, &opts).unwrap_err().to_string();
+        assert!(wipe_err.contains("FULL_TRIAD_ROLLBACK_DETECTED"), "got: {}", wipe_err);
+
+        // Restore valid epoch 3 state
+        copy_dir_recursive(&triad_epoch3, &updater.updater_dir()).unwrap();
+        fs::write(updater.active_pointer_path(), &active_ptr_saved).unwrap();
+        assert!(updater.verify_install_security_audit().unwrap().passed);
+
+        // 5. Attack C: Rogue version directory planted inside versions/v9.9.9/
+        copy_dir_recursive(&rel_rogue, &updater.versions_dir().join("v9.9.9")).unwrap();
+        let rogue_err = updater.verify_install_security_audit().unwrap_err().to_string();
+        assert!(rogue_err.contains("ROGUE_VERSION_DIR_DETECTED"), "got: {}", rogue_err);
+        fs::remove_dir_all(updater.versions_dir().join("v9.9.9")).unwrap();
+
+        // 6. Attack D: Tamper distributed non-bundle file covered by release-manifest.json
+        fs::write(updater.versions_dir().join("v1.1.0").join("THIRD_PARTY_NOTICES.txt"), b"TAMPERED_NOTICE").unwrap();
+        let rm_err = updater.verify_install_security_audit().unwrap_err().to_string();
+        assert!(rm_err.contains("RELEASE_MANIFEST_TAMPERED"), "got: {}", rm_err);
 
         let _ = fs::remove_dir_all(&tmp);
     }

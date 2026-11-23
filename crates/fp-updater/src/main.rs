@@ -65,6 +65,20 @@ enum Commands {
         #[arg(long)]
         skip_child_verify_exec: bool,
     },
+    /// Revoke a compromised or retired publisher Ed25519 key in local + external Trust Anchor
+    RevokeKey {
+        #[arg(long)]
+        install_root: PathBuf,
+        #[arg(long)]
+        pubkey_hex: String,
+        #[arg(long, default_value = "manual_revocation")]
+        reason: String,
+    },
+    /// Audit entire installation security: Trust Triad + External Anchor + PE/Bundle/Manifests + All versions/
+    VerifySecurity {
+        #[arg(long)]
+        install_root: PathBuf,
+    },
 }
 
 fn main() -> Result<()> {
@@ -146,6 +160,20 @@ fn main() -> Result<()> {
         } => {
             let updater = MiniToolUpdater::new(&install_root);
             let res = updater.reconcile_incomplete_journal(skip_child_verify_exec)?;
+            println!("{}", serde_json::to_string_pretty(&res)?);
+        }
+        Commands::RevokeKey {
+            install_root,
+            pubkey_hex,
+            reason,
+        } => {
+            let updater = MiniToolUpdater::new(&install_root);
+            let res = updater.revoke_pubkey(&pubkey_hex, &reason)?;
+            println!("{}", serde_json::to_string_pretty(&res)?);
+        }
+        Commands::VerifySecurity { install_root } => {
+            let updater = MiniToolUpdater::new(&install_root);
+            let res = updater.verify_install_security_audit()?;
             println!("{}", serde_json::to_string_pretty(&res)?);
         }
     }
