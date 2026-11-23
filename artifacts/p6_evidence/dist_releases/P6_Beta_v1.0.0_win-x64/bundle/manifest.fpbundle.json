@@ -5,7 +5,7 @@
     "uiSchemaVersion": 1,
     "moduleApiVersion": "1.0.0",
     "minRuntimeVersion": "0.1.0",
-    "sqliteSchemaVersion": 5
+    "sqliteSchemaVersion": 6
   },
   "project": {
     "compatibility": {
@@ -14,9 +14,9 @@
       "uiSchemaVersion": 1,
       "moduleApiVersion": "1.0.0",
       "minRuntimeVersion": "0.1.0",
-      "sqliteSchemaVersion": 5
+      "sqliteSchemaVersion": 6
     },
-    "projectId": "proj-p6-beta-citadel-0cc62927",
+    "projectId": "proj-p6-beta-citadel-c7bfc8d1",
     "slug": "p6-beta-citadel",
     "name": "Orion Citadel Automator",
     "gamePackageId": "com.orion.citadel",
@@ -139,7 +139,7 @@
   ],
   "workflowsCount": 1,
   "templatesCount": 0,
-  "builtAtUtc": "2026-11-23T05:13:09.587777800+00:00",
+  "builtAtUtc": "2026-11-23T06:09:48.080764200+00:00",
   "publisher": {
     "publisherId": "pub-p6-beta",
     "displayName": "Orion Citadel Studio QA",
@@ -149,7 +149,7 @@
     "copyright": "Copyright (C) 2026 Orion Citadel Studio QA",
     "ed25519KeyId": "",
     "ed25519PubkeyHex": "",
-    "authenticodeCertRef": "CERT_STORE://CurrentUser/My/1773B76C3DA962D70ACA2E93D095580EA4DAC4D6",
+    "authenticodeCertRef": "CERT_STORE://CurrentUser/My/8C9CC2FBAA904050194C4A10965A3EC32D6EE966",
     "releaseChannel": "qa",
     "signingPolicy": "self_signed_qa"
   },
@@ -160,7 +160,7 @@
     "releaseChannel": "qa",
     "authenticodeTrustStatus": "self_signed_untrusted_root",
     "trustedPublicRelease": false,
-    "signerThumbprint": "CERT_STORE://CurrentUser/My/1773B76C3DA962D70ACA2E93D095580EA4DAC4D6",
+    "signerThumbprint": "CERT_STORE://CurrentUser/My/8C9CC2FBAA904050194C4A10965A3EC32D6EE966",
     "signerSubject": null,
     "versionInfo": {
       "companyName": "Orion Citadel Studio QA",

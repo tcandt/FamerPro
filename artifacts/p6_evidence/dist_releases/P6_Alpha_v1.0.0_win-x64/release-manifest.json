@@ -5,8 +5,8 @@
   "productName": "Zenith Harvester Pro",
   "version": "1.0.0",
   "exeName": "Auto_P6Alpha.exe",
-  "finalExeSha256": "336246bd8d889c9c4a9f07b1874c7dd8f802a1bbed4827c1c3cd7df41ff8eada",
-  "builtAtUtc": "2026-11-23T05:13:06.993772400+00:00",
+  "finalExeSha256": "bda66b9f4f6101eb6db694e57de283c2ba76e994062afb45c66749d200784143",
+  "builtAtUtc": "2026-11-23T06:09:45.071299400+00:00",
   "requirements": {
     "requiresRust": false,
     "requiresCargo": false,
@@ -55,8 +55,8 @@
   "distributedFiles": [
     {
       "relPath": "Auto_P6Alpha.exe",
-      "sizeBytes": 15912448,
-      "sha256": "336246bd8d889c9c4a9f07b1874c7dd8f802a1bbed4827c1c3cd7df41ff8eada"
+      "sizeBytes": 16181760,
+      "sha256": "bda66b9f4f6101eb6db694e57de283c2ba76e994062afb45c66749d200784143"
     },
     {
       "relPath": "THIRD_PARTY_NOTICES.txt",
@@ -86,22 +86,22 @@
     {
       "relPath": "bundle/checksums.sha256",
       "sizeBytes": 260,
-      "sha256": "5b3a45e865386681f1894b7ad355f45003ae265908e043022db6b29e7d9c4940"
+      "sha256": "b2164553b3025c47207f46704264edcb6e6a3d3e1b6c282e46ee3dd2183f91b2"
     },
     {
       "relPath": "bundle/manifest.fpbundle.json",
       "sizeBytes": 5727,
-      "sha256": "01d74fd51ff9ea5e174ff6005f3364973980d50199c3ee8d04cec47e92591442"
+      "sha256": "c74f50b858ee5cbf11f04d21fa17ec1f9fc4e75fdeda4c2b83f96d9e180bed52"
     },
     {
       "relPath": "bundle/signature.fpbundle.json",
       "sizeBytes": 883,
-      "sha256": "b8815acd45849fffb68594cb03811b6e151be21e8ced19de85f0c9cc83d3d3cd"
+      "sha256": "665c03b1a13930f35368ae613e39071eeae06e773c9249725b72ee9cfda06f7f"
     },
     {
       "relPath": "bundle/trusted_publisher.pub",
       "sizeBytes": 64,
-      "sha256": "899b0df485a9c2ad2204e41903c681405448aa7ce2d40d13e857e51afa6fd95f"
+      "sha256": "15619f00fa950bc9710fa0de6cb5d152ccb622c11765abca921af82e6a3455b4"
     },
     {
       "relPath": "bundle/ui-schema.json",
@@ -115,8 +115,8 @@
     },
     {
       "relPath": "updater/fp-updater.exe",
-      "sizeBytes": 5660160,
-      "sha256": "25f14532511cb039ce1bc553461cf2956fd823fcbb3d2becb6c6faeecae39df3"
+      "sizeBytes": 5843456,
+      "sha256": "6d92e62630c6a5a991017aa382707495c1c5a46fb4969fe992563009c040bb44"
     }
   ],
   "thirdPartyNotices": [

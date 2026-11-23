@@ -1,16 +1,16 @@
 {
-  "projectId": "proj-p6-beta-citadel-0cc62927",
+  "projectId": "proj-p6-beta-citadel-c7bfc8d1",
   "projectSlug": "p6-beta-citadel",
   "toolExeName": "Auto_P6Beta.exe",
   "toolExePath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\Auto_P6Beta.exe",
-  "toolExeSizeBytes": 15913944,
-  "toolExeSha256": "377207e92d5adacc89269ab8902166db8f7ce8c162a9392fc50c55dc6a88fb22",
+  "toolExeSizeBytes": 16183256,
+  "toolExeSha256": "d5b58001937d417d4ad3f4f5ef141a952f301a261b95a32fba1e9fc97560df9f",
   "peIconLayersInjected": 1,
   "peIconGroupResourceBytes": 20,
   "peIconFirstLayerBytes": 4264,
   "peEmbeddedPubkeyResourceId": 7777,
   "peEmbeddedPubkeyVerified": true,
-  "authenticodeStatus": "Authenticode Self-Signed QA Build (NOT TrustedPublicRelease; Subject='Orion Citadel Studio QA', Thumbprint=1773B76C3DA962D70ACA2E93D095580EA4DAC4D6)",
+  "authenticodeStatus": "Authenticode Self-Signed QA Build (NOT TrustedPublicRelease; Subject='Orion Citadel Studio QA', Thumbprint=8C9CC2FBAA904050194C4A10965A3EC32D6EE966)",
   "signingMode": "self_signed_qa",
   "trustedPublicRelease": false,
   "versionInfo": {
@@ -30,16 +30,16 @@
     "winTrustErrorCode": 2148204809,
     "signerSubject": "Orion Citadel Studio QA",
     "signerIssuer": "Orion Citadel Studio QA",
-    "signerThumbprint": "1773B76C3DA962D70ACA2E93D095580EA4DAC4D6",
+    "signerThumbprint": "8C9CC2FBAA904050194C4A10965A3EC32D6EE966",
     "timestampStatus": "NONE_OR_QA",
     "detail": "Self-Signed / Untrusted Root (0x800B0109): Authenticode PE hash intact, NOT trusted as Public Release."
   },
-  "keyId": "fp-ed25519-c16cc50b65aa",
-  "publisherPublicKeyHex": "c16cc50b65aac4f06b51594f17868a64754684d62262933aaa257f744cc86e26",
+  "keyId": "fp-ed25519-6df0c69234f8",
+  "publisherPublicKeyHex": "6df0c69234f8fb8cbedeb8e38e4d916bb049e1777a26ceed48108ce791e28cc5",
   "externalKeystorePath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\AppData\\Local\\FarmerPro\\ProducerKeys\\active_producer_ed25519.json",
   "signatureAlgorithm": "Ed25519-RFC8032-SHA256",
-  "signatureEd25519Hex": "5e8304ecfa3c19c23662fa337648a3d1adf74d92836aef32149504ce0c4d801ad2c68b9a572dd78b74e60bfc825944b1df2f3804c09f68eb043228c2d2519d07",
-  "totalDurationMs": 3514,
+  "signatureEd25519Hex": "b064fcc8538ada5286ecca7e7520c7a02db5f773b2e5111d29695457ea52a1ad5819a46f3b9a2c5801017bf318c47d94c51b7ae9bcb4a0ce64c5ef83611db103",
+  "totalDurationMs": 4226,
   "steps": [
     {
       "stepNo": 1,
@@ -72,30 +72,30 @@
     {
       "stepNo": 5,
       "name": "PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection",
-      "durationMs": 2364,
+      "durationMs": 2731,
       "status": "PASS",
-      "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Orion Citadel Automator', Company='Orion Citadel Studio QA'), PE RT_RCDATA #7777=c16cc50b65aac4f0"
+      "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Orion Citadel Automator', Company='Orion Citadel Studio QA'), PE RT_RCDATA #7777=6df0c69234f8fb8c"
     },
     {
       "stepNo": 6,
       "name": "Package Bundle Assets, Notices & Standalone Updater/ADB",
-      "durationMs": 32,
+      "durationMs": 34,
       "status": "PASS",
       "detail": "Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=true"
     },
     {
       "stepNo": 7,
       "name": "Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature",
-      "durationMs": 2,
+      "durationMs": 3,
       "status": "PASS",
-      "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-c16cc50b65aa, PubKey: c16cc50b65aac4f06b51594f17868a64754684d62262933aaa257f744cc86e26)"
+      "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-6df0c69234f8, PubKey: 6df0c69234f8fb8cbedeb8e38e4d916bb049e1777a26ceed48108ce791e28cc5)"
     },
     {
       "stepNo": 8,
       "name": "Authenticode Sign/Verify (WinVerifyTrust) & Final Release Manifest Check",
-      "durationMs": 1087,
+      "durationMs": 1428,
       "status": "PASS",
-      "detail": "Mode=SelfSignedQa, Trust=SelfSignedUntrustedRoot, FilesChecked=13, PubCertMatch=true, exe SHA-256=377207e92d5adacc"
+      "detail": "Mode=SelfSignedQa, Trust=SelfSignedUntrustedRoot, FilesChecked=13, PubCertMatch=true, exe SHA-256=d5b58001937d417d"
     }
   ],
   "modules": [

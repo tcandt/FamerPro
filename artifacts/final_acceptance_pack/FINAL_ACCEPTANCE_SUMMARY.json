@@ -12,11 +12,17 @@
       "commit": "b5a05673b1c0ad10dd4c6ce4463eaabbd3be40fe",
       "status": "INTERMEDIATE_GATE2_ADB_HOTFIX",
       "docsCommit": "3b05d17de991af4615dfca305f92e425d8459196"
+    },
+    {
+      "tag": "v0.1.0-p6-rc.3",
+      "commit": "629cce236e173f91642684858e44638948773b9e",
+      "status": "GATE2_RC3_WITH_CROSS_PROCESS_AND_V5_UPGRADE_DEFECTS",
+      "docsCommit": "f2ba2d70bcf6573f789757d62cef4fddc0518cb9"
     }
   ],
-  "verifiedCodeCommit": "629cce236e173f91642684858e44638948773b9e",
-  "rcGitTag": "v0.1.0-p6-rc.3",
-  "developmentGateDecision": "APPROVED_RC3_WITH_SUPPLEMENTAL_FINDINGS_LOGGED",
+  "verifiedCodeCommit": "abaabaa5806ac28de546dd1618897fb178badc68",
+  "rcGitTag": "v0.1.0-p6-rc.4",
+  "developmentGateDecision": "APPROVED_RC4_FIX_A_AND_FIX_B_VERIFIED",
   "productionReleaseDecision": "NOT_APPROVED_BLOCKED",
   "developmentStatuses": {
     "BUILD_PASS": "PASS",
@@ -24,8 +30,8 @@
     "UPDATE_ROLLBACK_PASS": "PASS",
     "GATE2_PLATFORM_LIVE_ADB": "PASS",
     "GATE2_SETTINGS_LIVE_WORKFLOW": "PASS",
-    "CROSS_PROCESS_LEASE": "NOT_VERIFIED_IN_PROCESS_ONLY",
-    "SQLITE_V5_UPGRADE_COMPATIBILITY": "FAIL_EARLY_RETURN_AT_MIGRATIONS_552_559",
+    "CROSS_PROCESS_LEASE": "PASS",
+    "SQLITE_V6_MIGRATION_COMPATIBILITY": "PASS",
     "GATE2_GAME_SPECIFIC_WORKFLOW": "NOT_TESTED",
     "CLEAN_WINDOWS_VM": "BLOCKED",
     "COMMERCIAL_AUTHENTICODE": "BLOCKED",
@@ -33,65 +39,83 @@
   },
   "provenance": {
     "os": "Microsoft Windows 11 Pro (Build 26200, AMD64)",
-    "cargoWorkspaceTestsPassed": 101,
+    "cargoWorkspaceTestsPassed": 106,
     "cargoWorkspaceTestsFailed": 0,
     "cargoWorkspaceTestSuites": 38,
-    "cargoTestLog": "artifacts/p6_evidence/cargo_test_workspace_p6.log",
+    "cargoTestLog": "artifacts/final_acceptance_pack/rc4_evidence/rust_workspace_test.log",
     "e2eReport": "artifacts/p6_evidence/p6_e2e_report.json",
     "gate2LiveAdbReport": "artifacts/final_acceptance_pack/gate2_live_adb/gate2_live_adb_report.json",
-    "gate2AcceptanceAddendumPath": "artifacts/final_acceptance_pack/GATE2_ACCEPTANCE_ADDENDUM.md",
-    "rc3SupplementalReportPath": "artifacts/final_acceptance_pack/RC3_SUPPLEMENTAL_VERIFICATION_REPORT.md",
-    "rc3SupplementalJsonPath": "artifacts/final_acceptance_pack/rc3_supplement_evidence/rc3_supplement_verification.json",
-    "pdfReportPath": "FARMERPRO_P6_ACCEPTANCE_REPORT.pdf",
-    "pdfSizeBytes": 712963,
-    "pdfSha256": "ed6e66a930df0b730c56724a46d70555337bf5fff9457c68c9503b48c16c8836",
-    "pdfQaPassed": true,
+    "rc4HotfixReportPath": "artifacts/final_acceptance_pack/RC4_HOTFIX_REPORT.md",
+    "rc4HotfixJsonPath": "artifacts/final_acceptance_pack/rc4_evidence/rc4_hotfix_verification.json",
+    "p6PdfReportPath": "FARMERPRO_P6_ACCEPTANCE_REPORT.pdf",
+    "p6PdfSizeBytes": 712963,
+    "p6PdfSha256": "ed6e66a930df0b730c56724a46d70555337bf5fff9457c68c9503b48c16c8836",
+    "rc4AddendumPdfPath": "FARMERPRO_RC4_ADDENDUM_REPORT.pdf",
+    "rc4AddendumPdfBytes": 525049,
+    "rc4AddendumPdfSha256": "d76ef4d4aa6ce1933c28009606dc349f297118adfd978ed6243af3a2a2058fe6",
     "evidenceManifestPath": "artifacts/p6_evidence/EVIDENCE_MANIFEST_SHA256.json",
-    "evidenceManifestFileCount": 64,
     "finalPackManifestPath": "artifacts/final_acceptance_pack/FINAL_PACK_MANIFEST_SHA256.json"
   },
   "releaseArtifacts": {
     "installer": {
       "path": "artifacts/p6_evidence/dist_releases/FarmerPro_0.1.0_x64-setup.exe",
-      "bytes": 15268397,
-      "sha256": "ab36da44ccdd50f33994bf9fc88f2b81635e5747bdd2dcc154bcc6bc4b57d7f1"
+      "bytes": 15435692,
+      "sha256": "3cd7124874dd2763ac6843fa5fecc466b0f1eb7f2db442c91054e418bae4f210"
+    },
+    "farmerproExe": {
+      "path": "target/release/farmerpro.exe",
+      "bytes": 20677632,
+      "sha256": "270101d8179f408ecfdf2b2672c6fdd4bed0b84d88d154f143f996ea03bb9ad0"
+    },
+    "fpMiniRuntimeExe": {
+      "path": "target/release/fp-mini-runtime.exe",
+      "bytes": 16178176,
+      "sha256": "27db65970ca36796dddbb217f8c7a47090dbd5670074d17f05e93aa982a42aa6"
+    },
+    "fpUpdaterExe": {
+      "path": "target/release/fp-updater.exe",
+      "bytes": 5843456,
+      "sha256": "6d92e62630c6a5a991017aa382707495c1c5a46fb4969fe992563009c040bb44"
     },
     "portableAlphaZip": {
       "path": "artifacts/p6_evidence/dist_releases/P6_Alpha_v1.0.0_win-x64.zip",
-      "bytes": 11971510,
-      "sha256": "e94279949710eca5baf0bd0ced6bd58fd92227fd2b8af6df60313bc8021b8339",
+      "bytes": 12156104,
+      "sha256": "06ed29a78896dc6791acbc24fc7665fe9c466b91a0748f9d21045ad85bec70e3",
       "prePostZipExeShaMatch": true
     },
     "portableBetaZip": {
       "path": "artifacts/p6_evidence/dist_releases/P6_Beta_v1.0.0_win-x64.zip",
-      "bytes": 11973272,
-      "sha256": "99512f43ddc10ab8cdcc55171929e230042a58b5a831f4b30e82c1bbacb24771",
+      "bytes": 12157696,
+      "sha256": "3e8785f7f4f6114a95f2b3b2c571b858769615aed2ade6f2c22885c5301562ea",
       "prePostZipExeShaMatch": true
     },
     "gate2MiniZip": {
       "file": "Gate2_LiveMini_v1.0.0_win-x64.zip",
-      "bytes": 11987054,
-      "sha256": "2de448a5e263cbbc84b5aa16acfa4a13ce0e78f0c989d8150f3d5cfcfb1aaa73"
+      "bytes": 12171644,
+      "sha256": "37f2d813f4b9b3cc8099ec05c69d10ef642d0c87781b0ec78ef2e63eadd11da0"
     }
   },
-  "gate2VerificationChecks": {
-    "canonicalDualTransportDedup": "PASS (emulator-5554 + 127.0.0.1:5555 -> LIVE ADB: 1 ONLINE)",
-    "canonicalIdentityRegressionCases": "PASS (7 scenarios: dual serials, 2 devices, USB+TCP, reboot boot_id change, disconnect, competing leases, unknown identity)",
-    "miniRuntimeCanonicalSchedulerLease": "PASS (in-process MultiDeviceScheduler integrated in MiniRuntimeState)",
-    "crossProcessDeviceLease": "NOT_VERIFIED (Job B in Auto_CrossMini.exe succeeded while Studio Job A was running; same-process conflict blocked; forced-kill recovery succeeded)",
-    "sqliteV5UpgradeCompatibility": "FAIL (pre-existing RC.2 v5 DB records & integrity_check=ok preserved, but migrations.rs:552-559 early-return skipped adding confidence_source, measured_confidence, rule_matched, device_id -> varsError: no such column: confidence_source)",
-    "adbForwardReverseCreateListRemove": "PASS (tcp:19555->tcp:19556, tcp:19557->tcp:19558 + parser/empty/host-token regressions)",
-    "ocrProvenanceSeparation": "PASS (ConfidenceSource=HEURISTIC, measuredConfidence=null, ruleMatched=true, UI badge='LIVE · Đã khớp quy tắc', 0 unmeasured % shown)",
-    "miniStandaloneZeroTestkitBadge": "PASS (anyTestkitBadge=false, 22 SQLite step_events)"
-  },
-  "securityRegressionChecks": {
-    "trustedKeyReUpgradeAfterRollback": "PASS",
-    "untrustedNonceReplayBlocked": "PASS",
-    "revokedPreviouslyTrustedKeyBlocked": "PASS",
-    "policyAndCompatGateEnforcementOnAlreadyTrustedKey": "PASS",
-    "fullTriadPartialTamperBlocked": "PASS",
-    "sameUser6ComponentBoundaryObservedEpoch": 1,
-    "windowsAtomicWriteRetryExhaustionAndJournalRecovery": "PASS"
+  "rc4HotfixVerificationChecks": {
+    "A1_studioHoldsMiniBlocked": "PASS (DEVICE_LEASE_CONFLICT on emulator-5554)",
+    "A2_miniProceedsAfterStudioRelease": "PASS (Succeeded)",
+    "A3_forcedKillStudioRecovery": "PASS (Mini took device immediately; Job C -> interrupted on restart; Job D -> succeeded)",
+    "A4_forcedKillMiniRecovery": "PASS (Studio blocked while running; succeeded immediately after kill; Mini job -> interrupted)",
+    "A5_dualTransportSameDeviceBlocked": "PASS (127.0.0.1:5555 blocked while Studio held emulator-5554)",
+    "A6_twoDistinctDevicesParallel": "PASS_IN_RUST_CROSS_PROCESS_AND_COORDINATOR_TESTS (1 live AVD on host)",
+    "A7_disconnectReconnectClean": "PASS",
+    "A8_twoIndependentMiniToolsConflict": "PASS (Auto_CrossMini2 blocked while Auto_CrossMini ran; succeeded after release)",
+    "A9_failClosedOnLockInitError": "PASS (DEVICE_LOCK_INIT_FAILED)",
+    "B1_rc2V5ToV6": "PASS ([1,2,3,4,5,6] + 4 provenance cols verified)",
+    "B2_freshV6": "PASS ([1,2,3,4,5,6])",
+    "B3_rc3ToV6": "PASS ([1,2,3,4,5,6], varsError=null)",
+    "B4_idempotentReopen": "PASS",
+    "B5_domainTablesPreserved": "PASS (projects, workflows, versions, tasks, releases, accounts, publisher_profiles)",
+    "B6_legacyNoFakeLiveConfidence": "PASS (LEGACY_UNVERIFIED, verified=false, confidence=null, confidenceSource=null)",
+    "B7_studioGetProjectRuntimeVars": "PASS (varsError=null)",
+    "B8_B9_integrityAndFk": "PASS (integrity_check=ok, fk_violations=0)",
+    "B10_rollbackAndBackupRestore": "PASS (SHA-256 1a777afb... match)",
+    "B11_independentMiniToolV5ToV6": "PASS (sqliteSchemaVersion=6, runState=Succeeded)",
+    "B12_incompatibleBlocked": "PASS (v99 -> SQLITE_DOWNGRADE_INCOMPATIBLE, missing col -> SQLITE_SCHEMA_INCOMPATIBLE)"
   },
   "externalGates": {
     "gate1CleanWindowsVm": "BLOCKED",

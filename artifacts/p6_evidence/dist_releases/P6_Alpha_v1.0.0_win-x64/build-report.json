@@ -1,10 +1,10 @@
 {
-  "projectId": "proj-p6-alpha-harvester-18e15d04",
+  "projectId": "proj-p6-alpha-harvester-eb501a21",
   "projectSlug": "p6-alpha-harvester",
   "toolExeName": "Auto_P6Alpha.exe",
   "toolExePath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Alpha_v1.0.0_win-x64\\Auto_P6Alpha.exe",
-  "toolExeSizeBytes": 15912448,
-  "toolExeSha256": "336246bd8d889c9c4a9f07b1874c7dd8f802a1bbed4827c1c3cd7df41ff8eada",
+  "toolExeSizeBytes": 16181760,
+  "toolExeSha256": "bda66b9f4f6101eb6db694e57de283c2ba76e994062afb45c66749d200784143",
   "peIconLayersInjected": 1,
   "peIconGroupResourceBytes": 20,
   "peIconFirstLayerBytes": 4264,
@@ -34,12 +34,12 @@
     "timestampStatus": "NONE",
     "detail": "Unsigned Internal Build (TRUST_E_NOSIGNATURE 0x800B0100)."
   },
-  "keyId": "fp-ed25519-c16cc50b65aa",
-  "publisherPublicKeyHex": "c16cc50b65aac4f06b51594f17868a64754684d62262933aaa257f744cc86e26",
+  "keyId": "fp-ed25519-6df0c69234f8",
+  "publisherPublicKeyHex": "6df0c69234f8fb8cbedeb8e38e4d916bb049e1777a26ceed48108ce791e28cc5",
   "externalKeystorePath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\AppData\\Local\\FarmerPro\\ProducerKeys\\active_producer_ed25519.json",
   "signatureAlgorithm": "Ed25519-RFC8032-SHA256",
-  "signatureEd25519Hex": "d7863f0c71d32c1e6eb46684b58d02ff97067a6c78084261af639c4925f3115018715ff3de51d5e3d614e627008aaca637fcd975deee1b99bfc2771a329dec02",
-  "totalDurationMs": 2608,
+  "signatureEd25519Hex": "181d3ff6262c9393b20253ad0f06b22acb2b1066210f0cc81979e86220510c85a1af92923b79c708b9987a6c4048f5d9afc0ea67e3932a49636559d0396c3509",
+  "totalDurationMs": 3605,
   "steps": [
     {
       "stepNo": 1,
@@ -65,37 +65,37 @@
     {
       "stepNo": 4,
       "name": "Copy Dedicated Mini Runtime Binary",
-      "durationMs": 25,
+      "durationMs": 28,
       "status": "PASS",
       "detail": "Copied E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\InstalledStudio\\fp-mini-runtime.exe -> E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Alpha_v1.0.0_win-x64\\Auto_P6Alpha.exe"
     },
     {
       "stepNo": 5,
       "name": "PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection",
-      "durationMs": 1963,
+      "durationMs": 2779,
       "status": "PASS",
-      "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Zenith Harvester Pro', Company='Zenith Automation Group Ltd.'), PE RT_RCDATA #7777=c16cc50b65aac4f0"
+      "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Zenith Harvester Pro', Company='Zenith Automation Group Ltd.'), PE RT_RCDATA #7777=6df0c69234f8fb8c"
     },
     {
       "stepNo": 6,
       "name": "Package Bundle Assets, Notices & Standalone Updater/ADB",
-      "durationMs": 31,
+      "durationMs": 32,
       "status": "PASS",
       "detail": "Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=true"
     },
     {
       "stepNo": 7,
       "name": "Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature",
-      "durationMs": 2,
+      "durationMs": 3,
       "status": "PASS",
-      "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-c16cc50b65aa, PubKey: c16cc50b65aac4f06b51594f17868a64754684d62262933aaa257f744cc86e26)"
+      "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-6df0c69234f8, PubKey: 6df0c69234f8fb8cbedeb8e38e4d916bb049e1777a26ceed48108ce791e28cc5)"
     },
     {
       "stepNo": 8,
       "name": "Authenticode Sign/Verify (WinVerifyTrust) & Final Release Manifest Check",
-      "durationMs": 584,
+      "durationMs": 760,
       "status": "PASS",
-      "detail": "Mode=UnsignedInternal, Trust=Unsigned, FilesChecked=13, PubCertMatch=false, exe SHA-256=336246bd8d889c9c"
+      "detail": "Mode=UnsignedInternal, Trust=Unsigned, FilesChecked=13, PubCertMatch=false, exe SHA-256=bda66b9f4f6101eb"
     }
   ],
   "modules": [

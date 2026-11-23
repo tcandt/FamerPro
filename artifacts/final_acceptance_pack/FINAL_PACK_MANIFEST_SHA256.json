@@ -1,15 +1,19 @@
 {
   "ACCEPTANCE_MATRIX.md": {
-    "bytes": 6947,
-    "sha256": "a3c35ca2ef7b6a796d88ec492cf75153850b6f33f3d2109bf4f743a553c8cb92"
+    "bytes": 6654,
+    "sha256": "dcd3986564fc0ac62e82f2eece1ff9fda2bad7884a202868fbfdb835093ef3cf"
   },
   "EXTERNAL_GATES_STATUS.md": {
-    "bytes": 3272,
-    "sha256": "d2c639434520a7b2862b0cff4c0d7d8c32f9a82df05f6b4267c043bcd38ab77f"
+    "bytes": 2902,
+    "sha256": "9593ca30628c8d773d0a1081d5d9def47b24b77c9efa4803f85e86c96b25efdf"
+  },
+  "FARMERPRO_RC4_ADDENDUM_REPORT.pdf": {
+    "bytes": 525049,
+    "sha256": "d76ef4d4aa6ce1933c28009606dc349f297118adfd978ed6243af3a2a2058fe6"
   },
   "FINAL_ACCEPTANCE_SUMMARY.json": {
-    "bytes": 5289,
-    "sha256": "59cc71b976e82749649cda838cc3008f99d3d278b6504080f2acdbe1da357f95"
+    "bytes": 6118,
+    "sha256": "851eabbd3775249ac55663c41b9ea7b31847f881aab453b8f125b900464389b5"
   },
   "GATE2_ACCEPTANCE_ADDENDUM.md": {
     "bytes": 9891,
@@ -23,48 +27,80 @@
     "bytes": 6711,
     "sha256": "5a526f6496dc1c1e45e723d05740ce147b8c33e3d738f6200e6d63ce3c2b8def"
   },
+  "RC4_HOTFIX_REPORT.md": {
+    "bytes": 10138,
+    "sha256": "50671fbbe3b69d350aecd2a4701e61c79609fda95aee675debe5707fd78d03d3"
+  },
   "SECURITY_RISK_REGISTER_AND_THREAT_MODEL.md": {
     "bytes": 6821,
     "sha256": "872f6808889e02966f3f8a93f16f17dc58fe7ba80f66fc09f9df5c4ef49f5073"
   },
   "gate2_live_adb\\gate2_device_after_mini.png": {
-    "bytes": 49826,
-    "sha256": "989474c70fb3bdf615e4db8bedd05ec4583b62e1aa20b80e3269b115c17d9ea7"
+    "bytes": 24782,
+    "sha256": "e4c25c2780d1cb0d4b4de38bcd74186e9ad09425e2158fcd9a36415bcd719354"
   },
   "gate2_live_adb\\gate2_device_after_studio.png": {
-    "bytes": 61447,
-    "sha256": "c4586882a5a173c93d23f4d5fbcaf7fb3caf29a2d4eb1f461fcf6be2f85b6805"
+    "bytes": 61212,
+    "sha256": "43b8f0355c856dae32fbd4c174ffd4a60475002694ace504818f1c9c0ab2def4"
   },
   "gate2_live_adb\\gate2_device_before_mini.png": {
-    "bytes": 58919,
-    "sha256": "0543fd70b96ac9dd17b7d3d6e7f38533f54e526946e9ee1c71e46b6f75a32cda"
+    "bytes": 58574,
+    "sha256": "a86add00a5a526cac6ae38e88d01a360c2add734b4aff9f9e9922741875a0ac0"
   },
   "gate2_live_adb\\gate2_device_before_studio.png": {
-    "bytes": 59064,
-    "sha256": "fd16fcef56cc11aa94b0d256e5d56d6abd9791f9a064de06f512db669a163a95"
+    "bytes": 58750,
+    "sha256": "81f00bc4a08e418a0782c6f7ad7c365b14e76f516375bdd7b82eb48201de7930"
   },
   "gate2_live_adb\\gate2_live_adb_report.json": {
-    "bytes": 136778,
-    "sha256": "2612cd87f0b360395e4ea034ca6c254ee5cf32a74f9fcd51a871db8ab666d676"
+    "bytes": 136500,
+    "sha256": "928e630769d1f55f86f4fb9025cb14d4e49182a129ae8074464a52a861ab563c"
   },
   "gate2_live_adb\\gate2_mini_after.png": {
-    "bytes": 88972,
-    "sha256": "f869620540045e0f78f30558b8e6c3584212205e801b24fa20a01a95bb29e5fd"
+    "bytes": 88926,
+    "sha256": "6c5f91a3657c58262fbab5713cc6d0ee92029c43fa768a169e0686710ffdc83e"
   },
   "gate2_live_adb\\gate2_mini_before.png": {
-    "bytes": 49337,
-    "sha256": "1d7d16e087240f5ea3d4f0c50f1938f4eb5f278d6d4ab1ca49161188a78e5d7e"
+    "bytes": 49149,
+    "sha256": "cc88ac6f76da39f5bd54c9bce97bfdf6834411173653d0bb5d1d56559c425d0a"
   },
   "gate2_live_adb\\gate2_studio_device_lab.png": {
     "bytes": 116817,
     "sha256": "a4fbdf805d2c74dab92a7e14c0782e494fd2ebab46bbe1f3e726296b07738439"
   },
   "gate2_live_adb\\gate2_studio_runtime_vars.png": {
-    "bytes": 145746,
-    "sha256": "b0fd8e208472688386a5af6cfd6836f55944d76a3788c8cc016b4132b26540b4"
+    "bytes": 144926,
+    "sha256": "61a663924d6c02ce3dc3583412a884d80531ef977a5cdf9bae955a8597d05d8e"
   },
   "rc3_supplement_evidence\\rc3_supplement_verification.json": {
     "bytes": 5429,
     "sha256": "712f1a6d4548b32dd4862365eb2cbca90281e35d4332a1c2d583072dcc7b277d"
+  },
+  "rc4_evidence\\FARMERPRO_RC4_ADDENDUM_REPORT.html": {
+    "bytes": 657215,
+    "sha256": "3df6f479a3727882869cfb83b3ba63f07da20d9dd5054852633bb58aa478ed1d"
+  },
+  "rc4_evidence\\pdf_rc4_rendered_pages\\rc4_page_01.png": {
+    "bytes": 308413,
+    "sha256": "fce68923587906f3c162551c50096c1c6b079994608d78da0f04058cce7e01f0"
+  },
+  "rc4_evidence\\pdf_rc4_rendered_pages\\rc4_page_02.png": {
+    "bytes": 306197,
+    "sha256": "d45332878038960cb6d5b4bb1dfa048138043d71405a3e852816f85a6533b93c"
+  },
+  "rc4_evidence\\rc4_hotfix_verification.json": {
+    "bytes": 13548,
+    "sha256": "7884a92984961dcf29dc332761a9505a5ecc3a093f9996c8a7bd86c12781de13"
+  },
+  "rc4_evidence\\rust_workspace_test.log": {
+    "bytes": 18931,
+    "sha256": "634c88cf06ddcf0178a33c2cb1849213bc5c54f73657bc749f09ce6f28b1087d"
+  },
+  "rc4_evidence\\verify_gate2_live_adb.log": {
+    "bytes": 1504,
+    "sha256": "5b699bc15eab5d8af578209851b86b41ce53d9570f50dc91917f70dfbc5cd351"
+  },
+  "rc4_evidence\\verify_rc4_supplement.log": {
+    "bytes": 795,
+    "sha256": "b134570b789d904e7684f74641758c658e4073ab473b286d545b15540de0f5d3"
   }
 }

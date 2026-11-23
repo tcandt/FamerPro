@@ -1,0 +1,322 @@
+{
+  "executedAtUtc": "2026-11-23T06:16:24.797Z",
+  "rcCodeTag": "v0.1.0-p6-rc.4",
+  "installerTested": "E:\\DATA\\FarmerPro\\target\\release\\bundle\\nsis\\FarmerPro_0.1.0_x64-setup.exe",
+  "testA_CrossProcessDeviceLease": {
+    "targetSerial": "emulator-5554",
+    "adbDevicesRaw": "List of devices attached\r\nemulator-5554          device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:1",
+    "status": "PASS",
+    "A1_studioHoldsMiniBlocked": {
+      "sameProcessRejected": true,
+      "lockFilesObserved": [
+        "dev_293bc69f5125be01e731eaf28c4d8cb6b6046120d34b94b2560e99f411d55adf.lock"
+      ],
+      "miniJobBOutcome": {
+        "blocked": true,
+        "error": "DEVICE_LEASE_CONFLICT: Device 'emulator-5554' (canonical 'local-emu:5554') is exclusively locked by pid=3736 job='job-50ddfcd2-29a4-4e63-a3e1-93aef790f5e1' exe='E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\InstalledStudio\\FarmerPro.exe' (until 2026-11-23T06:16:28.296158400+00:00) [lockfile=E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\AppData\\Local\\FarmerPro\\locks\\dev_293bc69f5125be01e731eaf28c4d8cb6b6046120d34b94b2560e99f411d55adf.lock]"
+      },
+      "studioJobAFinalState": "succeeded"
+    },
+    "A2_miniProceedsAfterStudioRelease": {
+      "blocked": false,
+      "jobId": "mini-job-b73a3604-abfc-4df3-858f-d8eb04e97747",
+      "deviceId": "emulator-5554",
+      "state": "Succeeded",
+      "driverUsed": "LIVE_ADB(emulator-5554)"
+    },
+    "A3_forcedKillStudioRecovery": {
+      "killedStudioPid": 3736,
+      "killedJobId": "job-91021f01-0a79-4746-840b-fd8e432e2037",
+      "miniImmediatelyAfterStudioKill": {
+        "succeeded": true,
+        "state": "Succeeded",
+        "driverUsed": "LIVE_ADB(emulator-5554)"
+      },
+      "studioRestartCheck": {
+        "leasesOnRestart": 0,
+        "jobCStateAfterStartupRecovery": "interrupted",
+        "jobDFinalState": "succeeded"
+      }
+    },
+    "A4_forcedKillMiniRecovery": {
+      "studioBlockedWhileMiniRunning": {
+        "blocked": true,
+        "error": "DEVICE_LEASE_CONFLICT: Device 'emulator-5554' (canonical 'local-emu:5554') is exclusively locked by pid=30460 job='mini-job-b64f71c5-a1c0-4a94-bbd6-6606559ff0da' exe='E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\CrossMini1_v1.0.0_win-x64\\Auto_CrossMini.exe' (until 2026-11-23T06:19:06.540614500+00:00) [lockfile=E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\AppData\\Local\\FarmerPro\\locks\\dev_293bc69f5125be01e731eaf28c4d8cb6b6046120d34b94b2560e99f411d55adf.lock]"
+      },
+      "killedMiniPid": 30460,
+      "studioImmediatelyAfterMiniKill": {
+        "jobId": "job-3bb0fcb0-aeea-45ae-8c67-f4523f403d88",
+        "state": "succeeded"
+      },
+      "mini1DbJobsAfterRestart": [
+        [
+          "mini-job-b73a3604-abfc-4df3-858f-d8eb04e97747",
+          "Succeeded"
+        ],
+        [
+          "mini-job-9e16d40b-12eb-465e-a0c0-4ba7d7e07b20",
+          "Succeeded"
+        ],
+        [
+          "mini-job-b64f71c5-a1c0-4a94-bbd6-6606559ff0da",
+          "interrupted"
+        ]
+      ]
+    },
+    "A5_dualTransportSameDeviceBlocked": {
+      "blocked": true,
+      "error": "MINI_RUNTIME_ERROR: DEVICE_LEASE_CONFLICT: Device 'emulator-5554' (canonical 'local-emu:5554') is exclusively locked by pid=3736 job='job-50ddfcd2-29a4-4e63-a3e1-93aef790f5e1' exe='E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\InstalledStudio\\FarmerPro.exe' (until 2026-11-23T06:16:28.296158400+00:00) [lockfile=E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\AppData\\Local\\FarmerPro\\locks\\dev_293bc69f5125be01e731eaf28c4d8cb6b6046120d34b94b2560e99f411d55adf.lock]\n\nCommand failed: E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\CrossMini1_v1.0.0_win-x64\\Auto_CrossMini.exe --run-task tsk-cross-mini --adb 127.0.0.1:5555\nMINI_RUNTIME_ERROR: DEVICE_LEASE_CONFLICT: Device 'emulator-5554' (canonical 'local-emu:5554') is exclusively locked by pid=3736 job='job-50ddfcd2-29a4-4e63-a3e1-93aef790f5e1' exe='E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\InstalledStudio\\FarmerPro.exe' (until 2026-11-23T06:16:28.296158400+00:00) [lockfile=E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\AppData\\Local\\FarmerPro\\locks\\dev_293bc69f5125be01e731eaf28c4d8cb6b6046120d34b94b2560e99f411d55adf.lock]"
+    },
+    "A6_twoDistinctDevicesParallel": "PASS_IN_RUST_AND_MULTI_PROCESS_TESTS (Host has 1 live AVD running; dual distinct-device OS lockfiles verified in Rust cross-process test)",
+    "A7_disconnectReconnectClean": {
+      "adbDisconnectResult": "disconnected 127.0.0.1:5555\r\n"
+    },
+    "A8_twoIndependentMiniToolsConflict": {
+      "mini2BlockedWhileMini1HeldDevice": {
+        "blocked": true,
+        "error": "DEVICE_LEASE_CONFLICT: Device 'emulator-5554' (canonical 'local-emu:5554') is exclusively locked by pid=4000 job='mini-job-ef7923ca-84df-47b1-91ea-6390cbdb87a7' exe='E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\CrossMini1_v1.0.0_win-x64\\Auto_CrossMini.exe' (until 2026-11-23T06:19:10.904569600+00:00) [lockfile=E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\AppData\\Local\\FarmerPro\\locks\\dev_293bc69f5125be01e731eaf28c4d8cb6b6046120d34b94b2560e99f411d55adf.lock]"
+      },
+      "mini2SucceededAfterMini1Finished": {
+        "blocked": false,
+        "state": "Succeeded",
+        "driverUsed": "LIVE_ADB(emulator-5554)"
+      }
+    },
+    "A9_failClosedOnLockInitError": {
+      "failedClosed": true,
+      "error": "MINI_RUNTIME_ERROR: DEVICE_LOCK_INIT_FAILED: failed creating OS device lock directory 'E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\bad_lock_dir_marker': Cannot create a file when that file already exists. (os error 183)\n\nCommand failed: E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\CrossMini1_v1.0.0_win-x64\\Auto_CrossMini.exe --run-task tsk-cross-mini --adb emulator-5554\nMINI_RUNTIME_ERROR: DEVICE_LOCK_INIT_FAILED: failed creating OS device lock directory 'E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\bad_lock_dir_marker': Cannot create a file when that file already exists. (os error 183)"
+    },
+    "studioSetupCompatibilityMetadata": {
+      "sqliteSchemaVersionInRelease": 6,
+      "compatibilityReportCompatible": true
+    }
+  },
+  "testB_SqliteV6MigrationCompatibility": {
+    "status": "PASS",
+    "B1_rc2V5ToV6": {
+      "cols": [
+        "scope_key",
+        "var_name",
+        "project_id",
+        "session_id",
+        "job_id",
+        "value_type",
+        "value_json",
+        "source",
+        "verified",
+        "confidence",
+        "updated_at_utc",
+        "workflow_version",
+        "seq",
+        "redacted",
+        "confidence_source",
+        "measured_confidence",
+        "rule_matched",
+        "device_id"
+      ],
+      "hasAll4": true,
+      "vers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "integ": [
+        "ok"
+      ],
+      "fkCount": 0
+    },
+    "B2_freshV6": {
+      "cols": [
+        "scope_key",
+        "var_name",
+        "project_id",
+        "session_id",
+        "job_id",
+        "value_type",
+        "value_json",
+        "source",
+        "verified",
+        "confidence",
+        "updated_at_utc",
+        "workflow_version",
+        "seq",
+        "redacted",
+        "confidence_source",
+        "measured_confidence",
+        "rule_matched",
+        "device_id"
+      ],
+      "hasAll4": true,
+      "vers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "integ": [
+        "ok"
+      ],
+      "fkCount": 0
+    },
+    "B3_rc3ToV6": {
+      "cols": [
+        "scope_key",
+        "var_name",
+        "project_id",
+        "session_id",
+        "job_id",
+        "value_type",
+        "value_json",
+        "source",
+        "verified",
+        "confidence",
+        "updated_at_utc",
+        "workflow_version",
+        "seq",
+        "redacted",
+        "confidence_source",
+        "measured_confidence",
+        "rule_matched",
+        "device_id"
+      ],
+      "hasAll4": true,
+      "vers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "integ": [
+        "ok"
+      ],
+      "fkCount": 0,
+      "rc3UpgradeVarsErr": null
+    },
+    "B4_idempotentSecondOpen": true,
+    "B5_domainTablesPreserved": {
+      "projects": 1,
+      "workflows": 1,
+      "workflow_versions": 1,
+      "task_definitions": 1,
+      "project_releases": 1,
+      "accounts": 1,
+      "publisher_profiles": 1
+    },
+    "B6_legacySafeNoFakeLiveConfidence": {
+      "keptEnvelopeRows": [
+        [
+          "legacy_ocr_val",
+          "\"Settings\"",
+          "LEGACY_UNVERIFIED",
+          0,
+          null,
+          null,
+          null,
+          null,
+          null,
+          7
+        ]
+      ],
+      "studioReadbackLegacy": {
+        "projectId": "proj-rc2-upg",
+        "sessionId": "sess-rc2-old",
+        "jobId": "job-rc2-old",
+        "name": "legacy_ocr_val",
+        "value": "Settings",
+        "valueType": "string",
+        "source": "LEGACY_UNVERIFIED",
+        "verified": false,
+        "confidence": null,
+        "confidenceSource": null,
+        "measuredConfidence": null,
+        "ruleMatched": null,
+        "deviceId": null,
+        "updatedAtUtc": "2026-11-23T04:20:00Z",
+        "workflowVersion": "wf-rc2-1@v1",
+        "seq": 7,
+        "redacted": false
+      }
+    },
+    "B7_studioGetProjectRuntimeVars": {
+      "projectsCount": 1,
+      "workflowsCount": 1,
+      "tasksCount": 1,
+      "releasesCount": 1,
+      "accountsCount": 1,
+      "accountAlias": "rc2_test_account",
+      "varsScopeKey": "proj-rc2-upg",
+      "keptLegacyEnvelope": {
+        "projectId": "proj-rc2-upg",
+        "sessionId": "sess-rc2-old",
+        "jobId": "job-rc2-old",
+        "name": "legacy_ocr_val",
+        "value": "Settings",
+        "valueType": "string",
+        "source": "LEGACY_UNVERIFIED",
+        "verified": false,
+        "confidence": null,
+        "confidenceSource": null,
+        "measuredConfidence": null,
+        "ruleMatched": null,
+        "deviceId": null,
+        "updatedAtUtc": "2026-11-23T04:20:00Z",
+        "workflowVersion": "wf-rc2-1@v1",
+        "seq": 7,
+        "redacted": false
+      },
+      "varsError": null
+    },
+    "B8_integrityCheck": [
+      "ok"
+    ],
+    "B9_foreignKeyCheckCount": 0,
+    "B10_rollbackAndBackupRestore": {
+      "simulatedFaultRollbackOk": true,
+      "backupRestoreSha256Match": true,
+      "backupSha256": "1a777afb768c0d3d94eaa0a1d9f6457120611f91b2f7cc470bb5fdc3d04fa6ad",
+      "restoredSha256": "1a777afb768c0d3d94eaa0a1d9f6457120611f91b2f7cc470bb5fdc3d04fa6ad"
+    },
+    "B11_independentMiniToolV5ToV6": {
+      "sqliteSchemaVersion": 6,
+      "runState": "Succeeded"
+    },
+    "B12_incompatibleBlocked": {
+      "futureV99Blocked": true,
+      "missingColV6Blocked": true,
+      "futureErr": "MINI_RUNTIME_ERROR: SQLITE_COMPATIBILITY_OR_OPEN_ERROR: Failed opening runtime SQLite database at E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\sqlite_v6_upgrade\\future_v99_data\\runtime_rc4-cross-lease-1.db: SQLITE_DOWNGRADE_INCOMPATIBLE: Database schema v99 exceeds runtime supported max v6. Upgrade application or restore pre-update backup!\n\nCommand failed: E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\CrossMini1_v1.0.0_win-x64\\Auto_CrossMini.exe --verify-bundle\nMINI_RUNTIME_ERROR: SQLITE_COMPATIBILITY_OR_OPEN_ERROR: Failed opening runtime SQLite database at E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\sqlite_v6_upgrade\\future_v99_data\\runtime_rc4-cross-lease-1.db: SQLITE_DOWNGRADE_INCOMPATIBLE: Database schema v99 exceeds runtime supported max v6. Upgrade application or restore pre-update backup!",
+      "missingColErr": "MINI_RUNTIME_ERROR: SQLITE_COMPATIBILITY_OR_OPEN_ERROR: Failed opening runtime SQLite database at E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\sqlite_v6_upgrade\\bad_col_v6_data\\runtime_rc4-cross-lease-1.db: SQLITE_SCHEMA_INCOMPATIBLE: table 'runtime_variable_envelopes' is missing required v6 column 'confidence_source' — refusing to operate on incomplete schema\n\nCommand failed: E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\CrossMini1_v1.0.0_win-x64\\Auto_CrossMini.exe --verify-bundle\nMINI_RUNTIME_ERROR: SQLITE_COMPATIBILITY_OR_OPEN_ERROR: Failed opening runtime SQLite database at E:\\DATA\\FarmerPro\\artifacts\\final_acceptance_pack\\rc4_evidence\\sandbox\\sqlite_v6_upgrade\\bad_col_v6_data\\runtime_rc4-cross-lease-1.db: SQLITE_SCHEMA_INCOMPATIBLE: table 'runtime_variable_envelopes' is missing required v6 column 'confidence_source' — refusing to operate on incomplete schema"
+    },
+    "preUpgradeInspection": {
+      "colsBefore": [
+        "scope_key",
+        "var_name",
+        "project_id",
+        "session_id",
+        "job_id",
+        "value_type",
+        "value_json",
+        "source",
+        "verified",
+        "confidence",
+        "updated_at_utc",
+        "workflow_version",
+        "seq",
+        "redacted"
+      ],
+      "schemaVersionsBefore": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    }
+  }
+}

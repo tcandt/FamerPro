@@ -1,16 +1,16 @@
 {
-  "executedAtUtc": "2026-11-23T05:13:55.458Z",
-  "gitHead": "629cce236e173f91642684858e44638948773b9e",
+  "executedAtUtc": "2026-11-23T06:10:40.177Z",
+  "gitHead": "7c661201b2b81025e10357d5841e67b9bc34348b",
   "hostEnvironment": {
     "osCaption": "Microsoft Windows 11 Pro",
     "osBuild": "26200",
     "arch": "AMD64",
     "webview2Version": "157.0.4341.60",
-    "windowsSandboxExists": false,
+    "windowsSandboxExists": true,
     "commercialCodeSignCertsCount": 0,
-    "adbOut": "List of devices attached\r\nemulator-5554          device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:2",
+    "adbOut": "List of devices attached\r\nemulator-5554          device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:1",
     "onlineDevices": [
-      "emulator-5554          device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:2"
+      "emulator-5554          device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:1"
     ],
     "ldRunning": "unknown",
     "whoami": "desktop-n916ap3\\tinh-nguyen",
@@ -25,8 +25,8 @@
   },
   "p6_1_nsisAndWebview2": {
     "installerPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\FarmerPro_0.1.0_x64-setup.exe",
-    "installerBytes": 15268397,
-    "installerSha256": "ab36da44ccdd50f33994bf9fc88f2b81635e5747bdd2dcc154bcc6bc4b57d7f1",
+    "installerBytes": 15435692,
+    "installerSha256": "3cd7124874dd2763ac6843fa5fecc466b0f1eb7f2db442c91054e418bae4f210",
     "sdkBundled": false,
     "webview2InstallMode": "embedBootstrapper",
     "requiresInternetIfWebview2Missing": true,
@@ -49,23 +49,23 @@
     "dbPreserved": true
   },
   "p6_2_liveAdb": {
-    "adbDevicesOutput": "List of devices attached\r\nemulator-5554          device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:2",
+    "adbDevicesOutput": "List of devices attached\r\nemulator-5554          device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:1",
     "onlineDevicesCount": 1,
     "ldplayer14Vm0IsRunning": "unknown",
     "status": "PASS"
   },
   "p6_3_securityAndReleaseChecksums": {
-    "zipAlphaBytes": 11971510,
-    "zipAlphaSha256": "e94279949710eca5baf0bd0ced6bd58fd92227fd2b8af6df60313bc8021b8339",
-    "zipBetaBytes": 11973272,
-    "zipBetaSha256": "99512f43ddc10ab8cdcc55171929e230042a58b5a831f4b30e82c1bbacb24771",
+    "zipAlphaBytes": 12156104,
+    "zipAlphaSha256": "06ed29a78896dc6791acbc24fc7665fe9c466b91a0748f9d21045ad85bec70e3",
+    "zipBetaBytes": 12157696,
+    "zipBetaSha256": "3e8785f7f4f6114a95f2b3b2c571b858769615aed2ade6f2c22885c5301562ea",
     "alphaPrePostZipShaMatch": true,
     "betaPrePostZipShaMatch": true,
     "finalVerifyAlpha": {
       "verified": true,
       "releaseDir": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Alpha_v1.0.0_win-x64",
       "exeName": "Auto_P6Alpha.exe",
-      "finalExeSha256": "336246bd8d889c9c4a9f07b1874c7dd8f802a1bbed4827c1c3cd7df41ff8eada",
+      "finalExeSha256": "bda66b9f4f6101eb6db694e57de283c2ba76e994062afb45c66749d200784143",
       "authenticodeChecked": true,
       "authenticodeTrustStatus": "unsigned",
       "authenticodeTrustedPublicChain": false,
@@ -82,7 +82,7 @@
       "verified": true,
       "releaseDir": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64",
       "exeName": "Auto_P6Beta.exe",
-      "finalExeSha256": "377207e92d5adacc89269ab8902166db8f7ce8c162a9392fc50c55dc6a88fb22",
+      "finalExeSha256": "d5b58001937d417d4ad3f4f5ef141a952f301a261b95a32fba1e9fc97560df9f",
       "authenticodeChecked": true,
       "authenticodeTrustStatus": "self_signed_untrusted_root",
       "authenticodeTrustedPublicChain": false,
@@ -102,7 +102,7 @@
       "previousVersion": "1.0.0",
       "activeVersion": "1.1.0",
       "stageReached": "completed",
-      "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwst8y9z\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261123_051346_895.db",
+      "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwsv9ulx\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261123_061028_468.db",
       "backupVerifiedOk": true,
       "signatureVerifiedOk": true,
       "compatibilityVerifiedOk": true,
@@ -111,16 +111,16 @@
       "binaryRollbackOnly": false,
       "databaseRestored": false,
       "preRollbackSafetyDbPath": null,
-      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwst8y9z\\.updater\\update-journal.json",
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwsv9ulx\\.updater\\update-journal.json",
       "detail": "Upgraded Mini Tool safely with WAL backup and atomic version switch."
     },
     "secAuditOk": {
       "passed": true,
-      "installRoot": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwst8y9z",
+      "installRoot": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwsv9ulx",
       "trustEpoch": 3,
       "activeVersion": "1.1.0",
-      "activeExeSha256": "78d22349b3b26143d8e7cba193f9c34e3c9fe43e55a9bfa47895e884591d4677",
-      "peRootPubkeyHex": "c2830b31c60a14148ef2fff93c7aaf1e2bb9e9de4b433b08807d6e62b52786c3",
+      "activeExeSha256": "5d4b298c4651484bbb82a0607f598f5cd7fbf9cffd7d104c574b4376b379cd3f",
+      "peRootPubkeyHex": "55c3239184a1673bc37b0ac0984890214faca0a1a7bcc7d800479c7de2c232b5",
       "authenticodeTrustStatus": "self_signed_untrusted_root",
       "externalAnchorVerified": true,
       "versionsScanned": [
@@ -129,21 +129,21 @@
       "rogueOrTamperedVersions": [],
       "issues": []
     },
-    "fullTriadAttackErr": "Error: FULL_TRIAD_ROLLBACK_DETECTED: local .updater triad (epoch 1, db_epoch Some(1)) < external trust anchor (epoch 3)\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe verify-security --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwst8y9z\nError: FULL_TRIAD_ROLLBACK_DETECTED: local .updater triad (epoch 1, db_epoch Some(1)) < external trust anchor (epoch 3)",
-    "rogueRevokedDirAttackErr": "Error: KEY_REVOKED in versions/v9.9.9\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe verify-security --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwst8y9z\nError: KEY_REVOKED in versions/v9.9.9",
-    "rogueDirAttackErr": "Error: ROGUE_OR_CORRUPT_VERSION_DIR versions/v9.9.8: PE_ROOT_OF_TRUST_MISMATCH: disk trusted_publisher.pub != trusted PE RT_RCDATA #7777\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe verify-security --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwst8y9z\nError: ROGUE_OR_CORRUPT_VERSION_DIR versions/v9.9.8: PE_ROOT_OF_TRUST_MISMATCH: disk trusted_publisher.pub != trusted PE RT_RCDATA #7777",
-    "manifestTamperErr": "Error: RELEASE_MANIFEST_TAMPERED: checksum mismatch for 'THIRD_PARTY_NOTICES.txt'\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe verify-security --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwst8y9z\nError: RELEASE_MANIFEST_TAMPERED: checksum mismatch for 'THIRD_PARTY_NOTICES.txt'",
+    "fullTriadAttackErr": "Error: FULL_TRIAD_ROLLBACK_DETECTED: local .updater triad (epoch 1, db_epoch Some(1)) < external trust anchor (epoch 3)\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe verify-security --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwsv9ulx\nError: FULL_TRIAD_ROLLBACK_DETECTED: local .updater triad (epoch 1, db_epoch Some(1)) < external trust anchor (epoch 3)",
+    "rogueRevokedDirAttackErr": "Error: KEY_REVOKED in versions/v9.9.9\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe verify-security --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwsv9ulx\nError: KEY_REVOKED in versions/v9.9.9",
+    "rogueDirAttackErr": "Error: ROGUE_OR_CORRUPT_VERSION_DIR versions/v9.9.8: PE_ROOT_OF_TRUST_MISMATCH: disk trusted_publisher.pub != trusted PE RT_RCDATA #7777\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe verify-security --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwsv9ulx\nError: ROGUE_OR_CORRUPT_VERSION_DIR versions/v9.9.8: PE_ROOT_OF_TRUST_MISMATCH: disk trusted_publisher.pub != trusted PE RT_RCDATA #7777",
+    "manifestTamperErr": "Error: RELEASE_MANIFEST_TAMPERED: checksum mismatch for 'THIRD_PARTY_NOTICES.txt'\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe verify-security --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwsv9ulx\nError: RELEASE_MANIFEST_TAMPERED: checksum mismatch for 'THIRD_PARTY_NOTICES.txt'",
     "threatModelAcls": {
       "hkcuWriteAcl": "DESKTOP-N916AP3\\TINH-NGUYEN:FullControl",
-      "extFileAcl": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ExternalTrustAnchors\\eaa82867c79b718e.json BUILTIN\\Administrators:(I)(F) |                                                                                            NT AUTHORITY\\SYSTEM:(I)(F) |                                                                                            NT AUTHORITY\\Authenticated Users:(I)(M) |                                                                                            BUILTIN\\Users:(I)(RX) |  | Successfully processed 1 files; Failed processing 0 files"
+      "extFileAcl": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ExternalTrustAnchors\\fd3c04c1c098f864.json BUILTIN\\Administrators:(I)(F) |                                                                                            NT AUTHORITY\\SYSTEM:(I)(F) |                                                                                            NT AUTHORITY\\Authenticated Users:(I)(M) |                                                                                            BUILTIN\\Users:(I)(RX) |  | Successfully processed 1 files; Failed processing 0 files"
     },
     "sameUser6CompResult": {
       "passed": true,
-      "installRoot": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwst8y9z",
+      "installRoot": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwsv9ulx",
       "trustEpoch": 1,
       "activeVersion": "1.0.0",
-      "activeExeSha256": "377207e92d5adacc89269ab8902166db8f7ce8c162a9392fc50c55dc6a88fb22",
-      "peRootPubkeyHex": "c16cc50b65aac4f06b51594f17868a64754684d62262933aaa257f744cc86e26",
+      "activeExeSha256": "d5b58001937d417d4ad3f4f5ef141a952f301a261b95a32fba1e9fc97560df9f",
+      "peRootPubkeyHex": "6df0c69234f8fb8cbedeb8e38e4d916bb049e1777a26ceed48108ce791e28cc5",
       "authenticodeTrustStatus": "self_signed_untrusted_root",
       "externalAnchorVerified": true,
       "versionsScanned": [
@@ -179,7 +179,7 @@
       "binaryRollbackOnly": false,
       "databaseRestored": false,
       "preRollbackSafetyDbPath": null,
-      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwst8y9z\\.updater\\update-journal.json",
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwsv9ulx\\.updater\\update-journal.json",
       "detail": "Initial Mini Tool versioned installation verified and activated."
     },
     "upgRes": {
@@ -189,7 +189,7 @@
       "previousVersion": "1.0.0",
       "activeVersion": "1.1.0",
       "stageReached": "completed",
-      "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwst8y9z\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261123_051345_458.db",
+      "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwsv9ulx\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261123_061026_801.db",
       "backupVerifiedOk": true,
       "signatureVerifiedOk": true,
       "compatibilityVerifiedOk": true,
@@ -198,7 +198,7 @@
       "binaryRollbackOnly": false,
       "databaseRestored": false,
       "preRollbackSafetyDbPath": null,
-      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwst8y9z\\.updater\\update-journal.json",
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwsv9ulx\\.updater\\update-journal.json",
       "detail": "Upgraded Mini Tool safely with WAL backup and atomic version switch."
     },
     "rbRes": {
@@ -217,7 +217,7 @@
       "binaryRollbackOnly": true,
       "databaseRestored": false,
       "preRollbackSafetyDbPath": null,
-      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwst8y9z\\.updater\\update-journal.json",
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwsv9ulx\\.updater\\update-journal.json",
       "detail": "Binary-only rollback completed; live SQLite database and post-update user data preserved cleanly."
     },
     "afterReUpgNotes": {

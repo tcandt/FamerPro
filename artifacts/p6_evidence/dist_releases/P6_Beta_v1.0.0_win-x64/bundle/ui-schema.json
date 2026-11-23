@@ -141,7 +141,7 @@
   ],
   "initialRuntimeVars": {
     "stamina_left": 140,
-    "raid_score": 9850,
-    "division": "Diamond-II"
+    "division": "Diamond-II",
+    "raid_score": 9850
   }
 }
