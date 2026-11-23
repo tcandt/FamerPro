@@ -16,7 +16,7 @@
       "minRuntimeVersion": "0.1.0",
       "sqliteSchemaVersion": 5
     },
-    "projectId": "proj-p6-alpha-harvester-9970b651",
+    "projectId": "proj-p6-alpha-harvester-61a44b9a",
     "slug": "p6-alpha-harvester",
     "name": "Zenith Harvester Pro",
     "gamePackageId": "com.zenith.harvester",
@@ -139,7 +139,7 @@
   ],
   "workflowsCount": 1,
   "templatesCount": 0,
-  "builtAtUtc": "2026-11-23T01:34:18.018229900+00:00",
+  "builtAtUtc": "2026-11-23T02:06:56.246599800+00:00",
   "publisher": {
     "publisherId": "pub-p6-alpha",
     "displayName": "Zenith Automation Group",

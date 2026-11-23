@@ -1,63 +1,63 @@
 {
   "FARMERPRO_P6_ACCEPTANCE_REPORT.html": {
-    "bytes": 924392,
-    "sha256": "77b32520aa11d397f05a547c0ca181821811fd988d220e5e88009cf3db603ea5"
+    "bytes": 924926,
+    "sha256": "d6bbb20e5b44fcdd68d3362f5fbb040b92c4fc38121b22ebd63ee09eaa9b7c4f"
   },
   "FARMERPRO_P6_ACCEPTANCE_REPORT.pdf": {
-    "bytes": 708647,
-    "sha256": "64c8678ab5f4df7e285e714e6bed504370386dc66b96fae863cefaeab0533217"
+    "bytes": 708671,
+    "sha256": "7aa48889661711ff580237440dd2a96a064dddc86d67c77b9b64ac71478cbd1d"
   },
   "cargo_test_workspace_p6.log": {
-    "bytes": 17056,
-    "sha256": "ffeab8ddda7741f137abdf1d0ba5256227689b96aac40738547c7e28ce8a4165"
+    "bytes": 16625,
+    "sha256": "d9b31676d0eaf92784bb3c5d08c1a49eaf48328cc110cf1f1a1fcaf0eadb7eb3"
   },
   "p6_e2e_report.json": {
-    "bytes": 17755,
-    "sha256": "124265a96ad35aa8766213b6f8327cb592a382942828ff77456df3cdf60454bd"
+    "bytes": 19867,
+    "sha256": "4deb365efea040cf427d512039a5801a7e2f5a2468d4dc2f62adad90ad2d6349"
   },
   "p6_pdf_qa.json": {
     "bytes": 507,
-    "sha256": "95f2e71f1f8c99c91355431a67491449cfbfae54d751ea9057be91676d3272d5"
+    "sha256": "3c7c7c76684304d952d20ad3d48f2528e509bfaf35c601ee3156bdd4a5dfb336"
   },
   "p6_portable_alpha_compact_testkit.png": {
-    "bytes": 79114,
-    "sha256": "8f54722e4eb1e9af404441d035154f7bc3c8645c4d0ff504a51fc05b295e65ec"
+    "bytes": 79646,
+    "sha256": "64b8a49f753af52587710a2dbdd5d50ea76a959bded8bcffed16b515381ff68b"
   },
   "p6_portable_beta_expanded_testkit.png": {
-    "bytes": 111916,
-    "sha256": "e83a8e81746023b39cf13d4c26e1d5dca6cc368863a9f2b4acd94d43c2fecdb2"
+    "bytes": 111762,
+    "sha256": "0fff53e43ac6b32b15a582a1fcc1cdf4fdf82d45a861c7f67f3ff038b42667f9"
   },
   "p6_studio_1280x720_workflow.png": {
     "bytes": 138013,
     "sha256": "147fc914513c39cd50b56fdfe668909c6ba8334c070f5ea9ad6fa6b1864cda03"
   },
   "p6_studio_1600x900_builder.png": {
-    "bytes": 185803,
-    "sha256": "4d08880260af272e5b17366aa83139ea08107a5088f9e87fe84a174cfab942bb"
+    "bytes": 185579,
+    "sha256": "fac31b0794a3ed45abfca258af284a2da5ee62cfab68a00e27dd356819a27aa7"
   },
   "p6_studio_1920x1080_tasks.png": {
     "bytes": 159966,
     "sha256": "335c57d81a238698f79dac3aea84236f087b073ba6452aa8a76f5b23244f1a0b"
   },
   "verify_p6_stdout.log": {
-    "bytes": 1690,
-    "sha256": "0936dc7b310e27f546a4c84b9b3f5c4369639fe2a254be91d42769c55a6e5fa8"
+    "bytes": 1868,
+    "sha256": "1c1d64a2405828b406cfbb72ff2a228d1f7b07f8b8eb97b58e7511731123d6e6"
   },
   "dist_releases/FarmerPro_0.1.0_x64-setup.exe": {
-    "bytes": 15177006,
-    "sha256": "e0f4e09dfe42b00b852e2b53372645d5a5579e26c4b1557d5c7aae0d34b71daf"
+    "bytes": 15180250,
+    "sha256": "d99dd255f6ecae424832013f70b215463fdb6feedce35a967e155291e5f867c6"
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64.zip": {
-    "bytes": 11911410,
-    "sha256": "6509dc5785a9fa3aad358a846d1481f7af5cdc33d336efee9c308e3a7a101f5f"
+    "bytes": 11911656,
+    "sha256": "95949c8dcc5296fdbbc0ff22d9e21cd8521871872027968671fd92befb09ed0a"
   },
   "dist_releases/P6_Beta_v1.0.0_win-x64.zip": {
-    "bytes": 11913055,
-    "sha256": "3aece83faffc38125a151808b750bce90c69767f3544190a878711d95eaa35f7"
+    "bytes": 11913300,
+    "sha256": "ac518a423a4f22e72e570437c0db3afbcd46d4016f3f9365dcbd2d3cd0e3d0ac"
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64/Auto_P6Alpha.exe": {
     "bytes": 15759872,
-    "sha256": "bed31b0ee7b305a42efa1431ab834c405d7f844be62f19e89162f8af344222da"
+    "sha256": "24be91b7a60338376fd0d6c0c2a662a90b15d7c4be277483c1a3feffb7446572"
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64/THIRD_PARTY_NOTICES.txt": {
     "bytes": 532,
@@ -65,11 +65,11 @@
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64/build-report.json": {
     "bytes": 8344,
-    "sha256": "633da3ce95f3f305b06e93d3e39456d8060354fb3760f9fa9a288b44260f2a6f"
+    "sha256": "80f4dd090220fa6494d47a41d769e97bb5d64d44a63a80def01bdae0d121d8d4"
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64/release-manifest.json": {
     "bytes": 4642,
-    "sha256": "1fa4756398345610116417d20df7824556658d3210ae068b3a4f7949a0aafdc3"
+    "sha256": "e01ccb0e695f2a3ec0f062e43d9e1fee33f81b25b6020865e95969aaae317595"
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64/bin/AdbWinApi.dll": {
     "bytes": 108184,
@@ -85,23 +85,23 @@
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64/bundle/checksums.sha256": {
     "bytes": 260,
-    "sha256": "79e739b8575886c2207b7890066f16853b0b01878ad9ff47fc787c9dd633a73a"
+    "sha256": "a66de73494b2013117475541873302200ab2cda20f3cc8a0d3eb054fbdc90d25"
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64/bundle/manifest.fpbundle.json": {
     "bytes": 5727,
-    "sha256": "592fe6c9f1f4cedcc16a415d1f735408068984e145d2db0cc800f8b113a0ebfa"
+    "sha256": "7e59b83b056d54cc4dd281eefb45c8e3c3975eae73b4170bb7b1de3bd61d394a"
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64/bundle/signature.fpbundle.json": {
     "bytes": 883,
-    "sha256": "3b00ce27afe86f1ac1dedcdc0feb1b8f88a37e529124bca6d363026abaf42cb6"
+    "sha256": "5f31a4f5b2a0991c3008d807d55e6f135a75fa94536a85ccb1daa7551ce54234"
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64/bundle/trusted_publisher.pub": {
     "bytes": 64,
-    "sha256": "907b033d025cc41859a8a436744e25248569038fcb12661d6a62700766f6eeee"
+    "sha256": "977336ca2f206deb04feb061d54ef2eb005aa374b937d8ce54b969be9f3f8128"
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64/bundle/ui-schema.json": {
     "bytes": 2883,
-    "sha256": "c6f42a7c3805dc8744298b799d56981b57e3935f7f61dae34936cccc83d2f2a3"
+    "sha256": "dd0d81546fe32443a766db9f2343791ff3a8d0194c63d038c30a78333028771f"
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64/bundle/workflows.fpbundle.json": {
     "bytes": 1400,
@@ -112,12 +112,12 @@
     "sha256": "d0b69eb24e697cff15eafa2e2913ec0bd79d60aec08ff12c15351ca289648ee3"
   },
   "dist_releases/P6_Alpha_v1.0.0_win-x64/updater/fp-updater.exe": {
-    "bytes": 5658112,
-    "sha256": "9890fec42942ad87337468f99936bf29bd4689736e553522de89730c0716b282"
+    "bytes": 5659136,
+    "sha256": "8f66e11c9d058f6ed700d7599774bf175e77159ec12c2ea3e8139c4ea0e32865"
   },
   "dist_releases/P6_Beta_v1.0.0_win-x64/Auto_P6Beta.exe": {
     "bytes": 15761368,
-    "sha256": "54776e349b16b9f39f6a2f135456b5258466015a7e379d8f66cad02066e34b1e"
+    "sha256": "03c0ffc680d0a7eda3bdfe06b5b9b000382917605735fdeccbd7b78d56b45f8b"
   },
   "dist_releases/P6_Beta_v1.0.0_win-x64/THIRD_PARTY_NOTICES.txt": {
     "bytes": 532,
@@ -125,11 +125,11 @@
   },
   "dist_releases/P6_Beta_v1.0.0_win-x64/build-report.json": {
     "bytes": 8541,
-    "sha256": "79d6935663cbcaa9d7f35f705f5097adcfe2cb59ea5c60e287ed108d1f6127b5"
+    "sha256": "85ad48dc3c3e318da0c00b48b18fc3c95683ec980c6b5d9214683bb9d625ee12"
   },
   "dist_releases/P6_Beta_v1.0.0_win-x64/release-manifest.json": {
     "bytes": 4733,
-    "sha256": "7c828964553838a411594eb376928854e2a93f0621165148e4271058ed324246"
+    "sha256": "c55e063ca9f23c9a96b6bc72b2cb3a5f504793c601596e603200a400e8c3160a"
   },
   "dist_releases/P6_Beta_v1.0.0_win-x64/bin/AdbWinApi.dll": {
     "bytes": 108184,
@@ -145,19 +145,19 @@
   },
   "dist_releases/P6_Beta_v1.0.0_win-x64/bundle/checksums.sha256": {
     "bytes": 260,
-    "sha256": "23ba8288d698dbb661cb05f08c1a8848d546d9d5fc04bae5eaf51cc1c1ac70a3"
+    "sha256": "b1fa5ee2215f2198d2e75ea00edaa38c66071e984df33695b0581862521939cd"
   },
   "dist_releases/P6_Beta_v1.0.0_win-x64/bundle/manifest.fpbundle.json": {
     "bytes": 5823,
-    "sha256": "36444dc0f1f0c693b52587e74233eb8fc58829db37ba3c1a4b9a0c78503db68f"
+    "sha256": "dba08ccd67d1ef605102da9b29a206e4d30a6f1549a42847fc078783b41c23ff"
   },
   "dist_releases/P6_Beta_v1.0.0_win-x64/bundle/signature.fpbundle.json": {
     "bytes": 883,
-    "sha256": "ae5de74bf7d02fdb94f9dd511723e3cc7f79bcbefe4554db20c8c008bd7d1448"
+    "sha256": "981c6fb382af73db68bf60d4bfc9158c9f45e689cd9810dbe9563f664cfedc92"
   },
   "dist_releases/P6_Beta_v1.0.0_win-x64/bundle/trusted_publisher.pub": {
     "bytes": 64,
-    "sha256": "907b033d025cc41859a8a436744e25248569038fcb12661d6a62700766f6eeee"
+    "sha256": "977336ca2f206deb04feb061d54ef2eb005aa374b937d8ce54b969be9f3f8128"
   },
   "dist_releases/P6_Beta_v1.0.0_win-x64/bundle/ui-schema.json": {
     "bytes": 3284,
@@ -172,12 +172,12 @@
     "sha256": "615c4fcf8181ce1220834befbba9d1fb8a87e483b233729a6969576089cdd440"
   },
   "dist_releases/P6_Beta_v1.0.0_win-x64/updater/fp-updater.exe": {
-    "bytes": 5658112,
-    "sha256": "9890fec42942ad87337468f99936bf29bd4689736e553522de89730c0716b282"
+    "bytes": 5659136,
+    "sha256": "8f66e11c9d058f6ed700d7599774bf175e77159ec12c2ea3e8139c4ea0e32865"
   },
   "dist_releases/P6_Beta_v1.1.0_win-x64/Auto_P6Beta.exe": {
     "bytes": 15761368,
-    "sha256": "a495ef8f35742599d2f20272280a49978267bf72f86a217b536b501ef2fdcfb1"
+    "sha256": "eb3cf7e637e5d04a48f3beaeda17e7abbefdc022d2d1fd4bcb54215d4964a87e"
   },
   "dist_releases/P6_Beta_v1.1.0_win-x64/THIRD_PARTY_NOTICES.txt": {
     "bytes": 532,
@@ -185,11 +185,11 @@
   },
   "dist_releases/P6_Beta_v1.1.0_win-x64/build-report.json": {
     "bytes": 8541,
-    "sha256": "4f6e1407e9a6f89cd2db26806c464228041d079e811e40e01e74579cc286ae6d"
+    "sha256": "db03759997d1a7114c8e974c82bde398a95ee09d78648d693a88686b47448177"
   },
   "dist_releases/P6_Beta_v1.1.0_win-x64/release-manifest.json": {
-    "bytes": 5329,
-    "sha256": "c861a51b9915708c0ac963213da41fe769d0394f1023453249d6fd089ba9064a"
+    "bytes": 5323,
+    "sha256": "38cbfd1f91f40058bda749968cdd8652ccac0f152dca96e9cf567b064ae3e51f"
   },
   "dist_releases/P6_Beta_v1.1.0_win-x64/bin/AdbWinApi.dll": {
     "bytes": 108184,
@@ -205,23 +205,23 @@
   },
   "dist_releases/P6_Beta_v1.1.0_win-x64/bundle/checksums.sha256": {
     "bytes": 260,
-    "sha256": "121fb0b3a63aef045348cb555923d30efc63c09add5ebd616ccf7cd77981a7a0"
+    "sha256": "ce1d06743b81125ffaa2ab32087871486ce7ed1d0c1a88ec9243abd2a5239ec3"
   },
   "dist_releases/P6_Beta_v1.1.0_win-x64/bundle/manifest.fpbundle.json": {
-    "bytes": 6419,
-    "sha256": "88b34b3c175b8d975b5edb4215078c8ed4e99b67caf2906f3639b139d21fa6a4"
+    "bytes": 6413,
+    "sha256": "445fa86034525c06da336dfab75ef4c73620b173dbe1a71589c7dee1a3602304"
   },
   "dist_releases/P6_Beta_v1.1.0_win-x64/bundle/signature.fpbundle.json": {
     "bytes": 883,
-    "sha256": "4778a761e52c5bf8660439e9aaa7e034f7c929645c63c65b04952f84710ef8d2"
+    "sha256": "4438d5d3a1a17aa95d6990cc73de7743c257d80da8944b1e6d53863c601fdd8d"
   },
   "dist_releases/P6_Beta_v1.1.0_win-x64/bundle/trusted_publisher.pub": {
     "bytes": 64,
-    "sha256": "f609382f92c956ebec57a99eca2801109b3dd98e8a4bbc09261928012c4132a6"
+    "sha256": "a36de5218c9b3d548a5c8cbc5fc2c4898d7397ca278c62feaabe9fa0c6355423"
   },
   "dist_releases/P6_Beta_v1.1.0_win-x64/bundle/ui-schema.json": {
     "bytes": 3284,
-    "sha256": "f430b817f75888183ac6b97deecf017dc506229f1cedc742c56413cc007f2550"
+    "sha256": "5918ccbc2f98f2b4f8f3ce24e3794e83a642b00392116807b19ed116cfd6a463"
   },
   "dist_releases/P6_Beta_v1.1.0_win-x64/bundle/workflows.fpbundle.json": {
     "bytes": 1397,
@@ -232,27 +232,27 @@
     "sha256": "615c4fcf8181ce1220834befbba9d1fb8a87e483b233729a6969576089cdd440"
   },
   "dist_releases/P6_Beta_v1.1.0_win-x64/updater/fp-updater.exe": {
-    "bytes": 5658112,
-    "sha256": "9890fec42942ad87337468f99936bf29bd4689736e553522de89730c0716b282"
+    "bytes": 5659136,
+    "sha256": "8f66e11c9d058f6ed700d7599774bf175e77159ec12c2ea3e8139c4ea0e32865"
   },
   "pdf_p6_rendered_pages/p6_page_01.png": {
-    "bytes": 268327,
-    "sha256": "40d3d9852f30c7e9fe4c92db19b3adbfc46a0b23f6317a8af8fd02ff679adbbb"
+    "bytes": 269508,
+    "sha256": "3addfd7abaeb5561219fb1e44e26b03da9214d579f269fafe441c18151b53d48"
   },
   "pdf_p6_rendered_pages/p6_page_02.png": {
-    "bytes": 262223,
-    "sha256": "4078faaa020b55543ae6338f41a15e1478df8e5f6e1ad1c0c10d1b8aa89a49eb"
+    "bytes": 262383,
+    "sha256": "3b35d6b59a0e62873d1ddbc94a0d2b21b60978ba137266e5526ea365e9008624"
   },
   "pdf_p6_rendered_pages/p6_page_03.png": {
-    "bytes": 328369,
-    "sha256": "3e032e138fdb126e6767b627ed29c28f9abf0f17bc64e19c2d1092d846691d4a"
+    "bytes": 329064,
+    "sha256": "5588c35f54fd9607dbffb90abff859830d839d66b107261ea9e49d960867b951"
   },
   "pdf_p6_rendered_pages/p6_page_04.png": {
-    "bytes": 166191,
-    "sha256": "76840b075ec289e8dd39cf34eed5983de7aa190abf9bc319b53c5c9a8b916669"
+    "bytes": 171935,
+    "sha256": "d79e8d3152e9a189c93f42f6c020e1324303acc473fc7ce5ba17439e490f1512"
   },
   "pdf_p6_rendered_pages/p6_page_05.png": {
-    "bytes": 218514,
-    "sha256": "c5cfef2ee3fa7f08ef3e8aecea7391ebe19b28b42721d65a1f592befa6396a92"
+    "bytes": 225440,
+    "sha256": "24b8b3a8bb2e63b67af12f1faec73ccdaf5834c0531049dd68512580c7540091"
   }
 }
