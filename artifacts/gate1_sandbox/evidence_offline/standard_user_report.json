@@ -1,0 +1,13 @@
+﻿{
+    "standardUsername":  "fpstandard",
+    "createOut":  "The command completed successfully.",
+    "isInAdministratorsGroup":  false,
+    "startProcessCredExit":  -1073741502,
+    "startProcessCredErr":  null,
+    "scheduledTaskInfo":  {
+                              "lastTaskResult":  267011,
+                              "lastRunTime":  "11/30/1999 00:00:00"
+                          },
+    "scheduledTaskErr":  null,
+    "stdRunResult":  null
+}

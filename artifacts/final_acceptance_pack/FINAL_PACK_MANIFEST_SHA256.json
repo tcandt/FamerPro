@@ -1,19 +1,27 @@
 {
   "ACCEPTANCE_MATRIX.md": {
-    "bytes": 6654,
-    "sha256": "dcd3986564fc0ac62e82f2eece1ff9fda2bad7884a202868fbfdb835093ef3cf"
+    "bytes": 7097,
+    "sha256": "2e646051d990fa6f831030493ee5ff8eacd3032fd2dad21920fc1aa25ae6fd63"
   },
   "EXTERNAL_GATES_STATUS.md": {
-    "bytes": 2902,
-    "sha256": "9593ca30628c8d773d0a1081d5d9def47b24b77c9efa4803f85e86c96b25efdf"
+    "bytes": 3716,
+    "sha256": "55f24ca9fee889b4478d81d91545c639d60728be94bf7334afa156a97a2402f5"
+  },
+  "FARMERPRO_GATE1_SANDBOX_REPORT.pdf": {
+    "bytes": 4510646,
+    "sha256": "057d062c17b639602e871acff1288eb8ecc81f80a65e816f6e12ebb9cbf30f88"
   },
   "FARMERPRO_RC4_ADDENDUM_REPORT.pdf": {
     "bytes": 525049,
     "sha256": "d76ef4d4aa6ce1933c28009606dc349f297118adfd978ed6243af3a2a2058fe6"
   },
   "FINAL_ACCEPTANCE_SUMMARY.json": {
-    "bytes": 6118,
-    "sha256": "851eabbd3775249ac55663c41b9ea7b31847f881aab453b8f125b900464389b5"
+    "bytes": 7424,
+    "sha256": "f347e06abf1bd06773915121e53443070c6e5843d1cfaae2f2e2e4f46b907822"
+  },
+  "GATE1_SANDBOX_REPORT.md": {
+    "bytes": 8607,
+    "sha256": "1a2e04a8ed0192a3b2e9ae96115ea7713946bf7fdcdb1e6d1b0fb635b56a11a5"
   },
   "GATE2_ACCEPTANCE_ADDENDUM.md": {
     "bytes": 9891,
@@ -28,8 +36,8 @@
     "sha256": "5a526f6496dc1c1e45e723d05740ce147b8c33e3d738f6200e6d63ce3c2b8def"
   },
   "RC4_HOTFIX_REPORT.md": {
-    "bytes": 10138,
-    "sha256": "50671fbbe3b69d350aecd2a4701e61c79609fda95aee675debe5707fd78d03d3"
+    "bytes": 10778,
+    "sha256": "8014cbd8e422cbd4423eea79979acb7e5ac4d56afcfcaed828cff6f61a7e2894"
   },
   "SECURITY_RISK_REGISTER_AND_THREAT_MODEL.md": {
     "bytes": 6821,

@@ -27,13 +27,13 @@
   "developmentStatuses": {
     "BUILD_PASS": "PASS",
     "STANDALONE_LAUNCH_PASS": "PASS",
-    "UPDATE_ROLLBACK_PASS": "PASS",
+    "UPDATE_ROLLBACK_PASS": "FAIL_CLEAN_WINDOWS_VCRUNTIME140_MISSING (PASS on Host)",
     "GATE2_PLATFORM_LIVE_ADB": "PASS",
     "GATE2_SETTINGS_LIVE_WORKFLOW": "PASS",
     "CROSS_PROCESS_LEASE": "PASS",
     "SQLITE_V6_MIGRATION_COMPATIBILITY": "PASS",
     "GATE2_GAME_SPECIFIC_WORKFLOW": "NOT_TESTED",
-    "CLEAN_WINDOWS_VM": "BLOCKED",
+    "CLEAN_WINDOWS_VM": "PARTIAL (DEFECT_FOUND: fp-updater VCRUNTIME140.dll)",
     "COMMERCIAL_AUTHENTICODE": "BLOCKED",
     "PRODUCTION_ACCEPTANCE_PASS": "BLOCKED"
   },
@@ -53,6 +53,11 @@
     "rc4AddendumPdfPath": "FARMERPRO_RC4_ADDENDUM_REPORT.pdf",
     "rc4AddendumPdfBytes": 525049,
     "rc4AddendumPdfSha256": "d76ef4d4aa6ce1933c28009606dc349f297118adfd978ed6243af3a2a2058fe6",
+    "gate1PdfReportPath": "FARMERPRO_GATE1_SANDBOX_REPORT.pdf",
+    "gate1PdfBytes": 4510646,
+    "gate1PdfSha256": "057d062c17b639602e871acff1288eb8ecc81f80a65e816f6e12ebb9cbf30f88",
+    "gate1ReportPath": "artifacts/final_acceptance_pack/GATE1_SANDBOX_REPORT.md",
+    "gate1ManifestPath": "artifacts/gate1_sandbox/GATE1_EVIDENCE_MANIFEST_SHA256.json",
     "evidenceManifestPath": "artifacts/p6_evidence/EVIDENCE_MANIFEST_SHA256.json",
     "finalPackManifestPath": "artifacts/final_acceptance_pack/FINAL_PACK_MANIFEST_SHA256.json"
   },
@@ -117,8 +122,19 @@
     "B11_independentMiniToolV5ToV6": "PASS (sqliteSchemaVersion=6, runState=Succeeded)",
     "B12_incompatibleBlocked": "PASS (v99 -> SQLITE_DOWNGRADE_INCOMPATIBLE, missing col -> SQLITE_SCHEMA_INCOMPATIBLE)"
   },
+  "gate1SandboxChecks": {
+    "SANDBOX_BOOT_PASS": "PASS",
+    "STUDIO_INSTALL_PASS": "PASS",
+    "STANDALONE_PORTABLE_PASS": "PASS",
+    "WEBVIEW2_ONLINE_PASS": "PARTIAL (Present+Online PASS; Missing+Online BLOCKED exit 93)",
+    "WEBVIEW2_OFFLINE_PASS": "PARTIAL (Present+Offline PASS; Missing+Offline BLOCKED exit 93)",
+    "STANDARD_USER_PASS": "BLOCKED (Sandbox WDAGUtilityAccount single-session isolation 0xC0000142 / 267011)",
+    "SQLITE_V5_TO_V6_PASS": "PASS (clean 0/4 + partial 2/4 + partial 3/4 -> [1..=6], integrity=ok, FK=0)",
+    "UPDATE_ROLLBACK_PASS": "FAIL (fp-updater.exe exited -1073741515 / 0xC0000135: VCRUNTIME140.dll missing on Clean Windows)",
+    "UNINSTALL_DATA_PRESERVATION_PASS": "PASS (farmerpro.db SHA-256 41b81c50... preserved)"
+  },
   "externalGates": {
-    "gate1CleanWindowsVm": "BLOCKED",
+    "gate1CleanWindowsVm": "PARTIAL (DEFECT_FOUND: fp-updater VCRUNTIME140.dll missing; StandardUser & MissingWebView2 BLOCKED)",
     "gate2PlatformAndSettingsLiveAdb": "PASS",
     "gate2GameSpecificWorkflows": "NOT_TESTED",
     "gate3CommercialAuthenticode": "BLOCKED"

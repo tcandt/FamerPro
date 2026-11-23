@@ -1,0 +1,245 @@
+{
+  "studioDbs": {
+    "studio_after_create_reopen.db": {
+      "file": "studio_after_create_reopen.db",
+      "schemaMigrations": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "envColsCount": 18,
+      "hasAll4ProvenanceCols": true,
+      "integrityCheck": [
+        "ok"
+      ],
+      "fkViolations": 0,
+      "projects": [
+        [
+          "proj-gate1-sandbox-rpg-a1d888f2",
+          "gate1-sandbox-rpg",
+          "Gate1 Sandbox RPG"
+        ]
+      ],
+      "workflows": [],
+      "counts": {
+        "tasks": 0,
+        "accounts": 0,
+        "publisher_profiles": 0,
+        "project_releases": 0
+      },
+      "runtimeVarRows": []
+    },
+    "upgraded_rc2_v5_clean.db": {
+      "file": "upgraded_rc2_v5_clean.db",
+      "schemaMigrations": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "envColsCount": 18,
+      "hasAll4ProvenanceCols": true,
+      "integrityCheck": [
+        "ok"
+      ],
+      "fkViolations": 0,
+      "projects": [
+        [
+          "proj-g1-rc2",
+          "gate1-rc2-game",
+          "Gate1 RC2 Game"
+        ]
+      ],
+      "workflows": [
+        [
+          "wf-g1-rc2",
+          "proj-g1-rc2",
+          "Gate1 RC2 Workflow"
+        ]
+      ],
+      "counts": {
+        "tasks": 1,
+        "accounts": 1,
+        "publisher_profiles": 1,
+        "project_releases": 1
+      },
+      "runtimeVarRows": [
+        [
+          "legacy_g1_ocr",
+          "LEGACY_UNVERIFIED",
+          0,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ]
+    },
+    "upgraded_rc2_v5_partial_2cols.db": {
+      "file": "upgraded_rc2_v5_partial_2cols.db",
+      "schemaMigrations": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "envColsCount": 18,
+      "hasAll4ProvenanceCols": true,
+      "integrityCheck": [
+        "ok"
+      ],
+      "fkViolations": 0,
+      "projects": [
+        [
+          "proj-g1-rc2",
+          "gate1-rc2-game",
+          "Gate1 RC2 Game"
+        ]
+      ],
+      "workflows": [
+        [
+          "wf-g1-rc2",
+          "proj-g1-rc2",
+          "Gate1 RC2 Workflow"
+        ]
+      ],
+      "counts": {
+        "tasks": 1,
+        "accounts": 1,
+        "publisher_profiles": 1,
+        "project_releases": 1
+      },
+      "runtimeVarRows": [
+        [
+          "legacy_g1_ocr",
+          "LEGACY_UNVERIFIED",
+          0,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ]
+    },
+    "upgraded_rc2_v5_partial_3cols.db": {
+      "file": "upgraded_rc2_v5_partial_3cols.db",
+      "schemaMigrations": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "envColsCount": 18,
+      "hasAll4ProvenanceCols": true,
+      "integrityCheck": [
+        "ok"
+      ],
+      "fkViolations": 0,
+      "projects": [
+        [
+          "proj-g1-rc2",
+          "gate1-rc2-game",
+          "Gate1 RC2 Game"
+        ]
+      ],
+      "workflows": [
+        [
+          "wf-g1-rc2",
+          "proj-g1-rc2",
+          "Gate1 RC2 Workflow"
+        ]
+      ],
+      "counts": {
+        "tasks": 1,
+        "accounts": 1,
+        "publisher_profiles": 1,
+        "project_releases": 1
+      },
+      "runtimeVarRows": [
+        [
+          "legacy_g1_ocr",
+          "LEGACY_UNVERIFIED",
+          0,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ]
+    }
+  },
+  "miniDbs": {
+    "portable_alpha_standalone.db": {
+      "file": "portable_alpha_standalone.db",
+      "schemaMigrations": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "jobsCols": [
+        "id",
+        "device_id",
+        "account_id",
+        "workflow_version_id",
+        "priority",
+        "state",
+        "fencing_generation",
+        "current_node_id",
+        "created_at",
+        "updated_at",
+        "project_id"
+      ],
+      "jobsCount": 0,
+      "jobs": [],
+      "stepEventsCount": 0,
+      "integrityCheck": [
+        "ok"
+      ]
+    },
+    "portable_beta_standalone.db": {
+      "file": "portable_beta_standalone.db",
+      "schemaMigrations": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "jobsCols": [
+        "id",
+        "device_id",
+        "account_id",
+        "workflow_version_id",
+        "priority",
+        "state",
+        "fencing_generation",
+        "current_node_id",
+        "created_at",
+        "updated_at",
+        "project_id"
+      ],
+      "jobsCount": 0,
+      "jobs": [],
+      "stepEventsCount": 0,
+      "integrityCheck": [
+        "ok"
+      ]
+    }
+  }
+}

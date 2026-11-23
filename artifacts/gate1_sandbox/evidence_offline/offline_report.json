@@ -1,0 +1,242 @@
+﻿{
+    "executedAtUtc":  "2026-11-23T07:09:37.2352102Z",
+    "environment":  {
+                        "computerName":  "531E73CC-4C15-4",
+                        "username":  "WDAGUtilityAccount",
+                        "isAdmin":  true,
+                        "osCaption":  "Microsoft Windows 11 Enterprise",
+                        "osBuild":  "26100",
+                        "arch":  "AMD64",
+                        "cpuName":  "11th Gen Intel(R) Core(TM) i9-11950H @ 2.60GHz",
+                        "totalMemMb":  4095,
+                        "networking":  "Disable",
+                        "nonLoopbackIpv4":  [
+
+                                            ],
+                        "webview2BeforeTest":  [
+                                                   {
+                                                       "key":  "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
+                                                       "pv":  "157.0.4341.60"
+                                                   }
+                                               ],
+                        "hasCargo":  false,
+                        "hasRustc":  false,
+                        "hasNode":  false,
+                        "hasAdbOnPath":  false
+                    },
+    "stageShaChecks":  [
+                           {
+                               "file":  "FarmerPro_0.1.0_x64-setup.exe",
+                               "bytes":  15435692,
+                               "sha256":  "3cd7124874dd2763ac6843fa5fecc466b0f1eb7f2db442c91054e418bae4f210",
+                               "expectedSha256":  "3cd7124874dd2763ac6843fa5fecc466b0f1eb7f2db442c91054e418bae4f210",
+                               "match":  true
+                           },
+                           {
+                               "file":  "P6_Alpha_v1.0.0_win-x64.zip",
+                               "bytes":  12156104,
+                               "sha256":  "06ed29a78896dc6791acbc24fc7665fe9c466b91a0748f9d21045ad85bec70e3",
+                               "expectedSha256":  "06ed29a78896dc6791acbc24fc7665fe9c466b91a0748f9d21045ad85bec70e3",
+                               "match":  true
+                           },
+                           {
+                               "file":  "P6_Beta_v1.0.0_win-x64.zip",
+                               "bytes":  12157696,
+                               "sha256":  "3e8785f7f4f6114a95f2b3b2c571b858769615aed2ade6f2c22885c5301562ea",
+                               "expectedSha256":  "3e8785f7f4f6114a95f2b3b2c571b858769615aed2ade6f2c22885c5301562ea",
+                               "match":  true
+                           }
+                       ],
+    "B_portableBeforeStudio":  {
+                                   "studioPreInstalled":  false,
+                                   "alphaExePath":  "C:\\Gate1Work\\Portable\\P6_Alpha\\P6_Alpha_v1.0.0_win-x64\\Auto_P6Alpha.exe",
+                                   "betaExePath":  "C:\\Gate1Work\\Portable\\P6_Beta\\P6_Beta_v1.0.0_win-x64\\Auto_P6Beta.exe",
+                                   "alphaCheckDeps":  "{\r\n  \"webview2EvergreenInstalled\": true,\r\n  \"webview2VersionOrNote\": \"Evergreen Runtime v157.0.4341.60 (Registry Client Verified; offline target requires WebView2 Evergreen/Bootstrapper if missing)\",\r\n  \"adbExePresent\": true,\r\n  \"adbWinApiDllPresent\": true,\r\n  \"adbWinUsbApiDllPresent\": true,\r\n  \"winrtOcrPowershellAvailable\": true,\r\n  \"exeDirWritable\": true,\r\n  \"writeProbeError\": null,\r\n  \"resolvedSqliteDbPath\": \"C:\\\\Gate1Work\\\\Portable\\\\P6_Alpha\\\\P6_Alpha_v1.0.0_win-x64\\\\data\\\\runtime_p6-alpha-harvester.db\",\r\n  \"fallbackToLocalAppdataUsed\": false,\r\n  \"offlineExecutionReady\": true,\r\n  \"thirdPartyNoticesPresent\": true,\r\n  \"updaterBundled\": true,\r\n  \"requiresInternetIfWebview2Missing\": true\r\n}",
+                                   "alphaWindow":  {
+                                                       "pid":  4648,
+                                                       "hwnd":  1441842,
+                                                       "title":  "Zenith Harvester Pro v1.0.0",
+                                                       "painted":  true,
+                                                       "left":  179,
+                                                       "top":  179,
+                                                       "width":  754,
+                                                       "height":  698
+                                                   },
+                                   "betaWindow":  {
+                                                      "pid":  6136,
+                                                      "hwnd":  197000,
+                                                      "title":  "Orion Citadel Automator v1.0.0",
+                                                      "painted":  true,
+                                                      "left":  102,
+                                                      "top":  102,
+                                                      "width":  994,
+                                                      "height":  758
+                                                  },
+                                   "alphaDbCreated":  true,
+                                   "alphaDbName":  "runtime_p6-alpha-harvester.db",
+                                   "betaDbCreated":  true,
+                                   "betaDbName":  "runtime_p6-beta-citadel.db",
+                                   "screenshots":  [
+                                                       {
+                                                           "path":  "C:\\gate1_out\\screenshots\\01_portable_alpha_standalone.png",
+                                                           "width":  1624,
+                                                           "height":  984,
+                                                           "bytes":  1922380
+                                                       },
+                                                       {
+                                                           "path":  "C:\\gate1_out\\screenshots\\01b_portable_alpha_testkit_run.png",
+                                                           "width":  1624,
+                                                           "height":  984,
+                                                           "bytes":  1922380
+                                                       },
+                                                       {
+                                                           "path":  "C:\\gate1_out\\screenshots\\02_portable_beta_standalone.png",
+                                                           "width":  1624,
+                                                           "height":  984,
+                                                           "bytes":  1188714
+                                                       }
+                                                   ]
+                               },
+    "A_studioNsisInstallAndPersist":  {
+                                          "nsisExitCode":  0,
+                                          "installDir":  "C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\FarmerPro",
+                                          "installedFiles":  {
+                                                                 "farmerproExe":  true,
+                                                                 "fpMiniRuntimeExe":  true,
+                                                                 "fpUpdaterExe":  true,
+                                                                 "bundledAdbExe":  true,
+                                                                 "nsisMarker":  true,
+                                                                 "uninstallExe":  true
+                                                             },
+                                          "window1":  {
+                                                          "pid":  2620,
+                                                          "hwnd":  197186,
+                                                          "title":  "FarmerPro — Android Workflow Automation Studio",
+                                                          "painted":  true,
+                                                          "left":  10,
+                                                          "top":  76,
+                                                          "width":  1614,
+                                                          "height":  908
+                                                      },
+                                          "window2Reopen":  {
+                                                                "pid":  2804,
+                                                                "hwnd":  393768,
+                                                                "title":  "FarmerPro — Android Workflow Automation Studio",
+                                                                "painted":  true,
+                                                                "left":  10,
+                                                                "top":  51,
+                                                                "width":  1614,
+                                                                "height":  908
+                                                            },
+                                          "projectDirsOnDisk":  [
+
+                                                                ],
+                                          "studioUserDb":  "C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\FarmerPro\\StudioData\\data\\farmerpro.db",
+                                          "dbExists":  true,
+                                          "dbSha256":  "41b81c502c6354f4b38ce0a65dd19c933017a73b7f04b7e3a4e2eece86f2f3ce",
+                                          "screenshots":  [
+                                                              {
+                                                                  "path":  "C:\\gate1_out\\screenshots\\03_studio_installed_dashboard.png",
+                                                                  "width":  1624,
+                                                                  "height":  984,
+                                                                  "bytes":  327343
+                                                              },
+                                                              {
+                                                                  "path":  "C:\\gate1_out\\screenshots\\03b_studio_after_create_project.png",
+                                                                  "width":  1624,
+                                                                  "height":  984,
+                                                                  "bytes":  323504
+                                                              },
+                                                              {
+                                                                  "path":  "C:\\gate1_out\\screenshots\\04_studio_workflow_tab.png",
+                                                                  "width":  1624,
+                                                                  "height":  984,
+                                                                  "bytes":  244889
+                                                              },
+                                                              {
+                                                                  "path":  "C:\\gate1_out\\screenshots\\04b_studio_settings_tab.png",
+                                                                  "width":  1624,
+                                                                  "height":  984,
+                                                                  "bytes":  244889
+                                                              },
+                                                              {
+                                                                  "path":  "C:\\gate1_out\\screenshots\\04c_studio_reopened.png",
+                                                                  "width":  1624,
+                                                                  "height":  984,
+                                                                  "bytes":  268360
+                                                              }
+                                                          ]
+                                      },
+    "UNINSTALL_dataPreservation":  {
+                                       "uninstallExitCode":  0,
+                                       "farmerproExeRemoved":  true,
+                                       "nsisMarkerRemoved":  true,
+                                       "userDbPreserved":  true,
+                                       "userDbShaBefore":  "41b81c502c6354f4b38ce0a65dd19c933017a73b7f04b7e3a4e2eece86f2f3ce",
+                                       "userDbShaAfter":  "41b81c502c6354f4b38ce0a65dd19c933017a73b7f04b7e3a4e2eece86f2f3ce",
+                                       "userDbShaExactMatch":  true,
+                                       "portableAlphaRunsAfterStudioUninstall":  true
+                                   },
+    "E_sqliteUpgrade":  {
+                            "rc2_v5_clean":  {
+                                                 "studioWindow":  {
+                                                                      "pid":  3056,
+                                                                      "hwnd":  786612,
+                                                                      "title":  "FarmerPro — Android Workflow Automation Studio",
+                                                                      "painted":  true,
+                                                                      "left":  10,
+                                                                      "top":  26,
+                                                                      "width":  1614,
+                                                                      "height":  908
+                                                                  },
+                                                 "screenshot":  {
+                                                                    "path":  "C:\\gate1_out\\screenshots\\05_sql_rc2_v5_clean.png",
+                                                                    "width":  1624,
+                                                                    "height":  984,
+                                                                    "bytes":  216219
+                                                                }
+                                             },
+                            "rc2_v5_partial_2cols":  {
+                                                         "studioWindow":  {
+                                                                              "pid":  2264,
+                                                                              "hwnd":  524862,
+                                                                              "title":  "FarmerPro — Android Workflow Automation Studio",
+                                                                              "painted":  true,
+                                                                              "left":  10,
+                                                                              "top":  76,
+                                                                              "width":  1614,
+                                                                              "height":  908
+                                                                          },
+                                                         "screenshot":  {
+                                                                            "path":  "C:\\gate1_out\\screenshots\\05_sql_rc2_v5_partial_2cols.png",
+                                                                            "width":  1624,
+                                                                            "height":  984,
+                                                                            "bytes":  331192
+                                                                        }
+                                                     },
+                            "rc2_v5_partial_3cols":  {
+                                                         "studioWindow":  {
+                                                                              "pid":  6400,
+                                                                              "hwnd":  1114632,
+                                                                              "title":  "FarmerPro — Android Workflow Automation Studio",
+                                                                              "painted":  true,
+                                                                              "left":  10,
+                                                                              "top":  76,
+                                                                              "width":  1614,
+                                                                              "height":  908
+                                                                          },
+                                                         "screenshot":  {
+                                                                            "path":  "C:\\gate1_out\\screenshots\\05_sql_rc2_v5_partial_3cols.png",
+                                                                            "width":  1624,
+                                                                            "height":  984,
+                                                                            "bytes":  331192
+                                                                        }
+                                                     }
+                        },
+    "F_updateRollback":  {
+
+                         },
+    "errors":  [
+                   "System.Management.Automation.RuntimeException: You cannot call a method on a null-valued expression.\r\n   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)\r\n   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)\r\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\r\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)"
+               ]
+}

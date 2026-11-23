@@ -1,0 +1,286 @@
+{
+  "FARMERPRO_GATE1_SANDBOX_REPORT.html": {
+    "bytes": 6260780,
+    "sha256": "f31573f362bb8a90fbf90d17859a0118c974b84176a7ccc73d7ed2bc807a9767"
+  },
+  "audit_gate1_dbs.py": {
+    "bytes": 3479,
+    "sha256": "546fda62a1d26b74c3a5f8ef86c47ec0cd54379e49415b03c9bc6235fc95db09"
+  },
+  "evidence_offline\\db_snapshots\\portable_alpha_standalone.db": {
+    "bytes": 282624,
+    "sha256": "5562a7c561bedbb1216cff4915034455625214b3e8b1d7cd5e89e1454540f49c"
+  },
+  "evidence_offline\\db_snapshots\\portable_beta_standalone.db": {
+    "bytes": 282624,
+    "sha256": "895c0957514186a82afe788ce9865733f4cbf178c6dc4c90b0de6bdaf5740544"
+  },
+  "evidence_offline\\db_snapshots\\studio_after_create_reopen.db": {
+    "bytes": 282624,
+    "sha256": "7a3c01677e796a03126b87fdb5a5e7659bf827b2c3095f5e2ba151e094253e17"
+  },
+  "evidence_offline\\db_snapshots\\upgraded_rc2_v5_clean.db": {
+    "bytes": 282624,
+    "sha256": "26b482141ad13ebc6c6819268e1260986587323bcb405f11f032a4437439b919"
+  },
+  "evidence_offline\\db_snapshots\\upgraded_rc2_v5_partial_2cols.db": {
+    "bytes": 282624,
+    "sha256": "92b2835171ce6f8aab63ed0065726d30f704a1692b3188ab2e449ad4ed5372f1"
+  },
+  "evidence_offline\\db_snapshots\\upgraded_rc2_v5_partial_3cols.db": {
+    "bytes": 282624,
+    "sha256": "879b7003486096530d3af38773c8df0661798d8dd0554fdade3ffac46c327d7f"
+  },
+  "evidence_offline\\offline_report.json": {
+    "bytes": 19214,
+    "sha256": "c8645d9a4399a0e84841aff881f8cf5fd23cf02550f2d5baeaf21e0cc0e13c85"
+  },
+  "evidence_offline\\screenshots\\01_portable_alpha_standalone.png": {
+    "bytes": 1922380,
+    "sha256": "8dbe75a3fbd84f4fcdafd2fa0b33bc701c3629a8b96d6afcdc5329d77e958d6f"
+  },
+  "evidence_offline\\screenshots\\01b_portable_alpha_testkit_run.png": {
+    "bytes": 1922380,
+    "sha256": "8dbe75a3fbd84f4fcdafd2fa0b33bc701c3629a8b96d6afcdc5329d77e958d6f"
+  },
+  "evidence_offline\\screenshots\\02_portable_beta_standalone.png": {
+    "bytes": 1188714,
+    "sha256": "747d42168a2d4e911e09259c8e65fe5d27e6938a9fc26916d78b0c898a7f723b"
+  },
+  "evidence_offline\\screenshots\\03_studio_installed_dashboard.png": {
+    "bytes": 327343,
+    "sha256": "1419d20e16662bb71b7b4c4ed5a8f6b70fd04a462becf4305a363c5f194e2d6f"
+  },
+  "evidence_offline\\screenshots\\03b_studio_after_create_project.png": {
+    "bytes": 323504,
+    "sha256": "66e0871d167cd0d9f7dbbea03d3601337d8b706b4a6aaf914318f47e6bb2bea3"
+  },
+  "evidence_offline\\screenshots\\03c_studio_project_created_real.png": {
+    "bytes": 555891,
+    "sha256": "2f01c3e338109ffbfa5f7d180e061d80380df9dd0be2f740516d0725c0012b63"
+  },
+  "evidence_offline\\screenshots\\04_studio_workflow_tab.png": {
+    "bytes": 244889,
+    "sha256": "5c2f40f1f21f8d8e5348ef7ed9e4436cb99b6d9780de2fbdb934315d8938807b"
+  },
+  "evidence_offline\\screenshots\\04_studio_workflow_tab_real.png": {
+    "bytes": 551154,
+    "sha256": "8e7218000035e0e1c39225c43ead277f0d2e5c54e02ab651c459da4f6ff0bfae"
+  },
+  "evidence_offline\\screenshots\\04b_studio_settings_tab.png": {
+    "bytes": 244889,
+    "sha256": "5c2f40f1f21f8d8e5348ef7ed9e4436cb99b6d9780de2fbdb934315d8938807b"
+  },
+  "evidence_offline\\screenshots\\04b_studio_settings_tab_real.png": {
+    "bytes": 551154,
+    "sha256": "8e7218000035e0e1c39225c43ead277f0d2e5c54e02ab651c459da4f6ff0bfae"
+  },
+  "evidence_offline\\screenshots\\04c_studio_reopened.png": {
+    "bytes": 268360,
+    "sha256": "78ae2a399aeaf2beecd870a9ba3e03efb7804f29ba402976297800bb38774b1b"
+  },
+  "evidence_offline\\screenshots\\04c_studio_reopened_real.png": {
+    "bytes": 531258,
+    "sha256": "b6f1868746cfaf6cc3d934979d025242937b58fd4a3df650eef003c51d00f753"
+  },
+  "evidence_offline\\screenshots\\05_sql_rc2_v5_clean.png": {
+    "bytes": 216219,
+    "sha256": "c67af7aa84f0fd0c72c7ff6e17f25189742d806c60bc9b06386bfb48e3e82679"
+  },
+  "evidence_offline\\screenshots\\05_sql_rc2_v5_partial_2cols.png": {
+    "bytes": 331192,
+    "sha256": "987c7b9002a0385e69c87fbe0bd34c727f1f1168f4e38407bf0395a2a811fe61"
+  },
+  "evidence_offline\\screenshots\\05_sql_rc2_v5_partial_3cols.png": {
+    "bytes": 331192,
+    "sha256": "987c7b9002a0385e69c87fbe0bd34c727f1f1168f4e38407bf0395a2a811fe61"
+  },
+  "evidence_offline\\standard_user_report.json": {
+    "bytes": 470,
+    "sha256": "7f10cc0a9064874eee325f5ca124e79b7d9db43862c8f7f0f995c2852cea7046"
+  },
+  "evidence_offline\\test_f_and_create_report.json": {
+    "bytes": 3869,
+    "sha256": "f966c7bc5f844ac997137d38cbb59f973929540384817a65a9852a4db7deb80e"
+  },
+  "evidence_offline\\wsb_exec_offline.log": {
+    "bytes": 48,
+    "sha256": "0a0e09b8085c6d56e4fe5e66f2c940c7726b4cd84525335407737964aa8b815f"
+  },
+  "evidence_offline\\wsb_exec_stduser.log": {
+    "bytes": 48,
+    "sha256": "0a0e09b8085c6d56e4fe5e66f2c940c7726b4cd84525335407737964aa8b815f"
+  },
+  "evidence_offline\\wsb_exec_wv2uninst.log": {
+    "bytes": 48,
+    "sha256": "0a0e09b8085c6d56e4fe5e66f2c940c7726b4cd84525335407737964aa8b815f"
+  },
+  "evidence_offline\\wv2_uninstall_sys.json": {
+    "bytes": 510,
+    "sha256": "564e0b367b97af3ba0562d12ca9c9a130b9167ff5d356cd55f51f744014f220a"
+  },
+  "evidence_online\\online_present_wv2.json": {
+    "bytes": 1212,
+    "sha256": "8408895fad3af02886af7501bff559a87679dcc602c161714c41515e7211a5f9"
+  },
+  "evidence_online\\screenshots\\07_online_firewall_adb_prompt.png": {
+    "bytes": 271465,
+    "sha256": "827c17d7691c2b865e5fa37b83a8512831858133982bbc5a9e60965340d74d66"
+  },
+  "evidence_online\\screenshots\\07b_online_studio_present_wv2.png": {
+    "bytes": 271465,
+    "sha256": "827c17d7691c2b865e5fa37b83a8512831858133982bbc5a9e60965340d74d66"
+  },
+  "evidence_online\\wsb_exec_online_present.log": {
+    "bytes": 48,
+    "sha256": "0a0e09b8085c6d56e4fe5e66f2c940c7726b4cd84525335407737964aa8b815f"
+  },
+  "evidence_online\\wsb_exec_online_wv2uninst.log": {
+    "bytes": 48,
+    "sha256": "0a0e09b8085c6d56e4fe5e66f2c940c7726b4cd84525335407737964aa8b815f"
+  },
+  "evidence_online\\wv2_uninstall_sys.json": {
+    "bytes": 510,
+    "sha256": "564e0b367b97af3ba0562d12ca9c9a130b9167ff5d356cd55f51f744014f220a"
+  },
+  "gate1_offline.wsb": {
+    "bytes": 798,
+    "sha256": "a44cc3c15454044d08861e3ff3f9377243cf87c08c130e83d1da3c23db8a3dbb"
+  },
+  "gate1_online.wsb": {
+    "bytes": 796,
+    "sha256": "3a674a2c55b339003335bebf0a77e8ba26ded2b7b5c7503aa01cb76024d7a5f0"
+  },
+  "gate1_sqlite_audit_report.json": {
+    "bytes": 4903,
+    "sha256": "31a069d79c8a00add6b484d5bb149dfb2828601835a8c88be685d9721ea916d7"
+  },
+  "pdf_gate1_rendered_pages\\gate1_page_01.png": {
+    "bytes": 297482,
+    "sha256": "f68735112a7913f5370112c5e7a4198a2c38ae7a41f48f6305e5578839ef7640"
+  },
+  "pdf_gate1_rendered_pages\\gate1_page_02.png": {
+    "bytes": 496907,
+    "sha256": "5940289a55bbae119dbcd1bd65be7978c2defb85b17cbc865a1158feedf3e884"
+  },
+  "prepare_gate1_stage.py": {
+    "bytes": 8199,
+    "sha256": "1feab7a8e752dca89ee161ae29a7bc4d9801997b661024a8a32faff00aa95b3d"
+  },
+  "rc4_ro_stage\\FarmerPro_0.1.0_x64-setup.exe": {
+    "bytes": 15435692,
+    "sha256": "3cd7124874dd2763ac6843fa5fecc466b0f1eb7f2db442c91054e418bae4f210"
+  },
+  "rc4_ro_stage\\P6_Alpha_v1.0.0_win-x64.zip": {
+    "bytes": 12156104,
+    "sha256": "06ed29a78896dc6791acbc24fc7665fe9c466b91a0748f9d21045ad85bec70e3"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.0.0_win-x64.zip": {
+    "bytes": 12157696,
+    "sha256": "3e8785f7f4f6114a95f2b3b2c571b858769615aed2ade6f2c22885c5301562ea"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\Auto_P6Beta.exe": {
+    "bytes": 16183256,
+    "sha256": "5d4b298c4651484bbb82a0607f598f5cd7fbf9cffd7d104c574b4376b379cd3f"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\THIRD_PARTY_NOTICES.txt": {
+    "bytes": 532,
+    "sha256": "febda6bc7fcfc8df2111468bda143498a072a18630c75d07e08774742b520aa5"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\bin\\AdbWinApi.dll": {
+    "bytes": 108184,
+    "sha256": "120bef587119c6cb926b86b9be90fdfbce38937588eae28cd91a94ce63c7b965"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\bin\\AdbWinUsbApi.dll": {
+    "bytes": 73368,
+    "sha256": "6ca69a2ca0e31309c087d288f058977d421ad03500e4c3e1dbd981241a069c60"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\bin\\adb.exe": {
+    "bytes": 8485016,
+    "sha256": "957e46b8615f7af5b7292a2ddabe98d2e61940c3fb2b0545756507f080613e71"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\build-report.json": {
+    "bytes": 8541,
+    "sha256": "7c6420dce4eb7dcb634764e25ef6393cf105b38ec3c8487af527ec3342d5c4a8"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\bundle\\branding\\icon.ico": {
+    "bytes": 4286,
+    "sha256": "615c4fcf8181ce1220834befbba9d1fb8a87e483b233729a6969576089cdd440"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\bundle\\checksums.sha256": {
+    "bytes": 260,
+    "sha256": "9ab679fa70eb724d7ae07bede6f1dad020ea778348a0518c03d6946dc24bd678"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\bundle\\manifest.fpbundle.json": {
+    "bytes": 6419,
+    "sha256": "657a6c4b030bb0aeb807be633b6933f418139032e9192fa5a45b62043eefb699"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\bundle\\signature.fpbundle.json": {
+    "bytes": 883,
+    "sha256": "b300bdeacbdfedc714982b3f1a1cea9e3f862343d0cc1deafbc2ce0d532a4183"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\bundle\\trusted_publisher.pub": {
+    "bytes": 64,
+    "sha256": "242e96b86a93be6b1681481445d2b17835ef915ca031722561fa9afcacb2e141"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\bundle\\ui-schema.json": {
+    "bytes": 3284,
+    "sha256": "6e5de5c3718443fc5350a5c4a1f12387f9830dace16e709724c1ab1bbbc3f41b"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\bundle\\workflows.fpbundle.json": {
+    "bytes": 1397,
+    "sha256": "a34c44ff0cdfa4cab00717301e6e918cb003765ed8510260fd80bd2e5f3dd9dc"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\release-manifest.json": {
+    "bytes": 5329,
+    "sha256": "42ae4b9e20d12d8857cd3dd8525e719f1aa2a21a8e92740cecf41999ef5bf393"
+  },
+  "rc4_ro_stage\\P6_Beta_v1.1.0_win-x64\\updater\\fp-updater.exe": {
+    "bytes": 5843456,
+    "sha256": "6d92e62630c6a5a991017aa382707495c1c5a46fb4969fe992563009c040bb44"
+  },
+  "rc4_ro_stage\\fixtures\\rc2_v5_clean.db": {
+    "bytes": 274432,
+    "sha256": "f0985dc92921c6d48b23351f48a8a5d15192e9d8450081bd090cceed3456bcb8"
+  },
+  "rc4_ro_stage\\fixtures\\rc2_v5_partial_2cols.db": {
+    "bytes": 274432,
+    "sha256": "b0b79a8175d61aea2932f26a703af2c48c1868f4ba534ebd9949be3742234e35"
+  },
+  "rc4_ro_stage\\fixtures\\rc2_v5_partial_3cols.db": {
+    "bytes": 274432,
+    "sha256": "ece07b98a81cfc1d2909350b3300f07e5ca365cf3494e71124152aaf3e56b5b1"
+  },
+  "rc4_ro_stage\\scripts\\gate1_common.ps1": {
+    "bytes": 4913,
+    "sha256": "991cfde2011c19d290da0548ff1577c57f45079d0e625518093db9d075928b99"
+  },
+  "rc4_ro_stage\\scripts\\run_gate1_offline_nowv2.ps1": {
+    "bytes": 3501,
+    "sha256": "95f8086c6ed6e75695b5449263b69c63253626662accb55c8e770cb16c208e8f"
+  },
+  "rc4_ro_stage\\scripts\\run_gate1_offline_suite.ps1": {
+    "bytes": 17401,
+    "sha256": "a65c100b61c7058027db82ed9cab2c67614118f06ae2765398f6913f12bc6829"
+  },
+  "rc4_ro_stage\\scripts\\run_gate1_online_wv2_suite.ps1": {
+    "bytes": 1731,
+    "sha256": "dc2825c5689b20ff09b6fe388029bd9173a46368053aadf88ceb849f48f1c2e8"
+  },
+  "rc4_ro_stage\\scripts\\run_gate1_standard_user_probe.ps1": {
+    "bytes": 4014,
+    "sha256": "8873934489988d91b185a5eb6a96a215d6f388369844d9d8ef6ffe4fe451bc0b"
+  },
+  "rc4_ro_stage\\scripts\\run_gate1_test_f_and_studio_create.ps1": {
+    "bytes": 7099,
+    "sha256": "76087c02b30f18b61075070d15028d261e093a981870620c03dafad0c109b606"
+  },
+  "rc4_ro_stage\\stage_manifest_sha256.json": {
+    "bytes": 4535,
+    "sha256": "d40b5d6e3bf989fa240dd0f9bfb35a142cabe6e40b2cb430940f3702120d15fa"
+  },
+  "run_gate1_orchestrator.ps1": {
+    "bytes": 6023,
+    "sha256": "ab738f77a1a4e59302d8fb5704405f73f300fde9d8aeb12eaa2e9715f9195fe6"
+  }
+}

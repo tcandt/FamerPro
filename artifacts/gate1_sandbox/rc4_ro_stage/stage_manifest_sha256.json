@@ -1,0 +1,118 @@
+{
+  "FarmerPro_0.1.0_x64-setup.exe": {
+    "bytes": 15435692,
+    "sha256": "3cd7124874dd2763ac6843fa5fecc466b0f1eb7f2db442c91054e418bae4f210"
+  },
+  "P6_Alpha_v1.0.0_win-x64.zip": {
+    "bytes": 12156104,
+    "sha256": "06ed29a78896dc6791acbc24fc7665fe9c466b91a0748f9d21045ad85bec70e3"
+  },
+  "P6_Beta_v1.0.0_win-x64.zip": {
+    "bytes": 12157696,
+    "sha256": "3e8785f7f4f6114a95f2b3b2c571b858769615aed2ade6f2c22885c5301562ea"
+  },
+  "fixtures/rc2_v5_clean.db": {
+    "bytes": 274432,
+    "sha256": "f0985dc92921c6d48b23351f48a8a5d15192e9d8450081bd090cceed3456bcb8"
+  },
+  "fixtures/rc2_v5_partial_2cols.db": {
+    "bytes": 274432,
+    "sha256": "b0b79a8175d61aea2932f26a703af2c48c1868f4ba534ebd9949be3742234e35"
+  },
+  "fixtures/rc2_v5_partial_3cols.db": {
+    "bytes": 274432,
+    "sha256": "ece07b98a81cfc1d2909350b3300f07e5ca365cf3494e71124152aaf3e56b5b1"
+  },
+  "P6_Beta_v1.1.0_win-x64/Auto_P6Beta.exe": {
+    "bytes": 16183256,
+    "sha256": "5d4b298c4651484bbb82a0607f598f5cd7fbf9cffd7d104c574b4376b379cd3f"
+  },
+  "P6_Beta_v1.1.0_win-x64/THIRD_PARTY_NOTICES.txt": {
+    "bytes": 532,
+    "sha256": "febda6bc7fcfc8df2111468bda143498a072a18630c75d07e08774742b520aa5"
+  },
+  "P6_Beta_v1.1.0_win-x64/build-report.json": {
+    "bytes": 8541,
+    "sha256": "7c6420dce4eb7dcb634764e25ef6393cf105b38ec3c8487af527ec3342d5c4a8"
+  },
+  "P6_Beta_v1.1.0_win-x64/release-manifest.json": {
+    "bytes": 5329,
+    "sha256": "42ae4b9e20d12d8857cd3dd8525e719f1aa2a21a8e92740cecf41999ef5bf393"
+  },
+  "P6_Beta_v1.1.0_win-x64/bin/AdbWinApi.dll": {
+    "bytes": 108184,
+    "sha256": "120bef587119c6cb926b86b9be90fdfbce38937588eae28cd91a94ce63c7b965"
+  },
+  "P6_Beta_v1.1.0_win-x64/bin/AdbWinUsbApi.dll": {
+    "bytes": 73368,
+    "sha256": "6ca69a2ca0e31309c087d288f058977d421ad03500e4c3e1dbd981241a069c60"
+  },
+  "P6_Beta_v1.1.0_win-x64/bin/adb.exe": {
+    "bytes": 8485016,
+    "sha256": "957e46b8615f7af5b7292a2ddabe98d2e61940c3fb2b0545756507f080613e71"
+  },
+  "P6_Beta_v1.1.0_win-x64/bundle/checksums.sha256": {
+    "bytes": 260,
+    "sha256": "9ab679fa70eb724d7ae07bede6f1dad020ea778348a0518c03d6946dc24bd678"
+  },
+  "P6_Beta_v1.1.0_win-x64/bundle/manifest.fpbundle.json": {
+    "bytes": 6419,
+    "sha256": "657a6c4b030bb0aeb807be633b6933f418139032e9192fa5a45b62043eefb699"
+  },
+  "P6_Beta_v1.1.0_win-x64/bundle/signature.fpbundle.json": {
+    "bytes": 883,
+    "sha256": "b300bdeacbdfedc714982b3f1a1cea9e3f862343d0cc1deafbc2ce0d532a4183"
+  },
+  "P6_Beta_v1.1.0_win-x64/bundle/trusted_publisher.pub": {
+    "bytes": 64,
+    "sha256": "242e96b86a93be6b1681481445d2b17835ef915ca031722561fa9afcacb2e141"
+  },
+  "P6_Beta_v1.1.0_win-x64/bundle/ui-schema.json": {
+    "bytes": 3284,
+    "sha256": "6e5de5c3718443fc5350a5c4a1f12387f9830dace16e709724c1ab1bbbc3f41b"
+  },
+  "P6_Beta_v1.1.0_win-x64/bundle/workflows.fpbundle.json": {
+    "bytes": 1397,
+    "sha256": "a34c44ff0cdfa4cab00717301e6e918cb003765ed8510260fd80bd2e5f3dd9dc"
+  },
+  "P6_Beta_v1.1.0_win-x64/bundle/branding/icon.ico": {
+    "bytes": 4286,
+    "sha256": "615c4fcf8181ce1220834befbba9d1fb8a87e483b233729a6969576089cdd440"
+  },
+  "P6_Beta_v1.1.0_win-x64/updater/fp-updater.exe": {
+    "bytes": 5843456,
+    "sha256": "6d92e62630c6a5a991017aa382707495c1c5a46fb4969fe992563009c040bb44"
+  },
+  "scripts/diag_cdp.ps1": {
+    "bytes": 864,
+    "sha256": "38ae451cc042c0ac7e816c9ab73d3b3780037db1d16061407a6703379aa71426"
+  },
+  "scripts/diag_uia_and_wv2.ps1": {
+    "bytes": 2185,
+    "sha256": "355e9bdbd1ad688c416b9eebf43ce2c2f7b23f4b9bb3608ed008abe206d36410"
+  },
+  "scripts/gate1_common.ps1": {
+    "bytes": 4913,
+    "sha256": "991cfde2011c19d290da0548ff1577c57f45079d0e625518093db9d075928b99"
+  },
+  "scripts/run_gate1_offline_nowv2.ps1": {
+    "bytes": 3501,
+    "sha256": "95f8086c6ed6e75695b5449263b69c63253626662accb55c8e770cb16c208e8f"
+  },
+  "scripts/run_gate1_offline_suite.ps1": {
+    "bytes": 17401,
+    "sha256": "a65c100b61c7058027db82ed9cab2c67614118f06ae2765398f6913f12bc6829"
+  },
+  "scripts/run_gate1_online_wv2_suite.ps1": {
+    "bytes": 1731,
+    "sha256": "dc2825c5689b20ff09b6fe388029bd9173a46368053aadf88ceb849f48f1c2e8"
+  },
+  "scripts/run_gate1_standard_user_probe.ps1": {
+    "bytes": 4014,
+    "sha256": "8873934489988d91b185a5eb6a96a215d6f388369844d9d8ef6ffe4fe451bc0b"
+  },
+  "scripts/run_gate1_test_f_and_studio_create.ps1": {
+    "bytes": 7099,
+    "sha256": "76087c02b30f18b61075070d15028d261e093a981870620c03dafad0c109b606"
+  }
+}

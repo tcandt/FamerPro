@@ -1,0 +1,60 @@
+﻿{
+    "A_createAndPersist":  {
+                               "projectDirsOnDisk":  [
+                                                         ".fp_journal",
+                                                         ".fp_staging",
+                                                         "gate1-sandbox-rpg"
+                                                     ],
+                               "dbShaBeforeUninstall":  "41b81c502c6354f4b38ce0a65dd19c933017a73b7f04b7e3a4e2eece86f2f3ce",
+                               "dbShaAfterUninstall":  "41b81c502c6354f4b38ce0a65dd19c933017a73b7f04b7e3a4e2eece86f2f3ce",
+                               "dbPreservedExactMatch":  true,
+                               "studioExeRemovedAfterUninstall":  true,
+                               "screenshots":  [
+                                                   {
+                                                       "path":  "C:\\gate1_out\\screenshots\\03c_studio_project_created_real.png",
+                                                       "width":  2030,
+                                                       "height":  1230,
+                                                       "bytes":  555891
+                                                   },
+                                                   {
+                                                       "path":  "C:\\gate1_out\\screenshots\\04_studio_workflow_tab_real.png",
+                                                       "width":  2030,
+                                                       "height":  1230,
+                                                       "bytes":  551154
+                                                   },
+                                                   {
+                                                       "path":  "C:\\gate1_out\\screenshots\\04b_studio_settings_tab_real.png",
+                                                       "width":  2030,
+                                                       "height":  1230,
+                                                       "bytes":  551154
+                                                   },
+                                                   {
+                                                       "path":  "C:\\gate1_out\\screenshots\\04c_studio_reopened_real.png",
+                                                       "width":  2030,
+                                                       "height":  1230,
+                                                       "bytes":  531258
+                                                   }
+                                               ]
+                           },
+    "F_updateRollback":  {
+                             "updaterExePath":  "C:\\Gate1Work\\Portable\\P6_Beta\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe",
+                             "updaterExeExists":  true,
+                             "installInitialExitCode":  -1073741515,
+                             "installInitialHex":  "0xC0000135",
+                             "status":  "FAIL_CLEAN_WINDOWS_VCRUNTIME140_MISSING",
+                             "v100Installed":  false
+                         },
+    "sandboxVcrtCheck":  {
+                             "vcruntime140Exists":  false,
+                             "vcruntime140_1Exists":  false,
+                             "msvcp140Exists":  false,
+                             "ucrtbaseExists":  true,
+                             "vcruntimeFilesInSystem32":  [
+                                                              "vcruntime140_1_clr0400.dll",
+                                                              "vcruntime140_clr0400.dll"
+                                                          ]
+                         },
+    "errors":  [
+
+               ]
+}

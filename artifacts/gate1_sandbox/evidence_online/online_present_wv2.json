@@ -1,0 +1,30 @@
+﻿{
+    "networking":  "Enable",
+    "nonLoopbackIpv4":  [
+                            "172.17.238.59"
+                        ],
+    "webview2Initially":  [
+                              {
+                                  "key":  "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
+                                  "pv":  "157.0.4341.60"
+                              }
+                          ],
+    "nsisExitCode":  0,
+    "studioWindow":  {
+                         "pid":  7424,
+                         "hwnd":  131160,
+                         "title":  "FarmerPro — Android Workflow Automation Studio",
+                         "painted":  false,
+                         "left":  10,
+                         "top":  76,
+                         "width":  1614,
+                         "height":  908
+                     },
+    "studioLaunchOk":  true,
+    "screenshot":  {
+                       "path":  "C:\\gate1_out\\screenshots\\07b_online_studio_present_wv2.png",
+                       "width":  1624,
+                       "height":  984,
+                       "bytes":  271465
+                   }
+}

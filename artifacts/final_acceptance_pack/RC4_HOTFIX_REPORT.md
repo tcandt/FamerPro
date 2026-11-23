@@ -20,6 +20,10 @@
 - **RAII Drop Safety & Crash Recovery:** `DeviceLeaseGuard` and `CoordinatorLeaseDropGuard` ensure unlock on normal completion, error, cancel, or future drop. Windows kernel closes the handle immediately on `taskkill /F`; on next startup, `StorageManager::recover_interrupted_jobs_on_startup` marks orphaned `running`/`verifying`/`queued` DB rows `interrupted`, bumps `fencing_generation`, and clears stale `device_leases` rows only when `inspect_os_lock_holder` reports unlocked.
 - **Fail-Closed Guarantee:** If the lock directory or lockfile cannot be initialized safely, `MultiDeviceScheduler` returns `DEVICE_LOCK_INIT_FAILED` and refuses to run unlocked.
 - **Zero-Bypass Coverage:** Applied across `RuntimeCoordinator` (`studio_run_project_workflow`, `studio_start_project_workflow`, `resume_from_checkpoint`), V1 `execute_workflow`, `apps/mini-runtime` (`mini_run_task`, `mini_start_task`, `--run-task`), and `adb_disconnect_endpoint` cleanup.
+- **Recorded Technical Boundaries (Auditor RC.4 Acceptance Directive):**
+  1. `A6` dual distinct-device concurrency is proven via Rust cross-process/coordinator tests (host runs 1 live AVD); it is not claimed as a live two-device test.
+  2. `%LOCALAPPDATA%\FarmerPro\locks\` lease coordination is verified within a single Windows User account scope (cross-Windows-user isolation is not claimed).
+  3. Offset-64 JSON metadata is diagnostic-only; kernel `[0..64)` byte-range lock state is the sole authoritative ownership source (lingering metadata after crash never constitutes an active lease), and lockfiles are never unlinked on release.
 
 ### 2. Test A Results (`A1`–`A9`, Observed on `695a8b6` / `abaabaa`)
 | Case | Scenario | Outcome | Scope / Evidence |
