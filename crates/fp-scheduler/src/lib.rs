@@ -43,8 +43,33 @@ pub struct AccountLease {
     pub expires_at: DateTime<Utc>,
 }
 
+/// Derives a canonical scheduler lease key so two ADB transport strings
+/// referring to the same local emulator instance (e.g. `emulator-5554` and
+/// `127.0.0.1:5555`) share a single mutual-exclusion lock.
+pub fn canonical_device_lease_key(device_id: &str) -> String {
+    let trimmed = device_id.trim();
+    if let Some(rest) = trimmed.strip_prefix("emulator-") {
+        if let Ok(port) = rest.parse::<u16>() {
+            if port >= 5554 && port % 2 == 0 {
+                return format!("local-emu:{}", port);
+            }
+        }
+    }
+    let port_opt = trimmed
+        .strip_prefix("127.0.0.1:")
+        .or_else(|| trimmed.strip_prefix("localhost:"))
+        .and_then(|p| p.parse::<u16>().ok());
+    if let Some(port) = port_opt {
+        if (5555..=5699).contains(&port) && port % 2 == 1 {
+            return format!("local-emu:{}", port - 1);
+        }
+    }
+    trimmed.to_string()
+}
+
 pub struct MultiDeviceScheduler {
     device_leases: Arc<Mutex<HashMap<String, DeviceLease>>>,
+    canonical_aliases: Arc<Mutex<HashMap<String, String>>>,
     account_leases: Arc<Mutex<HashMap<String, AccountLease>>>,
     job_queue: Arc<Mutex<BinaryHeap<QueuedJob>>>,
     generation_counter: Arc<Mutex<HashMap<String, u64>>>,
@@ -55,11 +80,29 @@ impl MultiDeviceScheduler {
     pub fn new(max_concurrent_vision_workers: usize) -> Self {
         Self {
             device_leases: Arc::new(Mutex::new(HashMap::new())),
+            canonical_aliases: Arc::new(Mutex::new(HashMap::new())),
             account_leases: Arc::new(Mutex::new(HashMap::new())),
             job_queue: Arc::new(Mutex::new(BinaryHeap::new())),
             generation_counter: Arc::new(Mutex::new(HashMap::new())),
             vision_workers_semaphore: Arc::new(Semaphore::new(max_concurrent_vision_workers)),
         }
+    }
+
+    pub fn register_device_canonical_identity(&self, device_id: &str, canonical_identity: &str) {
+        let canon = canonical_identity.trim();
+        if !canon.is_empty() {
+            let mut aliases = self.canonical_aliases.lock().unwrap();
+            aliases.insert(device_id.trim().to_string(), canon.to_string());
+        }
+    }
+
+    fn resolve_lease_key(&self, device_id: &str) -> String {
+        let trimmed = device_id.trim();
+        let aliases = self.canonical_aliases.lock().unwrap();
+        if let Some(canon) = aliases.get(trimmed) {
+            return canon.clone();
+        }
+        canonical_device_lease_key(trimmed)
     }
 
     pub fn enqueue_job(&self, job: QueuedJob) {
@@ -73,22 +116,43 @@ impl MultiDeviceScheduler {
         job_id: &str,
         lease_duration: Duration,
     ) -> Result<DeviceLease> {
+        self.acquire_device_lease_canonical(device_id, None, job_id, lease_duration)
+    }
+
+    pub fn acquire_device_lease_canonical(
+        &self,
+        device_id: &str,
+        canonical_identity: Option<&str>,
+        job_id: &str,
+        lease_duration: Duration,
+    ) -> Result<DeviceLease> {
+        if let Some(canon) = canonical_identity {
+            self.register_device_canonical_identity(device_id, canon);
+        }
+        let lease_key = canonical_identity
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(str::to_string)
+            .unwrap_or_else(|| self.resolve_lease_key(device_id));
+
         let mut leases = self.device_leases.lock().unwrap();
         let now = Utc::now();
 
-        if let Some(existing) = leases.get(device_id) {
+        if let Some(existing) = leases.get(&lease_key) {
             if existing.expires_at > now {
                 bail!(
-                    "Device '{}' is currently leased by job '{}' until {}",
+                    "Device '{}' (canonical '{}') is currently leased by job '{}' (transport '{}') until {}",
                     device_id,
+                    lease_key,
                     existing.job_id,
+                    existing.device_id,
                     existing.expires_at
                 );
             }
         }
 
         let mut gens = self.generation_counter.lock().unwrap();
-        let gen = gens.entry(device_id.to_string()).or_insert(0);
+        let gen = gens.entry(lease_key.clone()).or_insert(0);
         *gen += 1;
 
         let lease = DeviceLease {
@@ -98,15 +162,16 @@ impl MultiDeviceScheduler {
             expires_at: now + lease_duration,
         };
 
-        leases.insert(device_id.to_string(), lease.clone());
+        leases.insert(lease_key, lease.clone());
         Ok(lease)
     }
 
     pub fn release_device_lease(&self, device_id: &str, job_id: &str) -> bool {
+        let lease_key = self.resolve_lease_key(device_id);
         let mut leases = self.device_leases.lock().unwrap();
-        if let Some(lease) = leases.get(device_id) {
+        if let Some(lease) = leases.get(&lease_key) {
             if lease.job_id == job_id {
-                leases.remove(device_id);
+                leases.remove(&lease_key);
                 return true;
             }
         }
@@ -162,9 +227,10 @@ impl MultiDeviceScheduler {
         generation: u64,
         extend_by: Duration,
     ) -> Result<DeviceLease> {
+        let lease_key = self.resolve_lease_key(device_id);
         let mut leases = self.device_leases.lock().unwrap();
         let now = Utc::now();
-        let Some(lease) = leases.get_mut(device_id) else {
+        let Some(lease) = leases.get_mut(&lease_key) else {
             bail!(
                 "LEASE_NOT_FOUND: No active lease on device '{}' for job '{}'",
                 device_id,
@@ -199,9 +265,10 @@ impl MultiDeviceScheduler {
     }
 
     pub fn verify_device_lease(&self, device_id: &str, job_id: &str, generation: u64) -> Result<()> {
+        let lease_key = self.resolve_lease_key(device_id);
         let leases = self.device_leases.lock().unwrap();
         let now = Utc::now();
-        let Some(lease) = leases.get(device_id) else {
+        let Some(lease) = leases.get(&lease_key) else {
             bail!("LEASE_NOT_FOUND: No lease for device '{}'", device_id);
         };
         if lease.job_id != job_id || lease.generation != generation || lease.expires_at <= now {
@@ -304,5 +371,49 @@ mod tests {
             .renew_device_lease("dev-hb", "job-other", l1.generation, Duration::seconds(10))
             .is_err());
         assert_eq!(scheduler.active_device_leases().len(), 1);
+    }
+
+    #[test]
+    fn test_canonical_device_identity_lease_exclusion_across_transports() {
+        let scheduler = MultiDeviceScheduler::new(2);
+        // 1. emulator-5554 and 127.0.0.1:5555 map to the same canonical local-emu:5554 lease key
+        let l1 = scheduler
+            .acquire_device_lease("emulator-5554", "job-emu-1", Duration::seconds(60))
+            .unwrap();
+        assert_eq!(l1.generation, 1);
+
+        let dup_conflict =
+            scheduler.acquire_device_lease("127.0.0.1:5555", "job-tcp-2", Duration::seconds(60));
+        assert!(dup_conflict.is_err());
+
+        // Different AVD console port can lease concurrently
+        let l_other = scheduler
+            .acquire_device_lease("emulator-5556", "job-emu-2", Duration::seconds(60))
+            .unwrap();
+        assert_eq!(l_other.generation, 1);
+
+        assert!(scheduler.release_device_lease("emulator-5554", "job-emu-1"));
+        let l2 = scheduler
+            .acquire_device_lease("127.0.0.1:5555", "job-tcp-2", Duration::seconds(60))
+            .unwrap();
+        assert_eq!(l2.generation, 2);
+
+        // 2. Arbitrary USB + WiFi ADB sharing identical boot identity also collide cleanly
+        let l_usb = scheduler
+            .acquire_device_lease_canonical(
+                "USB-SERIAL-99",
+                Some("android-boot:3A19:boot-uuid-1"),
+                "job-usb",
+                Duration::seconds(60),
+            )
+            .unwrap();
+        assert_eq!(l_usb.generation, 1);
+        let wifi_conflict = scheduler.acquire_device_lease_canonical(
+            "192.168.1.50:5555",
+            Some("android-boot:3A19:boot-uuid-1"),
+            "job-wifi",
+            Duration::seconds(60),
+        );
+        assert!(wifi_conflict.is_err());
     }
 }

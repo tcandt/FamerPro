@@ -285,7 +285,7 @@ html = f"""<!DOCTYPE html>
 [6] Revoked &amp; Rogue Dir : Dropped v9.9.9 (revoked) &amp; v9.9.8 (altered pub) -&gt; REJECTED ({h_esc(p63["rogueRevokedDirAttackErr"].splitlines()[0])} | ROGUE_OR_CORRUPT_VERSION_DIR)
 [7] Manifest Tamper     : Modified THIRD_PARTY_NOTICES.txt in v1.1.0 -&gt; REJECTED: {h_esc(p63["manifestTamperErr"].splitlines()[0])}
 [8] 6-Comp User Bound   : ACL=({h_esc(p63["threatModelAcls"]["hkcuWriteAcl"])}; Ext=AuthUsers:(I)(M)) -&gt; replacing all 6 user-writable stores resets trustEpoch={p63["sameUser6CompResult"]["trustEpoch"]}
-[9] Closeout Regression : Revoked previously-trusted key/policy/compat gates PASS; Win32 atomic_write retry exhaustion + journal recovery PASS (99/99 Cargo)
+[9] Closeout Regression : Revoked previously-trusted key/policy/compat gates PASS; Win32 atomic_write retry exhaustion + journal recovery PASS ({total_passed}/{total_passed + total_failed} Cargo)
   </pre>
   <div class="sec-h">II. Đối chiếu Toàn vẹn Binary Phát hành (Pre-ZIP Manifest == Post-ZIP Extracted Binary)</div>
   <table>

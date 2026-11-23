@@ -53,11 +53,17 @@ function pullLiveScreenshot(outName) {
 }
 
 function resetToTopSettings() {
-  try {
-    execFileSync(ADB_BIN, ['-s', TARGET_SERIAL, 'shell', 'am', 'force-stop', 'com.android.settings'], { encoding: 'utf8' });
-  } catch (_) {}
+  for (const pkg of ['com.android.settings', 'com.google.android.settings.intelligence']) {
+    try {
+      execFileSync(ADB_BIN, ['-s', TARGET_SERIAL, 'shell', 'am', 'force-stop', pkg], { encoding: 'utf8' });
+    } catch (_) { }
+  }
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
-  execFileSync(ADB_BIN, ['-s', TARGET_SERIAL, 'shell', 'am', 'start', '-W', '-a', 'android.settings.SETTINGS'], { encoding: 'utf8' });
+  execFileSync(
+    ADB_BIN,
+    ['-s', TARGET_SERIAL, 'shell', 'am', 'start', '-W', '-a', 'android.settings.SETTINGS', '--activity-clear-task'],
+    { encoding: 'utf8' }
+  );
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1500);
 }
 
@@ -111,7 +117,7 @@ async function waitForCdp(port, timeoutMs = 28000) {
       });
       const page = targets.find((t) => t.type === 'page' && t.url.startsWith('http://tauri.localhost'));
       if (page) return page;
-    } catch (_) {}
+    } catch (_) { }
     await new Promise((r) => setTimeout(r, 300));
   }
   throw new Error(`Timed out waiting for WebView2 CDP on port ${port}`);
@@ -192,10 +198,19 @@ async function main() {
   fs.mkdirSync(path.join(SANDBOX, 'AppData', 'Roaming'), { recursive: true });
   fs.mkdirSync(path.join(SANDBOX, 'ExternalTrustAnchors'), { recursive: true });
 
-  // 0. Check live ADB device online & reset to Android Settings home
+  // 0. Check live ADB device online, verify canonical two-transport identity on 1 AVD, & reset to Android Settings home
   const adbDevicesRaw = runCommandChecked(ADB_BIN, ['devices', '-l'], ROOT);
   if (!adbDevicesRaw.includes(TARGET_SERIAL) || !/\sdevice(\s|$)/.test(adbDevicesRaw)) {
     throw new Error(`Expected ${TARGET_SERIAL} in Ready device state; got:\n${adbDevicesRaw}`);
+  }
+  const emuSerialNo = runCommandChecked(ADB_BIN, ['-s', TARGET_SERIAL, 'shell', 'getprop', 'ro.boot.serialno'], ROOT);
+  const emuBootId = runCommandChecked(ADB_BIN, ['-s', TARGET_SERIAL, 'shell', 'cat', '/proc/sys/kernel/random/boot_id'], ROOT);
+  // Deliberately attach loopback alias 127.0.0.1:5555 before Studio starts to prove canonical deduplication in real runtime!
+  const connectLoopbackOut = runCommandChecked(ADB_BIN, ['connect', '127.0.0.1:5555'], ROOT);
+  const adbDevicesWithDualTransport = runCommandChecked(ADB_BIN, ['devices', '-l'], ROOT);
+  const tcpBootId = runCommandChecked(ADB_BIN, ['-s', '127.0.0.1:5555', 'shell', 'cat', '/proc/sys/kernel/random/boot_id'], ROOT);
+  if (emuBootId !== tcpBootId) {
+    throw new Error(`Expected identical boot_id across ${TARGET_SERIAL} and 127.0.0.1:5555, got ${emuBootId} vs ${tcpBootId}`);
   }
   resetToTopSettings();
   const devBeforeStudio = pullLiveScreenshot('gate2_device_before_studio.png');
@@ -218,11 +233,34 @@ async function main() {
     const page = await waitForCdp(9298, 28000);
     const { ws, evalJs, snap, consoleErrors } = await connectCdp(page);
 
-    // Phase A1: ADB Discovery, Live Screenshot & Vision Template Crop + Match
+    // Phase A1: ADB Discovery (must coalesce dual-transport emulator-5554 + 127.0.0.1:5555 to 1!), Forward/Reverse Create/List/Remove, Live Screenshot & Vision Template Crop + Match
     const discoveryRes = await evalJs(`(async () => {
       const inv = window.__TAURI_INTERNALS__.invoke;
       const discovered = await inv('auto_discover_devices');
       const listed = await inv('list_devices');
+
+      // Real ADB forward/reverse create -> list -> remove verification on live ${TARGET_SERIAL}
+      const fwdCreated = await inv('studio_add_device_forward', {
+        serial: '${TARGET_SERIAL}',
+        localSpec: 'tcp:19555',
+        remoteSpec: 'tcp:19556'
+      });
+      const revCreated = await inv('studio_add_device_reverse', {
+        serial: '${TARGET_SERIAL}',
+        remoteSpec: 'tcp:19557',
+        localSpec: 'tcp:19558'
+      });
+      const portsAfterCreate = await inv('studio_list_device_ports', { serial: '${TARGET_SERIAL}' });
+      const listedFwd = portsAfterCreate.forwards.find(f => f.local === 'tcp:19555' && f.remote === 'tcp:19556');
+      const listedRev = portsAfterCreate.reverses.find(r => r.remote === 'tcp:19557' && r.local === 'tcp:19558');
+      if (listedFwd) {
+        await inv('studio_remove_device_forward', { serial: listedFwd.serial, localSpec: listedFwd.local });
+      }
+      if (listedRev) {
+        await inv('studio_remove_device_reverse', { serial: listedRev.serial, remoteSpec: listedRev.remote });
+      }
+      const portsAfterRemove = await inv('studio_list_device_ports', { serial: '${TARGET_SERIAL}' });
+
       const capDataUrl = await inv('capture_device', { deviceId: '${TARGET_SERIAL}' });
       const b64 = capDataUrl.replace(/^data:image\\/png;base64,/, '');
 
@@ -284,8 +322,20 @@ async function main() {
 
       const navDev = Array.from(document.querySelectorAll('button')).find(b => b.textContent && (b.textContent.includes('Thiết bị') || b.textContent.includes('Device Lab')));
       if (navDev) navDev.click();
-      return { discovered, listed, capLen: b64.length, proj, pub, tplNetwork, tplConnected, matchPreview };
+      return { discovered, listed, fwdCreated, revCreated, portsAfterCreate, portsAfterRemove, capLen: b64.length, proj, pub, tplNetwork, tplConnected, matchPreview };
     })()`);
+    if (discoveryRes.discovered.length !== 1 || discoveryRes.discovered[0].adb_serial !== TARGET_SERIAL) {
+      throw new Error(`Expected canonical deduplication to return 1 device (${TARGET_SERIAL}), got: ${JSON.stringify(discoveryRes.discovered)}`);
+    }
+    if (discoveryRes.listed.length !== 1 || discoveryRes.listed[0].adb_serial !== TARGET_SERIAL) {
+      throw new Error(`Expected list_devices to return 1 device (${TARGET_SERIAL}), got: ${JSON.stringify(discoveryRes.listed)}`);
+    }
+    if (!discoveryRes.portsAfterCreate.forwards.some(f => f.local === 'tcp:19555' && f.remote === 'tcp:19556')
+        || !discoveryRes.portsAfterCreate.reverses.some(r => r.remote === 'tcp:19557' && r.local === 'tcp:19558')
+        || discoveryRes.portsAfterRemove.forwards.some(f => f.local === 'tcp:19555')
+        || discoveryRes.portsAfterRemove.reverses.some(r => r.remote === 'tcp:19557')) {
+      throw new Error(`ADB forward/reverse create/list/remove assertion failed: create=${JSON.stringify(discoveryRes.portsAfterCreate)}, remove=${JSON.stringify(discoveryRes.portsAfterRemove)}`);
+    }
 
     await new Promise((r) => setTimeout(r, 600));
     const snapStudioDev = await snap('gate2_studio_device_lab.png', 1600, 900);
@@ -508,7 +558,9 @@ async function main() {
     for (let i = 0; i < 20; i++) {
       await new Promise((r) => setTimeout(r, 250));
       job2Suspended = await evalJs(`window.__TAURI_INTERNALS__.invoke('studio_get_job_resume_detail', { jobId: ${JSON.stringify(job2Start.jobId)} })`);
-      if (job2Suspended && job2Suspended.jobState === 'Paused' && job2Suspended.checkpoint) break;
+      const st = job2Suspended?.resumeContext?.job?.state || job2Suspended?.jobState;
+      const cp = job2Suspended?.resumeContext?.latestCheckpoint || job2Suspended?.checkpoint;
+      if (st && String(st).toLowerCase() === 'paused' && cp) break;
     }
     const job2Resumed = await evalJs(`window.__TAURI_INTERNALS__.invoke('studio_resume_job_from_checkpoint', {
       jobId: ${JSON.stringify(job2Start.jobId)},
@@ -600,6 +652,12 @@ async function main() {
     studioResult = {
       adbDiscoveredCount: discoveryRes.discovered.length,
       listedDevices: discoveryRes.listed,
+      adbPortMappingVerification: {
+        fwdCreated: discoveryRes.fwdCreated,
+        revCreated: discoveryRes.revCreated,
+        portsAfterCreate: discoveryRes.portsAfterCreate,
+        portsAfterRemove: discoveryRes.portsAfterRemove,
+      },
       liveCapturePngLen: discoveryRes.capLen,
       templateNetwork: discoveryRes.tplNetwork,
       templateConnected: discoveryRes.tplConnected,
@@ -608,7 +666,16 @@ async function main() {
       job1PausedState: job1PausedState?.state,
       job1Final,
       job1EventsCount: studioEvents.length,
-      job2SuspendedStage: { jobState: job2Suspended?.jobState, hasCheckpoint: Boolean(job2Suspended?.checkpoint) },
+      job1AuditEventsSummary: studioEvents.map(e => ({
+        nodeId: e.node_id || e.nodeId,
+        eventType: e.event_type || e.eventType,
+        payloadJson: e.payload_json || e.payloadJson,
+      })),
+      job2SuspendedStage: {
+        jobState: job2Suspended?.resumeContext?.job?.state || job2Suspended?.jobState || null,
+        checkpointId: job2Suspended?.resumeContext?.latestCheckpoint?.id || job2Suspended?.checkpoint?.id || null,
+        hasCheckpoint: Boolean(job2Suspended?.resumeContext?.latestCheckpoint || job2Suspended?.checkpoint),
+      },
       job2Resumed,
       job3FinalState: job3Final?.state,
       studioRuntimeVars,
@@ -621,7 +688,7 @@ async function main() {
     };
     ws.close();
   } finally {
-    try { studioChild.kill('SIGTERM'); } catch (_) {}
+    try { studioChild.kill('SIGTERM'); } catch (_) { }
   }
 
   await new Promise((r) => setTimeout(r, 1000));
@@ -652,6 +719,9 @@ async function main() {
     await new Promise((r) => setTimeout(r, 500));
 
     const pillBefore = await evalJs(`document.getElementById('adb-mode-pill')?.textContent || ''`);
+    if (!pillBefore.includes('1 ONLINE')) {
+      throw new Error(`Expected deduplicated 'LIVE ADB: 1 ONLINE' on Mini Runtime pill, got: '${pillBefore}'`);
+    }
     const snapMiniBefore = await snap('gate2_mini_before.png', 980, 720);
 
     // Click the REAL ADB button ("▶ CHẠY NHIỆM VỤ (ADB THẬT)"), NOT TestKit!
@@ -690,7 +760,7 @@ async function main() {
     };
     ws.close();
   } finally {
-    try { miniChild.kill('SIGTERM'); } catch (_) {}
+    try { miniChild.kill('SIGTERM'); } catch (_) { }
   }
 
   // Query Mini Tool independent SQLite DB provenance!
@@ -713,6 +783,7 @@ print(json.dumps({"jobs": jobs, "stepEventsCount": ev_cnt, "runtimeVariableEnvel
   );
 
   const zipMeta = { file: path.basename(releaseZip), bytes: fs.statSync(releaseZip).size, sha256: sha256File(releaseZip) };
+  try { execFileSync(ADB_BIN, ['disconnect', '127.0.0.1:5555'], { encoding: 'utf8' }); } catch (_) {}
   rmSyncRetry(SANDBOX);
   rmSyncRetry(relOut);
   rmSyncRetry(releaseZip);
@@ -720,9 +791,17 @@ print(json.dumps({"jobs": jobs, "stepEventsCount": ev_cnt, "runtimeVariableEnvel
   const report = {
     executedAtUtc: new Date().toISOString(),
     gitHead: runCommandChecked('git', ['rev-parse', 'HEAD'], ROOT),
-    rcCodeTag: 'v0.1.0-p6-rc.1',
+    rcCodeTag: 'v0.1.0-p6-rc.2',
     adbTargetSerial: TARGET_SERIAL,
     adbTargetModel: 'sdk_gphone16k_x86_64 (Android SDK Emulator fp_gate2_avd, WHPX)',
+    canonicalDeviceIdentityProof: {
+      emuBootSerialNo: emuSerialNo,
+      emuBootId,
+      loopbackConnectOutput: connectLoopbackOut,
+      adbDevicesRawDualTransport: adbDevicesWithDualTransport,
+      tcpBootId,
+      identicalInstanceConfirmed: emuBootId === tcpBootId,
+    },
     adbDevicesRaw,
     gate2Status: 'PASS (LIVE_ANDROID_ADB_VERIFIED)',
     studioLiveRun: studioResult,

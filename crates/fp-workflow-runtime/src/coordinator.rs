@@ -290,7 +290,7 @@ impl RuntimeCoordinator {
         (adapter_kind, fenced)
     }
 
-    fn prepare_new_execution(
+    async fn prepare_new_execution(
         &self,
         req: RunProjectWorkflowRequest,
         custom_driver: Option<Arc<dyn DeviceDriver>>,
@@ -330,9 +330,18 @@ impl RuntimeCoordinator {
         let ttl_secs = req.lease_ttl_secs.max(4);
         let ttl = ChronoDuration::seconds(ttl_secs as i64);
 
+        let canonical_identity = if custom_driver.is_none()
+            && classify_device_adapter(&req.device_id, None) != DeviceAdapterKind::Synthetic
+            && fp_adb::infer_local_emulator_canonical_key(&req.device_id).is_none()
+            && std::path::Path::new(&self.adb_runner.adb_path).is_file()
+        {
+            self.adb_runner.probe_canonical_device_identity(&req.device_id).await
+        } else {
+            None
+        };
         let device_lease = self
             .scheduler
-            .acquire_device_lease(&req.device_id, &job_id, ttl)?;
+            .acquire_device_lease_canonical(&req.device_id, canonical_identity.as_deref(), &job_id, ttl)?;
 
         if let Some(ref acc_id) = req.account_id {
             if let Err(err) = self.scheduler.acquire_account_lease(acc_id, &job_id, ttl) {
@@ -623,7 +632,7 @@ impl RuntimeCoordinator {
         JobControlHandle,
         tokio::task::JoinHandle<Result<RunWorkflowExecutionSummary>>,
     )> {
-        let prep = self.prepare_new_execution(req, custom_driver)?;
+        let prep = self.prepare_new_execution(req, custom_driver).await?;
         let handle = JobControlHandle {
             job_id: prep.job_id.clone(),
             device_id: prep.device_id.clone(),
@@ -639,7 +648,7 @@ impl RuntimeCoordinator {
         req: RunProjectWorkflowRequest,
         custom_driver: Option<Arc<dyn DeviceDriver>>,
     ) -> Result<RunWorkflowExecutionSummary> {
-        let prep = self.prepare_new_execution(req, custom_driver)?;
+        let prep = self.prepare_new_execution(req, custom_driver).await?;
         self.execute_prepared(prep).await
     }
 
@@ -758,9 +767,25 @@ impl RuntimeCoordinator {
         // Safe to resume: acquire fresh device/account leases with bumped generation
         let ttl_secs = lease_ttl_secs.max(4);
         let ttl = ChronoDuration::seconds(ttl_secs as i64);
+        let canonical_identity = if custom_driver.is_none()
+            && classify_device_adapter(&resume_ctx.job.device_id, None) != DeviceAdapterKind::Synthetic
+            && fp_adb::infer_local_emulator_canonical_key(&resume_ctx.job.device_id).is_none()
+            && std::path::Path::new(&self.adb_runner.adb_path).is_file()
+        {
+            self.adb_runner
+                .probe_canonical_device_identity(&resume_ctx.job.device_id)
+                .await
+        } else {
+            None
+        };
         let device_lease = self
             .scheduler
-            .acquire_device_lease(&resume_ctx.job.device_id, job_id, ttl)?;
+            .acquire_device_lease_canonical(
+                &resume_ctx.job.device_id,
+                canonical_identity.as_deref(),
+                job_id,
+                ttl,
+            )?;
 
         if let Some(ref acc_id) = resume_ctx.job.account_id {
             if let Err(err) = self.scheduler.acquire_account_lease(acc_id, job_id, ttl) {

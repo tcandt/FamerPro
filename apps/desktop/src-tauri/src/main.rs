@@ -524,13 +524,25 @@ async fn adb_scan_range(
     };
     let runner = AdbRunner::new(Some(adb_path));
 
+    let existing_raw = runner.list_devices_raw().await.unwrap_or_default();
+    let attached_emu_loopback_ports: std::collections::HashSet<u16> = existing_raw
+        .iter()
+        .filter_map(|d| d.adb_serial.strip_prefix("emulator-"))
+        .filter_map(|s| s.parse::<u16>().ok())
+        .filter(|p| *p >= 5554 && p % 2 == 0)
+        .map(|p| p + 1)
+        .collect();
+
     let scan_emulators = emulator_ports.unwrap_or(true);
     let mut targets_to_probe: Vec<(String, u16)> = Vec::new();
 
     if scan_emulators {
         // Standard Android emulator & LDPlayer ports on localhost: 5555..=5595
+        // Skip loopback ports whose `emulator-<port-1>` transport is already attached.
         for p in 5555..=5595 {
-            targets_to_probe.push(("127.0.0.1".to_string(), p));
+            if !attached_emu_loopback_ports.contains(&p) {
+                targets_to_probe.push(("127.0.0.1".to_string(), p));
+            }
         }
         // Nox ports
         for p in 62001..=62025 {
@@ -607,7 +619,18 @@ async fn auto_discover_devices(
     };
     let runner = AdbRunner::new(Some(adb_path));
 
-    let mut ports_to_probe: Vec<u16> = (5555..=5595).collect();
+    let existing_raw = runner.list_devices_raw().await.unwrap_or_default();
+    let attached_emu_loopback_ports: std::collections::HashSet<u16> = existing_raw
+        .iter()
+        .filter_map(|d| d.adb_serial.strip_prefix("emulator-"))
+        .filter_map(|s| s.parse::<u16>().ok())
+        .filter(|p| *p >= 5554 && p % 2 == 0)
+        .map(|p| p + 1)
+        .collect();
+
+    let mut ports_to_probe: Vec<u16> = (5555..=5595)
+        .filter(|p| !attached_emu_loopback_ports.contains(p))
+        .collect();
     ports_to_probe.extend_from_slice(&[62001, 62025, 21503, 21513, 21523, 7555, 58526]);
 
     let mut set = tokio::task::JoinSet::new();

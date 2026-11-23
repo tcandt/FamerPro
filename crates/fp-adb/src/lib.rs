@@ -30,6 +30,86 @@ pub fn validate_adb_token(label: &str, value: &str) -> Result<String> {
     Ok(trimmed.to_string())
 }
 
+pub fn infer_local_emulator_canonical_key(serial: &str) -> Option<String> {
+    let trimmed = serial.trim();
+    if let Some(rest) = trimmed.strip_prefix("emulator-") {
+        if let Ok(port) = rest.parse::<u16>() {
+            if port >= 5554 && port % 2 == 0 {
+                return Some(format!("local-emu:{}", port));
+            }
+        }
+    }
+    let port_opt = trimmed
+        .strip_prefix("127.0.0.1:")
+        .or_else(|| trimmed.strip_prefix("localhost:"))
+        .and_then(|p| p.parse::<u16>().ok());
+    if let Some(port) = port_opt {
+        // Android Emulator & LDPlayer expose ADB TCP on console_port + 1 (odd ports 5555..=5699)
+        if (5555..=5699).contains(&port) && port % 2 == 1 {
+            return Some(format!("local-emu:{}", port - 1));
+        }
+    }
+    None
+}
+
+pub fn serial_transport_priority(serial: &str) -> u8 {
+    let trimmed = serial.trim();
+    if trimmed.starts_with("127.0.0.1:") || trimmed.starts_with("localhost:") {
+        3
+    } else if trimmed.contains(':') {
+        2
+    } else if trimmed.starts_with("emulator-") {
+        1
+    } else {
+        0
+    }
+}
+
+pub fn coalesce_device_summaries(
+    entries: Vec<(DeviceSummary, Option<String>)>,
+) -> Vec<DeviceSummary> {
+    let mut best_by_key: std::collections::HashMap<String, DeviceSummary> =
+        std::collections::HashMap::new();
+    let mut ordered_keys: Vec<String> = Vec::new();
+
+    let rank = |d: &DeviceSummary| -> (u8, u8, String) {
+        let ready_rank = if d.connection_state == ConnectionState::Ready {
+            0
+        } else {
+            1
+        };
+        (
+            ready_rank,
+            serial_transport_priority(&d.adb_serial),
+            d.adb_serial.clone(),
+        )
+    };
+
+    for (summary, observed_identity) in entries {
+        let canonical_key = observed_identity
+            .filter(|k| !k.trim().is_empty())
+            .or_else(|| infer_local_emulator_canonical_key(&summary.adb_serial))
+            .unwrap_or_else(|| format!("serial:{}", summary.adb_serial));
+
+        match best_by_key.get_mut(&canonical_key) {
+            Some(existing) => {
+                if rank(&summary) < rank(existing) {
+                    *existing = summary;
+                }
+            }
+            None => {
+                ordered_keys.push(canonical_key.clone());
+                best_by_key.insert(canonical_key, summary);
+            }
+        }
+    }
+
+    ordered_keys
+        .into_iter()
+        .filter_map(|k| best_by_key.remove(&k))
+        .collect()
+}
+
 pub fn classify_device_adapter(serial: &str, model: Option<&str>) -> DeviceAdapterKind {
     let s = serial.to_lowercase();
     let m = model.unwrap_or("").to_lowercase();
@@ -188,9 +268,72 @@ impl AdbRunner {
         Ok(output.stdout)
     }
 
-    pub async fn list_devices(&self) -> Result<Vec<DeviceSummary>> {
+    pub async fn list_devices_raw(&self) -> Result<Vec<DeviceSummary>> {
         let output = self.run_args(&["devices", "-l"]).await?;
         Self::parse_devices_output(&output)
+    }
+
+    /// Probes the live OS boot instance & hardware serial so multi-transport
+    /// aliases (e.g. `emulator-5554` + `127.0.0.1:5555`, or USB + WiFi ADB)
+    /// resolve to one canonical Android instance identity.
+    pub async fn probe_canonical_device_identity(&self, serial: &str) -> Option<String> {
+        let s = validate_adb_token("serial", serial).ok()?;
+        let boot_id_out = self
+            .run_args(&["-s", &s, "shell", "cat", "/proc/sys/kernel/random/boot_id"])
+            .await
+            .ok();
+        let boot_id = boot_id_out
+            .as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty() && !v.to_lowercase().contains("no such file"))
+            .map(str::to_string);
+
+        if let Some(bid) = boot_id {
+            let boot_sn = self
+                .run_args(&["-s", &s, "shell", "getprop", "ro.boot.serialno"])
+                .await
+                .ok()
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty())
+                .unwrap_or_default();
+            return Some(format!("android-boot:{}:{}", boot_sn, bid));
+        }
+
+        infer_local_emulator_canonical_key(&s)
+    }
+
+    pub async fn list_devices(&self) -> Result<Vec<DeviceSummary>> {
+        let raw = self.list_devices_raw().await?;
+        if raw.len() <= 1 {
+            return Ok(raw);
+        }
+
+        let mut entries: Vec<(DeviceSummary, Option<String>)> = Vec::with_capacity(raw.len());
+        let mut set = tokio::task::JoinSet::new();
+        for (idx, dev) in raw.into_iter().enumerate() {
+            let runner = self.clone();
+            set.spawn(async move {
+                let canonical = if dev.connection_state == ConnectionState::Ready {
+                    runner.probe_canonical_device_identity(&dev.adb_serial).await
+                } else {
+                    infer_local_emulator_canonical_key(&dev.adb_serial)
+                };
+                (idx, dev, canonical)
+            });
+        }
+
+        let mut indexed = Vec::new();
+        while let Some(res) = set.join_next().await {
+            if let Ok(item) = res {
+                indexed.push(item);
+            }
+        }
+        indexed.sort_by_key(|(idx, _, _)| *idx);
+        for (_, dev, canonical) in indexed {
+            entries.push((dev, canonical));
+        }
+
+        Ok(coalesce_device_summaries(entries))
     }
 
     pub async fn connect(&self, endpoint: &str) -> Result<String> {
@@ -232,11 +375,18 @@ impl AdbRunner {
                         continue;
                     }
                 }
+                // `adb forward --list` emits: `<serial> <local_host> <remote_device>`
+                // `adb reverse --list` emits: `<host_transport> <remote_device> <local_host>`
+                let (local, remote) = if direction == "reverse" {
+                    (parts[2].to_string(), parts[1].to_string())
+                } else {
+                    (parts[1].to_string(), parts[2].to_string())
+                };
                 list.push(DevicePortMapping {
                     direction: direction.to_string(),
                     serial,
-                    local: parts[1].to_string(),
-                    remote: parts[2].to_string(),
+                    local,
+                    remote,
                 });
             }
         }
@@ -284,7 +434,12 @@ impl AdbRunner {
     pub async fn reverse_list(&self, serial: &str) -> Result<Vec<DevicePortMapping>> {
         let s = validate_adb_token("serial", serial)?;
         let out = self.run_args(&["-s", &s, "reverse", "--list"]).await?;
-        Ok(Self::parse_port_mappings(&out, "reverse", None))
+        let mut mappings = Self::parse_port_mappings(&out, "reverse", None);
+        for m in &mut mappings {
+            // Preserve the target device serial rather than ADB's internal `host-XX` transport token
+            m.serial = s.clone();
+        }
+        Ok(mappings)
     }
 
     pub async fn reverse_remove(&self, serial: &str, remote: &str) -> Result<()> {
@@ -312,7 +467,7 @@ impl AdbRunner {
             }
         };
 
-        let devices = match self.list_devices().await {
+        let devices = match self.list_devices_raw().await {
             Ok(d) => d,
             Err(e) => {
                 return DeviceHealthReport {
@@ -730,6 +885,12 @@ emulator-5554          device product:sdk_gphone64_x86_64 model:Pixel_6 device:e
         assert_eq!(one[0].local, "tcp:18080");
         assert_eq!(one[0].remote, "tcp:8080");
 
+        let rev = "host-22 tcp:19557 tcp:19558\n";
+        let rev_parsed = AdbRunner::parse_port_mappings(rev, "reverse", None);
+        assert_eq!(rev_parsed.len(), 1);
+        assert_eq!(rev_parsed[0].remote, "tcp:19557");
+        assert_eq!(rev_parsed[0].local, "tcp:19558");
+
         assert!(validate_adb_token("local", "tcp:18080").is_ok());
         assert!(validate_adb_token("local", "tcp:8080; calc.exe").is_err());
         assert!(validate_adb_token("serial", "").is_err());
@@ -740,6 +901,53 @@ emulator-5554          device product:sdk_gphone64_x86_64 model:Pixel_6 device:e
         assert_eq!(
             classify_device_adapter("127.0.0.1:62001", Some("Nox")),
             DeviceAdapterKind::Nox
+        );
+    }
+
+    #[test]
+    fn test_coalesce_duplicate_emulator_and_multitransport_identities() {
+        let mock_out = r#"
+List of devices attached
+127.0.0.1:5555         device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:2
+emulator-5554          device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:1
+emulator-5556          device product:sdk_gphone16k_x86_64 model:sdk_gphone16k_x86_64 device:emu64xa16k transport_id:3
+USB-PIXEL-9            device product:tokay model:Pixel_9 transport_id:4
+192.168.1.44:5555      device product:tokay model:Pixel_9 transport_id:5
+        "#;
+        let raw = AdbRunner::parse_devices_output(mock_out).unwrap();
+        assert_eq!(raw.len(), 5);
+
+        let entries = raw
+            .into_iter()
+            .map(|d| {
+                let obs = match d.adb_serial.as_str() {
+                    "127.0.0.1:5555" | "emulator-5554" => {
+                        Some("android-boot:EMULATOR37X1X11X0:boot-avd-1".to_string())
+                    }
+                    "emulator-5556" => {
+                        Some("android-boot:EMULATOR37X1X11X0:boot-avd-2".to_string())
+                    }
+                    "USB-PIXEL-9" | "192.168.1.44:5555" => {
+                        Some("android-boot:3A191FDJH:boot-pixel-9".to_string())
+                    }
+                    _ => None,
+                };
+                (d, obs)
+            })
+            .collect();
+
+        let deduped = coalesce_device_summaries(entries);
+        let serials: Vec<&str> = deduped.iter().map(|d| d.adb_serial.as_str()).collect();
+        assert_eq!(serials, vec!["emulator-5554", "emulator-5556", "USB-PIXEL-9"]);
+
+        // Also works deterministically via fallback inference without shell boot_id probe
+        assert_eq!(
+            infer_local_emulator_canonical_key("emulator-5554"),
+            infer_local_emulator_canonical_key("127.0.0.1:5555")
+        );
+        assert_ne!(
+            infer_local_emulator_canonical_key("emulator-5554"),
+            infer_local_emulator_canonical_key("emulator-5556")
         );
     }
 }
