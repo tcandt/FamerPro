@@ -1462,10 +1462,15 @@ impl MiniToolUpdater {
                 );
             }
         }
-        let key_already_trusted = trust_state
-            .trusted_pubkeys
+        let is_revoked = trust_state
+            .revoked_pubkeys
             .iter()
             .any(|k| k.eq_ignore_ascii_case(&verified.pe_pubkey_hex));
+        let key_already_trusted = !is_revoked
+            && trust_state
+                .trusted_pubkeys
+                .iter()
+                .any(|k| k.eq_ignore_ascii_case(&verified.pe_pubkey_hex));
         if verified.rotated_from_pubkey_hex.is_some() && !key_already_trusted {
             if let Some(ref deleg) = verified
                 .manifest
@@ -1694,10 +1699,10 @@ impl MiniToolUpdater {
             updated_trust.previous_state_sha256 = None;
             updated_trust.updated_at_utc = Utc::now().to_rfc3339();
         }
-        self.write_trust_state(&updated_trust)?;
         self.write_active_pointer_with_shadow(&next_pointer)?;
         journal.stage = UpdateStage::Activated;
         self.write_journal(&mut journal)?;
+        self.write_trust_state(&updated_trust)?;
         maybe_trigger_fault(FaultInjectionPoint::AfterActivate, options);
 
         journal.stage = UpdateStage::Completed;
@@ -2002,6 +2007,18 @@ impl MiniToolUpdater {
                     let sp = Path::new(staging);
                     if sp.exists() {
                         let _ = fs::remove_dir_all(sp);
+                    }
+                }
+                if journal.operation == "upgrade" {
+                    let prev_ver = journal
+                        .previous_active_pointer
+                        .as_ref()
+                        .map(|p| p.active_version.as_str());
+                    if prev_ver != Some(journal.target_version.as_str()) {
+                        let target_vp = Path::new(&journal.staged_version_dir);
+                        if target_vp.exists() {
+                            let _ = fs::remove_dir_all(target_vp);
+                        }
                     }
                 }
                 if let Some(prev_ptr) = journal.previous_active_pointer.as_ref() {
@@ -4057,6 +4074,275 @@ mod tests {
         fs::write(u_comp.external_anchor_file_path().unwrap(), &snap_ext).unwrap();
         let after_6comp = u_comp.verify_install_security_audit().unwrap();
         assert_eq!(after_6comp.trust_epoch, 1);
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_p6_closeout_revoked_previously_trusted_key_policy_and_compat_gates() {
+        use fp_builder::security::ProducerKeyManager;
+        use fp_bundle_contract::{
+            KeyRotationDelegation, PeVersionInfoSpec, PublisherIdentitySpec, ReleaseSigningMetadata,
+        };
+
+        let tmp = std::env::temp_dir().join(format!("fp_updater_p6_gates_{}", Uuid::new_v4()));
+        let anchor_dir = tmp.join("ext_anchors");
+        let key_old = SigningKey::from_bytes(&[91u8; 32]);
+        let key_new = SigningKey::from_bytes(&[92u8; 32]);
+        let pub_old: String = key_old.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let pub_new: String = key_new.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+
+        let sign_bundle = |dir: &Path,
+                           sk: &SigningKey,
+                           pk_hex: &str,
+                           rot: Option<KeyRotationDelegation>,
+                           mode: SigningMode,
+                           channel: &str| {
+            let bdir = dir.join("bundle");
+            let mut m: ReleaseBundleManifest =
+                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap()).unwrap();
+            m.publisher = Some(PublisherIdentitySpec {
+                publisher_id: "pub-p6-gate".to_string(),
+                display_name: "P6 Gate Publisher".to_string(),
+                organization: "P6 Gate Labs".to_string(),
+                website: None,
+                support_contact: None,
+                copyright: "Copyright (C) 2026 P6 Gate Labs".to_string(),
+                ed25519_key_id: "k-p6g".to_string(),
+                ed25519_pubkey_hex: pk_hex.to_string(),
+                authenticode_cert_ref: None,
+                release_channel: channel.to_string(),
+                signing_policy: mode,
+            });
+            m.signing = Some(ReleaseSigningMetadata {
+                signing_mode: mode,
+                publisher_id: "pub-p6-gate".to_string(),
+                publisher_organization: "P6 Gate Labs".to_string(),
+                release_channel: channel.to_string(),
+                authenticode_trust_status: AuthenticodeTrustStatus::Unsigned,
+                trusted_public_release: false,
+                signer_thumbprint: None,
+                signer_subject: None,
+                version_info: PeVersionInfoSpec::default(),
+                key_rotation: rot,
+            });
+            let mb = serde_json::to_vec_pretty(&m).unwrap();
+            fs::write(bdir.join("manifest.fpbundle.json"), &mb).unwrap();
+            let mut sig_env: SignedBundleEnvelope =
+                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap()).unwrap();
+            sig_env.file_checksums.insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
+            let msha = sha256_hex(&mb);
+            let tjson = serde_json::to_string(&sig_env.file_checksums).unwrap();
+            let thash = sha256_hex(tjson.as_bytes());
+            let msg = fp_bundle_verify::canonical_signing_message(&sig_env.key_id, &msha, &thash);
+            let s = sk.sign(&msg);
+            sig_env.manifest_sha256 = msha;
+            sig_env.checksums_table_sha256 = thash;
+            sig_env.signature_ed25519_hex = s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+            fs::write(bdir.join("signature.fpbundle.json"), serde_json::to_vec_pretty(&sig_env).unwrap()).unwrap();
+        };
+
+        let rel_100 = tmp.join("rel_100");
+        let rel_110 = tmp.join("rel_110");
+        let rel_120_direct = tmp.join("rel_120_direct");
+        let rel_130_policy = tmp.join("rel_130_policy");
+        let rel_140_compat = tmp.join("rel_140_compat");
+
+        let deleg = ProducerKeyManager::sign_key_rotation_delegation(&key_old, &pub_new, "pub-p6-gate", "p6-gate", 30);
+        create_signed_test_release(&rel_100, "p6-gate", "Auto_Gate.exe", "1.0.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [91u8; 32]);
+        sign_bundle(&rel_100, &key_old, &pub_old, None, SigningMode::UnsignedInternal, "qa");
+
+        create_signed_test_release(&rel_110, "p6-gate", "Auto_Gate.exe", "1.1.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [92u8; 32]);
+        sign_bundle(&rel_110, &key_new, &pub_new, Some(deleg), SigningMode::UnsignedInternal, "qa");
+
+        create_signed_test_release(&rel_120_direct, "p6-gate", "Auto_Gate.exe", "1.2.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [92u8; 32]);
+        sign_bundle(&rel_120_direct, &key_new, &pub_new, None, SigningMode::UnsignedInternal, "qa");
+
+        create_signed_test_release(&rel_130_policy, "p6-gate", "Auto_Gate.exe", "1.3.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [92u8; 32]);
+        sign_bundle(&rel_130_policy, &key_new, &pub_new, None, SigningMode::PublicSigned, "production");
+
+        create_signed_test_release(&rel_140_compat, "p6-gate", "Auto_Gate.exe", "1.4.0", CURRENT_SQLITE_SCHEMA_VERSION + 50, 99, [92u8; 32]);
+        let deleg_compat = ProducerKeyManager::sign_key_rotation_delegation(&key_old, &pub_new, "pub-p6-gate", "p6-gate", 31);
+        sign_bundle(&rel_140_compat, &key_new, &pub_new, Some(deleg_compat), SigningMode::UnsignedInternal, "qa");
+
+        let opts = UpdateExecutionOptions { skip_child_verify_exec: true, ..Default::default() };
+
+        // Part A: Previously-trusted key gets revoked after rollback -> re-upgrade & direct upgrade MUST fail
+        let rev_root = tmp.join("inst_revoked");
+        let u_rev = MiniToolUpdater::new_with_external_anchor(&rev_root, &anchor_dir);
+        u_rev.install_initial(&rel_100, &opts).unwrap();
+        u_rev.upgrade_from_release(&rel_110, &opts).unwrap();
+        u_rev.rollback_to_previous(false, true).unwrap();
+        u_rev.revoke_pubkey(&pub_new, "compromised_after_rollback").unwrap();
+
+        let err_reupg_revoked = u_rev.upgrade_from_release(&rel_110, &opts).unwrap_err().to_string();
+        assert!(err_reupg_revoked.contains("KEY_REVOKED"), "got: {}", err_reupg_revoked);
+        let err_direct_revoked = u_rev.upgrade_from_release(&rel_120_direct, &opts).unwrap_err().to_string();
+        assert!(
+            err_direct_revoked.contains("UPDATE_ROOT_OF_TRUST_UNTRUSTED") || err_direct_revoked.contains("KEY_REVOKED"),
+            "got: {}",
+            err_direct_revoked
+        );
+
+        // Even if trusted_pubkeys still retained pub_new alongside revoked_pubkeys, BOTH paths must reject!
+        let mut st_both = u_rev.read_trust_state().unwrap().unwrap();
+        st_both.trusted_pubkeys.push(pub_new.clone());
+        st_both.trust_epoch += 1;
+        u_rev.write_trust_state(&st_both).unwrap();
+        let err_both = u_rev.upgrade_from_release(&rel_110, &opts).unwrap_err().to_string();
+        assert!(err_both.contains("KEY_REVOKED"), "got: {}", err_both);
+
+        // Part B: Non-revoked already-trusted key after rollback still MUST enforce release policy & compat gate
+        let gate_root = tmp.join("inst_gates");
+        let u_gate = MiniToolUpdater::new_with_external_anchor(&gate_root, &anchor_dir);
+        u_gate.install_initial(&rel_100, &opts).unwrap();
+        u_gate.upgrade_from_release(&rel_110, &opts).unwrap();
+        u_gate.rollback_to_previous(false, true).unwrap();
+
+        let err_policy = u_gate.upgrade_from_release(&rel_130_policy, &opts).unwrap_err().to_string();
+        assert!(err_policy.contains("AUTHENTICODE_PUBLIC_TRUST_REQUIRED"), "got: {}", err_policy);
+
+        let err_compat = u_gate.upgrade_from_release(&rel_140_compat, &opts).unwrap_err().to_string();
+        assert!(err_compat.contains("COMPATIBILITY_ERROR"), "got: {}", err_compat);
+        assert_eq!(u_gate.read_active_pointer().unwrap().unwrap().active_version, "1.0.0");
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_p6_closeout_windows_atomic_write_acl_lock_exhaustion_and_journal_recovery() {
+        use std::os::windows::ffi::OsStrExt;
+
+        const GENERIC_READ: u32 = 0x8000_0000;
+        const GENERIC_WRITE: u32 = 0x4000_0000;
+        const FILE_SHARE_READ: u32 = 0x0000_0001;
+        const OPEN_EXISTING: u32 = 3;
+        const FILE_ATTRIBUTE_NORMAL: u32 = 0x80;
+
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn CreateFileW(
+                lpFileName: *const u16,
+                dwDesiredAccess: u32,
+                dwShareMode: u32,
+                lpSecurityAttributes: *const core::ffi::c_void,
+                dwCreationDisposition: u32,
+                dwFlagsAndAttributes: u32,
+                hTemplateFile: *mut core::ffi::c_void,
+            ) -> *mut core::ffi::c_void;
+            fn CloseHandle(hObject: *mut core::ffi::c_void) -> i32;
+        }
+
+        let tmp = std::env::temp_dir().join(format!("fp_updater_p6_winio_{}", Uuid::new_v4()));
+        fs::create_dir_all(&tmp).unwrap();
+
+        // 1. Permanent read-only destination -> retries exhaust and fail closed with Win32 error 5
+        let ro_file = tmp.join("readonly_ptr.json");
+        fs::write(&ro_file, b"ORIGINAL_RO").unwrap();
+        let mut perms = fs::metadata(&ro_file).unwrap().permissions();
+        perms.set_readonly(true);
+        fs::set_permissions(&ro_file, perms).unwrap();
+        let ro_err = atomic_write_file(&ro_file, b"OVERWRITE_FAIL").unwrap_err().to_string();
+        assert!(ro_err.contains("ACTIVE_POINTER_LOCKED"), "got: {}", ro_err);
+        assert_eq!(fs::read(&ro_file).unwrap(), b"ORIGINAL_RO");
+        let ro_tmps: Vec<_> = fs::read_dir(&tmp)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().contains(".tmp."))
+            .collect();
+        assert!(ro_tmps.is_empty(), "leftover tmp files found: {:?}", ro_tmps);
+        let mut perms_w = fs::metadata(&ro_file).unwrap().permissions();
+        perms_w.set_readonly(false);
+        let _ = fs::set_permissions(&ro_file, perms_w);
+
+        // 2. Prolonged exclusive Win32 lock (> 140ms retry window) -> retry exhaustion preserves original & cleans tmp
+        let lock_file = tmp.join("locked_long.json");
+        fs::write(&lock_file, b"ORIGINAL_LOCKED").unwrap();
+        let lock_w: Vec<u16> = lock_file.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+        let h_long = unsafe {
+            CreateFileW(
+                lock_w.as_ptr(),
+                GENERIC_READ | GENERIC_WRITE,
+                0,
+                core::ptr::null_mut(),
+                OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL,
+                core::ptr::null_mut(),
+            )
+        };
+        assert_ne!(h_long, (-1isize) as *mut core::ffi::c_void);
+        let t0 = std::time::Instant::now();
+        let long_err = atomic_write_file(&lock_file, b"SHOULD_FAIL").unwrap_err().to_string();
+        let elapsed = t0.elapsed();
+        unsafe { CloseHandle(h_long); }
+        assert!(long_err.contains("ACTIVE_POINTER_LOCKED"), "got: {}", long_err);
+        assert!(elapsed.as_millis() >= 110, "expected retry backoff elapsed >=110ms, got {:?}", elapsed);
+        assert_eq!(fs::read(&lock_file).unwrap(), b"ORIGINAL_LOCKED");
+
+        // 3. Transient lock released inside retry window (~55ms) -> retry succeeds transparently
+        let h_short = unsafe {
+            CreateFileW(
+                lock_w.as_ptr(),
+                GENERIC_READ | GENERIC_WRITE,
+                0,
+                core::ptr::null_mut(),
+                OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL,
+                core::ptr::null_mut(),
+            )
+        };
+        assert_ne!(h_short, (-1isize) as *mut core::ffi::c_void);
+        let h_short_addr = h_short as usize;
+        let releaser = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(55));
+            unsafe { CloseHandle(h_short_addr as *mut core::ffi::c_void); }
+        });
+        atomic_write_file(&lock_file, b"TRANSIENT_RECOVERED").unwrap();
+        releaser.join().unwrap();
+        assert_eq!(fs::read(&lock_file).unwrap(), b"TRANSIENT_RECOVERED");
+
+        // 4. End-to-end upgrade aborted at atomic pointer flip by prolonged lock + journal recovery
+        let rel_100 = tmp.join("rel_100");
+        let rel_110 = tmp.join("rel_110");
+        let anchor_dir = tmp.join("ext_anchors");
+        create_signed_test_release(&rel_100, "p6-io", "Auto_Io.exe", "1.0.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [93u8; 32]);
+        create_signed_test_release(&rel_110, "p6-io", "Auto_Io.exe", "1.1.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [93u8; 32]);
+
+        let install_root = tmp.join("inst_io");
+        let updater = MiniToolUpdater::new_with_external_anchor(&install_root, &anchor_dir);
+        let opts = UpdateExecutionOptions { skip_child_verify_exec: true, ..Default::default() };
+        updater.install_initial(&rel_100, &opts).unwrap();
+
+        let ptr_path = updater.active_pointer_path();
+        let ptr_w: Vec<u16> = ptr_path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+        // FILE_SHARE_READ allows preflight fs::read checks while blocking MoveFileExW replace with ERROR_SHARING_VIOLATION (32)
+        let h_ptr = unsafe {
+            CreateFileW(
+                ptr_w.as_ptr(),
+                GENERIC_READ,
+                FILE_SHARE_READ,
+                core::ptr::null(),
+                OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL,
+                core::ptr::null_mut(),
+            )
+        };
+        assert_ne!(h_ptr, (-1isize) as *mut core::ffi::c_void);
+        let upg_err = updater.upgrade_from_release(&rel_110, &opts).unwrap_err().to_string();
+        unsafe { CloseHandle(h_ptr); }
+        assert!(upg_err.contains("ACTIVE_POINTER_LOCKED"), "got: {}", upg_err);
+        assert_eq!(updater.read_active_pointer().unwrap().unwrap().active_version, "1.0.0");
+        assert_eq!(updater.read_trust_state().unwrap().unwrap().trust_epoch, 1);
+
+        let rec = updater.reconcile_incomplete_journal(true).unwrap();
+        assert_eq!(rec.status, "RECOVERED_TO_PREVIOUS");
+        assert!(rec.db_integrity_ok);
+        assert!(updater.verify_install_security_audit().unwrap().passed);
+
+        // Once lock cleared & journal reconciled, upgrade succeeds cleanly!
+        let ok_after = updater.upgrade_from_release(&rel_110, &opts).unwrap();
+        assert_eq!(ok_after.active_version, "1.1.0");
 
         let _ = fs::remove_dir_all(&tmp);
     }
