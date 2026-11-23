@@ -1,0 +1,216 @@
+{
+  "projectId": "proj-p6-alpha-harvester-9970b651",
+  "projectSlug": "p6-alpha-harvester",
+  "toolExeName": "Auto_P6Alpha.exe",
+  "toolExePath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Alpha_v1.0.0_win-x64\\Auto_P6Alpha.exe",
+  "toolExeSizeBytes": 15759872,
+  "toolExeSha256": "bed31b0ee7b305a42efa1431ab834c405d7f844be62f19e89162f8af344222da",
+  "peIconLayersInjected": 1,
+  "peIconGroupResourceBytes": 20,
+  "peIconFirstLayerBytes": 4264,
+  "peEmbeddedPubkeyResourceId": 7777,
+  "peEmbeddedPubkeyVerified": true,
+  "authenticodeStatus": "Unsigned Internal Build (No Authenticode; Ed25519 PE RT_RCDATA #7777 Verified)",
+  "signingMode": "unsigned_internal",
+  "trustedPublicRelease": false,
+  "versionInfo": {
+    "companyName": "Zenith Automation Group Ltd.",
+    "fileDescription": "Zenith Harvester Pro Portable Runtime",
+    "fileVersion": "1.0.0.10",
+    "internalName": "p6-alpha-harvester",
+    "legalCopyright": "Copyright (C) 2026 Zenith Automation Group Ltd.",
+    "originalFilename": "Auto_P6Alpha.exe",
+    "productName": "Zenith Harvester Pro",
+    "productVersion": "1.0.0"
+  },
+  "authenticodeVerification": {
+    "signed": false,
+    "trustStatus": "unsigned",
+    "trustedPublicRelease": false,
+    "winTrustErrorCode": 2148204800,
+    "signerSubject": null,
+    "signerIssuer": null,
+    "signerThumbprint": null,
+    "timestampStatus": "NONE",
+    "detail": "Unsigned Internal Build (TRUST_E_NOSIGNATURE 0x800B0100)."
+  },
+  "keyId": "fp-ed25519-12da61df4d76",
+  "publisherPublicKeyHex": "12da61df4d766db7b33a64d7dfbe600f701779bc3bc9d31192c601257ef12b63",
+  "externalKeystorePath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\AppData\\Local\\FarmerPro\\ProducerKeys\\active_producer_ed25519.json",
+  "signatureAlgorithm": "Ed25519-RFC8032-SHA256",
+  "signatureEd25519Hex": "173d544f8191689bcd61d7abe0f6e3efed6a236c89964be392f7f2427c545de2c90d765e13f70e3b143c26c2a2896db0139e917737f1a2ff95378ee6ab680406",
+  "totalDurationMs": 2160,
+  "steps": [
+    {
+      "stepNo": 1,
+      "name": "Validate Project, UI Schema & Workflows",
+      "durationMs": 0,
+      "status": "PASS",
+      "detail": "Validated 1 workflows and UI schema (v1) for 'Zenith Harvester Pro'"
+    },
+    {
+      "stepNo": 2,
+      "name": "Asset Integrity & Path Traversal Guard",
+      "durationMs": 0,
+      "status": "PASS",
+      "detail": "Verified 0 template PNGs and icon 'branding/icon.ico'"
+    },
+    {
+      "stepNo": 3,
+      "name": "Resolve 5-State Module Matrix",
+      "durationMs": 0,
+      "status": "PASS",
+      "detail": "Packaged modules: [\"mod.adb_core\", \"mod.vision_ocr\"]"
+    },
+    {
+      "stepNo": 4,
+      "name": "Copy Dedicated Mini Runtime Binary",
+      "durationMs": 26,
+      "status": "PASS",
+      "detail": "Copied E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\InstalledStudio\\fp-mini-runtime.exe -> E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Alpha_v1.0.0_win-x64\\Auto_P6Alpha.exe"
+    },
+    {
+      "stepNo": 5,
+      "name": "PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection",
+      "durationMs": 1586,
+      "status": "PASS",
+      "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Zenith Harvester Pro', Company='Zenith Automation Group Ltd.'), PE RT_RCDATA #7777=12da61df4d766db7"
+    },
+    {
+      "stepNo": 6,
+      "name": "Package Bundle Assets, Notices & Standalone Updater/ADB",
+      "durationMs": 31,
+      "status": "PASS",
+      "detail": "Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=true"
+    },
+    {
+      "stepNo": 7,
+      "name": "Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature",
+      "durationMs": 3,
+      "status": "PASS",
+      "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-12da61df4d76, PubKey: 12da61df4d766db7b33a64d7dfbe600f701779bc3bc9d31192c601257ef12b63)"
+    },
+    {
+      "stepNo": 8,
+      "name": "Authenticode Sign/Verify (WinVerifyTrust) & Final Release Manifest Check",
+      "durationMs": 510,
+      "status": "PASS",
+      "detail": "Mode=UnsignedInternal, Trust=Unsigned, FilesChecked=13, PubCertMatch=false, exe SHA-256=bed31b0ee7b305a4"
+    }
+  ],
+  "modules": [
+    {
+      "moduleId": "mod.adb_core",
+      "displayName": "ADB & Device Driver Core",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn."
+    },
+    {
+      "moduleId": "mod.vision_ocr",
+      "displayName": "Multiscale Vision & WinRT OCR",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "filesystem_read_write"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR."
+    },
+    {
+      "moduleId": "mod.account_vault",
+      "displayName": "Account Vault (Credential Manager)",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "credential_vault_access"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool."
+    },
+    {
+      "moduleId": "mod.proxy_network",
+      "displayName": "SOCKS5/HTTP Application Proxy",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "outbound_proxy_connect"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding)."
+    },
+    {
+      "moduleId": "mod.adb_port_forward",
+      "displayName": "ADB Host-Device Socket Forwarding",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec",
+        "local_socket_bind"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game)."
+    },
+    {
+      "moduleId": "mod.emulator_optimizer",
+      "displayName": "Emulator Watchdog & Auto-Reconnect",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối."
+    }
+  ],
+  "dependencyAudit": {
+    "webview2EvergreenInstalled": true,
+    "webview2VersionOrNote": "Evergreen Runtime v157.0.4341.60 (Registry Client Verified; offline target requires WebView2 Evergreen/Bootstrapper if missing)",
+    "adbExePresent": true,
+    "adbWinApiDllPresent": true,
+    "adbWinUsbApiDllPresent": true,
+    "winrtOcrPowershellAvailable": true,
+    "exeDirWritable": true,
+    "writeProbeError": null,
+    "resolvedSqliteDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Alpha_v1.0.0_win-x64\\data\\runtime_p6-alpha-harvester.db",
+    "fallbackToLocalAppdataUsed": false,
+    "offlineExecutionReady": true,
+    "thirdPartyNoticesPresent": true,
+    "updaterBundled": true,
+    "requiresInternetIfWebview2Missing": true
+  }
+}

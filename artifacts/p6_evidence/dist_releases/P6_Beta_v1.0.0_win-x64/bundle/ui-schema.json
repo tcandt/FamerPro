@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "projectSlug": "p6-beta-citadel",
+  "windowTitle": "Orion Citadel Automator v1.0.0",
+  "versionBadge": "v1.0.0",
+  "themeAccentHex": "#E11D48",
+  "headerBgHex": "#2A1024",
+  "layoutPreset": "expanded",
+  "defaultWindowSize": [
+    980,
+    720
+  ],
+  "sectionsOrder": [
+    "device_table",
+    "task_and_log_split",
+    "footer_controls"
+  ],
+  "hiddenComponents": [],
+  "deviceColumns": [
+    {
+      "id": "col-score",
+      "label": "Raid Score",
+      "runtimeVarKey": "raid_score",
+      "fallbackDisplay": "0",
+      "minWindowWidth": 500,
+      "badgeColor": "#F43F5E"
+    },
+    {
+      "id": "col-div",
+      "label": "Division",
+      "runtimeVarKey": "division",
+      "fallbackDisplay": "-",
+      "minWindowWidth": 500,
+      "badgeColor": "#A855F7"
+    },
+    {
+      "id": "col-stam",
+      "label": "Stamina",
+      "runtimeVarKey": "stamina_left",
+      "fallbackDisplay": "0",
+      "minWindowWidth": 680,
+      "badgeColor": "#3BC38D"
+    }
+  ],
+  "taskCategories": [
+    {
+      "id": "cat-pvp",
+      "shortTag": "PVP",
+      "displayName": "Combat",
+      "colorHex": "#E11D48"
+    },
+    {
+      "id": "cat-evt",
+      "shortTag": "EVT",
+      "displayName": "Events",
+      "colorHex": "#A855F7"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "tsk-b1",
+      "title": "1. Arena Daily Blitz (5x)",
+      "categoryId": "cat-pvp",
+      "workflowId": "wf-o-blitz",
+      "defaultEnabled": true,
+      "priority": 1,
+      "estimateSec": 25,
+      "settingsSchema": [
+        {
+          "key": "max_rank",
+          "label": "Max Rank Target",
+          "fieldType": "number",
+          "defaultValue": 50,
+          "options": null
+        }
+      ]
+    },
+    {
+      "id": "tsk-b2",
+      "title": "2. World Boss Caravan",
+      "categoryId": "cat-pvp",
+      "workflowId": "wf-o-blitz",
+      "defaultEnabled": true,
+      "priority": 2,
+      "estimateSec": 30,
+      "settingsSchema": []
+    },
+    {
+      "id": "tsk-b3",
+      "title": "3. Expedition Crate Open",
+      "categoryId": "cat-evt",
+      "workflowId": "wf-o-blitz",
+      "defaultEnabled": true,
+      "priority": 3,
+      "estimateSec": 18,
+      "settingsSchema": []
+    },
+    {
+      "id": "tsk-b4",
+      "title": "4. Stamina Potion Claim",
+      "categoryId": "cat-evt",
+      "workflowId": "wf-o-blitz",
+      "defaultEnabled": true,
+      "priority": 4,
+      "estimateSec": 10,
+      "settingsSchema": []
+    },
+    {
+      "id": "tsk-b5",
+      "title": "5. Alliance Boss Rally",
+      "categoryId": "cat-evt",
+      "workflowId": "wf-o-blitz",
+      "defaultEnabled": false,
+      "priority": 5,
+      "estimateSec": 40,
+      "settingsSchema": []
+    }
+  ],
+  "utilities": [
+    {
+      "id": "u-b1",
+      "label": "Auto Stamina Refill",
+      "defaultEnabled": true,
+      "requiredModule": null,
+      "settingsSchema": []
+    },
+    {
+      "id": "u-b2",
+      "label": "Screenshot Verify",
+      "defaultEnabled": true,
+      "requiredModule": null,
+      "settingsSchema": []
+    },
+    {
+      "id": "u-b3",
+      "label": "Auto Resume Guard",
+      "defaultEnabled": false,
+      "requiredModule": null,
+      "settingsSchema": []
+    }
+  ],
+  "initialRuntimeVars": {
+    "stamina_left": 140,
+    "raid_score": 9850,
+    "division": "Diamond-II"
+  }
+}

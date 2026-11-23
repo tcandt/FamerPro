@@ -1,0 +1,127 @@
+{
+  "packageSchemaVersion": 1,
+  "packageType": "mini_tool_portable_win_x64",
+  "projectSlug": "p6-alpha-harvester",
+  "productName": "Zenith Harvester Pro",
+  "version": "1.0.0",
+  "exeName": "Auto_P6Alpha.exe",
+  "finalExeSha256": "bed31b0ee7b305a42efa1431ab834c405d7f844be62f19e89162f8af344222da",
+  "builtAtUtc": "2026-11-23T01:34:18.514155700+00:00",
+  "requirements": {
+    "requiresRust": false,
+    "requiresCargo": false,
+    "requiresNode": false,
+    "requiresPython": false,
+    "requiresWindowsSdk": false,
+    "webview2Strategy": "Evergreen Runtime v157.0.4341.60 (Registry Client Verified; offline target requires WebView2 Evergreen/Bootstrapper if missing)",
+    "offlineReady": true,
+    "requiresInternetIfWebview2Missing": true,
+    "dataIsolationPolicy": "External data/ next to install root OR %LOCALAPPDATA%\\FarmerPro\\MiniTools\\<slug> fallback; never inside versions/v*"
+  },
+  "publisher": {
+    "publisherId": "pub-p6-alpha",
+    "displayName": "Zenith Automation Group",
+    "organization": "Zenith Automation Group Ltd.",
+    "website": null,
+    "supportContact": null,
+    "copyright": "Copyright (C) 2026 Zenith Automation Group Ltd.",
+    "ed25519KeyId": "",
+    "ed25519PubkeyHex": "",
+    "authenticodeCertRef": null,
+    "releaseChannel": "internal",
+    "signingPolicy": "unsigned_internal"
+  },
+  "signing": {
+    "signingMode": "unsigned_internal",
+    "publisherId": "pub-p6-alpha",
+    "publisherOrganization": "Zenith Automation Group Ltd.",
+    "releaseChannel": "internal",
+    "authenticodeTrustStatus": "unsigned",
+    "trustedPublicRelease": false,
+    "signerThumbprint": null,
+    "signerSubject": null,
+    "versionInfo": {
+      "companyName": "Zenith Automation Group Ltd.",
+      "fileDescription": "Zenith Harvester Pro Portable Runtime",
+      "fileVersion": "1.0.0.10",
+      "internalName": "p6-alpha-harvester",
+      "legalCopyright": "Copyright (C) 2026 Zenith Automation Group Ltd.",
+      "originalFilename": "Auto_P6Alpha.exe",
+      "productName": "Zenith Harvester Pro",
+      "productVersion": "1.0.0"
+    },
+    "keyRotation": null
+  },
+  "distributedFiles": [
+    {
+      "relPath": "Auto_P6Alpha.exe",
+      "sizeBytes": 15759872,
+      "sha256": "bed31b0ee7b305a42efa1431ab834c405d7f844be62f19e89162f8af344222da"
+    },
+    {
+      "relPath": "THIRD_PARTY_NOTICES.txt",
+      "sizeBytes": 532,
+      "sha256": "febda6bc7fcfc8df2111468bda143498a072a18630c75d07e08774742b520aa5"
+    },
+    {
+      "relPath": "bin/AdbWinApi.dll",
+      "sizeBytes": 108184,
+      "sha256": "120bef587119c6cb926b86b9be90fdfbce38937588eae28cd91a94ce63c7b965"
+    },
+    {
+      "relPath": "bin/AdbWinUsbApi.dll",
+      "sizeBytes": 73368,
+      "sha256": "6ca69a2ca0e31309c087d288f058977d421ad03500e4c3e1dbd981241a069c60"
+    },
+    {
+      "relPath": "bin/adb.exe",
+      "sizeBytes": 8485016,
+      "sha256": "957e46b8615f7af5b7292a2ddabe98d2e61940c3fb2b0545756507f080613e71"
+    },
+    {
+      "relPath": "bundle/branding/icon.ico",
+      "sizeBytes": 4286,
+      "sha256": "d0b69eb24e697cff15eafa2e2913ec0bd79d60aec08ff12c15351ca289648ee3"
+    },
+    {
+      "relPath": "bundle/checksums.sha256",
+      "sizeBytes": 260,
+      "sha256": "79e739b8575886c2207b7890066f16853b0b01878ad9ff47fc787c9dd633a73a"
+    },
+    {
+      "relPath": "bundle/manifest.fpbundle.json",
+      "sizeBytes": 5727,
+      "sha256": "592fe6c9f1f4cedcc16a415d1f735408068984e145d2db0cc800f8b113a0ebfa"
+    },
+    {
+      "relPath": "bundle/signature.fpbundle.json",
+      "sizeBytes": 883,
+      "sha256": "3b00ce27afe86f1ac1dedcdc0feb1b8f88a37e529124bca6d363026abaf42cb6"
+    },
+    {
+      "relPath": "bundle/trusted_publisher.pub",
+      "sizeBytes": 64,
+      "sha256": "907b033d025cc41859a8a436744e25248569038fcb12661d6a62700766f6eeee"
+    },
+    {
+      "relPath": "bundle/ui-schema.json",
+      "sizeBytes": 2883,
+      "sha256": "c6f42a7c3805dc8744298b799d56981b57e3935f7f61dae34936cccc83d2f2a3"
+    },
+    {
+      "relPath": "bundle/workflows.fpbundle.json",
+      "sizeBytes": 1400,
+      "sha256": "56b3a11778cf2acbca68bd667f982e9ace103b93fa93fda7aa6f0a64c18b1dfc"
+    },
+    {
+      "relPath": "updater/fp-updater.exe",
+      "sizeBytes": 5658112,
+      "sha256": "9890fec42942ad87337468f99936bf29bd4689736e553522de89730c0716b282"
+    }
+  ],
+  "thirdPartyNotices": [
+    "FarmerPro Mini Runtime — MIT OR Apache-2.0",
+    "Microsoft Edge WebView2 Loader / Evergreen Runtime — Redistributable Notice (requires Evergreen Runtime or Fixed Version on offline Windows targets)",
+    "Android Debug Bridge (adb.exe, AdbWinApi.dll, AdbWinUsbApi.dll) — Apache License 2.0 (Android SDK Platform-Tools)"
+  ]
+}

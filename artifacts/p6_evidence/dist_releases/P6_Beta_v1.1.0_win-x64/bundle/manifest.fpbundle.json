@@ -1,0 +1,186 @@
+{
+  "compatibility": {
+    "projectSchemaVersion": 1,
+    "workflowSchemaVersion": 1,
+    "uiSchemaVersion": 1,
+    "moduleApiVersion": "1.0.0",
+    "minRuntimeVersion": "0.1.0",
+    "sqliteSchemaVersion": 5
+  },
+  "project": {
+    "compatibility": {
+      "projectSchemaVersion": 1,
+      "workflowSchemaVersion": 1,
+      "uiSchemaVersion": 1,
+      "moduleApiVersion": "1.0.0",
+      "minRuntimeVersion": "0.1.0",
+      "sqliteSchemaVersion": 5
+    },
+    "projectId": "proj-p6-beta-citadel-07fb2b29",
+    "slug": "p6-beta-citadel",
+    "name": "Orion Citadel Automator",
+    "gamePackageId": "com.orion.citadel",
+    "version": "1.1.0",
+    "exeName": "Auto_P6Beta.exe",
+    "windowTitle": "Orion Citadel Automator v1.1.0",
+    "iconRelPath": "branding/icon.ico",
+    "targetResolution": [
+      1280,
+      720
+    ],
+    "packagedModules": [
+      "mod.adb_core",
+      "mod.vision_ocr"
+    ],
+    "workflowFiles": [
+      "workflows/wf-o-blitz.json"
+    ],
+    "templateFiles": [],
+    "bundleAdb": true
+  },
+  "moduleStates": [
+    {
+      "moduleId": "mod.adb_core",
+      "displayName": "ADB & Device Driver Core",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn."
+    },
+    {
+      "moduleId": "mod.vision_ocr",
+      "displayName": "Multiscale Vision & WinRT OCR",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "filesystem_read_write"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR."
+    },
+    {
+      "moduleId": "mod.account_vault",
+      "displayName": "Account Vault (Credential Manager)",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "credential_vault_access"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool."
+    },
+    {
+      "moduleId": "mod.proxy_network",
+      "displayName": "SOCKS5/HTTP Application Proxy",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "outbound_proxy_connect"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding)."
+    },
+    {
+      "moduleId": "mod.adb_port_forward",
+      "displayName": "ADB Host-Device Socket Forwarding",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec",
+        "local_socket_bind"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game)."
+    },
+    {
+      "moduleId": "mod.emulator_optimizer",
+      "displayName": "Emulator Watchdog & Auto-Reconnect",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối."
+    }
+  ],
+  "workflowsCount": 1,
+  "templatesCount": 0,
+  "builtAtUtc": "2026-11-23T01:34:23.370168400+00:00",
+  "publisher": {
+    "publisherId": "pub-p6-beta",
+    "displayName": "Orion Citadel Studio QA",
+    "organization": "Orion Citadel Studio QA",
+    "website": null,
+    "supportContact": null,
+    "copyright": "Copyright (C) 2026 Orion Citadel Studio QA",
+    "ed25519KeyId": "",
+    "ed25519PubkeyHex": "",
+    "authenticodeCertRef": "CERT_STORE://CurrentUser/My/65A53E0E895DC32615B417F4C21D8C9A9B93C98E",
+    "releaseChannel": "qa",
+    "signingPolicy": "self_signed_qa"
+  },
+  "signing": {
+    "signingMode": "self_signed_qa",
+    "publisherId": "pub-p6-beta",
+    "publisherOrganization": "Orion Citadel Studio QA",
+    "releaseChannel": "qa",
+    "authenticodeTrustStatus": "self_signed_untrusted_root",
+    "trustedPublicRelease": false,
+    "signerThumbprint": "CERT_STORE://CurrentUser/My/65A53E0E895DC32615B417F4C21D8C9A9B93C98E",
+    "signerSubject": null,
+    "versionInfo": {
+      "companyName": "Orion Citadel Studio QA",
+      "fileDescription": "Orion Citadel Automator QA Signed",
+      "fileVersion": "1.1.0.21",
+      "internalName": "p6-beta-citadel",
+      "legalCopyright": "Copyright (C) 2026 Orion Citadel Studio QA",
+      "originalFilename": "Auto_P6Beta.exe",
+      "productName": "Orion Citadel Automator",
+      "productVersion": "1.1.0"
+    },
+    "keyRotation": {
+      "publisherId": "pub-p6-beta",
+      "productSlug": "p6-beta-citadel",
+      "oldPubkeyHex": "12da61df4d766db7b33a64d7dfbe600f701779bc3bc9d31192c601257ef12b63",
+      "newPubkeyHex": "4b96996d52815ba903bd1bd1fc2bf1431ab965e7c68c9dd7857e06b9375dbb1f",
+      "issuedAtUtc": "2026-11-23T01:34:21.384626200+00:00",
+      "expiresAtUtc": "2027-02-21T01:34:21.384626200+00:00",
+      "nonce": "rot-0570ca5c50eb4190bc29e378c369dd7d",
+      "signatureByOldKeyHex": "095ae1b90230930553eb146917a02e0ef076d0c4d09570dfb7c039076aae816e134cc5208e4042e45cc624db79bfc2083c3884a7db224e16a2a1ac3a68cac900"
+    }
+  }
+}

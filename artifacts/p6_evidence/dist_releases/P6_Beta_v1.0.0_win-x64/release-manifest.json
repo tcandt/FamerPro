@@ -1,0 +1,127 @@
+{
+  "packageSchemaVersion": 1,
+  "packageType": "mini_tool_portable_win_x64",
+  "projectSlug": "p6-beta-citadel",
+  "productName": "Orion Citadel Automator",
+  "version": "1.0.0",
+  "exeName": "Auto_P6Beta.exe",
+  "finalExeSha256": "54776e349b16b9f39f6a2f135456b5258466015a7e379d8f66cad02066e34b1e",
+  "builtAtUtc": "2026-11-23T01:34:21.212913400+00:00",
+  "requirements": {
+    "requiresRust": false,
+    "requiresCargo": false,
+    "requiresNode": false,
+    "requiresPython": false,
+    "requiresWindowsSdk": false,
+    "webview2Strategy": "Evergreen Runtime v157.0.4341.60 (Registry Client Verified; offline target requires WebView2 Evergreen/Bootstrapper if missing)",
+    "offlineReady": true,
+    "requiresInternetIfWebview2Missing": true,
+    "dataIsolationPolicy": "External data/ next to install root OR %LOCALAPPDATA%\\FarmerPro\\MiniTools\\<slug> fallback; never inside versions/v*"
+  },
+  "publisher": {
+    "publisherId": "pub-p6-beta",
+    "displayName": "Orion Citadel Studio QA",
+    "organization": "Orion Citadel Studio QA",
+    "website": null,
+    "supportContact": null,
+    "copyright": "Copyright (C) 2026 Orion Citadel Studio QA",
+    "ed25519KeyId": "",
+    "ed25519PubkeyHex": "",
+    "authenticodeCertRef": "CERT_STORE://CurrentUser/My/65A53E0E895DC32615B417F4C21D8C9A9B93C98E",
+    "releaseChannel": "qa",
+    "signingPolicy": "self_signed_qa"
+  },
+  "signing": {
+    "signingMode": "self_signed_qa",
+    "publisherId": "pub-p6-beta",
+    "publisherOrganization": "Orion Citadel Studio QA",
+    "releaseChannel": "qa",
+    "authenticodeTrustStatus": "self_signed_untrusted_root",
+    "trustedPublicRelease": false,
+    "signerThumbprint": "65A53E0E895DC32615B417F4C21D8C9A9B93C98E",
+    "signerSubject": "Orion Citadel Studio QA",
+    "versionInfo": {
+      "companyName": "Orion Citadel Studio QA",
+      "fileDescription": "Orion Citadel Automator QA Signed",
+      "fileVersion": "1.0.0.20",
+      "internalName": "p6-beta-citadel",
+      "legalCopyright": "Copyright (C) 2026 Orion Citadel Studio QA",
+      "originalFilename": "Auto_P6Beta.exe",
+      "productName": "Orion Citadel Automator",
+      "productVersion": "1.0.0"
+    },
+    "keyRotation": null
+  },
+  "distributedFiles": [
+    {
+      "relPath": "Auto_P6Beta.exe",
+      "sizeBytes": 15761368,
+      "sha256": "54776e349b16b9f39f6a2f135456b5258466015a7e379d8f66cad02066e34b1e"
+    },
+    {
+      "relPath": "THIRD_PARTY_NOTICES.txt",
+      "sizeBytes": 532,
+      "sha256": "febda6bc7fcfc8df2111468bda143498a072a18630c75d07e08774742b520aa5"
+    },
+    {
+      "relPath": "bin/AdbWinApi.dll",
+      "sizeBytes": 108184,
+      "sha256": "120bef587119c6cb926b86b9be90fdfbce38937588eae28cd91a94ce63c7b965"
+    },
+    {
+      "relPath": "bin/AdbWinUsbApi.dll",
+      "sizeBytes": 73368,
+      "sha256": "6ca69a2ca0e31309c087d288f058977d421ad03500e4c3e1dbd981241a069c60"
+    },
+    {
+      "relPath": "bin/adb.exe",
+      "sizeBytes": 8485016,
+      "sha256": "957e46b8615f7af5b7292a2ddabe98d2e61940c3fb2b0545756507f080613e71"
+    },
+    {
+      "relPath": "bundle/branding/icon.ico",
+      "sizeBytes": 4286,
+      "sha256": "615c4fcf8181ce1220834befbba9d1fb8a87e483b233729a6969576089cdd440"
+    },
+    {
+      "relPath": "bundle/checksums.sha256",
+      "sizeBytes": 260,
+      "sha256": "23ba8288d698dbb661cb05f08c1a8848d546d9d5fc04bae5eaf51cc1c1ac70a3"
+    },
+    {
+      "relPath": "bundle/manifest.fpbundle.json",
+      "sizeBytes": 5823,
+      "sha256": "36444dc0f1f0c693b52587e74233eb8fc58829db37ba3c1a4b9a0c78503db68f"
+    },
+    {
+      "relPath": "bundle/signature.fpbundle.json",
+      "sizeBytes": 883,
+      "sha256": "ae5de74bf7d02fdb94f9dd511723e3cc7f79bcbefe4554db20c8c008bd7d1448"
+    },
+    {
+      "relPath": "bundle/trusted_publisher.pub",
+      "sizeBytes": 64,
+      "sha256": "907b033d025cc41859a8a436744e25248569038fcb12661d6a62700766f6eeee"
+    },
+    {
+      "relPath": "bundle/ui-schema.json",
+      "sizeBytes": 3284,
+      "sha256": "f039655feed55bb85c19ac04c97068bb56464fc2ed1d2c56ba199351a2337be0"
+    },
+    {
+      "relPath": "bundle/workflows.fpbundle.json",
+      "sizeBytes": 1397,
+      "sha256": "a34c44ff0cdfa4cab00717301e6e918cb003765ed8510260fd80bd2e5f3dd9dc"
+    },
+    {
+      "relPath": "updater/fp-updater.exe",
+      "sizeBytes": 5658112,
+      "sha256": "9890fec42942ad87337468f99936bf29bd4689736e553522de89730c0716b282"
+    }
+  ],
+  "thirdPartyNotices": [
+    "FarmerPro Mini Runtime — MIT OR Apache-2.0",
+    "Microsoft Edge WebView2 Loader / Evergreen Runtime — Redistributable Notice (requires Evergreen Runtime or Fixed Version on offline Windows targets)",
+    "Android Debug Bridge (adb.exe, AdbWinApi.dll, AdbWinUsbApi.dll) — Apache License 2.0 (Android SDK Platform-Tools)"
+  ]
+}

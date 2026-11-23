@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "projectSlug": "p6-alpha-harvester",
+  "windowTitle": "Zenith Harvester Pro v1.0.0",
+  "versionBadge": "v1.0.0",
+  "themeAccentHex": "#2563EB",
+  "headerBgHex": "#141C28",
+  "layoutPreset": "compact2_col",
+  "defaultWindowSize": [
+    740,
+    660
+  ],
+  "sectionsOrder": [
+    "device_table",
+    "task_and_log_split",
+    "footer_controls"
+  ],
+  "hiddenComponents": [],
+  "deviceColumns": [
+    {
+      "id": "col-cycles",
+      "label": "Cycles",
+      "runtimeVarKey": "farm_cycles",
+      "fallbackDisplay": "0",
+      "minWindowWidth": 500,
+      "badgeColor": "#38BDF8"
+    },
+    {
+      "id": "col-srv",
+      "label": "Server",
+      "runtimeVarKey": "target_server",
+      "fallbackDisplay": "-",
+      "minWindowWidth": 500,
+      "badgeColor": "#10B981"
+    },
+    {
+      "id": "col-gold",
+      "label": "Gold",
+      "runtimeVarKey": "gold_collected",
+      "fallbackDisplay": "0",
+      "minWindowWidth": 680,
+      "badgeColor": "#FBBF24"
+    }
+  ],
+  "taskCategories": [
+    {
+      "id": "cat-res",
+      "shortTag": "RES",
+      "displayName": "Resources",
+      "colorHex": "#2563EB"
+    },
+    {
+      "id": "cat-gld",
+      "shortTag": "GLD",
+      "displayName": "Guild",
+      "colorHex": "#10B981"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "tsk-a1",
+      "title": "1. Quarry Iron Sweep",
+      "categoryId": "cat-res",
+      "workflowId": "wf-z-sweep",
+      "defaultEnabled": true,
+      "priority": 1,
+      "estimateSec": 15,
+      "settingsSchema": [
+        {
+          "key": "quota",
+          "label": "Daily Quota",
+          "fieldType": "number",
+          "defaultValue": 500,
+          "options": null
+        }
+      ]
+    },
+    {
+      "id": "tsk-a2",
+      "title": "2. Timber Mill Collect",
+      "categoryId": "cat-res",
+      "workflowId": "wf-z-sweep",
+      "defaultEnabled": true,
+      "priority": 2,
+      "estimateSec": 20,
+      "settingsSchema": []
+    },
+    {
+      "id": "tsk-a3",
+      "title": "3. Guild Donation Auto",
+      "categoryId": "cat-gld",
+      "workflowId": "wf-z-sweep",
+      "defaultEnabled": true,
+      "priority": 3,
+      "estimateSec": 12,
+      "settingsSchema": []
+    },
+    {
+      "id": "tsk-a4",
+      "title": "4. Night Shield Renew",
+      "categoryId": "cat-gld",
+      "workflowId": "wf-z-sweep",
+      "defaultEnabled": false,
+      "priority": 4,
+      "estimateSec": 10,
+      "settingsSchema": []
+    }
+  ],
+  "utilities": [
+    {
+      "id": "util-1",
+      "label": "Auto Reconnect ADB",
+      "defaultEnabled": true,
+      "requiredModule": null,
+      "settingsSchema": []
+    },
+    {
+      "id": "util-2",
+      "label": "Anti-Idle Safe Tap",
+      "defaultEnabled": true,
+      "requiredModule": null,
+      "settingsSchema": []
+    }
+  ],
+  "initialRuntimeVars": {
+    "farm_cycles": 42,
+    "target_server": "SEA-01",
+    "gold_collected": 18400
+  }
+}

@@ -1,0 +1,483 @@
+{
+  "executedAtUtc": "2026-11-23T01:35:03.562Z",
+  "gitHead": "11e083e01a0170ff6ab1500fdd9434e5b8aad22a",
+  "hostEnvironment": {
+    "osCaption": "Microsoft Windows 11 Pro",
+    "osBuild": "26200",
+    "arch": "AMD64",
+    "webview2Version": "157.0.4341.60",
+    "windowsSandboxExists": false,
+    "commercialCodeSignCertsCount": 0,
+    "adbOut": "List of devices attached",
+    "onlineDevices": [],
+    "ldRunning": "stop",
+    "whoami": "desktop-n916ap3\\tinh-nguyen",
+    "mediumIl": true
+  },
+  "stageStatuses": {
+    "BUILD_PASS": true,
+    "STANDALONE_LAUNCH_PASS": true,
+    "UPDATE_ROLLBACK_PASS": true,
+    "LIVE_WORKFLOW_EXECUTION_PASS": "BLOCKED (0 online ADB devices; LDPlayer14 vm0 stopped in Medium IL non-elevated session)",
+    "PRODUCTION_ACCEPTANCE_PASS": "BLOCKED (Clean Windows VM + Live Hardware ADB + Commercial PublicSigned CA Cert required before production sign-off)"
+  },
+  "p6_1_nsisAndWebview2": {
+    "installerPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\FarmerPro_0.1.0_x64-setup.exe",
+    "installerBytes": 15177006,
+    "installerSha256": "e0f4e09dfe42b00b852e2b53372645d5a5579e26c4b1557d5c7aae0d34b71daf",
+    "sdkBundled": false,
+    "webview2InstallMode": "embedBootstrapper",
+    "requiresInternetIfWebview2Missing": true,
+    "offlineReadyWhenWebview2Present": true,
+    "studioRemovedAfterUninstall": true,
+    "dbMetricsBefore": {
+      "projects": 2,
+      "workflows": 2,
+      "tasks": 9,
+      "releases": 3,
+      "accounts": 1
+    },
+    "dbMetricsAfter": {
+      "projects": 2,
+      "workflows": 2,
+      "tasks": 9,
+      "releases": 3,
+      "accounts": 1
+    },
+    "dbPreserved": true
+  },
+  "p6_2_liveAdb": {
+    "adbDevicesOutput": "List of devices attached",
+    "onlineDevicesCount": 0,
+    "ldplayer14Vm0IsRunning": "stop",
+    "status": "BLOCKED (0 online devices)"
+  },
+  "p6_3_securityAndReleaseChecksums": {
+    "zipAlphaBytes": 11911410,
+    "zipAlphaSha256": "6509dc5785a9fa3aad358a846d1481f7af5cdc33d336efee9c308e3a7a101f5f",
+    "zipBetaBytes": 11913055,
+    "zipBetaSha256": "3aece83faffc38125a151808b750bce90c69767f3544190a878711d95eaa35f7",
+    "alphaPrePostZipShaMatch": true,
+    "betaPrePostZipShaMatch": true,
+    "finalVerifyAlpha": {
+      "verified": true,
+      "releaseDir": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Alpha_v1.0.0_win-x64",
+      "exeName": "Auto_P6Alpha.exe",
+      "finalExeSha256": "bed31b0ee7b305a42efa1431ab834c405d7f844be62f19e89162f8af344222da",
+      "authenticodeChecked": true,
+      "authenticodeTrustStatus": "unsigned",
+      "authenticodeTrustedPublicChain": false,
+      "ed25519BundleVerified": true,
+      "peRootPubkeyMatches": true,
+      "peVersionInfoValid": true,
+      "publisherIdentityMatchesCert": false,
+      "publisherIdentityDetail": "No X.509 certificate subject present (VERSIONINFO CompanyName alone does not verify publisher identity).",
+      "distributedFilesChecked": 13,
+      "distributedFileMismatches": [],
+      "issues": []
+    },
+    "finalVerifyBeta": {
+      "verified": true,
+      "releaseDir": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64",
+      "exeName": "Auto_P6Beta.exe",
+      "finalExeSha256": "54776e349b16b9f39f6a2f135456b5258466015a7e379d8f66cad02066e34b1e",
+      "authenticodeChecked": true,
+      "authenticodeTrustStatus": "self_signed_untrusted_root",
+      "authenticodeTrustedPublicChain": false,
+      "ed25519BundleVerified": true,
+      "peRootPubkeyMatches": true,
+      "peVersionInfoValid": true,
+      "publisherIdentityMatchesCert": true,
+      "publisherIdentityDetail": "Certificate subject 'Orion Citadel Studio QA' matches declared publisher 'Orion Citadel Studio QA'",
+      "distributedFilesChecked": 13,
+      "distributedFileMismatches": [],
+      "issues": []
+    },
+    "nonceReplayErr": "Error: KEY_ROTATION_NONCE_REPLAYED: rotation nonce 'rot-0570ca5c50eb4190bc29e378c369dd7d' was already used\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe upgrade --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwslfjyn --release-dir E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.1.0_win-x64\nError: KEY_ROTATION_NONCE_REPLAYED: rotation nonce 'rot-0570ca5c50eb4190bc29e378c369dd7d' was already used",
+    "secAuditOk": {
+      "passed": true,
+      "installRoot": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwslfjyn",
+      "trustEpoch": 3,
+      "activeVersion": "1.1.0",
+      "activeExeSha256": "a495ef8f35742599d2f20272280a49978267bf72f86a217b536b501ef2fdcfb1",
+      "peRootPubkeyHex": "4b96996d52815ba903bd1bd1fc2bf1431ab965e7c68c9dd7857e06b9375dbb1f",
+      "authenticodeTrustStatus": "self_signed_untrusted_root",
+      "externalAnchorVerified": true,
+      "versionsScanned": [
+        "v1.1.0"
+      ],
+      "rogueOrTamperedVersions": [],
+      "issues": []
+    },
+    "fullTriadAttackErr": "Error: FULL_TRIAD_ROLLBACK_DETECTED: local .updater triad (epoch 1, db_epoch Some(1)) < external trust anchor (epoch 3)\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe verify-security --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwslfjyn\nError: FULL_TRIAD_ROLLBACK_DETECTED: local .updater triad (epoch 1, db_epoch Some(1)) < external trust anchor (epoch 3)",
+    "rogueRevokedDirAttackErr": "Error: KEY_REVOKED in versions/v9.9.9\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe verify-security --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwslfjyn\nError: KEY_REVOKED in versions/v9.9.9",
+    "rogueDirAttackErr": "Error: ROGUE_OR_CORRUPT_VERSION_DIR versions/v9.9.8: PE_ROOT_OF_TRUST_MISMATCH: disk trusted_publisher.pub != trusted PE RT_RCDATA #7777\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe verify-security --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwslfjyn\nError: ROGUE_OR_CORRUPT_VERSION_DIR versions/v9.9.8: PE_ROOT_OF_TRUST_MISMATCH: disk trusted_publisher.pub != trusted PE RT_RCDATA #7777",
+    "manifestTamperErr": "Error: RELEASE_MANIFEST_TAMPERED: checksum mismatch for 'THIRD_PARTY_NOTICES.txt'\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe verify-security --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaSecP6_mwslfjyn\nError: RELEASE_MANIFEST_TAMPERED: checksum mismatch for 'THIRD_PARTY_NOTICES.txt'",
+    "commercialPublicSigned": "BLOCKED (0 commercial CA code-signing certs on host)"
+  },
+  "p6_4_ntfsAclAndDataRecovery": {
+    "whoami": "desktop-n916ap3\\tinh-nguyen",
+    "mediumMandatoryLevel": true,
+    "directWriteDeniedMsg": "EPERM: operation not permitted, open 'E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\NtfsAclProtectedAlpha\\direct_acl_probe.txt'",
+    "ntfsDepsFallbackUsed": true,
+    "ntfsDepsWriteError": "create_dir_all failed: Access is denied. (os error 5) (os error Some(5))",
+    "ntfsDepsResolvedDb": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\AppData\\Local\\FarmerPro\\MiniTools\\p6-alpha-harvester\\data\\runtime_p6-alpha-harvester.db",
+    "ntfsUpdaterErr": "Error: INSTALL_DIR_NOT_WRITABLE: cannot create required directory E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\NtfsAclProtectedAlpha\\ManagedInstall\n\nCaused by:\n    Access is denied. (os error 5)\n Command failed: E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\updater\\fp-updater.exe install-initial --install-root E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\NtfsAclProtectedAlpha\\ManagedInstall --release-dir E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Alpha_v1.0.0_win-x64\nError: INSTALL_DIR_NOT_WRITABLE: cannot create required directory E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\NtfsAclProtectedAlpha\\ManagedInstall\n\nCaused by:\n    Access is denied. (os error 5)",
+    "instRes": {
+      "operation": "install_initial",
+      "status": "COMPLETED",
+      "projectSlug": "p6-beta-citadel",
+      "previousVersion": null,
+      "activeVersion": "1.0.0",
+      "stageReached": "completed",
+      "backupDbPath": null,
+      "backupVerifiedOk": false,
+      "signatureVerifiedOk": true,
+      "compatibilityVerifiedOk": true,
+      "postUpdateAutoResumeBlocked": false,
+      "blockedJobIds": [],
+      "binaryRollbackOnly": false,
+      "databaseRestored": false,
+      "preRollbackSafetyDbPath": null,
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwslfjyn\\.updater\\update-journal.json",
+      "detail": "Initial Mini Tool versioned installation verified and activated."
+    },
+    "upgRes": {
+      "operation": "upgrade",
+      "status": "COMPLETED",
+      "projectSlug": "p6-beta-citadel",
+      "previousVersion": "1.0.0",
+      "activeVersion": "1.1.0",
+      "stageReached": "completed",
+      "backupDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwslfjyn\\data\\backups\\pre_update_v1.0.0_to_v1.1.0_20261123_013456_636.db",
+      "backupVerifiedOk": true,
+      "signatureVerifiedOk": true,
+      "compatibilityVerifiedOk": true,
+      "postUpdateAutoResumeBlocked": false,
+      "blockedJobIds": [],
+      "binaryRollbackOnly": false,
+      "databaseRestored": false,
+      "preRollbackSafetyDbPath": null,
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwslfjyn\\.updater\\update-journal.json",
+      "detail": "Upgraded Mini Tool safely with WAL backup and atomic version switch."
+    },
+    "rbRes": {
+      "operation": "rollback",
+      "status": "ROLLED_BACK",
+      "projectSlug": "p6-beta-citadel",
+      "previousVersion": "1.1.0",
+      "activeVersion": "1.0.0",
+      "stageReached": "rolled_back",
+      "backupDbPath": null,
+      "backupVerifiedOk": true,
+      "signatureVerifiedOk": true,
+      "compatibilityVerifiedOk": true,
+      "postUpdateAutoResumeBlocked": true,
+      "blockedJobIds": [],
+      "binaryRollbackOnly": true,
+      "databaseRestored": false,
+      "preRollbackSafetyDbPath": null,
+      "journalPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\ManagedBetaP6_mwslfjyn\\.updater\\update-journal.json",
+      "detail": "Binary-only rollback completed; live SQLite database and post-update user data preserved cleanly."
+    },
+    "revOutEpoch": 3,
+    "preRbNotes": {
+      "pre_upgrade": "kept_across_upgrade",
+      "post_upgrade_v110": "kept_across_binary_rollback"
+    },
+    "postRbNotes": {
+      "pre_upgrade": "kept_across_upgrade",
+      "post_upgrade_v110": "kept_across_binary_rollback"
+    }
+  },
+  "p6_5_factoryAndUiUx": {
+    "studioConsoleErrors": [],
+    "uiResolutionAudit": [
+      {
+        "view": "Projects & Dashboard",
+        "width": 1280,
+        "height": 720,
+        "scrollW": 1280,
+        "clientW": 1280,
+        "overflowX": false,
+        "mainRect": 1060,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Workflow Studio",
+        "width": 1280,
+        "height": 720,
+        "scrollW": 1280,
+        "clientW": 1280,
+        "overflowX": false,
+        "mainRect": 1060,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Tasks & Modules",
+        "width": 1280,
+        "height": 720,
+        "scrollW": 1280,
+        "clientW": 1280,
+        "overflowX": false,
+        "mainRect": 1060,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Device Lab",
+        "width": 1280,
+        "height": 720,
+        "scrollW": 1280,
+        "clientW": 1280,
+        "overflowX": false,
+        "mainRect": 1060,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Test & Debug",
+        "width": 1280,
+        "height": 720,
+        "scrollW": 1280,
+        "clientW": 1280,
+        "overflowX": false,
+        "mainRect": 1060,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Mini Tool Builder",
+        "width": 1280,
+        "height": 720,
+        "scrollW": 1280,
+        "clientW": 1280,
+        "overflowX": false,
+        "mainRect": 1060,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Account Vault",
+        "width": 1280,
+        "height": 720,
+        "scrollW": 1280,
+        "clientW": 1280,
+        "overflowX": false,
+        "mainRect": 1060,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Proxy & Port Map",
+        "width": 1280,
+        "height": 720,
+        "scrollW": 1280,
+        "clientW": 1280,
+        "overflowX": false,
+        "mainRect": 1060,
+        "hdrRightClip": false
+      },
+      {
+        "view": "System Settings",
+        "width": 1280,
+        "height": 720,
+        "scrollW": 1280,
+        "clientW": 1280,
+        "overflowX": false,
+        "mainRect": 1060,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Projects & Dashboard",
+        "width": 1600,
+        "height": 900,
+        "scrollW": 1600,
+        "clientW": 1600,
+        "overflowX": false,
+        "mainRect": 1380,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Workflow Studio",
+        "width": 1600,
+        "height": 900,
+        "scrollW": 1600,
+        "clientW": 1600,
+        "overflowX": false,
+        "mainRect": 1380,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Tasks & Modules",
+        "width": 1600,
+        "height": 900,
+        "scrollW": 1600,
+        "clientW": 1600,
+        "overflowX": false,
+        "mainRect": 1380,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Device Lab",
+        "width": 1600,
+        "height": 900,
+        "scrollW": 1600,
+        "clientW": 1600,
+        "overflowX": false,
+        "mainRect": 1380,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Test & Debug",
+        "width": 1600,
+        "height": 900,
+        "scrollW": 1600,
+        "clientW": 1600,
+        "overflowX": false,
+        "mainRect": 1380,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Mini Tool Builder",
+        "width": 1600,
+        "height": 900,
+        "scrollW": 1600,
+        "clientW": 1600,
+        "overflowX": false,
+        "mainRect": 1380,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Account Vault",
+        "width": 1600,
+        "height": 900,
+        "scrollW": 1600,
+        "clientW": 1600,
+        "overflowX": false,
+        "mainRect": 1380,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Proxy & Port Map",
+        "width": 1600,
+        "height": 900,
+        "scrollW": 1600,
+        "clientW": 1600,
+        "overflowX": false,
+        "mainRect": 1380,
+        "hdrRightClip": false
+      },
+      {
+        "view": "System Settings",
+        "width": 1600,
+        "height": 900,
+        "scrollW": 1600,
+        "clientW": 1600,
+        "overflowX": false,
+        "mainRect": 1380,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Projects & Dashboard",
+        "width": 1920,
+        "height": 1080,
+        "scrollW": 1920,
+        "clientW": 1920,
+        "overflowX": false,
+        "mainRect": 1700,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Workflow Studio",
+        "width": 1920,
+        "height": 1080,
+        "scrollW": 1920,
+        "clientW": 1920,
+        "overflowX": false,
+        "mainRect": 1700,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Tasks & Modules",
+        "width": 1920,
+        "height": 1080,
+        "scrollW": 1920,
+        "clientW": 1920,
+        "overflowX": false,
+        "mainRect": 1700,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Device Lab",
+        "width": 1920,
+        "height": 1080,
+        "scrollW": 1920,
+        "clientW": 1920,
+        "overflowX": false,
+        "mainRect": 1700,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Test & Debug",
+        "width": 1920,
+        "height": 1080,
+        "scrollW": 1920,
+        "clientW": 1920,
+        "overflowX": false,
+        "mainRect": 1700,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Mini Tool Builder",
+        "width": 1920,
+        "height": 1080,
+        "scrollW": 1920,
+        "clientW": 1920,
+        "overflowX": false,
+        "mainRect": 1700,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Account Vault",
+        "width": 1920,
+        "height": 1080,
+        "scrollW": 1920,
+        "clientW": 1920,
+        "overflowX": false,
+        "mainRect": 1700,
+        "hdrRightClip": false
+      },
+      {
+        "view": "Proxy & Port Map",
+        "width": 1920,
+        "height": 1080,
+        "scrollW": 1920,
+        "clientW": 1920,
+        "overflowX": false,
+        "mainRect": 1700,
+        "hdrRightClip": false
+      },
+      {
+        "view": "System Settings",
+        "width": 1920,
+        "height": 1080,
+        "scrollW": 1920,
+        "clientW": 1920,
+        "overflowX": false,
+        "mainRect": 1700,
+        "hdrRightClip": false
+      }
+    ],
+    "uiAnyOverflow": false,
+    "alphaRunStats": {
+      "title": "Zenith Harvester Pro v1.0.0",
+      "tasksCount": 4,
+      "logsCount": 17,
+      "overflowX": false,
+      "consoleErrors": []
+    },
+    "betaRunStats": {
+      "title": "Orion Citadel Automator v1.0.0",
+      "tasksCount": 5,
+      "logsCount": 21,
+      "overflowX": false,
+      "consoleErrors": []
+    }
+  }
+}

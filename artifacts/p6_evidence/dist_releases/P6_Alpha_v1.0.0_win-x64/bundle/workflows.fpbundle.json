@@ -1,0 +1,67 @@
+[
+  {
+    "schemaVersion": 1,
+    "workflowId": "wf-z-sweep",
+    "name": "Zenith Multi-Zone Sweep",
+    "status": "published",
+    "graph": {
+      "nodes": [
+        {
+          "id": "n1",
+          "type": "flow.start",
+          "position": {
+            "x": 40.0,
+            "y": 80.0
+          },
+          "config": {},
+          "timeoutMs": null,
+          "retryPolicy": null
+        },
+        {
+          "id": "n2",
+          "type": "state.set_var",
+          "position": {
+            "x": 200.0,
+            "y": 80.0
+          },
+          "config": {
+            "value": 42,
+            "valueType": "number",
+            "varKey": "farm_cycles"
+          },
+          "timeoutMs": null,
+          "retryPolicy": null
+        },
+        {
+          "id": "n3",
+          "type": "flow.end",
+          "position": {
+            "x": 360.0,
+            "y": 80.0
+          },
+          "config": {},
+          "timeoutMs": null,
+          "retryPolicy": null
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "source": "n1",
+          "sourcePort": "flow",
+          "target": "n2",
+          "targetPort": "flow"
+        },
+        {
+          "id": "e2",
+          "source": "n2",
+          "sourcePort": "flow",
+          "target": "n3",
+          "targetPort": "flow"
+        }
+      ]
+    },
+    "runtimePolicy": null,
+    "disclaimer": null
+  }
+]

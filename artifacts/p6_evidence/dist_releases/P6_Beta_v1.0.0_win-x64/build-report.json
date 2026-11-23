@@ -1,0 +1,216 @@
+{
+  "projectId": "proj-p6-beta-citadel-07fb2b29",
+  "projectSlug": "p6-beta-citadel",
+  "toolExeName": "Auto_P6Beta.exe",
+  "toolExePath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\Auto_P6Beta.exe",
+  "toolExeSizeBytes": 15761368,
+  "toolExeSha256": "54776e349b16b9f39f6a2f135456b5258466015a7e379d8f66cad02066e34b1e",
+  "peIconLayersInjected": 1,
+  "peIconGroupResourceBytes": 20,
+  "peIconFirstLayerBytes": 4264,
+  "peEmbeddedPubkeyResourceId": 7777,
+  "peEmbeddedPubkeyVerified": true,
+  "authenticodeStatus": "Authenticode Self-Signed QA Build (NOT TrustedPublicRelease; Subject='Orion Citadel Studio QA', Thumbprint=65A53E0E895DC32615B417F4C21D8C9A9B93C98E)",
+  "signingMode": "self_signed_qa",
+  "trustedPublicRelease": false,
+  "versionInfo": {
+    "companyName": "Orion Citadel Studio QA",
+    "fileDescription": "Orion Citadel Automator QA Signed",
+    "fileVersion": "1.0.0.20",
+    "internalName": "p6-beta-citadel",
+    "legalCopyright": "Copyright (C) 2026 Orion Citadel Studio QA",
+    "originalFilename": "Auto_P6Beta.exe",
+    "productName": "Orion Citadel Automator",
+    "productVersion": "1.0.0"
+  },
+  "authenticodeVerification": {
+    "signed": true,
+    "trustStatus": "self_signed_untrusted_root",
+    "trustedPublicRelease": false,
+    "winTrustErrorCode": 2148204809,
+    "signerSubject": "Orion Citadel Studio QA",
+    "signerIssuer": "Orion Citadel Studio QA",
+    "signerThumbprint": "65A53E0E895DC32615B417F4C21D8C9A9B93C98E",
+    "timestampStatus": "NONE_OR_QA",
+    "detail": "Self-Signed / Untrusted Root (0x800B0109): Authenticode PE hash intact, NOT trusted as Public Release."
+  },
+  "keyId": "fp-ed25519-12da61df4d76",
+  "publisherPublicKeyHex": "12da61df4d766db7b33a64d7dfbe600f701779bc3bc9d31192c601257ef12b63",
+  "externalKeystorePath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\AppData\\Local\\FarmerPro\\ProducerKeys\\active_producer_ed25519.json",
+  "signatureAlgorithm": "Ed25519-RFC8032-SHA256",
+  "signatureEd25519Hex": "6001c2972192468be0b241936ac6187dff888494b4266c9a2164593e677c96f6da24fdda808220b59ed6a30bf8b31e1ff79359eb286866bb501cf8f33fc66a08",
+  "totalDurationMs": 2625,
+  "steps": [
+    {
+      "stepNo": 1,
+      "name": "Validate Project, UI Schema & Workflows",
+      "durationMs": 0,
+      "status": "PASS",
+      "detail": "Validated 1 workflows and UI schema (v1) for 'Orion Citadel Automator'"
+    },
+    {
+      "stepNo": 2,
+      "name": "Asset Integrity & Path Traversal Guard",
+      "durationMs": 0,
+      "status": "PASS",
+      "detail": "Verified 0 template PNGs and icon 'branding/icon.ico'"
+    },
+    {
+      "stepNo": 3,
+      "name": "Resolve 5-State Module Matrix",
+      "durationMs": 0,
+      "status": "PASS",
+      "detail": "Packaged modules: [\"mod.adb_core\", \"mod.vision_ocr\"]"
+    },
+    {
+      "stepNo": 4,
+      "name": "Copy Dedicated Mini Runtime Binary",
+      "durationMs": 24,
+      "status": "PASS",
+      "detail": "Copied E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\sandbox\\InstalledStudio\\fp-mini-runtime.exe -> E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\Auto_P6Beta.exe"
+    },
+    {
+      "stepNo": 5,
+      "name": "PE Icon + Win32 VERSIONINFO + Ed25519 Root-of-Trust Key Injection",
+      "durationMs": 1515,
+      "status": "PASS",
+      "detail": "Injected 1 icon layers (20B/4264B), VERSIONINFO (Product='Orion Citadel Automator', Company='Orion Citadel Studio QA'), PE RT_RCDATA #7777=12da61df4d766db7"
+    },
+    {
+      "stepNo": 6,
+      "name": "Package Bundle Assets, Notices & Standalone Updater/ADB",
+      "durationMs": 31,
+      "status": "PASS",
+      "detail": "Packaged manifest, ui-schema, 1 workflows, 0 templates, adb=true"
+    },
+    {
+      "stepNo": 7,
+      "name": "Compute SHA-256 Integrity Table & RFC 8032 Ed25519 Signature",
+      "durationMs": 3,
+      "status": "PASS",
+      "detail": "Signed 3 files with Ed25519-RFC8032-SHA256 (KeyID: fp-ed25519-12da61df4d76, PubKey: 12da61df4d766db7b33a64d7dfbe600f701779bc3bc9d31192c601257ef12b63)"
+    },
+    {
+      "stepNo": 8,
+      "name": "Authenticode Sign/Verify (WinVerifyTrust) & Final Release Manifest Check",
+      "durationMs": 1049,
+      "status": "PASS",
+      "detail": "Mode=SelfSignedQa, Trust=SelfSignedUntrustedRoot, FilesChecked=13, PubCertMatch=true, exe SHA-256=54776e349b16b9f3"
+    }
+  ],
+  "modules": [
+    {
+      "moduleId": "mod.adb_core",
+      "displayName": "ADB & Device Driver Core",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "Quản lý kết nối ADB, chụp màn hình screencap và gửi lệnh tap/swipe an toàn."
+    },
+    {
+      "moduleId": "mod.vision_ocr",
+      "displayName": "Multiscale Vision & WinRT OCR",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "filesystem_read_write"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": true,
+      "permittedToInitialize": true,
+      "enabledByUserConfig": true,
+      "activeAndInitialized": true,
+      "technicalNote": "So khớp mẫu đa tỉ lệ SSD và trích xuất chỉ số game qua OCR."
+    },
+    {
+      "moduleId": "mod.account_vault",
+      "displayName": "Account Vault (Credential Manager)",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "credential_vault_access"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Lưu trữ tham chiếu tài khoản theo namespace riêng của từng Mini Tool."
+    },
+    {
+      "moduleId": "mod.proxy_network",
+      "displayName": "SOCKS5/HTTP Application Proxy",
+      "version": "1.0.0",
+      "dependencies": [],
+      "requiredCapabilities": [
+        "outbound_proxy_connect"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Kiểm tra & định tuyến kết nối SOCKS5/HTTP tương thích (LƯU Ý: Lưu lượng UDP thô của game engine cần VPN/tun2socks riêng, tách biệt hoàn toàn với ADB port forwarding)."
+    },
+    {
+      "moduleId": "mod.adb_port_forward",
+      "displayName": "ADB Host-Device Socket Forwarding",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec",
+        "local_socket_bind"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Chuyển tiếp cổng TCP giữa máy chủ và thiết bị qua `adb forward` / `adb reverse` (Không phải proxy định tuyến lưu lượng game)."
+    },
+    {
+      "moduleId": "mod.emulator_optimizer",
+      "displayName": "Emulator Watchdog & Auto-Reconnect",
+      "version": "1.0.0",
+      "dependencies": [
+        "mod.adb_core"
+      ],
+      "requiredCapabilities": [
+        "adb_exec"
+      ],
+      "compiledInBinary": true,
+      "packagedInRelease": false,
+      "permittedToInitialize": false,
+      "enabledByUserConfig": false,
+      "activeAndInitialized": false,
+      "technicalNote": "Giám sát tiến trình giả lập, tự động mở lại game khi mất kết nối."
+    }
+  ],
+  "dependencyAudit": {
+    "webview2EvergreenInstalled": true,
+    "webview2VersionOrNote": "Evergreen Runtime v157.0.4341.60 (Registry Client Verified; offline target requires WebView2 Evergreen/Bootstrapper if missing)",
+    "adbExePresent": true,
+    "adbWinApiDllPresent": true,
+    "adbWinUsbApiDllPresent": true,
+    "winrtOcrPowershellAvailable": true,
+    "exeDirWritable": true,
+    "writeProbeError": null,
+    "resolvedSqliteDbPath": "E:\\DATA\\FarmerPro\\artifacts\\p6_evidence\\dist_releases\\P6_Beta_v1.0.0_win-x64\\data\\runtime_p6-beta-citadel.db",
+    "fallbackToLocalAppdataUsed": false,
+    "offlineExecutionReady": true,
+    "thirdPartyNoticesPresent": true,
+    "updaterBundled": true,
+    "requiresInternetIfWebview2Missing": true
+  }
+}
