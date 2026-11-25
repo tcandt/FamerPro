@@ -12,9 +12,7 @@ use anyhow::Result;
 use chrono::{Duration, Utc};
 use ed25519_dalek::{Signer, SigningKey};
 use fp_bundle_contract::{canonical_key_rotation_message, KeyRotationDelegation};
-use fp_bundle_verify::{
-    canonical_signing_message, hex_encode, sha256_hex, SignedBundleEnvelope,
-};
+use fp_bundle_verify::{canonical_signing_message, hex_encode, sha256_hex, SignedBundleEnvelope};
 use fp_security::{PortableProducerKeyRecoveryBundle, ProducerKeyBackupBundle, ProducerKeystore};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -68,7 +66,11 @@ impl ProducerKeyManager {
         backup_file_path: &Path,
         passphrase: &str,
     ) -> Result<PortableProducerKeyRecoveryBundle> {
-        ProducerKeystore::export_portable_recovery_bundle(keystore_dir, backup_file_path, passphrase)
+        ProducerKeystore::export_portable_recovery_bundle(
+            keystore_dir,
+            backup_file_path,
+            passphrase,
+        )
     }
 
     /// Imports a passphrase-encrypted portable recovery bundle into the local Windows DPAPI keystore.
@@ -77,7 +79,11 @@ impl ProducerKeyManager {
         keystore_dir: &Path,
         passphrase: &str,
     ) -> Result<ProducerKeyMetadata> {
-        ProducerKeystore::import_portable_recovery_bundle(backup_file_path, keystore_dir, passphrase)
+        ProducerKeystore::import_portable_recovery_bundle(
+            backup_file_path,
+            keystore_dir,
+            passphrase,
+        )
     }
 
     /// Signs a bundle's manifest SHA-256 and file checksums table using RFC 8032 Ed25519 (`ed25519-dalek`)

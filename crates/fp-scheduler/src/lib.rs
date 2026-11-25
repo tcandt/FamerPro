@@ -96,14 +96,17 @@ impl DeviceLeaseGuard {
 
     pub fn release(mut self) -> bool {
         self.released = true;
-        self.scheduler.release_device_lease(&self.device_id, &self.job_id)
+        self.scheduler
+            .release_device_lease(&self.device_id, &self.job_id)
     }
 }
 
 impl Drop for DeviceLeaseGuard {
     fn drop(&mut self) {
         if !self.released {
-            let _ = self.scheduler.release_device_lease(&self.device_id, &self.job_id);
+            let _ = self
+                .scheduler
+                .release_device_lease(&self.device_id, &self.job_id);
         }
     }
 }
@@ -519,7 +522,12 @@ impl MultiDeviceScheduler {
         Ok(entry.lease.clone())
     }
 
-    pub fn verify_device_lease(&self, device_id: &str, job_id: &str, generation: u64) -> Result<()> {
+    pub fn verify_device_lease(
+        &self,
+        device_id: &str,
+        job_id: &str,
+        generation: u64,
+    ) -> Result<()> {
         let lease_key = self.resolve_lease_key(device_id);
         let leases = self.device_leases.lock().unwrap();
         let now = Utc::now();
@@ -640,7 +648,12 @@ mod tests {
 
         // Wrong generation & wrong job rejected
         assert!(scheduler
-            .renew_device_lease("dev-hb", "job-hb-1", l1.generation + 1, Duration::seconds(10))
+            .renew_device_lease(
+                "dev-hb",
+                "job-hb-1",
+                l1.generation + 1,
+                Duration::seconds(10)
+            )
             .is_err());
         assert!(scheduler
             .renew_device_lease("dev-hb", "job-other", l1.generation, Duration::seconds(10))
@@ -764,9 +777,13 @@ mod tests {
     fn test_cross_process_os_lock_conflict_ttl_non_override_and_forced_kill_recovery() {
         // Child worker mode invoked by the parent test below
         if let Ok(child_dir) = std::env::var("FP_TEST_LOCK_CHILD_DIR") {
-            let dev = std::env::var("FP_TEST_LOCK_CHILD_DEV").unwrap_or_else(|_| "emulator-5554".to_string());
-            let canon = std::env::var("FP_TEST_LOCK_CHILD_CANON").ok().filter(|s| !s.is_empty());
-            let job = std::env::var("FP_TEST_LOCK_CHILD_JOB").unwrap_or_else(|_| "child-job".to_string());
+            let dev = std::env::var("FP_TEST_LOCK_CHILD_DEV")
+                .unwrap_or_else(|_| "emulator-5554".to_string());
+            let canon = std::env::var("FP_TEST_LOCK_CHILD_CANON")
+                .ok()
+                .filter(|s| !s.is_empty());
+            let job =
+                std::env::var("FP_TEST_LOCK_CHILD_JOB").unwrap_or_else(|_| "child-job".to_string());
             let ttl_secs: i64 = std::env::var("FP_TEST_LOCK_CHILD_TTL")
                 .ok()
                 .and_then(|s| s.parse().ok())
@@ -774,7 +791,12 @@ mod tests {
 
             let sched = MultiDeviceScheduler::with_lock_dir(2, PathBuf::from(&child_dir));
             let lease = sched
-                .acquire_device_lease_canonical(&dev, canon.as_deref(), &job, Duration::seconds(ttl_secs))
+                .acquire_device_lease_canonical(
+                    &dev,
+                    canon.as_deref(),
+                    &job,
+                    Duration::seconds(ttl_secs),
+                )
                 .expect("child lock acquire");
             println!("LOCKED:gen={}", lease.generation);
             let _ = std::io::stdout().flush();
@@ -790,7 +812,8 @@ mod tests {
 
         let lock_dir = test_lock_dir("xproc_win32");
         let self_exe = std::env::current_exe().unwrap();
-        let test_name = "tests::test_cross_process_os_lock_conflict_ttl_non_override_and_forced_kill_recovery";
+        let test_name =
+            "tests::test_cross_process_os_lock_conflict_ttl_non_override_and_forced_kill_recovery";
 
         let spawn_holder = |dev: &str, canon: &str, job: &str, ttl: i64| {
             let mut cmd = Command::new(&self_exe);
@@ -818,7 +841,11 @@ mod tests {
                     break;
                 }
             }
-            assert!(locked, "child failed to emit LOCKED signal (last line: {:?})", line);
+            assert!(
+                locked,
+                "child failed to emit LOCKED signal (last line: {:?})",
+                line
+            );
             (child, reader)
         };
 
@@ -831,19 +858,37 @@ mod tests {
             .acquire_device_lease("emulator-5554", "parent-job-1", Duration::seconds(30))
             .unwrap_err()
             .to_string();
-        assert!(conflict_same.contains("DEVICE_LEASE_CONFLICT"), "got: {}", conflict_same);
-        assert!(conflict_same.contains("child-job-ttl"), "expected holder job metadata, got: {}", conflict_same);
+        assert!(
+            conflict_same.contains("DEVICE_LEASE_CONFLICT"),
+            "got: {}",
+            conflict_same
+        );
+        assert!(
+            conflict_same.contains("child-job-ttl"),
+            "expected holder job metadata, got: {}",
+            conflict_same
+        );
 
         // 2. Different transport alias (127.0.0.1:5555) for same Android MUST ALSO BE BLOCKED!
         let conflict_alias = parent_sched
             .acquire_device_lease("127.0.0.1:5555", "parent-job-alias", Duration::seconds(30))
             .unwrap_err()
             .to_string();
-        assert!(conflict_alias.contains("DEVICE_LEASE_CONFLICT"), "got: {}", conflict_alias);
+        assert!(
+            conflict_alias.contains("DEVICE_LEASE_CONFLICT"),
+            "got: {}",
+            conflict_alias
+        );
 
         // 3. Different device (emulator-5556) succeeds concurrently!
         let other_guard = parent_sched
-            .acquire_device_lease_guarded("emulator-5556", None, "parent-other-dev", Duration::seconds(30), ConflictPolicy::FailImmediately)
+            .acquire_device_lease_guarded(
+                "emulator-5556",
+                None,
+                "parent-other-dev",
+                Duration::seconds(30),
+                ConflictPolicy::FailImmediately,
+            )
             .unwrap();
         assert_eq!(other_guard.lease().device_id, "emulator-5556");
         drop(other_guard);
@@ -877,7 +922,8 @@ mod tests {
         let _ = parent_waiter;
 
         // 5. Forced-kill (TerminateProcess) on child2 -> OS kernel releases LockFileEx immediately!
-        let (mut child2, _r2) = spawn_holder("USB-999", "android-boot:SN:boot-kill", "child-kill-job", 60);
+        let (mut child2, _r2) =
+            spawn_holder("USB-999", "android-boot:SN:boot-kill", "child-kill-job", 60);
         let conflict_usb = parent_sched
             .acquire_device_lease_canonical(
                 "192.168.1.99:5555",
@@ -887,7 +933,11 @@ mod tests {
             )
             .unwrap_err()
             .to_string();
-        assert!(conflict_usb.contains("DEVICE_LEASE_CONFLICT"), "got: {}", conflict_usb);
+        assert!(
+            conflict_usb.contains("DEVICE_LEASE_CONFLICT"),
+            "got: {}",
+            conflict_usb
+        );
 
         child2.kill().unwrap();
         let _ = child2.wait();

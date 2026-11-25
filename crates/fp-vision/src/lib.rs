@@ -494,7 +494,8 @@ mod tests {
         // Geometry scaling 1920x1080 -> 1280x720
         let from = ScreenGeometry::new(1920, 1080, 0);
         let to = ScreenGeometry::new(1280, 720, 0);
-        let scaled = scale_bounds_for_geometry(Bounds::new(300.0, 150.0, 150.0, 90.0), &from, &to).unwrap();
+        let scaled =
+            scale_bounds_for_geometry(Bounds::new(300.0, 150.0, 150.0, 90.0), &from, &to).unwrap();
         assert!((scaled.x - 200.0).abs() < 0.01);
         assert!((scaled.y - 100.0).abs() < 0.01);
         assert!((scaled.width - 100.0).abs() < 0.01);

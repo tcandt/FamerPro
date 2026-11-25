@@ -78,10 +78,7 @@ pub async fn run_p3_verification(repo_root: &Path, out_dir: &Path) -> Result<ser
         None
     };
     let adb_runner = AdbRunner::new(adb_arg);
-    let coord = RuntimeCoordinator::new(
-        Arc::clone(&storage),
-        PathBuf::from(&adb_runner.adb_path),
-    );
+    let coord = RuntimeCoordinator::new(Arc::clone(&storage), PathBuf::from(&adb_runner.adb_path));
 
     // ------------------------------------------------------------------
     // 1. Two Isolated Generic GameProjects + Tasks/Modules/Accounts
@@ -163,13 +160,11 @@ pub async fn run_p3_verification(repo_root: &Path, out_dir: &Path) -> Result<ser
     )?;
 
     let vision = VisionEngine::new();
-    let target = vision.find_template_multiscale(&before_frame, &cropped_png, Some(0.85), &[1.0])?;
+    let target =
+        vision.find_template_multiscale(&before_frame, &cropped_png, Some(0.85), &[1.0])?;
     let mut sampler = SafeRegionSampler::new(SafeTapPolicy::default());
-    let tap_pt = sampler.sample_safe_point(
-        &target.bounds,
-        &Bounds::new(0.0, 0.0, 1080.0, 1920.0),
-        &[],
-    )?;
+    let tap_pt =
+        sampler.sample_safe_point(&target.bounds, &Bounds::new(0.0, 0.0, 1080.0, 1920.0), &[])?;
     let after_annotated =
         annotate_match_and_tap_png(&before_frame.bytes, target.bounds, Some(tap_pt))?;
     let after_png_path = out_dir.join("vision_after_annotated.png");
@@ -285,7 +280,13 @@ pub async fn run_p3_verification(repo_root: &Path, out_dir: &Path) -> Result<ser
         }
     })
     .to_string();
-    storage.save_project_workflow(&proj_b.id, "wf-voxel-escape", "Escape Probe", "Audit", &escape_wf)?;
+    storage.save_project_workflow(
+        &proj_b.id,
+        "wf-voxel-escape",
+        "Escape Probe",
+        "Audit",
+        &escape_wf,
+    )?;
     let cross_drv = Arc::new(FakeDeviceDriver::new("fake-escape", 1080, 1920));
     *cross_drv.current_screen_state.lock().await = "quest_marker_visible".to_string();
     let cross_run = coord
@@ -331,7 +332,13 @@ pub async fn run_p3_verification(repo_root: &Path, out_dir: &Path) -> Result<ser
         }
     })
     .to_string();
-    storage.save_project_workflow(&proj_a.id, "wf-slow-cp", "Slow Checkpoint", "Sync", &wf_slow)?;
+    storage.save_project_workflow(
+        &proj_a.id,
+        "wf-slow-cp",
+        "Slow Checkpoint",
+        "Sync",
+        &wf_slow,
+    )?;
 
     let drv_d1 = Arc::new(FakeDeviceDriver::new("emulator-5554", 1080, 1920));
     let drv_d2 = Arc::new(FakeDeviceDriver::new("127.0.0.1:62001", 720, 1280));
@@ -493,7 +500,11 @@ pub async fn run_p3_verification(repo_root: &Path, out_dir: &Path) -> Result<ser
     // ------------------------------------------------------------------
     let discovered = adb_runner.list_devices().await;
     let live_hardware_section = match discovered {
-        Ok(devs) if devs.iter().any(|d| d.connection_state == ConnectionState::Ready) => {
+        Ok(devs)
+            if devs
+                .iter()
+                .any(|d| d.connection_state == ConnectionState::Ready) =>
+        {
             let ready_dev = devs
                 .iter()
                 .find(|d| d.connection_state == ConnectionState::Ready)

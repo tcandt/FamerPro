@@ -9,8 +9,9 @@ use std::sync::{Arc, Mutex};
 
 pub use keystore::{
     Argon2idKdfParams, PortableProducerKeyRecoveryBundle, ProducerKeyBackupBundle,
-    ProducerKeyMetadata, ProducerKeystore, PORTABLE_RECOVERY_AEAD, PORTABLE_RECOVERY_FORMAT_VERSION,
-    PORTABLE_RECOVERY_RETIRED_EXPERIMENTAL_SCHEME, PORTABLE_RECOVERY_SCHEME,
+    ProducerKeyMetadata, ProducerKeystore, PORTABLE_RECOVERY_AEAD,
+    PORTABLE_RECOVERY_FORMAT_VERSION, PORTABLE_RECOVERY_RETIRED_EXPERIMENTAL_SCHEME,
+    PORTABLE_RECOVERY_SCHEME,
 };
 pub use wincred::{
     parse_cred_uri_to_target, validate_segment, CredentialMetadata, SecretNamespace,
@@ -84,7 +85,10 @@ pub fn is_sensitive_var_key(key: &str) -> bool {
         }
     }
     // Also catch compound camelCase/snake_case substrings where appropriate
-    let compact: String = lower.chars().filter(|c| c.is_ascii_alphanumeric()).collect();
+    let compact: String = lower
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect();
     [
         "password",
         "passwd",
@@ -300,11 +304,7 @@ impl CredentialVault {
         Ok(uri)
     }
 
-    pub fn get_secret_namespaced(
-        &self,
-        ns: &SecretNamespace,
-        key: &str,
-    ) -> Result<Option<String>> {
+    pub fn get_secret_namespaced(&self, ns: &SecretNamespace, key: &str) -> Result<Option<String>> {
         let target_name = ns.target_name(key)?;
         self.get_secret_by_target(&target_name)
     }
@@ -494,12 +494,15 @@ mod tests {
         let ns_acct_a = SecretNamespace::Account(proj_a_slug.clone());
 
         // Ensure cleanup even on early panic
-        let _cleanup = scopeguard_cleanup(&vault, &[
-            (ns_proj_a.clone(), "api_token"),
-            (ns_proj_b.clone(), "api_token"),
-            (ns_tool_a.clone(), "proxy_pass"),
-            (ns_acct_a.clone(), "acc_01"),
-        ]);
+        let _cleanup = scopeguard_cleanup(
+            &vault,
+            &[
+                (ns_proj_a.clone(), "api_token"),
+                (ns_proj_b.clone(), "api_token"),
+                (ns_tool_a.clone(), "proxy_pass"),
+                (ns_acct_a.clone(), "acc_01"),
+            ],
+        );
 
         let uri_a = vault
             .set_secret_namespaced(&ns_proj_a, "api_token", "secret-project-A-!@#")
@@ -542,10 +545,7 @@ mod tests {
             Some("socks5-tool-pass")
         );
         assert_eq!(
-            vault
-                .resolve_secret_uri(&uri_acct)
-                .unwrap()
-                .as_deref(),
+            vault.resolve_secret_uri(&uri_acct).unwrap().as_deref(),
             Some("jx2-player-pass-999")
         );
         // Project B must NOT see Project A's account or Mini Tool's proxy_pass
@@ -600,10 +600,8 @@ mod tests {
 
     #[test]
     fn test_dpapi_producer_keystore_create_backup_rotate_and_restore() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_dpapi_keystore_test_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_dpapi_keystore_test_{}", uuid::Uuid::new_v4()));
         let ks_dir = temp_dir.join("keystore");
         let backup_path = temp_dir.join("backups").join("producer_key_backup.json");
 
@@ -656,10 +654,8 @@ mod tests {
 
     #[test]
     fn test_dpapi_legacy_v1_keystore_auto_upgrade() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_dpapi_legacy_upgrade_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_dpapi_legacy_upgrade_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
         let key_file = temp_dir.join("active_producer_ed25519.json");
 
@@ -690,7 +686,8 @@ mod tests {
     }
 
     #[test]
-    fn test_portable_passphrase_recovery_bundle_aead_roundtrip_wrong_pass_tamper_and_nonce_uniqueness() {
+    fn test_portable_passphrase_recovery_bundle_aead_roundtrip_wrong_pass_tamper_and_nonce_uniqueness(
+    ) {
         let temp_dir = std::env::temp_dir().join(format!(
             "fp_portable_recovery_test_{}",
             uuid::Uuid::new_v4()
@@ -801,7 +798,11 @@ mod tests {
         let bad_aead_path = temp_dir.join("bad_aead.json");
         let mut bad_aead = bundle.clone();
         bad_aead.aead_algorithm = "SHA-256-CTR".to_string();
-        std::fs::write(&bad_aead_path, serde_json::to_vec_pretty(&bad_aead).unwrap()).unwrap();
+        std::fs::write(
+            &bad_aead_path,
+            serde_json::to_vec_pretty(&bad_aead).unwrap(),
+        )
+        .unwrap();
         assert!(ProducerKeystore::import_portable_recovery_bundle(
             &bad_aead_path,
             &ks_machine_b,
@@ -828,7 +829,11 @@ mod tests {
         let mut bad_nonce = bundle.clone();
         bad_nonce.nonce_b64 =
             base64::Engine::encode(&base64::engine::general_purpose::STANDARD, [1u8; 16]);
-        std::fs::write(&bad_nonce_path, serde_json::to_vec_pretty(&bad_nonce).unwrap()).unwrap();
+        std::fs::write(
+            &bad_nonce_path,
+            serde_json::to_vec_pretty(&bad_nonce).unwrap(),
+        )
+        .unwrap();
         assert!(ProducerKeystore::import_portable_recovery_bundle(
             &bad_nonce_path,
             &ks_machine_b,
@@ -863,7 +868,8 @@ mod tests {
         )
         .unwrap();
         assert_eq!(restored_meta.key_id, meta_a.key_id);
-        let (sk_a_restored, _) = ProducerKeystore::load_or_create_signing_key(&ks_machine_a).unwrap();
+        let (sk_a_restored, _) =
+            ProducerKeystore::load_or_create_signing_key(&ks_machine_a).unwrap();
         assert_eq!(sk_a.to_bytes(), sk_a_restored.to_bytes());
 
         let _ = std::fs::remove_dir_all(&temp_dir);
@@ -871,10 +877,8 @@ mod tests {
 
     #[test]
     fn test_legacy_sha256_ctr_v1_bundle_is_rejected_as_retired_experimental() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_retired_v1_bundle_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_retired_v1_bundle_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
         let legacy_path = temp_dir.join("retired_v1_bundle.json");
         let ks_dir = temp_dir.join("ks");
@@ -892,7 +896,11 @@ mod tests {
             "ciphertextB64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
             "hmacSha256": "00".repeat(32)
         });
-        std::fs::write(&legacy_path, serde_json::to_vec_pretty(&legacy_payload).unwrap()).unwrap();
+        std::fs::write(
+            &legacy_path,
+            serde_json::to_vec_pretty(&legacy_payload).unwrap(),
+        )
+        .unwrap();
 
         let err = ProducerKeystore::import_portable_recovery_bundle(
             &legacy_path,
@@ -909,7 +917,8 @@ mod tests {
     #[test]
     fn test_structured_and_numeric_secret_redaction() {
         // 1. Sensitive numeric variable (e.g. PIN / OTP)
-        let (v_num, r_num) = sanitize_runtime_variable("account_otp_pin", &serde_json::json!(482910));
+        let (v_num, r_num) =
+            sanitize_runtime_variable("account_otp_pin", &serde_json::json!(482910));
         assert!(r_num);
         assert_eq!(v_num, serde_json::json!(REDACTED_PLACEHOLDER));
 
@@ -962,7 +971,8 @@ mod tests {
         assert_eq!(v_cred, cred_uri);
 
         // Error message redaction
-        let err_clean = sanitize_error_message("HTTP fail token=my_hidden_999 with sk-live-secret-42");
+        let err_clean =
+            sanitize_error_message("HTTP fail token=my_hidden_999 with sk-live-secret-42");
         assert!(!err_clean.contains("my_hidden_999"));
         assert!(!err_clean.contains("sk-live-secret-42"));
     }

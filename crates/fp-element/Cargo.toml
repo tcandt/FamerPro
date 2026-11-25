@@ -1,0 +1,24 @@
+[package]
+name = "fp-element"
+version = "0.1.0"
+edition = "2021"
+authors = ["FarmerPro Team"]
+license = "MIT OR Apache-2.0"
+description = "FarmerPro Native Rust Element Core & Selector Engine"
+
+[dependencies]
+fp-domain = { path = "../fp-domain" }
+fp-actions = { path = "../fp-actions" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+quick-xml = { workspace = true }
+regex = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+rand = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

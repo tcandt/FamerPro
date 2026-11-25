@@ -273,7 +273,9 @@ mod platform {
         if bytes_read == 0 {
             return None;
         }
-        let raw = std::str::from_utf8(&buf[..bytes_read as usize]).ok()?.trim();
+        let raw = std::str::from_utf8(&buf[..bytes_read as usize])
+            .ok()?
+            .trim();
         if raw.is_empty() {
             return None;
         }
@@ -553,8 +555,9 @@ pub fn acquire_os_device_lock_with_policy(
                             return Err(e);
                         }
                         if std::time::Instant::now() >= deadline {
-                            return Err(e)
-                                .context("Timed out waiting for competing process device lock release");
+                            return Err(e).context(
+                                "Timed out waiting for competing process device lock release",
+                            );
                         }
                         std::thread::sleep(std::time::Duration::from_millis(25));
                     }

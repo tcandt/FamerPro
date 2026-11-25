@@ -2,8 +2,8 @@ use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use fp_bundle_contract::{
     check_sqlite_downgrade_compatibility, AuthenticodeTrustStatus, AuthenticodeVerificationReport,
-    CompatibilityVersions, MiniToolUiSchema, ReleaseBundleManifest,
-    RuntimeCompatibilityProfile, SemVer, SigningMode, CURRENT_SQLITE_SCHEMA_VERSION,
+    CompatibilityVersions, MiniToolUiSchema, ReleaseBundleManifest, RuntimeCompatibilityProfile,
+    SemVer, SigningMode, CURRENT_SQLITE_SCHEMA_VERSION,
 };
 use fp_bundle_verify::{
     read_pe_embedded_pubkey_from_exe, validate_safe_relative_path, verify_authenticode_pe,
@@ -231,7 +231,9 @@ fn default_external_anchor_root() -> PathBuf {
     if let Ok(local) = std::env::var("LOCALAPPDATA") {
         let trimmed = local.trim();
         if !trimmed.is_empty() {
-            return PathBuf::from(trimmed).join("FarmerPro").join("TrustAnchors");
+            return PathBuf::from(trimmed)
+                .join("FarmerPro")
+                .join("TrustAnchors");
         }
     }
     std::env::temp_dir().join("FarmerProTrustAnchors")
@@ -331,19 +333,61 @@ impl MiniToolUpdater {
         {
             let key = self.hkcu_registry_key();
             let epoch_str = record.trust_epoch.to_string();
-            let rev_json = serde_json::to_string(&record.revoked_pubkeys).unwrap_or_else(|_| "[]".into());
-            let nonces_json = serde_json::to_string(&record.used_rotation_nonces).unwrap_or_else(|_| "[]".into());
+            let rev_json =
+                serde_json::to_string(&record.revoked_pubkeys).unwrap_or_else(|_| "[]".into());
+            let nonces_json =
+                serde_json::to_string(&record.used_rotation_nonces).unwrap_or_else(|_| "[]".into());
             let _ = std::process::Command::new("reg")
-                .args(["add", &key, "/v", "TrustEpoch", "/t", "REG_SZ", "/d", &epoch_str, "/f"])
+                .args([
+                    "add",
+                    &key,
+                    "/v",
+                    "TrustEpoch",
+                    "/t",
+                    "REG_SZ",
+                    "/d",
+                    &epoch_str,
+                    "/f",
+                ])
                 .output();
             let _ = std::process::Command::new("reg")
-                .args(["add", &key, "/v", "StateSha256", "/t", "REG_SZ", "/d", &record.trust_state_sha256, "/f"])
+                .args([
+                    "add",
+                    &key,
+                    "/v",
+                    "StateSha256",
+                    "/t",
+                    "REG_SZ",
+                    "/d",
+                    &record.trust_state_sha256,
+                    "/f",
+                ])
                 .output();
             let _ = std::process::Command::new("reg")
-                .args(["add", &key, "/v", "RevokedPubkeysJson", "/t", "REG_SZ", "/d", &rev_json, "/f"])
+                .args([
+                    "add",
+                    &key,
+                    "/v",
+                    "RevokedPubkeysJson",
+                    "/t",
+                    "REG_SZ",
+                    "/d",
+                    &rev_json,
+                    "/f",
+                ])
                 .output();
             let _ = std::process::Command::new("reg")
-                .args(["add", &key, "/v", "UsedNoncesJson", "/t", "REG_SZ", "/d", &nonces_json, "/f"])
+                .args([
+                    "add",
+                    &key,
+                    "/v",
+                    "UsedNoncesJson",
+                    "/t",
+                    "REG_SZ",
+                    "/d",
+                    &nonces_json,
+                    "/f",
+                ])
                 .output();
         }
     }
@@ -357,7 +401,8 @@ impl MiniToolUpdater {
             if path.exists() {
                 if let Ok(bytes) = fs::read(&path) {
                     if let Ok(rec) = serde_json::from_slice::<ExternalTrustAnchorRecord>(&bytes) {
-                        max_epoch = Some(max_epoch.map_or(rec.trust_epoch, |e| e.max(rec.trust_epoch)));
+                        max_epoch =
+                            Some(max_epoch.map_or(rec.trust_epoch, |e| e.max(rec.trust_epoch)));
                         for r in rec.revoked_pubkeys {
                             if !revoked.iter().any(|x| x.eq_ignore_ascii_case(&r)) {
                                 revoked.push(r);
@@ -388,7 +433,11 @@ impl MiniToolUpdater {
         max_epoch.map(|e| (e, revoked, nonces))
     }
 
-    fn write_external_trust_anchor(&self, state: &PersistentTrustState, state_sha: &str) -> Result<()> {
+    fn write_external_trust_anchor(
+        &self,
+        state: &PersistentTrustState,
+        state_sha: &str,
+    ) -> Result<()> {
         let record = ExternalTrustAnchorRecord {
             anchor_schema_version: 1,
             install_anchor_id: self.install_anchor_id(),
@@ -486,7 +535,12 @@ impl MiniToolUpdater {
         }
     }
 
-    fn sync_trust_ledger_db(&self, state: &PersistentTrustState, event_type: &str, detail: &str) -> Result<()> {
+    fn sync_trust_ledger_db(
+        &self,
+        state: &PersistentTrustState,
+        event_type: &str,
+        detail: &str,
+    ) -> Result<()> {
         if let Some((ext_epoch, ext_revoked, ext_nonces)) = self.read_external_trust_hwm() {
             if state.trust_epoch < ext_epoch {
                 bail!(
@@ -496,7 +550,11 @@ impl MiniToolUpdater {
                 );
             }
             for r in &ext_revoked {
-                if !state.revoked_pubkeys.iter().any(|x| x.eq_ignore_ascii_case(r)) {
+                if !state
+                    .revoked_pubkeys
+                    .iter()
+                    .any(|x| x.eq_ignore_ascii_case(r))
+                {
                     bail!(
                         "FULL_TRIAD_ROLLBACK_DETECTED: externally revoked pubkey '{}' missing from proposed trust state",
                         r
@@ -526,7 +584,11 @@ impl MiniToolUpdater {
                 );
             }
             for r in &cur_revoked {
-                if !state.revoked_pubkeys.iter().any(|x| x.eq_ignore_ascii_case(r)) {
+                if !state
+                    .revoked_pubkeys
+                    .iter()
+                    .any(|x| x.eq_ignore_ascii_case(r))
+                {
                     bail!(
                         "TRUST_STATE_ROLLBACK_DETECTED: revoked pubkey '{}' missing from proposed trust state",
                         r
@@ -680,10 +742,15 @@ impl MiniToolUpdater {
             anyhow::anyhow!("TRUST_STATE_MISSING: no persistent trust state found")
         })?;
         let active = self.read_active_pointer()?.ok_or_else(|| {
-            anyhow::anyhow!("ACTIVE_VERSION_MISSING: no active_version.json in {}", self.install_root.display())
+            anyhow::anyhow!(
+                "ACTIVE_VERSION_MISSING: no active_version.json in {}",
+                self.install_root.display()
+            )
         })?;
         let auth = self.verify_installed_exe_integrity()?;
-        let active_dir = self.versions_dir().join(format!("v{}", active.active_version));
+        let active_dir = self
+            .versions_dir()
+            .join(format!("v{}", active.active_version));
         let verified_active = Self::verify_candidate_release_dir_with_anchor(
             &active_dir,
             &RuntimeCompatibilityProfile::default(),
@@ -747,15 +814,26 @@ impl MiniToolUpdater {
                             .any(|k| k.eq_ignore_ascii_case(&vrel.pe_pubkey_hex))
                         {
                             rogue_versions.push(name.clone());
-                            issues.push(format!("ROGUE_VERSION_DIR_DETECTED: untrusted key in versions/{}", name));
-                        } else if let Err(e) = Self::verify_optional_release_manifest(&vpath, &vrel.exe_path) {
+                            issues.push(format!(
+                                "ROGUE_VERSION_DIR_DETECTED: untrusted key in versions/{}",
+                                name
+                            ));
+                        } else if let Err(e) =
+                            Self::verify_optional_release_manifest(&vpath, &vrel.exe_path)
+                        {
                             rogue_versions.push(name.clone());
-                            issues.push(format!("RELEASE_MANIFEST_TAMPERED in versions/{}: {:#}", name, e));
+                            issues.push(format!(
+                                "RELEASE_MANIFEST_TAMPERED in versions/{}: {:#}",
+                                name, e
+                            ));
                         }
                     }
                     Err(e) => {
                         rogue_versions.push(name.clone());
-                        issues.push(format!("ROGUE_OR_CORRUPT_VERSION_DIR versions/{}: {:#}", name, e));
+                        issues.push(format!(
+                            "ROGUE_OR_CORRUPT_VERSION_DIR versions/{}: {:#}",
+                            name, e
+                        ));
                     }
                 }
             }
@@ -788,7 +866,12 @@ impl MiniToolUpdater {
         }
         let rm_bytes = fs::read(&rm_path)?;
         let rm: fp_bundle_contract::ReleasePackageManifest = serde_json::from_slice(&rm_bytes)
-            .with_context(|| format!("RELEASE_MANIFEST_TAMPERED: invalid JSON in {}", rm_path.display()))?;
+            .with_context(|| {
+                format!(
+                    "RELEASE_MANIFEST_TAMPERED: invalid JSON in {}",
+                    rm_path.display()
+                )
+            })?;
         let actual_exe_sha = fp_bundle_verify::sha256_hex(&fs::read(exe_path)?);
         if !actual_exe_sha.eq_ignore_ascii_case(&rm.final_exe_sha256) {
             bail!(
@@ -798,11 +881,18 @@ impl MiniToolUpdater {
             );
         }
         for entry in &rm.distributed_files {
-            let target = validate_safe_relative_path(version_dir, &entry.rel_path).with_context(|| {
-                format!("RELEASE_MANIFEST_TAMPERED: unsafe rel_path '{}'", entry.rel_path)
-            })?;
+            let target =
+                validate_safe_relative_path(version_dir, &entry.rel_path).with_context(|| {
+                    format!(
+                        "RELEASE_MANIFEST_TAMPERED: unsafe rel_path '{}'",
+                        entry.rel_path
+                    )
+                })?;
             if !target.exists() {
-                bail!("RELEASE_MANIFEST_TAMPERED: missing file '{}'", entry.rel_path);
+                bail!(
+                    "RELEASE_MANIFEST_TAMPERED: missing file '{}'",
+                    entry.rel_path
+                );
             }
             let actual = fp_bundle_verify::sha256_hex(&fs::read(&target)?);
             if !actual.eq_ignore_ascii_case(&entry.sha256) {
@@ -1071,7 +1161,9 @@ impl MiniToolUpdater {
                     }
                 }
                 SigningMode::SelfSignedQa => {
-                    if !authenticode.signed || authenticode.trust_status == AuthenticodeTrustStatus::Unsigned {
+                    if !authenticode.signed
+                        || authenticode.trust_status == AuthenticodeTrustStatus::Unsigned
+                    {
                         bail!(
                             "AUTHENTICODE_SIGNATURE_MISSING: release requires SelfSignedQa signature but binary is unsigned"
                         );
@@ -1079,7 +1171,9 @@ impl MiniToolUpdater {
                 }
                 SigningMode::UnsignedInternal => {}
             }
-            if signing_meta.release_channel.eq_ignore_ascii_case("production")
+            if signing_meta
+                .release_channel
+                .eq_ignore_ascii_case("production")
                 && !authenticode.trusted_public_release
             {
                 bail!(
@@ -1099,10 +1193,15 @@ impl MiniToolUpdater {
                 let anchor_norm = anchor.trim().to_ascii_lowercase();
                 if pe_pubkey_hex.eq_ignore_ascii_case(&anchor_norm) {
                     anchor_norm
-                } else if let Some(delegation) =
-                    manifest.signing.as_ref().and_then(|s| s.key_rotation.as_ref())
+                } else if let Some(delegation) = manifest
+                    .signing
+                    .as_ref()
+                    .and_then(|s| s.key_rotation.as_ref())
                 {
-                    if !delegation.new_pubkey_hex.eq_ignore_ascii_case(&pe_pubkey_hex) {
+                    if !delegation
+                        .new_pubkey_hex
+                        .eq_ignore_ascii_case(&pe_pubkey_hex)
+                    {
                         bail!(
                             "KEY_ROTATION_TARGET_MISMATCH: delegation newPubkeyHex '{}' != candidate PE key '{}'",
                             delegation.new_pubkey_hex,
@@ -1133,7 +1232,10 @@ impl MiniToolUpdater {
 
         let disk_pub = fs::read_to_string(bundle_dir.join("trusted_publisher.pub"))
             .context("Missing trusted_publisher.pub")?;
-        if !disk_pub.trim().eq_ignore_ascii_case(&effective_trust_pubkey) {
+        if !disk_pub
+            .trim()
+            .eq_ignore_ascii_case(&effective_trust_pubkey)
+        {
             bail!(
                 "PE_ROOT_OF_TRUST_MISMATCH: disk trusted_publisher.pub != trusted PE RT_RCDATA #{}",
                 PE_ED25519_PUBKEY_RESOURCE_ID
@@ -1249,9 +1351,9 @@ impl MiniToolUpdater {
         let ver = verified.manifest.project.version.clone();
         let _ = SemVer::parse(&ver)?;
         let target_version_dir = self.versions_dir().join(format!("v{}", ver));
-        let staging_dir = self
-            .versions_dir()
-            .join(format!("v{}_staging_{}", ver, Uuid::new_v4().simple()));
+        let staging_dir =
+            self.versions_dir()
+                .join(format!("v{}_staging_{}", ver, Uuid::new_v4().simple()));
         let live_db_path = self.data_dir().join(format!("runtime_{}.db", slug));
 
         let mut journal = UpdateJournal {
@@ -1355,7 +1457,10 @@ impl MiniToolUpdater {
         options: &UpdateExecutionOptions,
     ) -> Result<UpdateOutcome> {
         let active = self.read_active_pointer()?.ok_or_else(|| {
-            anyhow::anyhow!("ACTIVE_VERSION_MISSING: no existing active_version.json in {}", self.install_root.display())
+            anyhow::anyhow!(
+                "ACTIVE_VERSION_MISSING: no existing active_version.json in {}",
+                self.install_root.display()
+            )
         })?;
 
         self.probe_install_permissions()?;
@@ -1388,7 +1493,10 @@ impl MiniToolUpdater {
             )
         })?;
         if let Some(ref ptr_pk) = active.trusted_pubkey_hex {
-            if !ptr_pk.trim().eq_ignore_ascii_case(&installed_trusted_pubkey) {
+            if !ptr_pk
+                .trim()
+                .eq_ignore_ascii_case(&installed_trusted_pubkey)
+            {
                 bail!(
                     "INSTALLED_ROOT_OF_TRUST_MISMATCH: active_version.json trustedPubkeyHex '{}' != installed EXE RT_RCDATA #{} '{}'",
                     ptr_pk,
@@ -1400,15 +1508,17 @@ impl MiniToolUpdater {
 
         let _ = self.verify_installed_exe_integrity()?;
 
-        let trust_state = self.read_trust_state()?.unwrap_or_else(|| PersistentTrustState {
-            trust_epoch: 1,
-            publisher_id: None,
-            trusted_pubkeys: vec![installed_trusted_pubkey.to_ascii_lowercase()],
-            revoked_pubkeys: vec![],
-            used_rotation_nonces: vec![],
-            previous_state_sha256: None,
-            updated_at_utc: Utc::now().to_rfc3339(),
-        });
+        let trust_state = self
+            .read_trust_state()?
+            .unwrap_or_else(|| PersistentTrustState {
+                trust_epoch: 1,
+                publisher_id: None,
+                trusted_pubkeys: vec![installed_trusted_pubkey.to_ascii_lowercase()],
+                revoked_pubkeys: vec![],
+                used_rotation_nonces: vec![],
+                previous_state_sha256: None,
+                updated_at_utc: Utc::now().to_rfc3339(),
+            });
 
         let verified = match Self::verify_candidate_release_dir_with_anchor(
             candidate_release_dir,
@@ -1513,7 +1623,12 @@ impl MiniToolUpdater {
         let live_db_path = self
             .data_dir()
             .join(format!("runtime_{}.db", active.project_slug));
-        ensure_tool_quiesced(&self.data_dir(), &active.project_slug, &active_exe, &live_db_path)?;
+        ensure_tool_quiesced(
+            &self.data_dir(),
+            &active.project_slug,
+            &active_exe,
+            &live_db_path,
+        )?;
 
         let target_ver = verified.manifest.project.version.clone();
         let target_version_dir = self.versions_dir().join(format!("v{}", target_ver));
@@ -1657,15 +1772,17 @@ impl MiniToolUpdater {
             activated_at_utc: Utc::now().to_rfc3339(),
             journal_id: journal.journal_id.clone(),
         };
-        let mut updated_trust = self.read_trust_state()?.unwrap_or_else(|| PersistentTrustState {
-            trust_epoch: 1,
-            publisher_id: staged_verified.publisher_id.clone(),
-            trusted_pubkeys: vec![installed_trusted_pubkey.to_ascii_lowercase()],
-            revoked_pubkeys: vec![],
-            used_rotation_nonces: vec![],
-            previous_state_sha256: None,
-            updated_at_utc: Utc::now().to_rfc3339(),
-        });
+        let mut updated_trust = self
+            .read_trust_state()?
+            .unwrap_or_else(|| PersistentTrustState {
+                trust_epoch: 1,
+                publisher_id: staged_verified.publisher_id.clone(),
+                trusted_pubkeys: vec![installed_trusted_pubkey.to_ascii_lowercase()],
+                revoked_pubkeys: vec![],
+                used_rotation_nonces: vec![],
+                previous_state_sha256: None,
+                updated_at_utc: Utc::now().to_rfc3339(),
+            });
         if updated_trust.publisher_id.is_none() {
             updated_trust.publisher_id = staged_verified.publisher_id.clone();
         }
@@ -1739,10 +1856,9 @@ impl MiniToolUpdater {
         let active = self
             .read_active_pointer()?
             .ok_or_else(|| anyhow::anyhow!("ACTIVE_VERSION_MISSING: no active installation"))?;
-        let prev_ver = active
-            .previous_version
-            .clone()
-            .ok_or_else(|| anyhow::anyhow!("NO_PREVIOUS_VERSION: no previous version recorded to roll back to"))?;
+        let prev_ver = active.previous_version.clone().ok_or_else(|| {
+            anyhow::anyhow!("NO_PREVIOUS_VERSION: no previous version recorded to roll back to")
+        })?;
 
         let active_exe = self
             .versions_dir()
@@ -1808,7 +1924,12 @@ impl MiniToolUpdater {
         let live_db_path = self
             .data_dir()
             .join(format!("runtime_{}.db", active.project_slug));
-        ensure_tool_quiesced(&self.data_dir(), &active.project_slug, &active_exe, &live_db_path)?;
+        ensure_tool_quiesced(
+            &self.data_dir(),
+            &active.project_slug,
+            &active_exe,
+            &live_db_path,
+        )?;
 
         let live_db_ver = if live_db_path.exists() {
             highest_migration_version_raw(&live_db_path)?
@@ -1876,7 +1997,9 @@ impl MiniToolUpdater {
             target_version: prev_ver.clone(),
             source_release_dir: prev_dir.to_string_lossy().to_string(),
             stage: UpdateStage::RolledBack,
-            backup_db_path: restored_backup_path.clone().or_else(|| active.backup_db_path.clone()),
+            backup_db_path: restored_backup_path
+                .clone()
+                .or_else(|| active.backup_db_path.clone()),
             live_db_path: live_db_path.to_string_lossy().to_string(),
             staged_staging_dir: None,
             staged_version_dir: prev_dir.to_string_lossy().to_string(),
@@ -1901,7 +2024,9 @@ impl MiniToolUpdater {
             trusted_pubkey_hex: Some(prev_verified.pe_pubkey_hex.clone()),
             post_update_auto_resume_blocked: true,
             blocked_job_ids: active.blocked_job_ids.clone(),
-            backup_db_path: restored_backup_path.clone().or_else(|| active.backup_db_path.clone()),
+            backup_db_path: restored_backup_path
+                .clone()
+                .or_else(|| active.backup_db_path.clone()),
             activated_at_utc: Utc::now().to_rfc3339(),
             journal_id,
         };
@@ -1933,7 +2058,10 @@ impl MiniToolUpdater {
         })
     }
 
-    pub fn reconcile_incomplete_journal(&self, skip_child_verify_exec: bool) -> Result<ReconcileOutcome> {
+    pub fn reconcile_incomplete_journal(
+        &self,
+        skip_child_verify_exec: bool,
+    ) -> Result<ReconcileOutcome> {
         self.probe_install_permissions()?;
         let _updater_lock = UpdaterLockGuard::acquire(&self.lock_file_path())?;
         let journal_opt = self.read_journal()?;
@@ -1971,7 +2099,9 @@ impl MiniToolUpdater {
         match recovered_from {
             UpdateStage::Idle | UpdateStage::Completed | UpdateStage::RolledBack => {
                 if !pointer_valid {
-                    if let Some(recovered) = self.recover_missing_or_corrupt_pointer(Some(&journal))? {
+                    if let Some(recovered) =
+                        self.recover_missing_or_corrupt_pointer(Some(&journal))?
+                    {
                         self.write_active_pointer_with_shadow(&recovered)?;
                         return Ok(ReconcileOutcome {
                             status: "RECOVERED_POINTER".to_string(),
@@ -2079,15 +2209,17 @@ impl MiniToolUpdater {
                 if forward_ok && verify_db_ok_if_exists(&live_db_path) {
                     // Ensure Trust State <-> Active Release <-> Nonce Ledger stay 100% consistent after rotation crash!
                     if let Some(ref ver_rel) = rotated_ver_opt {
-                        let mut ts = self.read_trust_state()?.unwrap_or_else(|| PersistentTrustState {
-                            trust_epoch: 1,
-                            publisher_id: ver_rel.publisher_id.clone(),
-                            trusted_pubkeys: anchor_opt.into_iter().collect(),
-                            revoked_pubkeys: vec![],
-                            used_rotation_nonces: vec![],
-                            previous_state_sha256: None,
-                            updated_at_utc: Utc::now().to_rfc3339(),
-                        });
+                        let mut ts =
+                            self.read_trust_state()?
+                                .unwrap_or_else(|| PersistentTrustState {
+                                    trust_epoch: 1,
+                                    publisher_id: ver_rel.publisher_id.clone(),
+                                    trusted_pubkeys: anchor_opt.into_iter().collect(),
+                                    revoked_pubkeys: vec![],
+                                    used_rotation_nonces: vec![],
+                                    previous_state_sha256: None,
+                                    updated_at_utc: Utc::now().to_rfc3339(),
+                                });
                         let mut changed = false;
                         if !ts
                             .trusted_pubkeys
@@ -2118,7 +2250,9 @@ impl MiniToolUpdater {
                         }
                     }
                     if !pointer_valid {
-                        if let Some(recovered) = self.recover_missing_or_corrupt_pointer(Some(&journal))? {
+                        if let Some(recovered) =
+                            self.recover_missing_or_corrupt_pointer(Some(&journal))?
+                        {
                             self.write_active_pointer_with_shadow(&recovered)?;
                         }
                     }
@@ -2134,7 +2268,9 @@ impl MiniToolUpdater {
                         detail: "Crash happened after atomic activation; verified target release & synchronized trust ledger.".to_string(),
                     })
                 } else {
-                    if let (Some(bk), true) = (journal.backup_db_path.as_ref(), live_db_path.exists()) {
+                    if let (Some(bk), true) =
+                        (journal.backup_db_path.as_ref(), live_db_path.exists())
+                    {
                         let safety_snap = self.backups_dir().join(format!(
                             "reconcile_safety_{}.db",
                             Utc::now().format("%Y%m%d_%H%M%S_%3f")
@@ -2158,7 +2294,9 @@ impl MiniToolUpdater {
                         active_version: self.read_active_pointer()?.map(|p| p.active_version),
                         db_integrity_ok: db_ok,
                         journal_path: self.journal_path().to_string_lossy().to_string(),
-                        detail: "Reverted interrupted activation back to previous verified version.".to_string(),
+                        detail:
+                            "Reverted interrupted activation back to previous verified version."
+                                .to_string(),
                     })
                 }
             }
@@ -2192,7 +2330,9 @@ impl MiniToolUpdater {
         if let Some(j) = journal_opt {
             if !matches!(j.stage, UpdateStage::Completed) {
                 if let Some(ref prev_ptr) = j.previous_active_pointer {
-                    let vdir = self.versions_dir().join(format!("v{}", prev_ptr.active_version));
+                    let vdir = self
+                        .versions_dir()
+                        .join(format!("v{}", prev_ptr.active_version));
                     if Self::verify_candidate_release_dir_with_anchor(
                         &vdir,
                         &RuntimeCompatibilityProfile::default(),
@@ -2222,9 +2362,11 @@ impl MiniToolUpdater {
                     continue;
                 }
                 let p = ent.path();
-                if let Ok(ver) =
-                    Self::verify_candidate_release_dir_with_anchor(&p, &RuntimeCompatibilityProfile::default(), None)
-                {
+                if let Ok(ver) = Self::verify_candidate_release_dir_with_anchor(
+                    &p,
+                    &RuntimeCompatibilityProfile::default(),
+                    None,
+                ) {
                     let is_trusted = trust_state
                         .trusted_pubkeys
                         .iter()
@@ -2243,7 +2385,11 @@ impl MiniToolUpdater {
                             previous_version: None,
                             exe_name: ver.manifest.project.exe_name.clone(),
                             sqlite_schema_version: ver.manifest.compatibility.sqlite_schema_version,
-                            min_runtime_version: ver.manifest.compatibility.min_runtime_version.clone(),
+                            min_runtime_version: ver
+                                .manifest
+                                .compatibility
+                                .min_runtime_version
+                                .clone(),
                             trusted_pubkey_hex: Some(ver.pe_pubkey_hex.clone()),
                             post_update_auto_resume_blocked: true,
                             blocked_job_ids: vec![],
@@ -2298,7 +2444,9 @@ fn highest_migration_version_raw(db_path: &Path) -> Result<u32> {
         return Ok(0);
     }
     let max_v: Option<i64> =
-        conn.query_row("SELECT MAX(version) FROM schema_migrations;", [], |r| r.get(0))?;
+        conn.query_row("SELECT MAX(version) FROM schema_migrations;", [], |r| {
+            r.get(0)
+        })?;
     Ok(max_v.unwrap_or(0).max(0) as u32)
 }
 
@@ -2504,7 +2652,10 @@ fn validate_single_filename(name: &str) -> Result<()> {
     let mut comps = Path::new(trimmed).components();
     match (comps.next(), comps.next()) {
         (Some(Component::Normal(_)), None) => Ok(()),
-        _ => bail!("PATH_SECURITY_ERROR: traversal or root in filename '{}'", name),
+        _ => bail!(
+            "PATH_SECURITY_ERROR: traversal or root in filename '{}'",
+            name
+        ),
     }
 }
 
@@ -2553,10 +2704,7 @@ fn atomic_write_file(dest: &Path, content: &[u8]) -> Result<()> {
             fs::create_dir_all(parent)?;
         }
     }
-    let file_name = dest
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or("file");
+    let file_name = dest.file_name().and_then(|s| s.to_str()).unwrap_or("file");
     let tmp_path = dest.with_file_name(format!(".{}.tmp.{}", file_name, Uuid::new_v4().simple()));
     {
         let mut f = File::create(&tmp_path)?;
@@ -2660,7 +2808,11 @@ fn is_process_alive(pid: u32) -> bool {
 
     #[link(name = "kernel32")]
     unsafe extern "system" {
-        fn OpenProcess(dwDesiredAccess: u32, bInheritHandle: i32, dwProcessId: u32) -> *mut core::ffi::c_void;
+        fn OpenProcess(
+            dwDesiredAccess: u32,
+            bInheritHandle: i32,
+            dwProcessId: u32,
+        ) -> *mut core::ffi::c_void;
         fn GetExitCodeProcess(hProcess: *mut core::ffi::c_void, lpExitCode: *mut u32) -> i32;
         fn CloseHandle(hObject: *mut core::ffi::c_void) -> i32;
     }
@@ -2737,13 +2889,13 @@ fn is_exe_file_locked(_exe_path: &Path) -> bool {
 mod tests {
     use super::*;
     use ed25519_dalek::{Signer, SigningKey};
-    use rusqlite::params;
     use fp_builder::pe_icon::inject_ed25519_pubkey_into_pe_exe;
     use fp_bundle_contract::{
         CompatibilityVersions, GameProjectManifest, MiniLayoutPreset, CURRENT_RUNTIME_VERSION,
     };
     use fp_bundle_verify::sha256_hex;
     use fp_workflow_schema::{NodePosition, WorkflowEdge, WorkflowGraph, WorkflowNode};
+    use rusqlite::params;
     use std::collections::{BTreeMap, HashMap};
 
     fn create_signed_test_release(
@@ -2793,10 +2945,7 @@ mod tests {
                 window_title: format!("Tool {} v{}", slug, version),
                 icon_rel_path: "branding/icon.ico".to_string(),
                 target_resolution: (1280, 720),
-                packaged_modules: vec![
-                    "mod.adb_core".to_string(),
-                    "mod.vision_ocr".to_string(),
-                ],
+                packaged_modules: vec!["mod.adb_core".to_string(), "mod.vision_ocr".to_string()],
                 workflow_files: vec!["wf_main.json".to_string()],
                 template_files: vec![],
                 bundle_adb: false,
@@ -2877,9 +3026,14 @@ mod tests {
         let manifest_sha = sha256_hex(&m_bytes);
         let tbl_json = serde_json::to_string(&checksums).unwrap();
         let tbl_hash = sha256_hex(tbl_json.as_bytes());
-        let msg = fp_bundle_verify::canonical_signing_message("test-key-p52", &manifest_sha, &tbl_hash);
+        let msg =
+            fp_bundle_verify::canonical_signing_message("test-key-p52", &manifest_sha, &tbl_hash);
         let sig = signing_key.sign(&msg);
-        let sig_hex: String = sig.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let sig_hex: String = sig
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
 
         let env = SignedBundleEnvelope {
             algorithm: "Ed25519-RFC8032-SHA256".to_string(),
@@ -3018,7 +3172,11 @@ mod tests {
         // 2. Tamper rejected during upgrade
         let rel_tampered = tmp.join("releases/alpha_tampered");
         copy_dir_recursive(&rel_110, &rel_tampered).unwrap();
-        fs::write(rel_tampered.join("bundle/ui-schema.json"), b"{\"tampered\":true}").unwrap();
+        fs::write(
+            rel_tampered.join("bundle/ui-schema.json"),
+            b"{\"tampered\":true}",
+        )
+        .unwrap();
         let err_tamper = updater_alpha
             .upgrade_from_release(&rel_tampered, &fast_opts)
             .unwrap_err()
@@ -3031,7 +3189,11 @@ mod tests {
             err_tamper
         );
         assert_eq!(
-            updater_alpha.read_active_pointer().unwrap().unwrap().active_version,
+            updater_alpha
+                .read_active_pointer()
+                .unwrap()
+                .unwrap()
+                .active_version,
             "1.0.0"
         );
 
@@ -3069,7 +3231,11 @@ mod tests {
         assert!(err_job.contains("ACTIVE_JOB_RUNNING"));
         {
             let conn = Connection::open(&db_alpha).unwrap();
-            conn.execute("UPDATE jobs SET state = 'Completed' WHERE id = 'job-active-1'", []).unwrap();
+            conn.execute(
+                "UPDATE jobs SET state = 'Completed' WHERE id = 'job-active-1'",
+                [],
+            )
+            .unwrap();
         }
 
         // 5. Real running OS process PID guard blocks upgrade while running
@@ -3113,25 +3279,39 @@ mod tests {
             .to_string();
         assert!(err_mig.contains("SIMULATED_MIGRATION_FAILURE"));
         assert_eq!(
-            updater_alpha.read_active_pointer().unwrap().unwrap().active_version,
+            updater_alpha
+                .read_active_pointer()
+                .unwrap()
+                .unwrap()
+                .active_version,
             "1.0.0"
         );
         assert!(verify_db_ok_if_exists(&db_alpha));
 
         // 8. Real Upgrade v1.0.0 -> v1.1.0 + check post_update_auto_resume_blocked & isolated Beta untouched!
-        let up_res = updater_alpha.upgrade_from_release(&rel_110, &fast_opts).unwrap();
+        let up_res = updater_alpha
+            .upgrade_from_release(&rel_110, &fast_opts)
+            .unwrap();
         assert_eq!(up_res.active_version, "1.1.0");
         assert!(up_res.post_update_auto_resume_blocked);
         assert_eq!(up_res.blocked_job_ids, vec!["job-paused-1".to_string()]);
         assert_eq!(
-            updater_beta.read_active_pointer().unwrap().unwrap().active_version,
+            updater_beta
+                .read_active_pointer()
+                .unwrap()
+                .unwrap()
+                .active_version,
             "1.0.0"
         );
         // Verify preserved account credential reference inside Alpha DB
         {
             let conn = Connection::open(&db_alpha).unwrap();
             let sref: String = conn
-                .query_row("SELECT secret_ref FROM accounts WHERE id = 'acc-a1'", [], |r| r.get(0))
+                .query_row(
+                    "SELECT secret_ref FROM accounts WHERE id = 'acc-a1'",
+                    [],
+                    |r| r.get(0),
+                )
                 .unwrap();
             assert_eq!(sref, "CRED_MGR://farmerpro/alpha_vip");
         }
@@ -3155,14 +3335,18 @@ mod tests {
         assert_eq!(rb_res.active_version, "1.0.0");
         assert!(rb_res.database_restored);
         assert!(rb_res.pre_rollback_safety_db_path.is_some());
-        assert_eq!(highest_migration_version_raw(&db_alpha).unwrap(), CURRENT_SQLITE_SCHEMA_VERSION);
+        assert_eq!(
+            highest_migration_version_raw(&db_alpha).unwrap(),
+            CURRENT_SQLITE_SCHEMA_VERSION
+        );
         assert!(verify_db_ok_if_exists(&db_alpha));
 
         let _ = fs::remove_dir_all(&tmp);
     }
 
     #[test]
-    fn test_p5_2_closeout_root_of_trust_rollback_data_preservation_locks_junction_and_pointer_recovery() {
+    fn test_p5_2_closeout_root_of_trust_rollback_data_preservation_locks_junction_and_pointer_recovery(
+    ) {
         let tmp = std::env::temp_dir().join(format!("fp_updater_closeout_{}", Uuid::new_v4()));
         let rel_100 = tmp.join("rel_100");
         let rel_110 = tmp.join("rel_110");
@@ -3228,7 +3412,11 @@ mod tests {
             err_rogue
         );
         assert_eq!(
-            updater.read_active_pointer().unwrap().unwrap().active_version,
+            updater
+                .read_active_pointer()
+                .unwrap()
+                .unwrap()
+                .active_version,
             "1.0.0"
         );
 
@@ -3303,18 +3491,33 @@ mod tests {
         {
             let conn = Connection::open(&live_db).unwrap();
             let cnt_a: i64 = conn
-                .query_row("SELECT COUNT(*) FROM accounts WHERE id = 'acc-data-A'", [], |r| r.get(0))
+                .query_row(
+                    "SELECT COUNT(*) FROM accounts WHERE id = 'acc-data-A'",
+                    [],
+                    |r| r.get(0),
+                )
                 .unwrap();
             let cnt_b: i64 = conn
-                .query_row("SELECT COUNT(*) FROM accounts WHERE id = 'acc-data-B'", [], |r| r.get(0))
+                .query_row(
+                    "SELECT COUNT(*) FROM accounts WHERE id = 'acc-data-B'",
+                    [],
+                    |r| r.get(0),
+                )
                 .unwrap();
             assert_eq!(cnt_a, 1);
-            assert_eq!(cnt_b, 1, "Data B created on v1.1.0 must survive binary rollback!");
+            assert_eq!(
+                cnt_b, 1,
+                "Data B created on v1.1.0 must survive binary rollback!"
+            );
 
             let st = StorageManager::new(&live_db).unwrap();
-            let snap = st.load_runtime_snapshot_with_recovery("mini:closeout-game", None).unwrap();
+            let snap = st
+                .load_runtime_snapshot_with_recovery("mini:closeout-game", None)
+                .unwrap();
             assert_eq!(
-                snap.testkit_envelopes.get("post_upgrade_loot").map(|v| &v.value),
+                snap.testkit_envelopes
+                    .get("post_upgrade_loot")
+                    .map(|v| &v.value),
                 Some(&serde_json::json!(88888))
             );
         }
@@ -3349,39 +3552,64 @@ mod tests {
         {
             let safety_conn = Connection::open(&safety_path).unwrap();
             let cnt_c: i64 = safety_conn
-                .query_row("SELECT COUNT(*) FROM accounts WHERE id = 'acc-data-C'", [], |r| r.get(0))
+                .query_row(
+                    "SELECT COUNT(*) FROM accounts WHERE id = 'acc-data-C'",
+                    [],
+                    |r| r.get(0),
+                )
                 .unwrap();
-            assert_eq!(cnt_c, 1, "Newer Data C preserved inside safety snapshot before DB restore");
+            assert_eq!(
+                cnt_c, 1,
+                "Newer Data C preserved inside safety snapshot before DB restore"
+            );
         }
 
         // Step 6: Path Traversal, data/ Overwrite Prevention & NTFS Junction Guard
         // 6a. Manifest workflow_files traversal
         let rel_trav = tmp.join("rel_trav");
         copy_dir_recursive(&rel_110, &rel_trav).unwrap();
-        let mut trav_manifest: ReleaseBundleManifest =
-            serde_json::from_slice(&fs::read(rel_trav.join("bundle/manifest.fpbundle.json")).unwrap()).unwrap();
-        trav_manifest.project.workflow_files.push("../data/evil.json".to_string());
+        let mut trav_manifest: ReleaseBundleManifest = serde_json::from_slice(
+            &fs::read(rel_trav.join("bundle/manifest.fpbundle.json")).unwrap(),
+        )
+        .unwrap();
+        trav_manifest
+            .project
+            .workflow_files
+            .push("../data/evil.json".to_string());
         fs::write(
             rel_trav.join("bundle/manifest.fpbundle.json"),
             serde_json::to_vec_pretty(&trav_manifest).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
         let err_trav = MiniToolUpdater::verify_candidate_release_dir_with_anchor(
             &rel_trav,
             &RuntimeCompatibilityProfile::default(),
             None,
-        ).unwrap_err().to_string();
-        assert!(err_trav.contains("PATH_SECURITY_ERROR"), "got: {}", err_trav);
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(
+            err_trav.contains("PATH_SECURITY_ERROR"),
+            "got: {}",
+            err_trav
+        );
 
         // 6b. Forbidden top-level `data/` inside release archive
         let rel_evil_data = tmp.join("rel_evil_data");
         copy_dir_recursive(&rel_110, &rel_evil_data).unwrap();
         fs::create_dir_all(rel_evil_data.join("data")).unwrap();
-        fs::write(rel_evil_data.join("data/runtime_closeout-game.db"), b"overwrite").unwrap();
+        fs::write(
+            rel_evil_data.join("data/runtime_closeout-game.db"),
+            b"overwrite",
+        )
+        .unwrap();
         let err_data_ov = MiniToolUpdater::verify_candidate_release_dir_with_anchor(
             &rel_evil_data,
             &RuntimeCompatibilityProfile::default(),
             None,
-        ).unwrap_err().to_string();
+        )
+        .unwrap_err()
+        .to_string();
         assert!(err_data_ov.contains("RELEASE_FORBIDS_USER_DATA_OVERWRITE"));
 
         // 6c. NTFS Junction inside candidate directory
@@ -3393,7 +3621,13 @@ mod tests {
             fs::create_dir_all(&outside).unwrap();
             let junc_link = rel_junc.join("bundle").join("linked_outside");
             let mk_status = std::process::Command::new("cmd")
-                .args(["/C", "mklink", "/J", junc_link.to_str().unwrap(), outside.to_str().unwrap()])
+                .args([
+                    "/C",
+                    "mklink",
+                    "/J",
+                    junc_link.to_str().unwrap(),
+                    outside.to_str().unwrap(),
+                ])
                 .output()
                 .unwrap();
             if mk_status.status.success() {
@@ -3401,8 +3635,14 @@ mod tests {
                     &rel_junc,
                     &RuntimeCompatibilityProfile::default(),
                     None,
-                ).unwrap_err().to_string();
-                assert!(err_j.contains("REPARSE_POINT_OR_JUNCTION_FORBIDDEN"), "got: {}", err_j);
+                )
+                .unwrap_err()
+                .to_string();
+                assert!(
+                    err_j.contains("REPARSE_POINT_OR_JUNCTION_FORBIDDEN"),
+                    "got: {}",
+                    err_j
+                );
             }
         }
 
@@ -3416,25 +3656,48 @@ mod tests {
                 .share_mode(0)
                 .open(updater.active_pointer_path())
                 .unwrap();
-            let err_lock = atomic_write_file(&updater.active_pointer_path(), b"should_not_overwrite")
-                .unwrap_err()
-                .to_string();
-            assert!(err_lock.contains("ACTIVE_POINTER_LOCKED"), "got: {}", err_lock);
+            let err_lock =
+                atomic_write_file(&updater.active_pointer_path(), b"should_not_overwrite")
+                    .unwrap_err()
+                    .to_string();
+            assert!(
+                err_lock.contains("ACTIVE_POINTER_LOCKED"),
+                "got: {}",
+                err_lock
+            );
             drop(locked_handle);
         }
 
         // 7b. Corrupt active_version.json -> reconcile recovers from shadow backup
-        fs::write(updater.active_pointer_path(), b"{CORRUPTED_TRUNCATED_POINTER").unwrap();
+        fs::write(
+            updater.active_pointer_path(),
+            b"{CORRUPTED_TRUNCATED_POINTER",
+        )
+        .unwrap();
         let rec_corrupt = updater.reconcile_incomplete_journal(true).unwrap();
         assert_eq!(rec_corrupt.status, "RECOVERED_POINTER");
-        assert_eq!(updater.read_active_pointer().unwrap().unwrap().active_version, "1.0.0");
+        assert_eq!(
+            updater
+                .read_active_pointer()
+                .unwrap()
+                .unwrap()
+                .active_version,
+            "1.0.0"
+        );
 
         // 7c. Delete BOTH active_version.json AND shadow backup -> reconcile scans versions/v* & recovers highest valid signed release (1.1.0)
         fs::remove_file(updater.active_pointer_path()).unwrap();
         fs::remove_file(updater.backup_pointer_path()).unwrap();
         let rec_scan = updater.reconcile_incomplete_journal(true).unwrap();
         assert_eq!(rec_scan.status, "RECOVERED_POINTER");
-        assert_eq!(updater.read_active_pointer().unwrap().unwrap().active_version, "1.1.0");
+        assert_eq!(
+            updater
+                .read_active_pointer()
+                .unwrap()
+                .unwrap()
+                .active_version,
+            "1.1.0"
+        );
 
         let _ = fs::remove_dir_all(&tmp);
     }
@@ -3459,9 +3722,24 @@ mod tests {
         let key_old = SigningKey::from_bytes(&[21u8; 32]);
         let key_new = SigningKey::from_bytes(&[33u8; 32]);
         let key_rogue = SigningKey::from_bytes(&[99u8; 32]);
-        let pub_old_hex: String = key_old.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-        let pub_new_hex: String = key_new.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-        let pub_rogue_hex: String = key_rogue.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let pub_old_hex: String = key_old
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+        let pub_new_hex: String = key_new
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+        let pub_rogue_hex: String = key_rogue
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
 
         let pub_spec = PublisherIdentitySpec {
             publisher_id: "pub-qa-studio".to_string(),
@@ -3478,10 +3756,15 @@ mod tests {
         };
 
         // Helper to stamp publisher + signing metadata + re-sign bundle
-        let attach_signing = |dir: &Path, sk: &SigningKey, mode: SigningMode, pub_id: &str, rot: Option<KeyRotationDelegation>| {
+        let attach_signing = |dir: &Path,
+                              sk: &SigningKey,
+                              mode: SigningMode,
+                              pub_id: &str,
+                              rot: Option<KeyRotationDelegation>| {
             let bdir = dir.join("bundle");
             let mut m: ReleaseBundleManifest =
-                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap()).unwrap();
+                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap())
+                    .unwrap();
             let mut p = pub_spec.clone();
             p.publisher_id = pub_id.to_string();
             p.signing_policy = mode;
@@ -3501,8 +3784,11 @@ mod tests {
             let mb = serde_json::to_vec_pretty(&m).unwrap();
             fs::write(bdir.join("manifest.fpbundle.json"), &mb).unwrap();
             let mut sig_env: SignedBundleEnvelope =
-                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap()).unwrap();
-            sig_env.file_checksums.insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
+                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap())
+                    .unwrap();
+            sig_env
+                .file_checksums
+                .insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
             let msha = sha256_hex(&mb);
             let tjson = serde_json::to_string(&sig_env.file_checksums).unwrap();
             let thash = sha256_hex(tjson.as_bytes());
@@ -3510,12 +3796,31 @@ mod tests {
             let s = sk.sign(&msg);
             sig_env.manifest_sha256 = msha;
             sig_env.checksums_table_sha256 = thash;
-            sig_env.signature_ed25519_hex = s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-            fs::write(bdir.join("signature.fpbundle.json"), serde_json::to_vec_pretty(&sig_env).unwrap()).unwrap();
+            sig_env.signature_ed25519_hex =
+                s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+            fs::write(
+                bdir.join("signature.fpbundle.json"),
+                serde_json::to_vec_pretty(&sig_env).unwrap(),
+            )
+            .unwrap();
         };
 
-        create_signed_test_release(&rel_100, "p53-tool", "Auto_P53.exe", "1.0.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [21u8; 32]);
-        attach_signing(&rel_100, &key_old, SigningMode::UnsignedInternal, "pub-qa-studio", None);
+        create_signed_test_release(
+            &rel_100,
+            "p53-tool",
+            "Auto_P53.exe",
+            "1.0.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [21u8; 32],
+        );
+        attach_signing(
+            &rel_100,
+            &key_old,
+            SigningMode::UnsignedInternal,
+            "pub-qa-studio",
+            None,
+        );
 
         let delegation = ProducerKeyManager::sign_key_rotation_delegation(
             &key_old,
@@ -3525,8 +3830,22 @@ mod tests {
             30,
         );
 
-        create_signed_test_release(&rel_110_rotated, "p53-tool", "Auto_P53.exe", "1.1.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [33u8; 32]);
-        attach_signing(&rel_110_rotated, &key_new, SigningMode::UnsignedInternal, "pub-qa-studio", Some(delegation.clone()));
+        create_signed_test_release(
+            &rel_110_rotated,
+            "p53-tool",
+            "Auto_P53.exe",
+            "1.1.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [33u8; 32],
+        );
+        attach_signing(
+            &rel_110_rotated,
+            &key_new,
+            SigningMode::UnsignedInternal,
+            "pub-qa-studio",
+            Some(delegation.clone()),
+        );
 
         // Authenticode signing + post-sign PE tampering test (if signtool.exe present)
         let mut test_cert_thumb: Option<String> = None;
@@ -3544,7 +3863,10 @@ mod tests {
                     },
                 )
                 .unwrap();
-                assert_eq!(auth_rep.trust_status, AuthenticodeTrustStatus::SelfSignedUntrustedRoot);
+                assert_eq!(
+                    auth_rep.trust_status,
+                    AuthenticodeTrustStatus::SelfSignedUntrustedRoot
+                );
                 assert!(!auth_rep.trusted_public_release);
 
                 // Tamper PE after Authenticode signing -> MUST fail even when bundle JSON is untouched!
@@ -3558,14 +3880,23 @@ mod tests {
                     &rel_tampered_pe,
                     &RuntimeCompatibilityProfile::default(),
                     None,
-                ).unwrap_err().to_string();
-                assert!(err_auth.contains("AUTHENTICODE_TAMPERED_OR_INVALID"), "got: {}", err_auth);
+                )
+                .unwrap_err()
+                .to_string();
+                assert!(
+                    err_auth.contains("AUTHENTICODE_TAMPERED_OR_INVALID"),
+                    "got: {}",
+                    err_auth
+                );
             }
         }
 
         let install_root = tmp.join("installed/P53Tool");
         let updater = MiniToolUpdater::new(&install_root);
-        let opts = UpdateExecutionOptions { skip_child_verify_exec: true, ..Default::default() };
+        let opts = UpdateExecutionOptions {
+            skip_child_verify_exec: true,
+            ..Default::default()
+        };
 
         // 1. Install v1.0.0 with Key Old
         updater.install_initial(&rel_100, &opts).unwrap();
@@ -3579,45 +3910,123 @@ mod tests {
             issued_at_utc: delegation.issued_at_utc.clone(),
             expires_at_utc: delegation.expires_at_utc.clone(),
             nonce: "rogue-nonce-12345678".to_string(),
-            signature_by_old_key_hex: ProducerKeyManager::sign_key_rotation_delegation(&key_rogue, &pub_rogue_hex, "pub-qa-studio", "p53-tool", 10).signature_by_old_key_hex,
+            signature_by_old_key_hex: ProducerKeyManager::sign_key_rotation_delegation(
+                &key_rogue,
+                &pub_rogue_hex,
+                "pub-qa-studio",
+                "p53-tool",
+                10,
+            )
+            .signature_by_old_key_hex,
         };
-        create_signed_test_release(&rel_130_rogue_del, "p53-tool", "Auto_P53.exe", "1.3.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [99u8; 32]);
-        attach_signing(&rel_130_rogue_del, &key_rogue, SigningMode::UnsignedInternal, "pub-qa-studio", Some(rogue_del));
-        let err_rdel = updater.upgrade_from_release(&rel_130_rogue_del, &opts).unwrap_err().to_string();
-        assert!(err_rdel.contains("KEY_ROTATION_DELEGATION_INVALID"), "got: {}", err_rdel);
+        create_signed_test_release(
+            &rel_130_rogue_del,
+            "p53-tool",
+            "Auto_P53.exe",
+            "1.3.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [99u8; 32],
+        );
+        attach_signing(
+            &rel_130_rogue_del,
+            &key_rogue,
+            SigningMode::UnsignedInternal,
+            "pub-qa-studio",
+            Some(rogue_del),
+        );
+        let err_rdel = updater
+            .upgrade_from_release(&rel_130_rogue_del, &opts)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err_rdel.contains("KEY_ROTATION_DELEGATION_INVALID"),
+            "got: {}",
+            err_rdel
+        );
 
         // 3. Valid KeyRotationDelegation v1.0.0 -> v1.1.0 SUCCEEDS!
-        let up = updater.upgrade_from_release(&rel_110_rotated, &opts).unwrap();
+        let up = updater
+            .upgrade_from_release(&rel_110_rotated, &opts)
+            .unwrap();
         assert_eq!(up.active_version, "1.1.0");
         let ts = updater.read_trust_state().unwrap().unwrap();
         assert!(ts.used_rotation_nonces.contains(&delegation.nonce));
-        assert!(ts.trusted_pubkeys.iter().any(|k| k.eq_ignore_ascii_case(&pub_new_hex)));
+        assert!(ts
+            .trusted_pubkeys
+            .iter()
+            .any(|k| k.eq_ignore_ascii_case(&pub_new_hex)));
 
         // 4. Replay / Rollback check & Trust-anchored pointer recovery (drop untrusted v9.9.9 into versions/)
         let rogue_v999 = updater.versions_dir().join("v9.9.9");
-        create_signed_test_release(&rogue_v999, "p53-tool", "Auto_P53.exe", "9.9.9", CURRENT_SQLITE_SCHEMA_VERSION, 1, [99u8; 32]);
+        create_signed_test_release(
+            &rogue_v999,
+            "p53-tool",
+            "Auto_P53.exe",
+            "9.9.9",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [99u8; 32],
+        );
         fs::remove_file(updater.active_pointer_path()).unwrap();
         fs::remove_file(updater.backup_pointer_path()).unwrap();
         let rec = updater.reconcile_incomplete_journal(true).unwrap();
         assert_eq!(rec.status, "RECOVERED_POINTER");
-        assert_eq!(updater.read_active_pointer().unwrap().unwrap().active_version, "1.1.0");
+        assert_eq!(
+            updater
+                .read_active_pointer()
+                .unwrap()
+                .unwrap()
+                .active_version,
+            "1.1.0"
+        );
 
         // Also test nonce replay rejection via another fresh install anchored on key_old with pre-recorded nonce
         let rel_replay_2 = rel_120_replayed;
-        create_signed_test_release(&rel_replay_2, "p53-tool", "Auto_P53.exe", "1.2.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [33u8; 32]);
-        attach_signing(&rel_replay_2, &key_new, SigningMode::UnsignedInternal, "pub-qa-studio", Some(delegation.clone()));
+        create_signed_test_release(
+            &rel_replay_2,
+            "p53-tool",
+            "Auto_P53.exe",
+            "1.2.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [33u8; 32],
+        );
+        attach_signing(
+            &rel_replay_2,
+            &key_new,
+            SigningMode::UnsignedInternal,
+            "pub-qa-studio",
+            Some(delegation.clone()),
+        );
         let install_replay = tmp.join("installed/P53Replay");
         let up_rep = MiniToolUpdater::new(&install_replay);
         up_rep.install_initial(&rel_100, &opts).unwrap();
         let mut seeded_ts = up_rep.read_trust_state().unwrap().unwrap();
-        seeded_ts.used_rotation_nonces.push(delegation.nonce.clone());
+        seeded_ts
+            .used_rotation_nonces
+            .push(delegation.nonce.clone());
         up_rep.write_trust_state(&seeded_ts).unwrap();
-        let err_replay = up_rep.upgrade_from_release(&rel_replay_2, &opts).unwrap_err().to_string();
-        assert!(err_replay.contains("KEY_ROTATION_NONCE_REPLAYED"), "got: {}", err_replay);
+        let err_replay = up_rep
+            .upgrade_from_release(&rel_replay_2, &opts)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err_replay.contains("KEY_ROTATION_NONCE_REPLAYED"),
+            "got: {}",
+            err_replay
+        );
 
         if let Some(thumb) = test_cert_thumb {
             let _ = std::process::Command::new("powershell")
-                .args(["-NoProfile", "-Command", &format!("Remove-Item 'Cert:\\CurrentUser\\My\\{}' -ErrorAction SilentlyContinue", thumb)])
+                .args([
+                    "-NoProfile",
+                    "-Command",
+                    &format!(
+                        "Remove-Item 'Cert:\\CurrentUser\\My\\{}' -ErrorAction SilentlyContinue",
+                        thumb
+                    ),
+                ])
                 .output();
         }
         let _ = fs::remove_dir_all(&tmp);
@@ -3635,13 +4044,27 @@ mod tests {
         let rel_110 = tmp.join("rel_110");
         let key_old = SigningKey::from_bytes(&[41u8; 32]);
         let key_new = SigningKey::from_bytes(&[52u8; 32]);
-        let pub_old: String = key_old.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-        let pub_new: String = key_new.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let pub_old: String = key_old
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+        let pub_new: String = key_new
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
 
-        let attach = |dir: &Path, sk: &SigningKey, pk_hex: &str, rot: Option<KeyRotationDelegation>| {
+        let attach = |dir: &Path,
+                      sk: &SigningKey,
+                      pk_hex: &str,
+                      rot: Option<KeyRotationDelegation>| {
             let bdir = dir.join("bundle");
             let mut m: ReleaseBundleManifest =
-                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap()).unwrap();
+                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap())
+                    .unwrap();
             m.publisher = Some(PublisherIdentitySpec {
                 publisher_id: "pub-p54-test".to_string(),
                 display_name: "P54 Test Publisher".to_string(),
@@ -3670,8 +4093,11 @@ mod tests {
             let mb = serde_json::to_vec_pretty(&m).unwrap();
             fs::write(bdir.join("manifest.fpbundle.json"), &mb).unwrap();
             let mut sig_env: SignedBundleEnvelope =
-                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap()).unwrap();
-            sig_env.file_checksums.insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
+                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap())
+                    .unwrap();
+            sig_env
+                .file_checksums
+                .insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
             let msha = sha256_hex(&mb);
             let tjson = serde_json::to_string(&sig_env.file_checksums).unwrap();
             let thash = sha256_hex(tjson.as_bytes());
@@ -3679,20 +4105,50 @@ mod tests {
             let s = sk.sign(&msg);
             sig_env.manifest_sha256 = msha;
             sig_env.checksums_table_sha256 = thash;
-            sig_env.signature_ed25519_hex = s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-            fs::write(bdir.join("signature.fpbundle.json"), serde_json::to_vec_pretty(&sig_env).unwrap()).unwrap();
+            sig_env.signature_ed25519_hex =
+                s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+            fs::write(
+                bdir.join("signature.fpbundle.json"),
+                serde_json::to_vec_pretty(&sig_env).unwrap(),
+            )
+            .unwrap();
         };
 
-        create_signed_test_release(&rel_100, "p54-trust", "Auto_P54Trust.exe", "1.0.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [41u8; 32]);
+        create_signed_test_release(
+            &rel_100,
+            "p54-trust",
+            "Auto_P54Trust.exe",
+            "1.0.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [41u8; 32],
+        );
         attach(&rel_100, &key_old, &pub_old, None);
 
-        let delegation = ProducerKeyManager::sign_key_rotation_delegation(&key_old, &pub_new, "pub-p54-test", "p54-trust", 30);
-        create_signed_test_release(&rel_110, "p54-trust", "Auto_P54Trust.exe", "1.1.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [52u8; 32]);
+        let delegation = ProducerKeyManager::sign_key_rotation_delegation(
+            &key_old,
+            &pub_new,
+            "pub-p54-test",
+            "p54-trust",
+            30,
+        );
+        create_signed_test_release(
+            &rel_110,
+            "p54-trust",
+            "Auto_P54Trust.exe",
+            "1.1.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [52u8; 32],
+        );
         attach(&rel_110, &key_new, &pub_new, Some(delegation.clone()));
 
         let install_root = tmp.join("installed/TrustTool");
         let updater = MiniToolUpdater::new(&install_root);
-        let opts = UpdateExecutionOptions { skip_child_verify_exec: true, ..Default::default() };
+        let opts = UpdateExecutionOptions {
+            skip_child_verify_exec: true,
+            ..Default::default()
+        };
 
         // 1. Install v1.0.0 (epoch=1) and snapshot old trust-state.json before rotation
         updater.install_initial(&rel_100, &opts).unwrap();
@@ -3705,16 +4161,24 @@ mod tests {
         assert_eq!(up.active_version, "1.1.0");
         let ts_after_rot = updater.read_trust_state().unwrap().unwrap();
         assert_eq!(ts_after_rot.trust_epoch, 2);
-        assert!(ts_after_rot.used_rotation_nonces.contains(&delegation.nonce));
+        assert!(ts_after_rot
+            .used_rotation_nonces
+            .contains(&delegation.nonce));
 
         // 3. Rollback test 1: Restore OLD trust-state.json (epoch 1) & backup -> MUST BE REJECTED by SQLite trust-ledger.db!
         fs::write(updater.trust_state_path(), &old_trust_json).unwrap();
         let _ = fs::write(updater.trust_state_backup_path(), &old_trust_json);
         let rollback_err = updater.read_trust_state().unwrap_err().to_string();
-        assert!(rollback_err.contains("TRUST_STATE_ROLLBACK_DETECTED"), "got: {}", rollback_err);
+        assert!(
+            rollback_err.contains("TRUST_STATE_ROLLBACK_DETECTED"),
+            "got: {}",
+            rollback_err
+        );
 
         // Restore valid epoch=2 trust-state.json so we can test rollback BEFORE & AFTER revoking old key
-        updater.sync_trust_ledger_db(&ts_after_rot, "restore_test", "restore").ok();
+        updater
+            .sync_trust_ledger_db(&ts_after_rot, "restore_test", "restore")
+            .ok();
         let bytes2 = serde_json::to_vec_pretty(&ts_after_rot).unwrap();
         fs::write(updater.trust_state_path(), &bytes2).unwrap();
         fs::write(updater.trust_state_backup_path(), &bytes2).unwrap();
@@ -3726,16 +4190,31 @@ mod tests {
         u2.upgrade_from_release(&rel_110, &opts).unwrap();
         let ts_rev = u2.revoke_pubkey(&pub_old, "compromised_old_key").unwrap();
         assert_eq!(ts_rev.trust_epoch, 3);
-        let rev_rb_err = u2.rollback_to_previous(false, true).unwrap_err().to_string();
-        assert!(rev_rb_err.contains("ROLLBACK_ROOT_OF_TRUST_UNTRUSTED"), "got: {}", rev_rb_err);
+        let rev_rb_err = u2
+            .rollback_to_previous(false, true)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            rev_rb_err.contains("ROLLBACK_ROOT_OF_TRUST_UNTRUSTED"),
+            "got: {}",
+            rev_rb_err
+        );
 
         // Attempt to replace trust-state.json to bring revoked old key back -> BLOCKED by trust-ledger.db!
         let mut forged_ts = ts_rev.clone();
         forged_ts.revoked_pubkeys.clear();
         forged_ts.trusted_pubkeys.push(pub_old.clone());
-        fs::write(u2.trust_state_path(), serde_json::to_vec_pretty(&forged_ts).unwrap()).unwrap();
+        fs::write(
+            u2.trust_state_path(),
+            serde_json::to_vec_pretty(&forged_ts).unwrap(),
+        )
+        .unwrap();
         let forged_err = u2.read_trust_state().unwrap_err().to_string();
-        assert!(forged_err.contains("TRUST_STATE_ROLLBACK_DETECTED"), "got: {}", forged_err);
+        assert!(
+            forged_err.contains("TRUST_STATE_ROLLBACK_DETECTED"),
+            "got: {}",
+            forged_err
+        );
 
         // 5. Simulate interrupted crash at Activated stage during KeyRotationDelegation -> reconcile synchronizes Trust State <-> Active Release <-> Nonce Ledger!
         let install_crash = tmp.join("installed/CrashRotTool");
@@ -3757,9 +4236,17 @@ mod tests {
             source_release_dir: rel_110.to_string_lossy().to_string(),
             stage: UpdateStage::Activated,
             backup_db_path: None,
-            live_db_path: u3.data_dir().join("runtime_p54-trust.db").to_string_lossy().to_string(),
+            live_db_path: u3
+                .data_dir()
+                .join("runtime_p54-trust.db")
+                .to_string_lossy()
+                .to_string(),
             staged_staging_dir: None,
-            staged_version_dir: u3.versions_dir().join("v1.1.0").to_string_lossy().to_string(),
+            staged_version_dir: u3
+                .versions_dir()
+                .join("v1.1.0")
+                .to_string_lossy()
+                .to_string(),
             previous_active_pointer: Some(pre_ptr),
             target_compat: CompatibilityVersions::default(),
             auto_resume_blocked_jobs: vec![],
@@ -3771,7 +4258,10 @@ mod tests {
         assert_eq!(rec.status, "RECOVERED_ROLL_FORWARD");
         let rec_ts = u3.read_trust_state().unwrap().unwrap();
         assert!(rec_ts.used_rotation_nonces.contains(&delegation.nonce));
-        assert!(rec_ts.trusted_pubkeys.iter().any(|k| k.eq_ignore_ascii_case(&pub_new)));
+        assert!(rec_ts
+            .trusted_pubkeys
+            .iter()
+            .any(|k| k.eq_ignore_ascii_case(&pub_new)));
 
         let _ = fs::remove_dir_all(&tmp);
     }
@@ -3794,109 +4284,207 @@ mod tests {
         let key_old = SigningKey::from_bytes(&[61u8; 32]);
         let key_new = SigningKey::from_bytes(&[72u8; 32]);
         let key_rogue = SigningKey::from_bytes(&[99u8; 32]);
-        let pub_old: String = key_old.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-        let pub_new: String = key_new.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-        let pub_rogue: String = key_rogue.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let pub_old: String = key_old
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+        let pub_new: String = key_new
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+        let pub_rogue: String = key_rogue
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
 
-        let attach_with_manifest = |dir: &Path, sk: &SigningKey, pk_hex: &str, slug: &str, ver: &str, exe_name: &str, rot: Option<KeyRotationDelegation>| {
-            let bdir = dir.join("bundle");
-            let mut m: ReleaseBundleManifest =
-                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap()).unwrap();
-            m.publisher = Some(PublisherIdentitySpec {
-                publisher_id: "pub-p6-sec".to_string(),
-                display_name: "P6 Sec Publisher".to_string(),
-                organization: "P6 Sec Labs".to_string(),
-                website: None,
-                support_contact: None,
-                copyright: "Copyright (C) 2026 P6 Sec Labs".to_string(),
-                ed25519_key_id: "k-p6".to_string(),
-                ed25519_pubkey_hex: pk_hex.to_string(),
-                authenticode_cert_ref: None,
-                release_channel: "qa".to_string(),
-                signing_policy: SigningMode::UnsignedInternal,
-            });
-            m.signing = Some(ReleaseSigningMetadata {
-                signing_mode: SigningMode::UnsignedInternal,
-                publisher_id: "pub-p6-sec".to_string(),
-                publisher_organization: "P6 Sec Labs".to_string(),
-                release_channel: "qa".to_string(),
-                authenticode_trust_status: AuthenticodeTrustStatus::Unsigned,
-                trusted_public_release: false,
-                signer_thumbprint: None,
-                signer_subject: None,
-                version_info: PeVersionInfoSpec::default(),
-                key_rotation: rot,
-            });
-            let mb = serde_json::to_vec_pretty(&m).unwrap();
-            fs::write(bdir.join("manifest.fpbundle.json"), &mb).unwrap();
-            let mut sig_env: SignedBundleEnvelope =
-                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap()).unwrap();
-            sig_env.file_checksums.insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
-            let msha = sha256_hex(&mb);
-            let tjson = serde_json::to_string(&sig_env.file_checksums).unwrap();
-            let thash = sha256_hex(tjson.as_bytes());
-            let msg = fp_bundle_verify::canonical_signing_message(&sig_env.key_id, &msha, &thash);
-            let s = sk.sign(&msg);
-            sig_env.manifest_sha256 = msha;
-            sig_env.checksums_table_sha256 = thash;
-            sig_env.signature_ed25519_hex = s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-            fs::write(bdir.join("signature.fpbundle.json"), serde_json::to_vec_pretty(&sig_env).unwrap()).unwrap();
+        let attach_with_manifest =
+            |dir: &Path,
+             sk: &SigningKey,
+             pk_hex: &str,
+             slug: &str,
+             ver: &str,
+             exe_name: &str,
+             rot: Option<KeyRotationDelegation>| {
+                let bdir = dir.join("bundle");
+                let mut m: ReleaseBundleManifest =
+                    serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap())
+                        .unwrap();
+                m.publisher = Some(PublisherIdentitySpec {
+                    publisher_id: "pub-p6-sec".to_string(),
+                    display_name: "P6 Sec Publisher".to_string(),
+                    organization: "P6 Sec Labs".to_string(),
+                    website: None,
+                    support_contact: None,
+                    copyright: "Copyright (C) 2026 P6 Sec Labs".to_string(),
+                    ed25519_key_id: "k-p6".to_string(),
+                    ed25519_pubkey_hex: pk_hex.to_string(),
+                    authenticode_cert_ref: None,
+                    release_channel: "qa".to_string(),
+                    signing_policy: SigningMode::UnsignedInternal,
+                });
+                m.signing = Some(ReleaseSigningMetadata {
+                    signing_mode: SigningMode::UnsignedInternal,
+                    publisher_id: "pub-p6-sec".to_string(),
+                    publisher_organization: "P6 Sec Labs".to_string(),
+                    release_channel: "qa".to_string(),
+                    authenticode_trust_status: AuthenticodeTrustStatus::Unsigned,
+                    trusted_public_release: false,
+                    signer_thumbprint: None,
+                    signer_subject: None,
+                    version_info: PeVersionInfoSpec::default(),
+                    key_rotation: rot,
+                });
+                let mb = serde_json::to_vec_pretty(&m).unwrap();
+                fs::write(bdir.join("manifest.fpbundle.json"), &mb).unwrap();
+                let mut sig_env: SignedBundleEnvelope = serde_json::from_slice(
+                    &fs::read(bdir.join("signature.fpbundle.json")).unwrap(),
+                )
+                .unwrap();
+                sig_env
+                    .file_checksums
+                    .insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
+                let msha = sha256_hex(&mb);
+                let tjson = serde_json::to_string(&sig_env.file_checksums).unwrap();
+                let thash = sha256_hex(tjson.as_bytes());
+                let msg =
+                    fp_bundle_verify::canonical_signing_message(&sig_env.key_id, &msha, &thash);
+                let s = sk.sign(&msg);
+                sig_env.manifest_sha256 = msha;
+                sig_env.checksums_table_sha256 = thash;
+                sig_env.signature_ed25519_hex =
+                    s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+                fs::write(
+                    bdir.join("signature.fpbundle.json"),
+                    serde_json::to_vec_pretty(&sig_env).unwrap(),
+                )
+                .unwrap();
 
-            fs::write(dir.join("THIRD_PARTY_NOTICES.txt"), b"Rust/Tauri/SQLite notices").unwrap();
-            let exe_bytes = fs::read(dir.join(exe_name)).unwrap();
-            let notices_bytes = fs::read(dir.join("THIRD_PARTY_NOTICES.txt")).unwrap();
-            let rm = ReleasePackageManifest {
-                package_schema_version: 1,
-                package_type: "mini_tool_portable_win_x64".to_string(),
-                project_slug: slug.to_string(),
-                product_name: "P6 Security Tool".to_string(),
-                version: ver.to_string(),
-                exe_name: exe_name.to_string(),
-                final_exe_sha256: sha256_hex(&exe_bytes),
-                built_at_utc: Utc::now().to_rfc3339(),
-                requirements: PortableRuntimeRequirements {
-                    requires_rust: false,
-                    requires_cargo: false,
-                    requires_node: false,
-                    requires_python: false,
-                    requires_windows_sdk: false,
-                    webview2_strategy: "Evergreen".to_string(),
-                    offline_ready: true,
-                    requires_internet_if_webview2_missing: true,
-                    data_isolation_policy: "External data/".to_string(),
-                },
-                publisher: m.publisher.clone(),
-                signing: m.signing.clone(),
-                distributed_files: vec![
-                    DistributedFileEntry {
-                        rel_path: exe_name.to_string(),
-                        size_bytes: exe_bytes.len() as u64,
-                        sha256: sha256_hex(&exe_bytes),
+                fs::write(
+                    dir.join("THIRD_PARTY_NOTICES.txt"),
+                    b"Rust/Tauri/SQLite notices",
+                )
+                .unwrap();
+                let exe_bytes = fs::read(dir.join(exe_name)).unwrap();
+                let notices_bytes = fs::read(dir.join("THIRD_PARTY_NOTICES.txt")).unwrap();
+                let rm = ReleasePackageManifest {
+                    package_schema_version: 1,
+                    package_type: "mini_tool_portable_win_x64".to_string(),
+                    project_slug: slug.to_string(),
+                    product_name: "P6 Security Tool".to_string(),
+                    version: ver.to_string(),
+                    exe_name: exe_name.to_string(),
+                    final_exe_sha256: sha256_hex(&exe_bytes),
+                    built_at_utc: Utc::now().to_rfc3339(),
+                    requirements: PortableRuntimeRequirements {
+                        requires_rust: false,
+                        requires_cargo: false,
+                        requires_node: false,
+                        requires_python: false,
+                        requires_windows_sdk: false,
+                        webview2_strategy: "Evergreen".to_string(),
+                        offline_ready: true,
+                        requires_internet_if_webview2_missing: true,
+                        data_isolation_policy: "External data/".to_string(),
                     },
-                    DistributedFileEntry {
-                        rel_path: "THIRD_PARTY_NOTICES.txt".to_string(),
-                        size_bytes: notices_bytes.len() as u64,
-                        sha256: sha256_hex(&notices_bytes),
-                    },
-                ],
-                third_party_notices: vec!["Tauri MIT".to_string()],
+                    publisher: m.publisher.clone(),
+                    signing: m.signing.clone(),
+                    distributed_files: vec![
+                        DistributedFileEntry {
+                            rel_path: exe_name.to_string(),
+                            size_bytes: exe_bytes.len() as u64,
+                            sha256: sha256_hex(&exe_bytes),
+                        },
+                        DistributedFileEntry {
+                            rel_path: "THIRD_PARTY_NOTICES.txt".to_string(),
+                            size_bytes: notices_bytes.len() as u64,
+                            sha256: sha256_hex(&notices_bytes),
+                        },
+                    ],
+                    third_party_notices: vec!["Tauri MIT".to_string()],
+                };
+                fs::write(
+                    dir.join("release-manifest.json"),
+                    serde_json::to_vec_pretty(&rm).unwrap(),
+                )
+                .unwrap();
             };
-            fs::write(dir.join("release-manifest.json"), serde_json::to_vec_pretty(&rm).unwrap()).unwrap();
-        };
 
-        create_signed_test_release(&rel_100, "p6-sec", "Auto_P6Sec.exe", "1.0.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [61u8; 32]);
-        attach_with_manifest(&rel_100, &key_old, &pub_old, "p6-sec", "1.0.0", "Auto_P6Sec.exe", None);
+        create_signed_test_release(
+            &rel_100,
+            "p6-sec",
+            "Auto_P6Sec.exe",
+            "1.0.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [61u8; 32],
+        );
+        attach_with_manifest(
+            &rel_100,
+            &key_old,
+            &pub_old,
+            "p6-sec",
+            "1.0.0",
+            "Auto_P6Sec.exe",
+            None,
+        );
 
-        let delegation = ProducerKeyManager::sign_key_rotation_delegation(&key_old, &pub_new, "pub-p6-sec", "p6-sec", 30);
-        create_signed_test_release(&rel_110, "p6-sec", "Auto_P6Sec.exe", "1.1.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [72u8; 32]);
-        attach_with_manifest(&rel_110, &key_new, &pub_new, "p6-sec", "1.1.0", "Auto_P6Sec.exe", Some(delegation));
+        let delegation = ProducerKeyManager::sign_key_rotation_delegation(
+            &key_old,
+            &pub_new,
+            "pub-p6-sec",
+            "p6-sec",
+            30,
+        );
+        create_signed_test_release(
+            &rel_110,
+            "p6-sec",
+            "Auto_P6Sec.exe",
+            "1.1.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [72u8; 32],
+        );
+        attach_with_manifest(
+            &rel_110,
+            &key_new,
+            &pub_new,
+            "p6-sec",
+            "1.1.0",
+            "Auto_P6Sec.exe",
+            Some(delegation),
+        );
 
-        create_signed_test_release(&rel_rogue, "p6-sec", "Auto_P6Sec.exe", "9.9.9", CURRENT_SQLITE_SCHEMA_VERSION, 1, [99u8; 32]);
-        attach_with_manifest(&rel_rogue, &key_rogue, &pub_rogue, "p6-sec", "9.9.9", "Auto_P6Sec.exe", None);
+        create_signed_test_release(
+            &rel_rogue,
+            "p6-sec",
+            "Auto_P6Sec.exe",
+            "9.9.9",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [99u8; 32],
+        );
+        attach_with_manifest(
+            &rel_rogue,
+            &key_rogue,
+            &pub_rogue,
+            "p6-sec",
+            "9.9.9",
+            "Auto_P6Sec.exe",
+            None,
+        );
 
         let install_root = tmp.join("installed/P6SecTool");
         let updater = MiniToolUpdater::new_with_external_anchor(&install_root, &anchor_dir);
-        let opts = UpdateExecutionOptions { skip_child_verify_exec: true, ..Default::default() };
+        let opts = UpdateExecutionOptions {
+            skip_child_verify_exec: true,
+            ..Default::default()
+        };
 
         // 1. Install v1.0.0 (epoch 1) and snapshot ALL THREE `.updater` files (`trust-state.json`, `.bak.json`, `trust-ledger.db`)
         updater.install_initial(&rel_100, &opts).unwrap();
@@ -3909,7 +4497,10 @@ mod tests {
         assert_eq!(rev_st.trust_epoch, 3);
 
         // Clean up legacy v1.0.0 first vs test audit catches revoked v1.0.0 still on disk
-        let old_ver_err = updater.verify_install_security_audit().unwrap_err().to_string();
+        let old_ver_err = updater
+            .verify_install_security_audit()
+            .unwrap_err()
+            .to_string();
         assert!(old_ver_err.contains("KEY_REVOKED"), "got: {}", old_ver_err);
 
         fs::remove_dir_all(updater.versions_dir().join("v1.0.0")).unwrap();
@@ -3926,15 +4517,33 @@ mod tests {
         let _ = fs::remove_dir_all(updater.updater_dir());
         copy_dir_recursive(&triad_epoch1, &updater.updater_dir()).unwrap();
         let triad_err = updater.read_trust_state().unwrap_err().to_string();
-        assert!(triad_err.contains("FULL_TRIAD_ROLLBACK_DETECTED"), "got: {}", triad_err);
-        let audit_triad_err = updater.verify_install_security_audit().unwrap_err().to_string();
-        assert!(audit_triad_err.contains("FULL_TRIAD_ROLLBACK_DETECTED"), "got: {}", audit_triad_err);
+        assert!(
+            triad_err.contains("FULL_TRIAD_ROLLBACK_DETECTED"),
+            "got: {}",
+            triad_err
+        );
+        let audit_triad_err = updater
+            .verify_install_security_audit()
+            .unwrap_err()
+            .to_string();
+        assert!(
+            audit_triad_err.contains("FULL_TRIAD_ROLLBACK_DETECTED"),
+            "got: {}",
+            audit_triad_err
+        );
 
         // 4. Attack B: Total `.updater` & pointer deletion + attempt to reinstall old revoked key release!
         let _ = fs::remove_dir_all(updater.updater_dir());
         let _ = fs::remove_file(updater.active_pointer_path());
-        let wipe_err = updater.install_initial(&rel_100, &opts).unwrap_err().to_string();
-        assert!(wipe_err.contains("FULL_TRIAD_ROLLBACK_DETECTED"), "got: {}", wipe_err);
+        let wipe_err = updater
+            .install_initial(&rel_100, &opts)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            wipe_err.contains("FULL_TRIAD_ROLLBACK_DETECTED"),
+            "got: {}",
+            wipe_err
+        );
 
         // Restore valid epoch 3 state
         copy_dir_recursive(&triad_epoch3, &updater.updater_dir()).unwrap();
@@ -3943,14 +4552,35 @@ mod tests {
 
         // 5. Attack C: Rogue version directory planted inside versions/v9.9.9/
         copy_dir_recursive(&rel_rogue, &updater.versions_dir().join("v9.9.9")).unwrap();
-        let rogue_err = updater.verify_install_security_audit().unwrap_err().to_string();
-        assert!(rogue_err.contains("ROGUE_VERSION_DIR_DETECTED"), "got: {}", rogue_err);
+        let rogue_err = updater
+            .verify_install_security_audit()
+            .unwrap_err()
+            .to_string();
+        assert!(
+            rogue_err.contains("ROGUE_VERSION_DIR_DETECTED"),
+            "got: {}",
+            rogue_err
+        );
         fs::remove_dir_all(updater.versions_dir().join("v9.9.9")).unwrap();
 
         // 6. Attack D: Tamper distributed non-bundle file covered by release-manifest.json
-        fs::write(updater.versions_dir().join("v1.1.0").join("THIRD_PARTY_NOTICES.txt"), b"TAMPERED_NOTICE").unwrap();
-        let rm_err = updater.verify_install_security_audit().unwrap_err().to_string();
-        assert!(rm_err.contains("RELEASE_MANIFEST_TAMPERED"), "got: {}", rm_err);
+        fs::write(
+            updater
+                .versions_dir()
+                .join("v1.1.0")
+                .join("THIRD_PARTY_NOTICES.txt"),
+            b"TAMPERED_NOTICE",
+        )
+        .unwrap();
+        let rm_err = updater
+            .verify_install_security_audit()
+            .unwrap_err()
+            .to_string();
+        assert!(
+            rm_err.contains("RELEASE_MANIFEST_TAMPERED"),
+            "got: {}",
+            rm_err
+        );
 
         let _ = fs::remove_dir_all(&tmp);
     }
@@ -3970,13 +4600,27 @@ mod tests {
 
         let key_old = SigningKey::from_bytes(&[81u8; 32]);
         let key_new = SigningKey::from_bytes(&[82u8; 32]);
-        let pub_old: String = key_old.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-        let pub_new: String = key_new.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let pub_old: String = key_old
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+        let pub_new: String = key_new
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
 
-        let attach = |dir: &Path, sk: &SigningKey, pk_hex: &str, rot: Option<KeyRotationDelegation>| {
+        let attach = |dir: &Path,
+                      sk: &SigningKey,
+                      pk_hex: &str,
+                      rot: Option<KeyRotationDelegation>| {
             let bdir = dir.join("bundle");
             let mut m: ReleaseBundleManifest =
-                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap()).unwrap();
+                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap())
+                    .unwrap();
             m.publisher = Some(PublisherIdentitySpec {
                 publisher_id: "pub-p6-reupg".to_string(),
                 display_name: "P6 Reupgrade Publisher".to_string(),
@@ -4005,8 +4649,11 @@ mod tests {
             let mb = serde_json::to_vec_pretty(&m).unwrap();
             fs::write(bdir.join("manifest.fpbundle.json"), &mb).unwrap();
             let mut sig_env: SignedBundleEnvelope =
-                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap()).unwrap();
-            sig_env.file_checksums.insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
+                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap())
+                    .unwrap();
+            sig_env
+                .file_checksums
+                .insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
             let msha = sha256_hex(&mb);
             let tjson = serde_json::to_string(&sig_env.file_checksums).unwrap();
             let thash = sha256_hex(tjson.as_bytes());
@@ -4014,23 +4661,61 @@ mod tests {
             let s = sk.sign(&msg);
             sig_env.manifest_sha256 = msha;
             sig_env.checksums_table_sha256 = thash;
-            sig_env.signature_ed25519_hex = s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-            fs::write(bdir.join("signature.fpbundle.json"), serde_json::to_vec_pretty(&sig_env).unwrap()).unwrap();
+            sig_env.signature_ed25519_hex =
+                s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+            fs::write(
+                bdir.join("signature.fpbundle.json"),
+                serde_json::to_vec_pretty(&sig_env).unwrap(),
+            )
+            .unwrap();
         };
 
-        create_signed_test_release(&rel_100, "p6-reupg", "Auto_Reupg.exe", "1.0.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [81u8; 32]);
+        create_signed_test_release(
+            &rel_100,
+            "p6-reupg",
+            "Auto_Reupg.exe",
+            "1.0.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [81u8; 32],
+        );
         attach(&rel_100, &key_old, &pub_old, None);
 
-        let delegation = ProducerKeyManager::sign_key_rotation_delegation(&key_old, &pub_new, "pub-p6-reupg", "p6-reupg", 30);
-        create_signed_test_release(&rel_110, "p6-reupg", "Auto_Reupg.exe", "1.1.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [82u8; 32]);
+        let delegation = ProducerKeyManager::sign_key_rotation_delegation(
+            &key_old,
+            &pub_new,
+            "pub-p6-reupg",
+            "p6-reupg",
+            30,
+        );
+        create_signed_test_release(
+            &rel_110,
+            "p6-reupg",
+            "Auto_Reupg.exe",
+            "1.1.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [82u8; 32],
+        );
         attach(&rel_110, &key_new, &pub_new, Some(delegation.clone()));
 
-        create_signed_test_release(&rel_120_direct, "p6-reupg", "Auto_Reupg.exe", "1.2.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [82u8; 32]);
+        create_signed_test_release(
+            &rel_120_direct,
+            "p6-reupg",
+            "Auto_Reupg.exe",
+            "1.2.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [82u8; 32],
+        );
         attach(&rel_120_direct, &key_new, &pub_new, None);
 
         let install_root = tmp.join("installed/LegitReupg");
         let updater = MiniToolUpdater::new_with_external_anchor(&install_root, &anchor_dir);
-        let opts = UpdateExecutionOptions { skip_child_verify_exec: true, ..Default::default() };
+        let opts = UpdateExecutionOptions {
+            skip_child_verify_exec: true,
+            ..Default::default()
+        };
 
         // 1. Install v1.0.0 -> Upgrade v1.1.0 -> Rollback v1.0.0 -> Legitimate Re-Upgrade v1.1.0 -> Rollback -> Direct v1.2.0 (already-trusted key)
         updater.install_initial(&rel_100, &opts).unwrap();
@@ -4041,7 +4726,9 @@ mod tests {
         let reupg = updater.upgrade_from_release(&rel_110, &opts).unwrap();
         assert_eq!(reupg.active_version, "1.1.0");
         updater.rollback_to_previous(false, true).unwrap();
-        let direct120 = updater.upgrade_from_release(&rel_120_direct, &opts).unwrap();
+        let direct120 = updater
+            .upgrade_from_release(&rel_120_direct, &opts)
+            .unwrap();
         assert_eq!(direct120.active_version, "1.2.0");
 
         // 2. Real Unauthorized Replay Attack on separate install where ONLY OldKey is trusted & nonce is already spent
@@ -4052,8 +4739,15 @@ mod tests {
         ts_rep.used_rotation_nonces.push(delegation.nonce.clone());
         ts_rep.trust_epoch += 1;
         u_replay.write_trust_state(&ts_rep).unwrap();
-        let rep_err = u_replay.upgrade_from_release(&rel_110, &opts).unwrap_err().to_string();
-        assert!(rep_err.contains("KEY_ROTATION_NONCE_REPLAYED"), "got: {}", rep_err);
+        let rep_err = u_replay
+            .upgrade_from_release(&rel_110, &opts)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            rep_err.contains("KEY_ROTATION_NONCE_REPLAYED"),
+            "got: {}",
+            rep_err
+        );
 
         // 3. Empirical 6-Component Same-User Simultaneous Compromise Demonstration
         // Snapshot epoch 1 across ALL same-user writable artifacts (local .updater + external anchor + pointer + versions/)
@@ -4092,8 +4786,18 @@ mod tests {
         let anchor_dir = tmp.join("ext_anchors");
         let key_old = SigningKey::from_bytes(&[91u8; 32]);
         let key_new = SigningKey::from_bytes(&[92u8; 32]);
-        let pub_old: String = key_old.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-        let pub_new: String = key_new.verifying_key().to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+        let pub_old: String = key_old
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+        let pub_new: String = key_new
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
 
         let sign_bundle = |dir: &Path,
                            sk: &SigningKey,
@@ -4103,7 +4807,8 @@ mod tests {
                            channel: &str| {
             let bdir = dir.join("bundle");
             let mut m: ReleaseBundleManifest =
-                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap()).unwrap();
+                serde_json::from_slice(&fs::read(bdir.join("manifest.fpbundle.json")).unwrap())
+                    .unwrap();
             m.publisher = Some(PublisherIdentitySpec {
                 publisher_id: "pub-p6-gate".to_string(),
                 display_name: "P6 Gate Publisher".to_string(),
@@ -4132,8 +4837,11 @@ mod tests {
             let mb = serde_json::to_vec_pretty(&m).unwrap();
             fs::write(bdir.join("manifest.fpbundle.json"), &mb).unwrap();
             let mut sig_env: SignedBundleEnvelope =
-                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap()).unwrap();
-            sig_env.file_checksums.insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
+                serde_json::from_slice(&fs::read(bdir.join("signature.fpbundle.json")).unwrap())
+                    .unwrap();
+            sig_env
+                .file_checksums
+                .insert("manifest.fpbundle.json".to_string(), sha256_hex(&mb));
             let msha = sha256_hex(&mb);
             let tjson = serde_json::to_string(&sig_env.file_checksums).unwrap();
             let thash = sha256_hex(tjson.as_bytes());
@@ -4141,8 +4849,13 @@ mod tests {
             let s = sk.sign(&msg);
             sig_env.manifest_sha256 = msha;
             sig_env.checksums_table_sha256 = thash;
-            sig_env.signature_ed25519_hex = s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
-            fs::write(bdir.join("signature.fpbundle.json"), serde_json::to_vec_pretty(&sig_env).unwrap()).unwrap();
+            sig_env.signature_ed25519_hex =
+                s.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+            fs::write(
+                bdir.join("signature.fpbundle.json"),
+                serde_json::to_vec_pretty(&sig_env).unwrap(),
+            )
+            .unwrap();
         };
 
         let rel_100 = tmp.join("rel_100");
@@ -4151,24 +4864,114 @@ mod tests {
         let rel_130_policy = tmp.join("rel_130_policy");
         let rel_140_compat = tmp.join("rel_140_compat");
 
-        let deleg = ProducerKeyManager::sign_key_rotation_delegation(&key_old, &pub_new, "pub-p6-gate", "p6-gate", 30);
-        create_signed_test_release(&rel_100, "p6-gate", "Auto_Gate.exe", "1.0.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [91u8; 32]);
-        sign_bundle(&rel_100, &key_old, &pub_old, None, SigningMode::UnsignedInternal, "qa");
+        let deleg = ProducerKeyManager::sign_key_rotation_delegation(
+            &key_old,
+            &pub_new,
+            "pub-p6-gate",
+            "p6-gate",
+            30,
+        );
+        create_signed_test_release(
+            &rel_100,
+            "p6-gate",
+            "Auto_Gate.exe",
+            "1.0.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [91u8; 32],
+        );
+        sign_bundle(
+            &rel_100,
+            &key_old,
+            &pub_old,
+            None,
+            SigningMode::UnsignedInternal,
+            "qa",
+        );
 
-        create_signed_test_release(&rel_110, "p6-gate", "Auto_Gate.exe", "1.1.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [92u8; 32]);
-        sign_bundle(&rel_110, &key_new, &pub_new, Some(deleg), SigningMode::UnsignedInternal, "qa");
+        create_signed_test_release(
+            &rel_110,
+            "p6-gate",
+            "Auto_Gate.exe",
+            "1.1.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [92u8; 32],
+        );
+        sign_bundle(
+            &rel_110,
+            &key_new,
+            &pub_new,
+            Some(deleg),
+            SigningMode::UnsignedInternal,
+            "qa",
+        );
 
-        create_signed_test_release(&rel_120_direct, "p6-gate", "Auto_Gate.exe", "1.2.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [92u8; 32]);
-        sign_bundle(&rel_120_direct, &key_new, &pub_new, None, SigningMode::UnsignedInternal, "qa");
+        create_signed_test_release(
+            &rel_120_direct,
+            "p6-gate",
+            "Auto_Gate.exe",
+            "1.2.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [92u8; 32],
+        );
+        sign_bundle(
+            &rel_120_direct,
+            &key_new,
+            &pub_new,
+            None,
+            SigningMode::UnsignedInternal,
+            "qa",
+        );
 
-        create_signed_test_release(&rel_130_policy, "p6-gate", "Auto_Gate.exe", "1.3.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [92u8; 32]);
-        sign_bundle(&rel_130_policy, &key_new, &pub_new, None, SigningMode::PublicSigned, "production");
+        create_signed_test_release(
+            &rel_130_policy,
+            "p6-gate",
+            "Auto_Gate.exe",
+            "1.3.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [92u8; 32],
+        );
+        sign_bundle(
+            &rel_130_policy,
+            &key_new,
+            &pub_new,
+            None,
+            SigningMode::PublicSigned,
+            "production",
+        );
 
-        create_signed_test_release(&rel_140_compat, "p6-gate", "Auto_Gate.exe", "1.4.0", CURRENT_SQLITE_SCHEMA_VERSION + 50, 99, [92u8; 32]);
-        let deleg_compat = ProducerKeyManager::sign_key_rotation_delegation(&key_old, &pub_new, "pub-p6-gate", "p6-gate", 31);
-        sign_bundle(&rel_140_compat, &key_new, &pub_new, Some(deleg_compat), SigningMode::UnsignedInternal, "qa");
+        create_signed_test_release(
+            &rel_140_compat,
+            "p6-gate",
+            "Auto_Gate.exe",
+            "1.4.0",
+            CURRENT_SQLITE_SCHEMA_VERSION + 50,
+            99,
+            [92u8; 32],
+        );
+        let deleg_compat = ProducerKeyManager::sign_key_rotation_delegation(
+            &key_old,
+            &pub_new,
+            "pub-p6-gate",
+            "p6-gate",
+            31,
+        );
+        sign_bundle(
+            &rel_140_compat,
+            &key_new,
+            &pub_new,
+            Some(deleg_compat),
+            SigningMode::UnsignedInternal,
+            "qa",
+        );
 
-        let opts = UpdateExecutionOptions { skip_child_verify_exec: true, ..Default::default() };
+        let opts = UpdateExecutionOptions {
+            skip_child_verify_exec: true,
+            ..Default::default()
+        };
 
         // Part A: Previously-trusted key gets revoked after rollback -> re-upgrade & direct upgrade MUST fail
         let rev_root = tmp.join("inst_revoked");
@@ -4176,13 +4979,26 @@ mod tests {
         u_rev.install_initial(&rel_100, &opts).unwrap();
         u_rev.upgrade_from_release(&rel_110, &opts).unwrap();
         u_rev.rollback_to_previous(false, true).unwrap();
-        u_rev.revoke_pubkey(&pub_new, "compromised_after_rollback").unwrap();
+        u_rev
+            .revoke_pubkey(&pub_new, "compromised_after_rollback")
+            .unwrap();
 
-        let err_reupg_revoked = u_rev.upgrade_from_release(&rel_110, &opts).unwrap_err().to_string();
-        assert!(err_reupg_revoked.contains("KEY_REVOKED"), "got: {}", err_reupg_revoked);
-        let err_direct_revoked = u_rev.upgrade_from_release(&rel_120_direct, &opts).unwrap_err().to_string();
+        let err_reupg_revoked = u_rev
+            .upgrade_from_release(&rel_110, &opts)
+            .unwrap_err()
+            .to_string();
         assert!(
-            err_direct_revoked.contains("UPDATE_ROOT_OF_TRUST_UNTRUSTED") || err_direct_revoked.contains("KEY_REVOKED"),
+            err_reupg_revoked.contains("KEY_REVOKED"),
+            "got: {}",
+            err_reupg_revoked
+        );
+        let err_direct_revoked = u_rev
+            .upgrade_from_release(&rel_120_direct, &opts)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err_direct_revoked.contains("UPDATE_ROOT_OF_TRUST_UNTRUSTED")
+                || err_direct_revoked.contains("KEY_REVOKED"),
             "got: {}",
             err_direct_revoked
         );
@@ -4192,7 +5008,10 @@ mod tests {
         st_both.trusted_pubkeys.push(pub_new.clone());
         st_both.trust_epoch += 1;
         u_rev.write_trust_state(&st_both).unwrap();
-        let err_both = u_rev.upgrade_from_release(&rel_110, &opts).unwrap_err().to_string();
+        let err_both = u_rev
+            .upgrade_from_release(&rel_110, &opts)
+            .unwrap_err()
+            .to_string();
         assert!(err_both.contains("KEY_REVOKED"), "got: {}", err_both);
 
         // Part B: Non-revoked already-trusted key after rollback still MUST enforce release policy & compat gate
@@ -4202,12 +5021,33 @@ mod tests {
         u_gate.upgrade_from_release(&rel_110, &opts).unwrap();
         u_gate.rollback_to_previous(false, true).unwrap();
 
-        let err_policy = u_gate.upgrade_from_release(&rel_130_policy, &opts).unwrap_err().to_string();
-        assert!(err_policy.contains("AUTHENTICODE_PUBLIC_TRUST_REQUIRED"), "got: {}", err_policy);
+        let err_policy = u_gate
+            .upgrade_from_release(&rel_130_policy, &opts)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err_policy.contains("AUTHENTICODE_PUBLIC_TRUST_REQUIRED"),
+            "got: {}",
+            err_policy
+        );
 
-        let err_compat = u_gate.upgrade_from_release(&rel_140_compat, &opts).unwrap_err().to_string();
-        assert!(err_compat.contains("COMPATIBILITY_ERROR"), "got: {}", err_compat);
-        assert_eq!(u_gate.read_active_pointer().unwrap().unwrap().active_version, "1.0.0");
+        let err_compat = u_gate
+            .upgrade_from_release(&rel_140_compat, &opts)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err_compat.contains("COMPATIBILITY_ERROR"),
+            "got: {}",
+            err_compat
+        );
+        assert_eq!(
+            u_gate
+                .read_active_pointer()
+                .unwrap()
+                .unwrap()
+                .active_version,
+            "1.0.0"
+        );
 
         let _ = fs::remove_dir_all(&tmp);
     }
@@ -4246,7 +5086,9 @@ mod tests {
         let mut perms = fs::metadata(&ro_file).unwrap().permissions();
         perms.set_readonly(true);
         fs::set_permissions(&ro_file, perms).unwrap();
-        let ro_err = atomic_write_file(&ro_file, b"OVERWRITE_FAIL").unwrap_err().to_string();
+        let ro_err = atomic_write_file(&ro_file, b"OVERWRITE_FAIL")
+            .unwrap_err()
+            .to_string();
         assert!(ro_err.contains("ACTIVE_POINTER_LOCKED"), "got: {}", ro_err);
         assert_eq!(fs::read(&ro_file).unwrap(), b"ORIGINAL_RO");
         let ro_tmps: Vec<_> = fs::read_dir(&tmp)
@@ -4254,7 +5096,11 @@ mod tests {
             .filter_map(|e| e.ok())
             .filter(|e| e.file_name().to_string_lossy().contains(".tmp."))
             .collect();
-        assert!(ro_tmps.is_empty(), "leftover tmp files found: {:?}", ro_tmps);
+        assert!(
+            ro_tmps.is_empty(),
+            "leftover tmp files found: {:?}",
+            ro_tmps
+        );
         let mut perms_w = fs::metadata(&ro_file).unwrap().permissions();
         perms_w.set_readonly(false);
         let _ = fs::set_permissions(&ro_file, perms_w);
@@ -4262,7 +5108,11 @@ mod tests {
         // 2. Prolonged exclusive Win32 lock (> 140ms retry window) -> retry exhaustion preserves original & cleans tmp
         let lock_file = tmp.join("locked_long.json");
         fs::write(&lock_file, b"ORIGINAL_LOCKED").unwrap();
-        let lock_w: Vec<u16> = lock_file.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+        let lock_w: Vec<u16> = lock_file
+            .as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
         let h_long = unsafe {
             CreateFileW(
                 lock_w.as_ptr(),
@@ -4276,11 +5126,23 @@ mod tests {
         };
         assert_ne!(h_long, (-1isize) as *mut core::ffi::c_void);
         let t0 = std::time::Instant::now();
-        let long_err = atomic_write_file(&lock_file, b"SHOULD_FAIL").unwrap_err().to_string();
+        let long_err = atomic_write_file(&lock_file, b"SHOULD_FAIL")
+            .unwrap_err()
+            .to_string();
         let elapsed = t0.elapsed();
-        unsafe { CloseHandle(h_long); }
-        assert!(long_err.contains("ACTIVE_POINTER_LOCKED"), "got: {}", long_err);
-        assert!(elapsed.as_millis() >= 110, "expected retry backoff elapsed >=110ms, got {:?}", elapsed);
+        unsafe {
+            CloseHandle(h_long);
+        }
+        assert!(
+            long_err.contains("ACTIVE_POINTER_LOCKED"),
+            "got: {}",
+            long_err
+        );
+        assert!(
+            elapsed.as_millis() >= 110,
+            "expected retry backoff elapsed >=110ms, got {:?}",
+            elapsed
+        );
         assert_eq!(fs::read(&lock_file).unwrap(), b"ORIGINAL_LOCKED");
 
         // 3. Transient lock released inside retry window (~55ms) -> retry succeeds transparently
@@ -4299,7 +5161,9 @@ mod tests {
         let h_short_addr = h_short as usize;
         let releaser = std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_millis(55));
-            unsafe { CloseHandle(h_short_addr as *mut core::ffi::c_void); }
+            unsafe {
+                CloseHandle(h_short_addr as *mut core::ffi::c_void);
+            }
         });
         atomic_write_file(&lock_file, b"TRANSIENT_RECOVERED").unwrap();
         releaser.join().unwrap();
@@ -4309,16 +5173,39 @@ mod tests {
         let rel_100 = tmp.join("rel_100");
         let rel_110 = tmp.join("rel_110");
         let anchor_dir = tmp.join("ext_anchors");
-        create_signed_test_release(&rel_100, "p6-io", "Auto_Io.exe", "1.0.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [93u8; 32]);
-        create_signed_test_release(&rel_110, "p6-io", "Auto_Io.exe", "1.1.0", CURRENT_SQLITE_SCHEMA_VERSION, 1, [93u8; 32]);
+        create_signed_test_release(
+            &rel_100,
+            "p6-io",
+            "Auto_Io.exe",
+            "1.0.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [93u8; 32],
+        );
+        create_signed_test_release(
+            &rel_110,
+            "p6-io",
+            "Auto_Io.exe",
+            "1.1.0",
+            CURRENT_SQLITE_SCHEMA_VERSION,
+            1,
+            [93u8; 32],
+        );
 
         let install_root = tmp.join("inst_io");
         let updater = MiniToolUpdater::new_with_external_anchor(&install_root, &anchor_dir);
-        let opts = UpdateExecutionOptions { skip_child_verify_exec: true, ..Default::default() };
+        let opts = UpdateExecutionOptions {
+            skip_child_verify_exec: true,
+            ..Default::default()
+        };
         updater.install_initial(&rel_100, &opts).unwrap();
 
         let ptr_path = updater.active_pointer_path();
-        let ptr_w: Vec<u16> = ptr_path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+        let ptr_w: Vec<u16> = ptr_path
+            .as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
         // FILE_SHARE_READ allows preflight fs::read checks while blocking MoveFileExW replace with ERROR_SHARING_VIOLATION (32)
         let h_ptr = unsafe {
             CreateFileW(
@@ -4332,10 +5219,26 @@ mod tests {
             )
         };
         assert_ne!(h_ptr, (-1isize) as *mut core::ffi::c_void);
-        let upg_err = updater.upgrade_from_release(&rel_110, &opts).unwrap_err().to_string();
-        unsafe { CloseHandle(h_ptr); }
-        assert!(upg_err.contains("ACTIVE_POINTER_LOCKED"), "got: {}", upg_err);
-        assert_eq!(updater.read_active_pointer().unwrap().unwrap().active_version, "1.0.0");
+        let upg_err = updater
+            .upgrade_from_release(&rel_110, &opts)
+            .unwrap_err()
+            .to_string();
+        unsafe {
+            CloseHandle(h_ptr);
+        }
+        assert!(
+            upg_err.contains("ACTIVE_POINTER_LOCKED"),
+            "got: {}",
+            upg_err
+        );
+        assert_eq!(
+            updater
+                .read_active_pointer()
+                .unwrap()
+                .unwrap()
+                .active_version,
+            "1.0.0"
+        );
         assert_eq!(updater.read_trust_state().unwrap().unwrap().trust_epoch, 1);
 
         let rec = updater.reconcile_incomplete_journal(true).unwrap();

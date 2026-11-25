@@ -144,10 +144,7 @@ mod win_pe {
         unsafe {
             let h_update = BeginUpdateResourceW(exe_wide.as_ptr(), 0);
             if h_update.is_null() {
-                bail!(
-                    "BeginUpdateResourceW failed on {}",
-                    exe_path.display()
-                );
+                bail!("BeginUpdateResourceW failed on {}", exe_path.display());
             }
 
             // Write each RT_ICON layer (language 0x0409 = en-US, standard neutral/US resource slot)
@@ -215,11 +212,7 @@ mod win_pe {
                 0
             };
 
-            let h_ico1 = FindResourceW(
-                h_mod,
-                make_int_resource(1),
-                make_int_resource(RT_ICON_ID),
-            );
+            let h_ico1 = FindResourceW(h_mod, make_int_resource(1), make_int_resource(RT_ICON_ID));
             let ico1_size = if !h_ico1.is_null() {
                 SizeofResource(h_mod, h_ico1)
             } else {
@@ -277,7 +270,10 @@ pub fn inject_ed25519_pubkey_into_pe_exe(exe_path: &Path, pubkey_hex: &str) -> R
     }
 }
 
-pub fn verify_pe_embedded_pubkey_resource(exe_path: &Path, expected_pubkey_hex: &str) -> Result<String> {
+pub fn verify_pe_embedded_pubkey_resource(
+    exe_path: &Path,
+    expected_pubkey_hex: &str,
+) -> Result<String> {
     let embedded = read_pe_embedded_pubkey_from_exe(exe_path)?;
     if !embedded.eq_ignore_ascii_case(expected_pubkey_hex.trim()) {
         bail!(

@@ -9,6 +9,7 @@ fp-domain = { path = "../fp-domain" }
 fp-workflow-schema = { path = "../fp-workflow-schema" }
 fp-vision = { path = "../fp-vision" }
 fp-actions = { path = "../fp-actions" }
+fp-element = { path = "../fp-element" }
 fp-adb = { path = "../fp-adb" }
 fp-device = { path = "../fp-device" }
 fp-scheduler = { path = "../fp-scheduler" }

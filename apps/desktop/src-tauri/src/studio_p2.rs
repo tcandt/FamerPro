@@ -396,8 +396,8 @@ pub fn studio_vault_delete_secret(
 #[tauri::command]
 pub fn studio_get_producer_key_status() -> Result<ProducerKeyMetadata, String> {
     let ks_dir = ProducerKeystore::default_external_keystore_dir();
-    let (_, meta) = ProducerKeystore::load_or_create_signing_key(&ks_dir)
-        .map_err(|e| e.to_string())?;
+    let (_, meta) =
+        ProducerKeystore::load_or_create_signing_key(&ks_dir).map_err(|e| e.to_string())?;
     Ok(meta)
 }
 
@@ -486,7 +486,9 @@ pub fn studio_optimize_db(
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<DbOptimizeReport, String> {
     let st = state.lock().unwrap();
-    st.storage.optimize_wal_and_vacuum().map_err(|e| e.to_string())
+    st.storage
+        .optimize_wal_and_vacuum()
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -509,10 +511,8 @@ mod tests {
 
     #[test]
     fn test_tauri_p2_project_crud_and_isolation_layer() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_tauri_p2_ipc_test_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_tauri_p2_ipc_test_{}", uuid::Uuid::new_v4()));
         let projects_root = temp_dir.join("projects");
         let storage = Arc::new(StorageManager::new_in_memory().unwrap());
         let vault = CredentialVault::new();
@@ -583,18 +583,26 @@ mod tests {
         // Vault IPC handler tests (including error paths)
         assert!(parse_namespace("invalid_scope", None).is_err());
         assert!(parse_namespace("project", None).is_err());
-        let uri = handle_vault_set_secret(&state, "project", Some("ipc-game-one"), "test_key", "val1")
-            .unwrap();
+        let uri =
+            handle_vault_set_secret(&state, "project", Some("ipc-game-one"), "test_key", "val1")
+                .unwrap();
         assert!(uri.contains("FarmerPro/project/ipc-game-one/test_key"));
-        assert!(handle_vault_has_secret(&state, "project", Some("ipc-game-one"), "test_key").unwrap());
-        assert!(!handle_vault_has_secret(&state, "project", Some("ipc-game-two"), "test_key").unwrap());
+        assert!(
+            handle_vault_has_secret(&state, "project", Some("ipc-game-one"), "test_key").unwrap()
+        );
+        assert!(
+            !handle_vault_has_secret(&state, "project", Some("ipc-game-two"), "test_key").unwrap()
+        );
         assert_eq!(
             handle_vault_list_namespace(&state, "project", Some("ipc-game-one"))
                 .unwrap()
                 .len(),
             1
         );
-        assert!(handle_vault_delete_secret(&state, "project", Some("ipc-game-one"), "test_key").unwrap());
+        assert!(
+            handle_vault_delete_secret(&state, "project", Some("ipc-game-one"), "test_key")
+                .unwrap()
+        );
 
         // Portable producer key export/import IPC handler tests
         let ks_src = temp_dir.join("ks_src");

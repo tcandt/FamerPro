@@ -217,7 +217,11 @@ pub fn evaluate_bundle_compatibility(
         required_or_bundle: format!(">= {}", compat.min_runtime_version),
         runtime_supported: profile.runtime_version.clone(),
         compatible: rt_ok,
-        detail: if rt_ok { "Compatible".to_string() } else { "Runtime upgrade required".to_string() },
+        detail: if rt_ok {
+            "Compatible".to_string()
+        } else {
+            "Runtime upgrade required".to_string()
+        },
     });
 
     // 2. Workflow Schema Version (manifest + all individual workflows)
@@ -239,7 +243,11 @@ pub fn evaluate_bundle_compatibility(
         required_or_bundle: format!("v{} (max {})", compat.workflow_schema_version, wf_max),
         runtime_supported: format!("<= v{}", profile.max_workflow_schema_version),
         compatible: wf_ok,
-        detail: if wf_ok { "Compatible".to_string() } else { "Unsupported workflow schema version".to_string() },
+        detail: if wf_ok {
+            "Compatible".to_string()
+        } else {
+            "Unsupported workflow schema version".to_string()
+        },
     });
 
     // 3. UI Schema Version
@@ -256,7 +264,11 @@ pub fn evaluate_bundle_compatibility(
         required_or_bundle: format!("v{} (ui v{})", compat.ui_schema_version, ui_schema_version),
         runtime_supported: format!("<= v{}", profile.max_ui_schema_version),
         compatible: ui_ok,
-        detail: if ui_ok { "Compatible".to_string() } else { "Unsupported UI schema version".to_string() },
+        detail: if ui_ok {
+            "Compatible".to_string()
+        } else {
+            "Unsupported UI schema version".to_string()
+        },
     });
 
     // 4. Module API Version (same major, runtime minor >= required minor)
@@ -278,7 +290,11 @@ pub fn evaluate_bundle_compatibility(
         required_or_bundle: compat.module_api_version.clone(),
         runtime_supported: profile.module_api_version.clone(),
         compatible: mod_ok,
-        detail: if mod_ok { "Compatible".to_string() } else { "Breaking Module API version".to_string() },
+        detail: if mod_ok {
+            "Compatible".to_string()
+        } else {
+            "Breaking Module API version".to_string()
+        },
     });
 
     // 5. SQLite Schema Version
@@ -294,7 +310,11 @@ pub fn evaluate_bundle_compatibility(
         required_or_bundle: format!("v{}", compat.sqlite_schema_version),
         runtime_supported: format!("<= v{}", profile.max_sqlite_schema_version),
         compatible: sql_ok,
-        detail: if sql_ok { "Compatible".to_string() } else { "Target runtime cannot safely open newer DB schema".to_string() },
+        detail: if sql_ok {
+            "Compatible".to_string()
+        } else {
+            "Target runtime cannot safely open newer DB schema".to_string()
+        },
     });
 
     CompatibilityReport {
@@ -648,7 +668,12 @@ pub struct PeVersionInfoSpec {
 
 impl PeVersionInfoSpec {
     pub fn parse_quad_version(raw: &str) -> [u16; 4] {
-        let core = raw.trim().trim_start_matches('v').split('-').next().unwrap_or("0.1.0");
+        let core = raw
+            .trim()
+            .trim_start_matches('v')
+            .split('-')
+            .next()
+            .unwrap_or("0.1.0");
         let nums: Vec<u16> = core
             .split('.')
             .filter_map(|p| p.trim().parse::<u16>().ok())
@@ -857,10 +882,18 @@ pub fn resolve_writable_runtime_db_path(
                         None,
                     );
                 }
-                Err(e) => Some(format!("write_probe failed: {} (os error {:?})", e, e.raw_os_error())),
+                Err(e) => Some(format!(
+                    "write_probe failed: {} (os error {:?})",
+                    e,
+                    e.raw_os_error()
+                )),
             }
         }
-        Err(e) => Some(format!("create_dir_all failed: {} (os error {:?})", e, e.raw_os_error())),
+        Err(e) => Some(format!(
+            "create_dir_all failed: {} (os error {:?})",
+            e,
+            e.raw_os_error()
+        )),
     };
 
     let base_appdata = std::env::var("LOCALAPPDATA")
@@ -994,7 +1027,12 @@ pub fn detect_webview2_runtime_at(paths: &[&Path], reg_version: Option<&str>) ->
             if let Ok(entries) = std::fs::read_dir(p) {
                 for entry in entries.flatten() {
                     let name = entry.file_name().to_string_lossy().to_string();
-                    if name.chars().next().map(|ch| ch.is_ascii_digit()).unwrap_or(false) {
+                    if name
+                        .chars()
+                        .next()
+                        .map(|ch| ch.is_ascii_digit())
+                        .unwrap_or(false)
+                    {
                         return (
                             true,
                             format!(
@@ -1081,12 +1119,8 @@ mod tests {
         assert!(!wv2_ok);
         assert!(wv2_note.contains("WEBVIEW2_MISSING"));
 
-        let audit = audit_portable_environment_with_webview2(
-            &temp_base,
-            "wv2-test",
-            wv2_ok,
-            wv2_note,
-        );
+        let audit =
+            audit_portable_environment_with_webview2(&temp_base, "wv2-test", wv2_ok, wv2_note);
         assert!(!audit.webview2_evergreen_installed);
         assert!(!audit.offline_execution_ready);
         assert!(audit.requires_internet_if_webview2_missing);

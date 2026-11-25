@@ -1,8 +1,6 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
-use fp_domain::{
-    ActionReceipt, DeviceAdapterKind, DeviceDriver, Frame, ScreenGeometry, SwipePath,
-};
+use fp_domain::{ActionReceipt, DeviceAdapterKind, DeviceDriver, Frame, ScreenGeometry, SwipePath};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
@@ -298,7 +296,13 @@ impl DeviceRegistry {
         }
         let mut map = self.actors.write().unwrap();
         map.entry(device_id.to_string())
-            .or_insert_with(|| DeviceActorHandle::with_adapter(device_id.to_string(), adapter_kind, driver_factory()))
+            .or_insert_with(|| {
+                DeviceActorHandle::with_adapter(
+                    device_id.to_string(),
+                    adapter_kind,
+                    driver_factory(),
+                )
+            })
             .clone()
     }
 
@@ -366,9 +370,7 @@ mod tests {
         let driver = Arc::new(FakeDeviceDriver::new("fake-03", 1080, 1920));
         let handle = DeviceActorHandle::new("fake-03".to_string(), driver.clone());
 
-        driver
-            .should_fail_next_action
-            .store(true, Ordering::SeqCst);
+        driver.should_fail_next_action.store(true, Ordering::SeqCst);
 
         let failed_tap = handle.tap(100, 100, 1).await;
         assert!(failed_tap.is_err());

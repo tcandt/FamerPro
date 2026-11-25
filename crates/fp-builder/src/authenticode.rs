@@ -1,7 +1,5 @@
 use anyhow::{bail, Context, Result};
-use fp_bundle_contract::{
-    AuthenticodeTrustStatus, AuthenticodeVerificationReport, SigningMode,
-};
+use fp_bundle_contract::{AuthenticodeTrustStatus, AuthenticodeVerificationReport, SigningMode};
 use fp_bundle_verify::verify_authenticode_pe;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -52,7 +50,8 @@ pub fn discover_signing_toolchain() -> SigningToolchainStatus {
                 sdk_bundled_in_app: false,
                 searched_locations: searched,
                 unsigned_internal_supported: true,
-                guidance: "Using FP_SIGNTOOL_PATH override; UnsignedInternal works without SDK.".to_string(),
+                guidance: "Using FP_SIGNTOOL_PATH override; UnsignedInternal works without SDK."
+                    .to_string(),
             };
         }
     }
@@ -67,7 +66,8 @@ pub fn discover_signing_toolchain() -> SigningToolchainStatus {
                     sdk_bundled_in_app: false,
                     searched_locations: searched,
                     unsigned_internal_supported: true,
-                    guidance: "Found signtool.exe on PATH; SDK components are not bundled.".to_string(),
+                    guidance: "Found signtool.exe on PATH; SDK components are not bundled."
+                        .to_string(),
                 };
             }
         }
@@ -90,13 +90,16 @@ pub fn discover_signing_toolchain() -> SigningToolchainStatus {
                         sdk_bundled_in_app: false,
                         searched_locations: searched,
                         unsigned_internal_supported: true,
-                        guidance: "Detected Windows SDK signtool.exe on host (external SDK; not bundled).".to_string(),
+                        guidance:
+                            "Detected Windows SDK signtool.exe on host (external SDK; not bundled)."
+                                .to_string(),
                     };
                 }
             }
         }
     }
-    let kit_ack = Path::new(r"C:\Program Files (x86)\Windows Kits\10\App Certification Kit\signtool.exe");
+    let kit_ack =
+        Path::new(r"C:\Program Files (x86)\Windows Kits\10\App Certification Kit\signtool.exe");
     searched.push(kit_ack.to_string_lossy().to_string());
     if kit_ack.is_file() {
         return SigningToolchainStatus {
@@ -139,7 +142,10 @@ pub fn verify_publisher_matches_cert_subject(
     let Some(pub_spec) = publisher else {
         return (
             false,
-            format!("Certificate subject '{}' present, but no PublisherIdentitySpec declared.", subj),
+            format!(
+                "Certificate subject '{}' present, but no PublisherIdentitySpec declared.",
+                subj
+            ),
         );
     };
     let subj_lc = subj.to_ascii_lowercase();
@@ -150,7 +156,10 @@ pub fn verify_publisher_matches_cert_subject(
     if matches {
         (
             true,
-            format!("Certificate subject '{}' matches declared publisher '{}'", subj, pub_spec.organization),
+            format!(
+                "Certificate subject '{}' matches declared publisher '{}'",
+                subj, pub_spec.organization
+            ),
         )
     } else {
         (
@@ -254,11 +263,8 @@ pub fn sign_pe_authenticode_and_verify(
                 bail!("QA_CERT_NOT_CONFIGURED: SelfSignedQa requires an existing QA cert_ref or generated CertStore thumbprint");
             }
 
-            let mut args: Vec<String> = vec![
-                "sign".to_string(),
-                "/fd".to_string(),
-                "SHA256".to_string(),
-            ];
+            let mut args: Vec<String> =
+                vec!["sign".to_string(), "/fd".to_string(), "SHA256".to_string()];
             if let Some(ref desc) = req.description {
                 if !desc.trim().is_empty() {
                     args.push("/d".to_string());
@@ -269,7 +275,10 @@ pub fn sign_pe_authenticode_and_verify(
             let mut use_pfx_env_pwd = false;
             if let Some(pfx_path) = cert_ref_str.strip_prefix("PFX://") {
                 if !Path::new(pfx_path).is_file() {
-                    bail!("AUTHENTICODE_CERT_FILE_MISSING: PFX not found at {}", pfx_path);
+                    bail!(
+                        "AUTHENTICODE_CERT_FILE_MISSING: PFX not found at {}",
+                        pfx_path
+                    );
                 }
                 args.push("/f".to_string());
                 args.push(pfx_path.to_string());

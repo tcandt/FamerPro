@@ -153,9 +153,7 @@ fn load_and_verify_bundle(bundle_dir: &Path, is_demo_mode: bool) -> Result<MiniR
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
         .map(|p| p.to_path_buf())
-        .unwrap_or_else(|| {
-            std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
-        });
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
 
     // 1. Read Pinned Root-of-Trust Ed25519 Public Key directly from this executable's PE RT_RCDATA #7777 resource!
     //    An attacker CANNOT bypass verification by editing `bundle/trusted_publisher.pub` on disk.
@@ -323,8 +321,16 @@ fn base64_encode(bytes: &[u8]) -> String {
     let mut result = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
         let b0 = chunk[0] as usize;
-        let b1 = if chunk.len() > 1 { chunk[1] as usize } else { 0 };
-        let b2 = if chunk.len() > 2 { chunk[2] as usize } else { 0 };
+        let b1 = if chunk.len() > 1 {
+            chunk[1] as usize
+        } else {
+            0
+        };
+        let b2 = if chunk.len() > 2 {
+            chunk[2] as usize
+        } else {
+            0
+        };
         result.push(CHARSET[b0 >> 2] as char);
         result.push(CHARSET[((b0 & 0x03) << 4) | (b1 >> 4)] as char);
         result.push(if chunk.len() > 1 {
@@ -401,14 +407,21 @@ async fn execute_task_internal(
     cancel_after_ms: Option<u64>,
     app_handle: Option<tauri::AppHandle>,
 ) -> Result<MiniTaskRunReceipt> {
-    let (scheduler_ref, workflow_doc, adb_path, storage, slug, project_id, project_version, seeded_vars) = {
+    let (
+        scheduler_ref,
+        workflow_doc,
+        adb_path,
+        storage,
+        slug,
+        project_id,
+        project_version,
+        seeded_vars,
+    ) = {
         let st = st_arc.lock().unwrap();
         st.module_registry
             .assert_capability_granted("mod.adb_core", &ModuleCapability::AdbExec)?;
-        st.module_registry.assert_capability_granted(
-            "mod.vision_ocr",
-            &ModuleCapability::FilesystemReadWrite,
-        )?;
+        st.module_registry
+            .assert_capability_granted("mod.vision_ocr", &ModuleCapability::FilesystemReadWrite)?;
 
         let task_def = st
             .ui_schema
@@ -501,7 +514,10 @@ async fn execute_task_internal(
             };
 
             (
-                Arc::new(fp_adb::AdbDeviceDriver::new(target_serial.clone(), runner.clone())),
+                Arc::new(fp_adb::AdbDeviceDriver::new(
+                    target_serial.clone(),
+                    runner.clone(),
+                )),
                 format!("LIVE_ADB({})", target_serial),
                 target_serial,
                 false,
@@ -551,8 +567,8 @@ async fn execute_task_internal(
     };
     let workflow_version = format!("{}@v{}", workflow_doc.workflow_id, project_version);
     let mut executor = WorkflowExecutor::new(driver, rx);
-    let mut ctx = ExecutionContext::new(job_id.clone(), device_id.clone())
-        .with_source_mode(source_mode);
+    let mut ctx =
+        ExecutionContext::new(job_id.clone(), device_id.clone()).with_source_mode(source_mode);
     ctx.project_id = Some(project_id.clone());
     ctx.workflow_version = Some(workflow_version.clone());
     ctx.task_id = Some(task_id.to_string());
@@ -586,18 +602,12 @@ async fn execute_task_internal(
                             fp_security::sanitize_runtime_variable("variables", &vars_obj);
                         pj["variables"] = clean_vars;
                     }
-                    if let Some(deltas) = pj
-                        .get("deltaEnvelopes")
-                        .and_then(|d| serde_json::from_value::<Vec<RuntimeVariableEnvelope>>(d.clone()).ok())
-                    {
+                    if let Some(deltas) = pj.get("deltaEnvelopes").and_then(|d| {
+                        serde_json::from_value::<Vec<RuntimeVariableEnvelope>>(d.clone()).ok()
+                    }) {
                         if !deltas.is_empty() {
                             if let Ok(delta_ev) = storage_clone.record_runtime_var_deltas(
-                                &scope_cb,
-                                &proj_cb,
-                                &sess_cb,
-                                &job_cb,
-                                &wf_ver_cb,
-                                deltas,
+                                &scope_cb, &proj_cb, &sess_cb, &job_cb, &wf_ver_cb, deltas,
                             ) {
                                 {
                                     let mut st = st_arc_cb.lock().unwrap();
@@ -671,10 +681,22 @@ async fn execute_task_internal(
         });
     }
     for (k, v) in [
-        ("last_task_id", serde_json::Value::String(task_id.to_string())),
-        ("last_task_state", serde_json::Value::String(format!("{:?}", job_state))),
-        ("last_data_source", serde_json::Value::String(driver_label.clone())),
-        ("last_updated_utc", serde_json::Value::String(now_utc.clone())),
+        (
+            "last_task_id",
+            serde_json::Value::String(task_id.to_string()),
+        ),
+        (
+            "last_task_state",
+            serde_json::Value::String(format!("{:?}", job_state)),
+        ),
+        (
+            "last_data_source",
+            serde_json::Value::String(driver_label.clone()),
+        ),
+        (
+            "last_updated_utc",
+            serde_json::Value::String(now_utc.clone()),
+        ),
     ] {
         final_envelopes.push(RuntimeVariableEnvelope {
             project_id: project_id.clone(),
@@ -830,7 +852,10 @@ async fn mini_get_runtime_snapshot(
 ) -> Result<RuntimeProvenanceSnapshot, String> {
     let (storage, scope_key) = {
         let st = state.lock().unwrap();
-        (st.storage.clone(), format!("mini:{}", st.manifest.project.slug))
+        (
+            st.storage.clone(),
+            format!("mini:{}", st.manifest.project.slug),
+        )
     };
     storage
         .load_runtime_snapshot_with_recovery(&scope_key, since_seq_by_stream.as_ref())
@@ -878,7 +903,10 @@ async fn mini_start_task(
         };
         let runner = AdbRunner::new(Some(adb_path));
         let devices = runner.list_devices().await.unwrap_or_default();
-        if !devices.iter().any(|d| d.connection_state == ConnectionState::Ready) {
+        if !devices
+            .iter()
+            .any(|d| d.connection_state == ConnectionState::Ready)
+        {
             return Err("NO_LIVE_ADB_DEVICE_ONLINE: 0 ready Android devices found via ADB. Fail-closed: connect a device or explicitly use TestKit Simulation.".to_string());
         }
     }
@@ -887,9 +915,15 @@ async fn mini_start_task(
     let task_clone = task_id.clone();
     let app_clone = app.clone();
     tauri::async_runtime::spawn(async move {
-        if let Err(err) =
-            execute_task_internal(st_arc, &task_clone, None, allow_demo, None, Some(app_clone.clone()))
-                .await
+        if let Err(err) = execute_task_internal(
+            st_arc,
+            &task_clone,
+            None,
+            allow_demo,
+            None,
+            Some(app_clone.clone()),
+        )
+        .await
         {
             let _ = app_clone.emit(
                 "mini://task-progress",
@@ -964,12 +998,7 @@ fn run_cli_mode(args: &[String]) -> Result<bool> {
             let state = Arc::new(Mutex::new(load_and_verify_bundle(&bundle_dir, allow_mock)?));
             let rt = tokio::runtime::Runtime::new()?;
             let receipt = rt.block_on(execute_task_internal(
-                state,
-                task_id,
-                adb_serial,
-                allow_mock,
-                cancel_ms,
-                None,
+                state, task_id, adb_serial, allow_mock, cancel_ms, None,
             ))?;
             println!("{}", serde_json::to_string_pretty(&receipt)?);
             Ok(true)
@@ -994,8 +1023,11 @@ fn run_cli_mode(args: &[String]) -> Result<bool> {
             // Runs 4 comprehensive RFC 8032 Ed25519 Tamper & Forgery Tests on a temporary copy of bundle/
             let src_bundle = resolve_bundle_dir();
             let clone_bundle = |suffix: &str| -> Result<(PathBuf, PathBuf)> {
-                let root = std::env::temp_dir()
-                    .join(format!("fp_ed25519_tamper_{}_{}", suffix, uuid::Uuid::new_v4()));
+                let root = std::env::temp_dir().join(format!(
+                    "fp_ed25519_tamper_{}_{}",
+                    suffix,
+                    uuid::Uuid::new_v4()
+                ));
                 let bdir = root.join("bundle");
                 std::fs::create_dir_all(bdir.join("templates"))?;
                 for f in [
@@ -1170,7 +1202,10 @@ fn main() {
                 .map(|m| m.project.slug)
                 .unwrap_or_else(|| "mini-tool".to_string());
             let audit = audit_portable_environment(&exe_dir, &slug);
-            println!("{}", serde_json::to_string_pretty(&audit).unwrap_or_default());
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&audit).unwrap_or_default()
+            );
             std::process::exit(0);
         }
         match run_cli_mode(&args) {

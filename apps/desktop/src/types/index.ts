@@ -883,3 +883,133 @@ export interface RuntimeVariablesSnapshot {
   variables: Record<string, any>;
   updatedAt?: string | null;
 }
+
+// --- Universal Element Inspector & Smart Action Types ---
+export interface ElementBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface ElementNode {
+  id: number;
+  parent_id: number | null;
+  children_ids: number[];
+  index: number;
+  text: string;
+  resource_id: string;
+  class_name: string;
+  package: string;
+  content_desc: string;
+  checkable: boolean;
+  checked: boolean;
+  clickable: boolean;
+  enabled: boolean;
+  focusable: boolean;
+  focused: boolean;
+  scrollable: boolean;
+  long_clickable: boolean;
+  password: boolean;
+  selected: boolean;
+  bounds: ElementBounds;
+  raw_bounds: ElementBounds;
+  depth: number;
+  path: string;
+  is_visible: boolean;
+}
+
+export interface ElementSnapshot {
+  id: string;
+  timestamp_ms: number;
+  rotation_deg: number;
+  screen_width: number;
+  screen_height: number;
+  package_name: string | null;
+  nodes: ElementNode[];
+  root_ids: number[];
+}
+
+export interface NativeElementSelector {
+  resource_id?: string | null;
+  text?: string | null;
+  text_regex?: string | null;
+  content_desc?: string | null;
+  class_name?: string | null;
+  package?: string | null;
+  clickable?: boolean | null;
+  enabled?: boolean | null;
+  xpath?: string | null;
+  search_region?: ElementBounds | null;
+}
+
+export interface SelectorMatch {
+  node_id: number | null;
+  bounds: ElementBounds;
+  confidence: number;
+  strategy_used: string;
+  is_clickable: boolean;
+  resolved_clickable_ancestor_id: number | null;
+  resolved_bounds: ElementBounds;
+}
+
+export interface GeneratedSelector {
+  strategy_name: string;
+  selector: NativeElementSelector;
+  uniqueness_score: number;
+  match_count: number;
+  expression: string;
+  is_recommended: boolean;
+}
+
+export interface InspectSnapshotResult {
+  snapshot: ElementSnapshot;
+  screenshot_base64: string;
+  capture_duration_ms: number;
+  dump_duration_ms: number;
+  parse_duration_ms: number;
+  total_duration_ms: number;
+  device_serial: string;
+  package_name: string | null;
+}
+
+export type ActionExecutionMode = 'DynamicBoundsTap' | 'ClickableParent' | 'SemanticClick';
+
+export type ElementActionKind =
+  | 'Tap'
+  | 'DoubleTap'
+  | { LongPress: { duration_ms: number } }
+  | { SetText: { text: string; clear_first: boolean } }
+  | { WaitAppear: { timeout_ms: number } }
+  | { WaitDisappear: { timeout_ms: number } }
+  | 'AssertExists';
+
+export interface ElementActionPlan {
+  mode: ActionExecutionMode;
+  target_bounds: ElementBounds;
+  safe_point: { x: number; y: number };
+  is_clickable_parent_used: boolean;
+  execution_kind: ElementActionKind;
+}
+
+export interface ElementActionResult {
+  success: boolean;
+  plan: ElementActionPlan;
+  execution_ms: number;
+  new_screenshot_base64: string | null;
+  post_verification_success: boolean;
+  message: string;
+}
+
+export interface LibraryElementRecord {
+  id: string;
+  project_id: string;
+  name: string;
+  package_filter?: string | null;
+  primary_strategy: string;
+  selector: NativeElementSelector;
+  fallback_selectors: NativeElementSelector[];
+  bounds?: ElementBounds | null;
+  created_at_ms: number;
+}
+

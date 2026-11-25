@@ -184,7 +184,8 @@ pub fn migrate_legacy_jx2_assets(
     for (src_file, wf_id, wf_name, category, wf_json) in &wf_entries {
         let wf_sha = sha256_hex(wf_json.as_bytes());
         let existing_row: Option<(Option<String>, String)> = {
-            let mut st = tx.prepare("SELECT project_id, draft_json FROM workflows WHERE id = ?1;")?;
+            let mut st =
+                tx.prepare("SELECT project_id, draft_json FROM workflows WHERE id = ?1;")?;
             let mut rows = st.query(params![wf_id])?;
             rows.next()?
                 .map(|r| Ok::<_, rusqlite::Error>((r.get(0)?, r.get(1)?)))
@@ -273,10 +274,13 @@ pub fn migrate_legacy_jx2_assets(
                     });
                 } else {
                     // Check semantic graph equality: only upgrade if graph (nodes & edges) is identical
-                    let existing_val = serde_json::from_str::<serde_json::Value>(&existing_draft).ok();
+                    let existing_val =
+                        serde_json::from_str::<serde_json::Value>(&existing_draft).ok();
                     let source_val = serde_json::from_str::<serde_json::Value>(wf_json).ok();
                     let graphs_match = match (&existing_val, &source_val) {
-                        (Some(e), Some(s)) => e.get("graph") == s.get("graph") && e.get("graph").is_some(),
+                        (Some(e), Some(s)) => {
+                            e.get("graph") == s.get("graph") && e.get("graph").is_some()
+                        }
                         _ => false,
                     };
 
@@ -310,7 +314,8 @@ pub fn migrate_legacy_jx2_assets(
                             action: "UPDATE".to_string(),
                             version_before: ver_before,
                             version_after: next_ver,
-                            content_comparison: "IDENTICAL_GRAPH_UPGRADED_TO_PUBLISHED_POLICY".to_string(),
+                            content_comparison: "IDENTICAL_GRAPH_UPGRADED_TO_PUBLISHED_POLICY"
+                                .to_string(),
                         });
                     } else {
                         // Preserve user-modified workflow without overwriting!
@@ -548,11 +553,16 @@ fn build_default_jx2_tasks() -> Vec<(MiniTaskDef, TaskCategoryDef)> {
     ]
 }
 
-fn build_default_jx2_ui_schema(tasks_with_cats: &[(MiniTaskDef, TaskCategoryDef)]) -> MiniToolUiSchema {
+fn build_default_jx2_ui_schema(
+    tasks_with_cats: &[(MiniTaskDef, TaskCategoryDef)],
+) -> MiniToolUiSchema {
     let mut cats = Vec::new();
     let mut tasks = Vec::new();
     for (t, c) in tasks_with_cats {
-        if !cats.iter().any(|existing: &TaskCategoryDef| existing.id == c.id) {
+        if !cats
+            .iter()
+            .any(|existing: &TaskCategoryDef| existing.id == c.id)
+        {
             cats.push(c.clone());
         }
         tasks.push(t.clone());

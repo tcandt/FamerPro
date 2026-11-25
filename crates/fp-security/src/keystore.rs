@@ -254,12 +254,18 @@ impl ProducerKeystore {
         Ok(())
     }
 
-    fn decode_signing_key_from_stored(stored: &StoredProducerKeyFile, key_file: &Path) -> Result<(SigningKey, bool)> {
+    fn decode_signing_key_from_stored(
+        stored: &StoredProducerKeyFile,
+        key_file: &Path,
+    ) -> Result<(SigningKey, bool)> {
         if let Some(ref b64) = stored.dpapi_protected_seed_b64 {
             let mut seed_vec = dpapi::unprotect_base64(b64, Some(PRODUCER_KEY_DPAPI_ENTROPY))?;
             if seed_vec.len() != 32 {
                 seed_vec.fill(0);
-                bail!("Invalid DPAPI-decrypted Ed25519 seed length in {}", key_file.display());
+                bail!(
+                    "Invalid DPAPI-decrypted Ed25519 seed length in {}",
+                    key_file.display()
+                );
             }
             let mut seed = [0u8; 32];
             seed.copy_from_slice(&seed_vec);
@@ -282,7 +288,10 @@ impl ProducerKeystore {
             let mut seed_vec = hex_decode(legacy_hex)?;
             if seed_vec.len() != 32 {
                 seed_vec.fill(0);
-                bail!("Invalid legacy Ed25519 seed length in {}", key_file.display());
+                bail!(
+                    "Invalid legacy Ed25519 seed length in {}",
+                    key_file.display()
+                );
             }
             let mut seed = [0u8; 32];
             seed.copy_from_slice(&seed_vec);
@@ -290,12 +299,21 @@ impl ProducerKeystore {
             let sk = SigningKey::from_bytes(&seed);
             // Auto-upgrade legacy plaintext key to DPAPI v2 without changing keypair
             let pub_hex = hex_encode(sk.verifying_key().as_bytes());
-            Self::write_dpapi_key_file(key_file, &stored.key_id, &seed, &pub_hex, &stored.created_at_utc)?;
+            Self::write_dpapi_key_file(
+                key_file,
+                &stored.key_id,
+                &seed,
+                &pub_hex,
+                &stored.created_at_utc,
+            )?;
             seed.fill(0);
             return Ok((sk, true));
         }
 
-        bail!("Keystore file {} contains neither DPAPI seed nor legacy seed", key_file.display());
+        bail!(
+            "Keystore file {} contains neither DPAPI seed nor legacy seed",
+            key_file.display()
+        );
     }
 
     pub fn inspect_active_metadata(keystore_dir: &Path) -> Result<Option<ProducerKeyMetadata>> {
@@ -425,8 +443,9 @@ impl ProducerKeystore {
         backup_file_path: &Path,
         keystore_dir: &Path,
     ) -> Result<ProducerKeyMetadata> {
-        let raw = std::fs::read(backup_file_path)
-            .with_context(|| format!("Failed to read key backup: {}", backup_file_path.display()))?;
+        let raw = std::fs::read(backup_file_path).with_context(|| {
+            format!("Failed to read key backup: {}", backup_file_path.display())
+        })?;
         let bundle: ProducerKeyBackupBundle = serde_json::from_slice(&raw)?;
 
         let expected_sha = compute_backup_digest(
