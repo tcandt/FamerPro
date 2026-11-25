@@ -685,7 +685,15 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
   return (
     <div className="flex flex-col h-full w-full bg-[#0B0F17] text-[#EDF3FC] select-none overflow-hidden">
       {/* 1. UNIFIED STUDIO ACTION BAR */}
-      <nav className="h-12 bg-[#0E1522] border-b border-[#1E293B] px-4 flex items-center justify-between shrink-0 z-20">
+      <nav
+        data-tauri-drag-region
+        onMouseDown={(e) => {
+          if (e.button === 0 && !(e.target as HTMLElement).closest('button, input, select, textarea, [data-no-drag]')) {
+            api.windowStartDragging();
+          }
+        }}
+        className="h-12 bg-[#0E1522] border-b border-[#1E293B] px-4 flex items-center justify-between shrink-0 z-20 cursor-default"
+      >
         <div className="flex items-center gap-2">
           <button
             onClick={() => onNavigate('devices')}

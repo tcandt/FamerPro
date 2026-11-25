@@ -92,6 +92,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     <header
       data-tauri-drag-region
       onDoubleClick={() => api.windowToggleMaximize()}
+      onMouseDown={(e) => {
+        if (e.button === 0 && !(e.target as HTMLElement).closest('button, input, select, textarea, [data-no-drag]')) {
+          api.windowStartDragging();
+        }
+      }}
       className="h-[44px] bg-[#141C28] border-b border-[#2A3647] flex items-center justify-between px-3 select-none z-50 text-xs shrink-0 cursor-default gap-2"
     >
       {/* Left: Studio Brand + Breadcrumb */}

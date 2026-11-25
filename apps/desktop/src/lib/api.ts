@@ -153,6 +153,15 @@ export const api = {
     }
   },
 
+  async windowStartDragging(): Promise<void> {
+    if (!isTauri()) return;
+    try {
+      await invoke('app_window_start_dragging');
+    } catch (e) {
+      console.warn('Failed to start dragging window:', e);
+    }
+  },
+
   async getStatus(): Promise<AppStatus | null> {
     if (!isTauri()) return null;
     try {

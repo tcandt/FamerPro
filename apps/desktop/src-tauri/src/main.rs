@@ -138,6 +138,11 @@ fn app_window_close(window: tauri::Window) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn app_window_start_dragging(window: tauri::Window) -> Result<(), String> {
+    window.start_dragging().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn list_devices(
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<Vec<DeviceSummary>, String> {
@@ -1241,6 +1246,7 @@ fn main() {
             app_window_minimize,
             app_window_toggle_maximize,
             app_window_close,
+            app_window_start_dragging,
             list_devices,
             inspect_device,
             capture_device,
