@@ -220,6 +220,7 @@ pub async fn run_verify_p2_3(serial: String, out_dir: Option<PathBuf>) -> Result
             uniqueness_score: 100,
             strategy_used: "Native Resource ID".to_string(),
             notes: None,
+            on_failure: Some("stop".to_string()),
         },
         RecordedWorkflowStep {
             id: "step-2-opadd".to_string(),
@@ -245,6 +246,7 @@ pub async fn run_verify_p2_3(serial: String, out_dir: Option<PathBuf>) -> Result
             uniqueness_score: 100,
             strategy_used: "Native Resource ID".to_string(),
             notes: None,
+            on_failure: Some("stop".to_string()),
         },
         RecordedWorkflowStep {
             id: "step-3-digit5".to_string(),
@@ -270,6 +272,7 @@ pub async fn run_verify_p2_3(serial: String, out_dir: Option<PathBuf>) -> Result
             uniqueness_score: 100,
             strategy_used: "Native Resource ID".to_string(),
             notes: None,
+            on_failure: Some("stop".to_string()),
         },
         RecordedWorkflowStep {
             id: "step-4-eq".to_string(),
@@ -295,6 +298,7 @@ pub async fn run_verify_p2_3(serial: String, out_dir: Option<PathBuf>) -> Result
             uniqueness_score: 100,
             strategy_used: "Native Resource ID".to_string(),
             notes: None,
+            on_failure: Some("stop".to_string()),
         },
         RecordedWorkflowStep {
             id: "step-5-assert-result".to_string(),
@@ -321,6 +325,7 @@ pub async fn run_verify_p2_3(serial: String, out_dir: Option<PathBuf>) -> Result
             uniqueness_score: 100,
             strategy_used: "Native ID & Text".to_string(),
             notes: None,
+            on_failure: Some("stop".to_string()),
         },
     ];
 
@@ -374,6 +379,7 @@ pub async fn run_verify_p2_3(serial: String, out_dir: Option<PathBuf>) -> Result
         uniqueness_score: 0,
         strategy_used: "None".to_string(),
         notes: None,
+        on_failure: Some("stop".to_string()),
     };
     let phantom_res = execute_recorded_step(&driver, &phantom_step, Some(&snapshot)).await;
     assert!(!phantom_res.success, "Phantom element execution MUST fail!");

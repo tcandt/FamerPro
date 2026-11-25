@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "workflowId": "wf-galaxy-s7-calc-p24",
+  "name": "Galaxy S7 Calculator 7+5=12 Acceptance",
+  "status": "recorded",
+  "graph": {
+    "nodes": [
+      {
+        "id": "node-start",
+        "type": "flow.start",
+        "position": {
+          "x": 100.0,
+          "y": 150.0
+        },
+        "config": {
+          "label": "Start Recording Session"
+        },
+        "timeoutMs": 5000,
+        "retryPolicy": null
+      },
+      {
+        "id": "node-action-1",
+        "type": "element.click",
+        "position": {
+          "x": 350.0,
+          "y": 150.0
+        },
+        "config": {
+          "className": null,
+          "label": "Click \"7\" [Resource ID]",
+          "pointX": 73.5,
+          "pointY": 220.0,
+          "requireUnique": true,
+          "resourceId": "com.android.calculator2:id/digit_7",
+          "selector": {
+            "spec": {
+              "class_name": null,
+              "clickable": null,
+              "content_desc": null,
+              "enabled": null,
+              "package": null,
+              "resource_id": "com.android.calculator2:id/digit_7",
+              "search_region": null,
+              "text": null,
+              "text_regex": null,
+              "xpath": null
+            },
+            "type": "Native"
+          },
+          "strategy": "Resource ID",
+          "targetBounds": {
+            "height": 88.0,
+            "width": 111.0,
+            "x": 18.0,
+            "y": 176.0
+          },
+          "text": null,
+          "uniquenessScore": 100,
+          "waitAfterMs": 500,
+          "xpath": null
+        },
+        "timeoutMs": 10000,
+        "retryPolicy": null
+      },
+      {
+        "id": "node-action-2",
+        "type": "element.click",
+        "position": {
+          "x": 600.0,
+          "y": 180.0
+        },
+        "config": {
+          "className": null,
+          "label": "Click \"+\" [Resource ID]",
+          "pointX": 433.5,
+          "pointY": 484.0,
+          "requireUnique": true,
+          "resourceId": "com.android.calculator2:id/op_add",
+          "selector": {
+            "spec": {
+              "class_name": null,
+              "clickable": null,
+              "content_desc": null,
+              "enabled": null,
+              "package": null,
+              "resource_id": "com.android.calculator2:id/op_add",
+              "search_region": null,
+              "text": null,
+              "text_regex": null,
+              "xpath": null
+            },
+            "type": "Native"
+          },
+          "strategy": "Resource ID",
+          "targetBounds": {
+            "height": 88.0,
+            "width": 93.0,
+            "x": 387.0,
+            "y": 440.0
+          },
+          "text": null,
+          "uniquenessScore": 100,
+          "waitAfterMs": 500,
+          "xpath": null
+        },
+        "timeoutMs": 10000,
+        "retryPolicy": null
+      },
+      {
+        "id": "node-action-3",
+        "type": "element.click",
+        "position": {
+          "x": 850.0,
+          "y": 150.0
+        },
+        "config": {
+          "className": null,
+          "label": "Click \"5\" [Resource ID]",
+          "pointX": 184.5,
+          "pointY": 308.0,
+          "requireUnique": true,
+          "resourceId": "com.android.calculator2:id/digit_5",
+          "selector": {
+            "spec": {
+              "class_name": null,
+              "clickable": null,
+              "content_desc": null,
+              "enabled": null,
+              "package": null,
+              "resource_id": "com.android.calculator2:id/digit_5",
+              "search_region": null,
+              "text": null,
+              "text_regex": null,
+              "xpath": null
+            },
+            "type": "Native"
+          },
+          "strategy": "Resource ID",
+          "targetBounds": {
+            "height": 88.0,
+            "width": 111.0,
+            "x": 129.0,
+            "y": 264.0
+          },
+          "text": null,
+          "uniquenessScore": 100,
+          "waitAfterMs": 500,
+          "xpath": null
+        },
+        "timeoutMs": 10000,
+        "retryPolicy": null
+      },
+      {
+        "id": "node-action-4",
+        "type": "element.click",
+        "position": {
+          "x": 1100.0,
+          "y": 180.0
+        },
+        "config": {
+          "className": null,
+          "label": "Click \"=\" [Resource ID]",
+          "pointX": 526.0,
+          "pointY": 484.0,
+          "requireUnique": true,
+          "resourceId": "com.android.calculator2:id/eq",
+          "selector": {
+            "spec": {
+              "class_name": null,
+              "clickable": null,
+              "content_desc": null,
+              "enabled": null,
+              "package": null,
+              "resource_id": "com.android.calculator2:id/eq",
+              "search_region": null,
+              "text": null,
+              "text_regex": null,
+              "xpath": null
+            },
+            "type": "Native"
+          },
+          "strategy": "Resource ID",
+          "targetBounds": {
+            "height": 88.0,
+            "width": 92.0,
+            "x": 480.0,
+            "y": 440.0
+          },
+          "text": null,
+          "uniquenessScore": 100,
+          "waitAfterMs": 500,
+          "xpath": null
+        },
+        "timeoutMs": 10000,
+        "retryPolicy": null
+      },
+      {
+        "id": "node-action-5",
+        "type": "element.assert",
+        "position": {
+          "x": 1350.0,
+          "y": 150.0
+        },
+        "config": {
+          "assertionRule": "text == '12'",
+          "label": "Assert Result contains '12'",
+          "resourceId": "com.android.calculator2:id/result",
+          "selector": {
+            "spec": {
+              "class_name": null,
+              "clickable": null,
+              "content_desc": null,
+              "enabled": null,
+              "package": null,
+              "resource_id": "com.android.calculator2:id/result",
+              "search_region": null,
+              "text": "12",
+              "text_regex": null,
+              "xpath": null
+            },
+            "type": "Native"
+          },
+          "text": "12",
+          "waitAfterMs": 200,
+          "xpath": null
+        },
+        "timeoutMs": 10000,
+        "retryPolicy": null
+      },
+      {
+        "id": "node-end",
+        "type": "flow.end",
+        "position": {
+          "x": 1600.0,
+          "y": 150.0
+        },
+        "config": {
+          "label": "Workflow Complete"
+        },
+        "timeoutMs": null,
+        "retryPolicy": null
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-1",
+        "source": "node-start",
+        "sourcePort": "out",
+        "target": "node-action-1",
+        "targetPort": "in"
+      },
+      {
+        "id": "edge-2",
+        "source": "node-action-1",
+        "sourcePort": "out",
+        "target": "node-action-2",
+        "targetPort": "in"
+      },
+      {
+        "id": "edge-3",
+        "source": "node-action-2",
+        "sourcePort": "out",
+        "target": "node-action-3",
+        "targetPort": "in"
+      },
+      {
+        "id": "edge-4",
+        "source": "node-action-3",
+        "sourcePort": "out",
+        "target": "node-action-4",
+        "targetPort": "in"
+      },
+      {
+        "id": "edge-5",
+        "source": "node-action-4",
+        "sourcePort": "out",
+        "target": "node-action-5",
+        "targetPort": "in"
+      },
+      {
+        "id": "edge-6",
+        "source": "node-action-5",
+        "sourcePort": "out",
+        "target": "node-end",
+        "targetPort": "in"
+      }
+    ]
+  },
+  "runtimePolicy": null,
+  "disclaimer": "Recorded via FarmerPro Smart Workflow Recorder"
+}

@@ -1,0 +1,17 @@
+{
+  "total_cycles": 100,
+  "successful_cycles": 100,
+  "success_rate_pct": 100.0,
+  "min_e2e_ms": 2790,
+  "max_e2e_ms": 3488,
+  "avg_e2e_ms": 3064.3,
+  "p50_e2e_ms": 3064,
+  "p95_e2e_ms": 3295,
+  "p99_e2e_ms": 3488,
+  "stddev_e2e_ms": 140.5534417935043,
+  "avg_dump_ms": 1737.62,
+  "avg_parse_ms": 1.19,
+  "avg_resolve_ms": 225.8,
+  "avg_dispatch_ms": 583.54,
+  "avg_verify_ms": 0.0
+}

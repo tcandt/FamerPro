@@ -35,6 +35,7 @@ pub struct RecordedWorkflowStep {
     pub uniqueness_score: u32,
     pub strategy_used: String,
     pub notes: Option<String>,
+    pub on_failure: Option<String>,
 }
 
 /// Execution result for an individual step during replay.
@@ -149,6 +150,7 @@ pub fn build_step_from_touch(
                     resolved_bounds.width,
                     resolved_bounds.height
                 )),
+                on_failure: Some("stop".to_string()),
             };
         }
     }
@@ -190,6 +192,7 @@ pub fn build_step_from_touch(
         uniqueness_score: 50,
         strategy_used: "Relative Point".to_string(),
         notes: Some(format!("Coordinates: ({:.1}, {:.1})", x, y)),
+        on_failure: Some("stop".to_string()),
     }
 }
 

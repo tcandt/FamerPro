@@ -11,9 +11,14 @@ pub fn parse_ui_hierarchy(
     let mut reader = Reader::from_str(xml_content);
     reader.config_mut().trim_text(true);
 
-    let screen_w = geometry.width_px as f32;
-    let screen_h = geometry.height_px as f32;
-    let screen_bounds = Bounds::new(0.0, 0.0, screen_w, screen_h);
+    let (mut screen_w, mut screen_h) = if (geometry.rotation_deg == 90 || geometry.rotation_deg == 270)
+        && geometry.width_px < geometry.height_px
+    {
+        (geometry.height_px as f32, geometry.width_px as f32)
+    } else {
+        (geometry.width_px as f32, geometry.height_px as f32)
+    };
+    let mut screen_bounds = Bounds::new(0.0, 0.0, screen_w, screen_h);
 
     let mut nodes: Vec<ElementNode> = Vec::new();
     let mut root_ids: Vec<usize> = Vec::new();
@@ -41,6 +46,10 @@ pub fn parse_ui_hierarchy(
                                     3 => 270,
                                     _ => 0,
                                 };
+                                if (rotation_deg == 90 || rotation_deg == 270) && screen_w < screen_h {
+                                    std::mem::swap(&mut screen_w, &mut screen_h);
+                                    screen_bounds = Bounds::new(0.0, 0.0, screen_w, screen_h);
+                                }
                             }
                         }
                     }
@@ -123,8 +132,8 @@ pub fn parse_ui_hierarchy(
     Ok(ElementSnapshot::new(
         chrono::Utc::now().timestamp_millis() as u64,
         rotation_deg,
-        geometry.width_px,
-        geometry.height_px,
+        screen_w as u32,
+        screen_h as u32,
         top_package,
         nodes,
         root_ids,

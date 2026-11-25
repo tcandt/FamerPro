@@ -1,5 +1,6 @@
 mod verify_p3;
 mod verify_p2_3;
+mod verify_p2_4;
 
 use anyhow::Context;
 use clap::{Parser, Subcommand};
@@ -120,6 +121,18 @@ enum Commands {
 
         #[arg(long)]
         out_dir: Option<PathBuf>,
+    },
+
+    /// Execute Phase 2.4 Integrated Streaming, Truthful Telemetry & True End-to-End Acceptance
+    VerifyP24 {
+        #[arg(long, default_value = "192.168.1.168:5555")]
+        serial: String,
+
+        #[arg(long)]
+        out_dir: Option<PathBuf>,
+
+        #[arg(long, default_value_t = 100)]
+        benchmark_cycles: usize,
     },
 
     /// Diagnostic internal worker that arms at an exact crash window and waits to be force-killed by OS TerminateProcess
@@ -324,6 +337,14 @@ async fn main() -> anyhow::Result<()> {
 
         Commands::VerifyP23 { serial, out_dir } => {
             verify_p2_3::run_verify_p2_3(serial, out_dir).await?;
+        }
+
+        Commands::VerifyP24 {
+            serial,
+            out_dir,
+            benchmark_cycles,
+        } => {
+            verify_p2_4::run_verify_p2_4(serial, out_dir, benchmark_cycles).await?;
         }
 
         Commands::CrashWorker {

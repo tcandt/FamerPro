@@ -52,6 +52,7 @@ import type {
   RecordedWorkflowStep,
   StepExecutionResult,
   StreamFrameResponse,
+  TemplateMatchResult,
   WorkflowReplayReport,
   ReconcileOutcome,
   ReleaseTransitionRecord,
@@ -1458,6 +1459,15 @@ export const api = {
     return await invoke<StreamFrameResponse>('device_stream_frame', { serial });
   },
 
+  async deviceFreezeStream(serial: string, freeze: boolean): Promise<boolean> {
+    if (!isTauri()) return freeze;
+    try {
+      return await invoke<boolean>('device_freeze_stream', { serial, freeze });
+    } catch {
+      return freeze;
+    }
+  },
+
   async deviceLaunchScrcpyMirror(serial: string): Promise<number> {
     requireTauri('device_launch_scrcpy_mirror');
     return await invoke<number>('device_launch_scrcpy_mirror', { serial });
@@ -1466,6 +1476,14 @@ export const api = {
   async deviceCropRegion(req: { serial: string; x: number; y: number; width: number; height: number }): Promise<{ cropped_base64: string; width: number; height: number }> {
     requireTauri('device_crop_region');
     return await invoke<{ cropped_base64: string; width: number; height: number }>('device_crop_region', { req });
+  },
+
+  async deviceTestTemplateMatch(serial: string, templateBase64: string): Promise<TemplateMatchResult> {
+    requireTauri('device_test_template_match');
+    return await invoke<TemplateMatchResult>('device_test_template_match', {
+      serial,
+      templateBase64,
+    });
   },
 
   // ========================================================================

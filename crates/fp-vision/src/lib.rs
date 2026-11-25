@@ -243,9 +243,9 @@ impl VisionEngine {
 
         // Determine coarse stepping based on screen size
         let is_large = sw > 400 || sh > 400;
-        let coarse_step: u32 = if is_large { 6 } else { 1 };
+        let coarse_step: u32 = if sw > 800 || sh > 800 { 4 } else if is_large { 3 } else { 1 };
         let coarse_sample_step: u32 = if is_large {
-            (tw.min(th) / 8).clamp(3, 8)
+            (tw.min(th) / 16).clamp(2, 4)
         } else {
             1
         };
@@ -255,7 +255,7 @@ impl VisionEngine {
         let mut best_cy: u32 = 0;
 
         // Phase 1: Coarse search
-        for y in (0..=(sh - th)).step_by(coarse_step as usize) {
+        'outer: for y in (0..=(sh - th)).step_by(coarse_step as usize) {
             for x in (0..=(sw - tw)).step_by(coarse_step as usize) {
                 let mut sum_diff = 0.0f32;
                 let mut count = 0;
@@ -279,6 +279,9 @@ impl VisionEngine {
                     max_coarse_conf = confidence;
                     best_cx = x;
                     best_cy = y;
+                    if max_coarse_conf >= 1.0 {
+                        break 'outer;
+                    }
                 }
             }
         }

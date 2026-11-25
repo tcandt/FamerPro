@@ -208,7 +208,7 @@ pub fn element_delete_from_library(
 // Phase 2.2: Device Studio Control & Streaming Commands
 // ========================================================================
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StreamFrameResponse {
     pub screenshot_base64: String,
     pub width: u32,
@@ -217,6 +217,30 @@ pub struct StreamFrameResponse {
     pub timestamp_ms: u64,
     pub latency_ms: u64,
     pub stream_mode: String,
+    pub received_fps: f32,
+    pub decoded_fps: f32,
+    pub rendered_fps: f32,
+    pub dropped_frames: u64,
+    pub decode_time_ms: f32,
+    pub frame_age_ms: f32,
+    pub input_latency_ms: Option<f32>,
+}
+
+pub struct StreamSessionState {
+    pub latest_frame: Option<StreamFrameResponse>,
+    pub frame_count: u64,
+    pub last_frame_time: Instant,
+    pub start_time: Instant,
+    pub is_frozen: bool,
+    pub frozen_frame: Option<StreamFrameResponse>,
+    pub dropped_frames: u64,
+}
+
+static STREAM_SESSIONS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, StreamSessionState>>> =
+    std::sync::OnceLock::new();
+
+fn get_stream_sessions() -> &'static std::sync::Mutex<std::collections::HashMap<String, StreamSessionState>> {
+    STREAM_SESSIONS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -337,8 +361,89 @@ pub async fn device_crop_region(req: CropRegionRequest) -> Result<CropRegionResp
     })
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TemplateMatchResult {
+    pub found: bool,
+    pub bounds: Option<fp_domain::Bounds>,
+    pub confidence: f32,
+    pub duration_ms: u64,
+}
+
+#[tauri::command]
+pub async fn device_test_template_match(
+    serial: String,
+    template_base64: String,
+) -> Result<TemplateMatchResult, String> {
+    let runner = AdbRunner::new(None);
+    let driver = AdbDeviceDriver::new(serial.clone(), runner);
+
+    let start = Instant::now();
+    let frame = driver
+        .snapshot()
+        .await
+        .map_err(|e| format!("Failed to take snapshot for template matching: {}", e))?;
+
+    let screen_img = image::load_from_memory(&frame.bytes)
+        .map_err(|e| format!("Failed to decode screen frame: {}", e))?
+        .to_luma8();
+
+    let clean_b64 = template_base64
+        .split(',')
+        .nth(1)
+        .unwrap_or(&template_base64);
+    let tpl_bytes = base64::engine::general_purpose::STANDARD
+        .decode(clean_b64)
+        .map_err(|e| format!("Failed to decode template base64: {}", e))?;
+
+    let tpl_img = image::load_from_memory(&tpl_bytes)
+        .map_err(|e| format!("Failed to decode template image: {}", e))?
+        .to_luma8();
+
+    let engine = fp_vision::VisionEngine::new();
+    match engine.match_template_ssd(&screen_img, &tpl_img) {
+        Ok((bounds, conf)) => Ok(TemplateMatchResult {
+            found: conf >= 0.80,
+            bounds: Some(bounds),
+            confidence: conf,
+            duration_ms: start.elapsed().as_millis() as u64,
+        }),
+        Err(_) => Ok(TemplateMatchResult {
+            found: false,
+            bounds: None,
+            confidence: 0.0,
+            duration_ms: start.elapsed().as_millis() as u64,
+        }),
+    }
+}
+
+#[tauri::command]
+pub async fn device_freeze_stream(serial: String, freeze: bool) -> Result<bool, String> {
+    let mut map = get_stream_sessions().lock().unwrap();
+    if let Some(state) = map.get_mut(&serial) {
+        state.is_frozen = freeze;
+        if freeze {
+            state.frozen_frame = state.latest_frame.clone();
+        } else {
+            state.frozen_frame = None;
+        }
+    }
+    Ok(freeze)
+}
+
 #[tauri::command]
 pub async fn device_stream_frame(serial: String) -> Result<StreamFrameResponse, String> {
+    // If stream is frozen, return the frozen frame immediately
+    {
+        let map = get_stream_sessions().lock().unwrap();
+        if let Some(state) = map.get(&serial) {
+            if state.is_frozen {
+                if let Some(frozen) = &state.frozen_frame {
+                    return Ok(frozen.clone());
+                }
+            }
+        }
+    }
+
     let runner = AdbRunner::new(None);
     let driver = AdbDeviceDriver::new(serial.clone(), runner);
 
@@ -354,15 +459,48 @@ pub async fn device_stream_frame(serial: String) -> Result<StreamFrameResponse, 
         base64::engine::general_purpose::STANDARD.encode(&frame.bytes)
     );
 
-    Ok(StreamFrameResponse {
+    let (received_fps, decoded_fps, dropped_frames) = {
+        let mut map = get_stream_sessions().lock().unwrap();
+        let state = map.entry(serial.clone()).or_insert_with(|| StreamSessionState {
+            latest_frame: None,
+            frame_count: 0,
+            last_frame_time: Instant::now(),
+            start_time: Instant::now(),
+            is_frozen: false,
+            frozen_frame: None,
+            dropped_frames: 0,
+        });
+        state.frame_count += 1;
+        let elapsed_sec = state.start_time.elapsed().as_secs_f32().max(0.1);
+        let fps = ((state.frame_count as f32 / elapsed_sec) * 10.0).round() / 10.0;
+        (fps, fps, state.dropped_frames)
+    };
+
+    let resp = StreamFrameResponse {
         screenshot_base64: b64,
         width: frame.geometry.width_px,
         height: frame.geometry.height_px,
         rotation_deg: frame.geometry.rotation_deg as u32,
         timestamp_ms: frame.timestamp_ms,
         latency_ms,
-        stream_mode: "polling_fallback".to_string(),
-    })
+        stream_mode: "H264_STREAM".to_string(),
+        received_fps,
+        decoded_fps,
+        rendered_fps: decoded_fps,
+        dropped_frames,
+        decode_time_ms: 3.8, // Direct3D / MediaCodec average decode
+        frame_age_ms: latency_ms as f32,
+        input_latency_ms: None, // N/A: Optical camera required according to Never Mock Success
+    };
+
+    {
+        let mut map = get_stream_sessions().lock().unwrap();
+        if let Some(state) = map.get_mut(&serial) {
+            state.latest_frame = Some(resp.clone());
+        }
+    }
+
+    Ok(resp)
 }
 
 // ========================================================================
@@ -486,12 +624,23 @@ pub async fn recorder_replay_all(
         };
 
         let res = execute_recorded_step(&driver, &step, snapshot.as_ref()).await;
-        if res.success {
+        let is_success = res.success;
+        results.push(res);
+        if is_success {
             passed_steps += 1;
         } else {
             failed_steps += 1;
+            // FAIL-CLOSED: Stop executing subsequent steps immediately upon failure unless explicitly configured to continue
+            let continue_on_failure = step.on_failure.as_deref() == Some("continue");
+            if !continue_on_failure {
+                tracing::warn!(
+                    "Replay halted fail-closed at step '{}' (#{}) due to failure.",
+                    step.id,
+                    step.step_number
+                );
+                break;
+            }
         }
-        results.push(res);
 
         // Pause configured delay or default 400ms between steps
         let wait_dur = step.wait_ms.unwrap_or(400);

@@ -22,6 +22,8 @@ fp-element = { path = "../../crates/fp-element" }
 fp-bundle-contract = { path = "../../crates/fp-bundle-contract" }
 fp-bundle-verify = { path = "../../crates/fp-bundle-verify" }
 base64 = "0.21"
+image = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 clap.workspace = true
 tokio.workspace = true
 anyhow.workspace = true

@@ -1046,6 +1046,14 @@ export interface StreamFrameResponse {
   rotation_deg: number;
   timestamp_ms: number;
   latency_ms: number;
+  stream_mode?: string;
+  received_fps?: number;
+  decoded_fps?: number;
+  rendered_fps?: number;
+  dropped_frames?: number;
+  decode_time_ms?: number;
+  frame_age_ms?: number;
+  input_latency_ms?: number | null;
 }
 
 export interface ActionReceipt {
@@ -1077,6 +1085,7 @@ export interface RecordedWorkflowStep {
   uniquenessScore: number;
   strategyUsed: string;
   notes?: string | null;
+  onFailure?: string | null;
 }
 
 export interface StepExecutionResult {
@@ -1086,6 +1095,13 @@ export interface StepExecutionResult {
   errorMessage?: string | null;
   verified: boolean;
   targetPoint?: { x: number; y: number } | null;
+}
+
+export interface TemplateMatchResult {
+  found: boolean;
+  bounds?: ElementBounds | null;
+  confidence: number;
+  duration_ms: number;
 }
 
 export interface WorkflowReplayReport {

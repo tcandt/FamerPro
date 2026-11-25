@@ -37,6 +37,7 @@ import {
   RecordedWorkflowStep,
   Selector,
   SelectorMatch,
+  TemplateMatchResult,
 } from '../../types';
 
 interface DeviceStudioViewProps {
@@ -68,6 +69,12 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
   const [isStreaming, setIsStreaming] = useState(true);
   const [streamFps, setStreamFps] = useState(0);
   const [streamLatency, setStreamLatency] = useState(0);
+  const [streamMode, setStreamMode] = useState<string>('H264_STREAM');
+  const [receivedFps, setReceivedFps] = useState<number>(0);
+  const [decodedFps, setDecodedFps] = useState<number>(0);
+  const [droppedFrames, setDroppedFrames] = useState<number>(0);
+  const [decodeTimeMs, setDecodeTimeMs] = useState<number>(0);
+  const [frameAgeMs, setFrameAgeMs] = useState<number>(0);
   const [screenWidth, setScreenWidth] = useState(540);
   const [screenHeight, setScreenHeight] = useState(960);
   const [screenRotation, setScreenRotation] = useState(0);
@@ -99,6 +106,8 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
   const [isDrawingRegion, setIsDrawingRegion] = useState(false);
   const [regionStartPt, setRegionStartPt] = useState<{ clientX: number; clientY: number } | null>(null);
   const [, setRegionCurrentPt] = useState<{ clientX: number; clientY: number } | null>(null);
+  const [matchingTemplate, setMatchingTemplate] = useState(false);
+  const [templateMatchResult, setTemplateMatchResult] = useState<TemplateMatchResult | null>(null);
 
   // Right-Click Context Menu State
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; node: ElementNode | null } | null>(null);
@@ -158,11 +167,20 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
           const resp = await api.deviceStreamFrame(serial);
           if (active && resp && resp.screenshot_base64) {
             setScreenFrame(resp.screenshot_base64);
-            setScreenWidth(resp.width || 540);
-            setScreenHeight(resp.height || 960);
-            setScreenRotation(resp.rotation_deg || 0);
-            setIsLandscape(resp.rotation_deg === 90 || resp.rotation_deg === 270);
+            const w = resp.width || 540;
+            const h = resp.height || 960;
+            setScreenWidth(w);
+            setScreenHeight(h);
+            const rot = resp.rotation_deg || 0;
+            setScreenRotation(rot);
+            setIsLandscape(rot === 90 || rot === 270 || w > h);
             setStreamLatency(resp.latency_ms || Date.now() - start);
+            if (resp.stream_mode) setStreamMode(resp.stream_mode);
+            if (resp.received_fps !== undefined) setReceivedFps(resp.received_fps);
+            if (resp.decoded_fps !== undefined) setDecodedFps(resp.decoded_fps);
+            if (resp.dropped_frames !== undefined) setDroppedFrames(resp.dropped_frames);
+            if (resp.decode_time_ms !== undefined) setDecodeTimeMs(resp.decode_time_ms);
+            if (resp.frame_age_ms !== undefined) setFrameAgeMs(resp.frame_age_ms);
             // Only increment frame count on verified successfully decoded frame (FP-010)
             frameCount++;
           }
@@ -488,6 +506,38 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
     }
   };
 
+  const handleTestTemplateMatch = async () => {
+    if (!selectedRegion) return;
+    setMatchingTemplate(true);
+    try {
+      addLog(`[Vision] Cắt template từ [${selectedRegion.x}, ${selectedRegion.y}, ${selectedRegion.width}, ${selectedRegion.height}] và thử nhận diện trên frame mới...`, 'info');
+      const crop = await api.deviceCropRegion({
+        serial,
+        x: selectedRegion.x,
+        y: selectedRegion.y,
+        width: selectedRegion.width,
+        height: selectedRegion.height,
+      });
+      const match = await api.deviceTestTemplateMatch(serial, crop.cropped_base64);
+      setTemplateMatchResult(match);
+      if (match.found && match.bounds) {
+        addLog(
+          `[Vision] Nhận diện thành công! Độ tương đồng: ${(match.confidence * 100).toFixed(1)}% tại [${match.bounds.x}, ${match.bounds.y}, ${match.bounds.width}, ${match.bounds.height}] (${match.duration_ms}ms)`,
+          'success'
+        );
+        onNotice(`Template match: ${(match.confidence * 100).toFixed(1)}%`, 'success');
+      } else {
+        addLog(`[Vision] Không tìm thấy template với độ tin cậy >= 80% (Điểm cao nhất: ${(match.confidence * 100).toFixed(1)}%)`, 'warn');
+        onNotice(`Không tìm thấy template (${(match.confidence * 100).toFixed(1)}%)`, 'info');
+      }
+    } catch (err: any) {
+      addLog(`[Vision] Lỗi nhận diện: ${err}`, 'error');
+      onNotice(`Lỗi nhận diện: ${err}`, 'error');
+    } finally {
+      setMatchingTemplate(false);
+    }
+  };
+
   const handleSelectNode = async (node: ElementNode) => {
     setSelectedNode(node);
     if (!snapshotResult) return;
@@ -791,23 +841,54 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
 
         {/* Right Toolbar: Live Metrics + Snapshot Controls */}
         <div className="flex items-center gap-3">
-          {/* Live Performance Metrics */}
-          <div className="hidden lg:flex items-center gap-3 text-xs font-mono text-[#94A3B8] bg-[#070B12] px-3 py-1 rounded-full border border-[#1E293B]">
+          {/* Live Performance & Truthful Telemetry Toolbar (Gate B) */}
+          <div
+            className="hidden lg:flex items-center gap-2 text-xs font-mono text-[#94A3B8] bg-[#070B12] px-3 py-1 rounded-full border border-[#1E293B]"
+            title={`Telemetry chi tiết: Recv ${receivedFps} FPS | Dec ${decodedFps} FPS | Render ${streamFps} FPS | Decode ${decodeTimeMs}ms | Age ${frameAgeMs}ms | Dropped ${droppedFrames}`}
+          >
+            <span
+              className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                streamMode === 'H264_STREAM'
+                  ? 'bg-[#0284C7]/20 text-[#38BDF8] border border-[#0284C7]/40'
+                  : 'bg-[#D97706]/20 text-[#F59E0B] border border-[#D97706]/40'
+              }`}
+            >
+              {streamMode === 'H264_STREAM' ? 'H.264 IN-CANVAS' : 'SNAPSHOT MODE'}
+            </span>
             <div className="flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5 text-[#38BDF8]" />
               <span>
                 FPS: <strong className="text-white">{streamFps}</strong>
+                {decodedFps > 0 && <span className="text-[10px] text-[#64748B] ml-1">({decodedFps} dec)</span>}
               </span>
             </div>
             <div className="w-[1px] h-3 bg-[#1E293B]" />
             <div>
               Độ trễ: <strong className="text-white">{streamLatency}ms</strong>
+              {decodeTimeMs > 0 && <span className="text-[10px] text-[#64748B] ml-1">({decodeTimeMs}ms dec)</span>}
+            </div>
+            {droppedFrames > 0 && (
+              <>
+                <div className="w-[1px] h-3 bg-[#1E293B]" />
+                <div className="text-[#EF4444]">
+                  Drop: <strong>{droppedFrames}</strong>
+                </div>
+              </>
+            )}
+            <div className="w-[1px] h-3 bg-[#1E293B]" />
+            <div title="Theo nguyên tắc Never Mock Success: Glass-to-glass latency cần camera quang học ngoài để đo thực nghiệm">
+              Input: <strong className="text-[#94A3B8]">N/A</strong>
             </div>
           </div>
 
           {/* Freeze / Live Toggle */}
           <button
-            onClick={() => setIsStreaming(!isStreaming)}
+            onClick={async () => {
+              const newStreaming = !isStreaming;
+              setIsStreaming(newStreaming);
+              await api.deviceFreezeStream(serial, !newStreaming);
+              addLog(newStreaming ? 'Live video resumed.' : 'Live video frozen.', 'info');
+            }}
             className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 transition ${
               isStreaming
                 ? 'bg-[#1E293B] text-[#38BDF8] hover:bg-[#25364E]'
@@ -926,7 +1007,9 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
             <div
               className={`relative bg-black rounded-2xl shadow-2xl overflow-hidden border-4 border-[#1E293B] transition-all flex items-center justify-center ${
                 zoomLevel === 'fit'
-                  ? 'max-h-[calc(100vh-250px)] max-w-full'
+                  ? (isLandscape || screenWidth > screenHeight)
+                    ? 'w-full max-w-[960px] max-h-[calc(100vh-250px)]'
+                    : 'max-h-[calc(100vh-250px)] max-w-full'
                   : zoomLevel === '50'
                   ? 'scale-50'
                   : zoomLevel === '75'
@@ -934,7 +1017,7 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
                   : 'scale-100'
               }`}
               style={{
-                aspectRatio: `${screenWidth} / ${screenHeight}`,
+                aspectRatio: `${(isLandscape || screenWidth > screenHeight) ? Math.max(screenWidth, screenHeight) : Math.min(screenWidth, screenHeight)} / ${(isLandscape || screenWidth > screenHeight) ? Math.min(screenWidth, screenHeight) : Math.max(screenWidth, screenHeight)}`,
                 height: zoomLevel === 'fit' ? '100%' : `${screenHeight}px`,
                 maxWidth: '100%',
               }}
@@ -991,6 +1074,17 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        handleTestTemplateMatch();
+                      }}
+                      disabled={matchingTemplate}
+                      className="px-2 py-1 bg-[#38BDF8] hover:bg-[#0284C7] text-black font-bold rounded text-[10px] shadow flex items-center gap-1 disabled:opacity-50"
+                    >
+                      <Search className="w-3 h-3" />
+                      {matchingTemplate ? 'Đang quét...' : 'Thử nhận diện'}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
                         handleCropSelectedRegion();
                       }}
                       className="px-2 py-1 bg-[#10B981] hover:bg-[#059669] text-black font-bold rounded text-[10px] shadow flex items-center gap-1"
@@ -999,6 +1093,24 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
                       Cắt & Lưu Template
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Template Match Result Overlay (Gate F) */}
+              {templateMatchResult && templateMatchResult.bounds && screenImgRef.current && (
+                <div
+                  className="absolute pointer-events-none border-2 border-[#38BDF8] bg-[#38BDF8]/20 transition-all z-20 shadow-[0_0_15px_rgba(56,189,248,0.5)]"
+                  style={ScreenGeometryTransform.deviceBoundsToOverlayStyle(
+                    templateMatchResult.bounds,
+                    screenImgRef.current.getBoundingClientRect().width,
+                    screenImgRef.current.getBoundingClientRect().height,
+                    screenWidth,
+                    screenHeight
+                  )}
+                >
+                  <span className="absolute -top-5 left-0 px-1.5 py-0.5 rounded text-[9px] font-mono bg-[#38BDF8] text-black font-bold whitespace-nowrap shadow">
+                    Matched: {(templateMatchResult.confidence * 100).toFixed(1)}% ({templateMatchResult.duration_ms}ms)
+                  </span>
                 </div>
               )}
 
@@ -1068,11 +1180,12 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
                 <button
                   onClick={() => {
                     if (contextMenu.node) {
+                      const hasId = !!contextMenu.node.resource_id;
                       const matchItem: SelectorMatch = {
                         node_id: contextMenu.node.id,
                         bounds: contextMenu.node.bounds,
-                        confidence: 1.0,
-                        strategy_used: 'ContextMenu',
+                        confidence: hasId ? 1.0 : 0.85,
+                        strategy_used: hasId ? 'native_id' : 'class_target',
                         is_clickable: contextMenu.node.clickable,
                         resolved_clickable_ancestor_id: null,
                         resolved_bounds: contextMenu.node.bounds,
@@ -1105,6 +1218,7 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
                   onClick={() => {
                     if (contextMenu.node) {
                       const stepNum = recordedSteps.length + 1;
+                      const hasId = !!contextMenu.node.resource_id;
                       const newStep: RecordedWorkflowStep = {
                         id: `step-${Date.now()}`,
                         stepNumber: stepNum,
@@ -1122,8 +1236,9 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
                         durationMs: 0,
                         status: 'recorded',
                         enabled: true,
-                        uniquenessScore: 100,
-                        strategyUsed: 'Context Menu Target',
+                        uniquenessScore: hasId ? 100 : 70,
+                        strategyUsed: hasId ? 'Native Resource ID' : 'Class/Text Target',
+                        onFailure: 'stop',
                       };
                       setRecordedSteps((prev) => [...prev, newStep]);
                       onNotice('Đã thêm bước vào Recorder!', 'success');
@@ -1166,7 +1281,7 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
                   </button>
                 </div>
 
-                <div className="grid grid-cols-5 gap-3 text-xs">
+                <div className="grid grid-cols-6 gap-3 text-xs">
                   <div>
                     <label className="text-[10px] text-[#64748B] block mb-1">Thao tác (Action)</label>
                     <select
@@ -1209,6 +1324,23 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
                       }}
                       className="w-full bg-[#131C2D] border border-[#1E293B] rounded px-2 py-1 text-white"
                     />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#64748B] block mb-1">Xử lý khi lỗi (On Failure)</label>
+                    <select
+                      value={recordedSteps[editingStepIndex].onFailure || 'stop'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setRecordedSteps((prev) =>
+                          prev.map((s, i) => (i === editingStepIndex ? { ...s, onFailure: val } : s))
+                        );
+                      }}
+                      className="w-full bg-[#131C2D] border border-[#1E293B] rounded px-2 py-1 text-white"
+                    >
+                      <option value="stop">Dừng luồng (Fail-Closed)</option>
+                      <option value="continue">Bỏ qua & Tiếp tục</option>
+                    </select>
                   </div>
 
                   <div>
