@@ -179,7 +179,7 @@ pub fn hex_encode(bytes: &[u8]) -> String {
 
 pub fn hex_decode(hex_str: &str) -> Result<Vec<u8>> {
     let s = hex_str.trim();
-    if s.len() % 2 != 0 {
+    if !s.len().is_multiple_of(2) {
         bail!("Invalid hex string length: {}", s.len());
     }
     let mut out = Vec::with_capacity(s.len() / 2);

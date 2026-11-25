@@ -20,16 +20,11 @@ pub struct OsLockOwnerMetadata {
     pub expires_at_utc: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum ConflictPolicy {
+    #[default]
     FailImmediately,
     WaitUpTo(std::time::Duration),
-}
-
-impl Default for ConflictPolicy {
-    fn default() -> Self {
-        Self::FailImmediately
-    }
 }
 
 pub fn canonical_lock_hash(canonical_key: &str) -> String {
@@ -133,9 +128,13 @@ mod platform {
     use std::os::windows::ffi::OsStrExt;
     use std::sync::Mutex;
 
+    #[allow(clippy::upper_case_acronyms)]
     type HANDLE = *mut core::ffi::c_void;
+    #[allow(clippy::upper_case_acronyms)]
     type BOOL = i32;
+    #[allow(clippy::upper_case_acronyms)]
     type DWORD = u32;
+    #[allow(clippy::upper_case_acronyms)]
     type LPCWSTR = *const u16;
 
     const GENERIC_READ: DWORD = 0x8000_0000;

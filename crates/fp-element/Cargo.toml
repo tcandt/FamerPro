@@ -19,6 +19,7 @@ tracing = { workspace = true }
 chrono = { workspace = true }
 rand = { workspace = true }
 uuid = { workspace = true }
+tokio = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true }
+fp-testkit = { path = "../fp-testkit" }

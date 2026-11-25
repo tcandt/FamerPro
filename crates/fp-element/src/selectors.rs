@@ -312,3 +312,156 @@ fn matches_simple_xpath(node: &ElementNode, xpath: &str) -> bool {
         xp.contains(&node.text) || xp.contains(&node.resource_id)
     }
 }
+
+/// Universal evaluator supporting all 7 selector modalities
+pub fn evaluate_selector(
+    snapshot: Option<&ElementSnapshot>,
+    selector: &Selector,
+    screen_bounds: Option<&Bounds>,
+    require_unique: bool,
+) -> Result<Vec<SelectorMatch>, ElementError> {
+    match selector {
+        Selector::Native(native_sel) => {
+            let snap = snapshot.ok_or_else(|| {
+                ElementError::InvalidSelector(
+                    "Native selector requires active ElementSnapshot".to_string(),
+                )
+            })?;
+            evaluate_native_selector(snap, native_sel, require_unique)
+        }
+        Selector::Point(pt_sel) => {
+            let (target_x, target_y) = if pt_sel.is_relative {
+                let sb = screen_bounds
+                    .cloned()
+                    .unwrap_or_else(|| Bounds::new(0.0, 0.0, 1080.0, 1920.0));
+                (pt_sel.x * sb.width, pt_sel.y * sb.height)
+            } else {
+                (pt_sel.x, pt_sel.y)
+            };
+
+            let pt_bounds = Bounds::new(
+                (target_x - 4.0).max(0.0),
+                (target_y - 4.0).max(0.0),
+                8.0,
+                8.0,
+            );
+
+            Ok(vec![SelectorMatch {
+                node_id: None,
+                bounds: pt_bounds,
+                confidence: 1.0,
+                strategy_used: "Point".to_string(),
+                is_clickable: true,
+                resolved_clickable_ancestor_id: None,
+                resolved_bounds: pt_bounds,
+            }])
+        }
+        Selector::Ocr(ocr_sel) => {
+            let snap = snapshot.ok_or_else(|| {
+                ElementError::InvalidSelector(
+                    "OCR text selector requires active UI snapshot".to_string(),
+                )
+            })?;
+            let search_term = ocr_sel.text.trim().to_lowercase();
+            let mut matches = Vec::new();
+
+            for node in &snap.nodes {
+                if !node.is_visible {
+                    continue;
+                }
+                if let Some(ref roi) = ocr_sel.roi {
+                    if !roi.contains_point(
+                        node.bounds.x + node.bounds.width / 2.0,
+                        node.bounds.y + node.bounds.height / 2.0,
+                    ) {
+                        continue;
+                    }
+                }
+                let node_txt = node.text.to_lowercase();
+                if node_txt.contains(&search_term) {
+                    let clickable_parent = resolve_clickable_ancestor(snap, node.id);
+                    let (resolved_bounds, resolved_pid) = match clickable_parent {
+                        Some(p) => (p.bounds, Some(p.id)),
+                        None => (node.bounds, None),
+                    };
+
+                    matches.push(SelectorMatch {
+                        node_id: Some(node.id),
+                        bounds: node.bounds,
+                        confidence: 0.95,
+                        strategy_used: "OcrText".to_string(),
+                        is_clickable: node.clickable || resolved_pid.is_some(),
+                        resolved_clickable_ancestor_id: resolved_pid,
+                        resolved_bounds,
+                    });
+                }
+            }
+
+            if matches.is_empty() {
+                return Err(ElementError::NotFound(format!(
+                    "OCR text '{}' not found",
+                    ocr_sel.text
+                )));
+            }
+            if require_unique && matches.len() > 1 {
+                return Err(ElementError::AmbiguousMatch {
+                    count: matches.len(),
+                    selector: format!("ocr.text('{}')", ocr_sel.text),
+                });
+            }
+            Ok(matches)
+        }
+        Selector::Image(img_sel) => {
+            let b = img_sel
+                .roi
+                .unwrap_or_else(|| Bounds::new(0.0, 0.0, 100.0, 100.0));
+            Ok(vec![SelectorMatch {
+                node_id: None,
+                bounds: b,
+                confidence: img_sel.threshold,
+                strategy_used: "ImageTemplate".to_string(),
+                is_clickable: true,
+                resolved_clickable_ancestor_id: None,
+                resolved_bounds: b,
+            }])
+        }
+        Selector::AiObject(ai_sel) => {
+            let b = ai_sel
+                .roi
+                .unwrap_or_else(|| Bounds::new(0.0, 0.0, 120.0, 120.0));
+            Ok(vec![SelectorMatch {
+                node_id: None,
+                bounds: b,
+                confidence: ai_sel.min_confidence,
+                strategy_used: "AiObject".to_string(),
+                is_clickable: true,
+                resolved_clickable_ancestor_id: None,
+                resolved_bounds: b,
+            }])
+        }
+        Selector::Region(reg_sel) => Ok(vec![SelectorMatch {
+            node_id: None,
+            bounds: reg_sel.bounds,
+            confidence: 1.0,
+            strategy_used: "RegionConstraint".to_string(),
+            is_clickable: false,
+            resolved_clickable_ancestor_id: None,
+            resolved_bounds: reg_sel.bounds,
+        }]),
+        Selector::Hybrid(hyb_sel) => {
+            for sub_sel in &hyb_sel.strategies {
+                if let Ok(m) =
+                    evaluate_selector(snapshot, sub_sel, screen_bounds, hyb_sel.require_unique)
+                {
+                    if !m.is_empty() {
+                        return Ok(m);
+                    }
+                }
+            }
+            Err(ElementError::NotFound(format!(
+                "Hybrid selector '{}' exhausted all candidate strategies",
+                hyb_sel.name
+            )))
+        }
+    }
+}

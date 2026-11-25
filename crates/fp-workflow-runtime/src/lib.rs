@@ -1,3 +1,9 @@
+#![allow(
+    clippy::too_many_arguments,
+    clippy::if_same_then_else,
+    clippy::unnecessary_lazy_evaluations
+)]
+
 pub mod coordinator;
 
 use anyhow::{bail, Context, Result};
@@ -1283,28 +1289,59 @@ impl WorkflowExecutor {
 
             "element.find" | "element.click" | "element.set_text" | "element.assert"
             | "element.wait" => {
+                let strategy = node
+                    .config
+                    .get("strategy")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("native");
+
                 let text_sel = node.config.get("text").and_then(|v| v.as_str());
                 let id_sel = node.config.get("resourceId").and_then(|v| v.as_str());
                 let xpath_sel = node.config.get("xpath").and_then(|v| v.as_str());
                 let class_sel = node.config.get("className").and_then(|v| v.as_str());
                 let desc_sel = node.config.get("contentDesc").and_then(|v| v.as_str());
+                let pt_x = node
+                    .config
+                    .get("pointX")
+                    .and_then(|v| v.as_f64())
+                    .map(|v| v as f32);
+                let pt_y = node
+                    .config
+                    .get("pointY")
+                    .and_then(|v| v.as_f64())
+                    .map(|v| v as f32);
 
-                let mut native_sel = fp_element::NativeElementSelector::default();
-                if let Some(t) = text_sel {
-                    native_sel.text = Some(t.to_string());
-                }
-                if let Some(i) = id_sel {
-                    native_sel.resource_id = Some(i.to_string());
-                }
-                if let Some(x) = xpath_sel {
-                    native_sel.xpath = Some(x.to_string());
-                }
-                if let Some(c) = class_sel {
-                    native_sel.class_name = Some(c.to_string());
-                }
-                if let Some(d) = desc_sel {
-                    native_sel.content_desc = Some(d.to_string());
-                }
+                let selector = match strategy {
+                    "point" => fp_element::Selector::Point(fp_element::PointSelector {
+                        x: pt_x.unwrap_or(0.5),
+                        y: pt_y.unwrap_or(0.5),
+                        is_relative: true,
+                    }),
+                    "ocr" => fp_element::Selector::Ocr(fp_element::OcrSelector {
+                        text: text_sel.unwrap_or("").to_string(),
+                        roi: None,
+                        min_confidence: 0.85,
+                    }),
+                    _ => {
+                        let mut native_sel = fp_element::NativeElementSelector::default();
+                        if let Some(t) = text_sel {
+                            native_sel.text = Some(t.to_string());
+                        }
+                        if let Some(i) = id_sel {
+                            native_sel.resource_id = Some(i.to_string());
+                        }
+                        if let Some(x) = xpath_sel {
+                            native_sel.xpath = Some(x.to_string());
+                        }
+                        if let Some(c) = class_sel {
+                            native_sel.class_name = Some(c.to_string());
+                        }
+                        if let Some(d) = desc_sel {
+                            native_sel.content_desc = Some(d.to_string());
+                        }
+                        fp_element::Selector::Native(native_sel)
+                    }
+                };
 
                 let require_unique = node
                     .config
@@ -1318,34 +1355,28 @@ impl WorkflowExecutor {
                     .unwrap_or(5000);
 
                 let geom = self.driver.geometry().await?;
+                let screen_bounds =
+                    Bounds::new(0.0, 0.0, geom.width_px as f32, geom.height_px as f32);
                 let start_wait = std::time::Instant::now();
 
                 let mut matched_item = None;
                 while start_wait.elapsed().as_millis() as u64 <= timeout_ms {
-                    let xml = if let Ok(_out) = fp_adb::AdbRunner::new(None)
-                        .run_args(&["shell", "uiautomator", "dump", "/sdcard/window.xml"])
-                        .await
-                    {
-                        fp_adb::AdbRunner::new(None)
-                            .run_args(&["shell", "cat", "/sdcard/window.xml"])
-                            .await
-                            .unwrap_or_default()
+                    let xml = self.driver.get_ui_tree().await.unwrap_or_default();
+                    let snapshot = if !xml.is_empty() {
+                        fp_element::parse_ui_hierarchy(&xml, &geom).ok()
                     } else {
-                        String::new()
+                        None
                     };
 
-                    if !xml.is_empty() {
-                        if let Ok(snapshot) = fp_element::parse_ui_hierarchy(&xml, &geom) {
-                            if let Ok(matches) = fp_element::evaluate_native_selector(
-                                &snapshot,
-                                &native_sel,
-                                require_unique,
-                            ) {
-                                if let Some(first) = matches.into_iter().next() {
-                                    matched_item = Some(first);
-                                    break;
-                                }
-                            }
+                    if let Ok(detection) = fp_element::UnifiedElementExecutor::detect(
+                        snapshot.as_ref(),
+                        &selector,
+                        Some(&screen_bounds),
+                        require_unique,
+                    ) {
+                        if let Some(first) = detection.matches.into_iter().next() {
+                            matched_item = Some(first);
+                            break;
                         }
                     }
 
@@ -1358,7 +1389,7 @@ impl WorkflowExecutor {
                 if node.node_type == "element.assert" && matched_item.is_none() {
                     bail!(
                         "Element assertion failed: selector {:?} not found",
-                        native_sel
+                        selector
                     );
                 }
 
@@ -1375,12 +1406,12 @@ impl WorkflowExecutor {
                     );
                     ctx.last_target = Some(VisionTarget {
                         bounds: m.resolved_bounds,
-                        confidence: 1.0,
+                        confidence: m.confidence,
                         geometry: geom,
                     });
 
                     if node.node_type == "element.click" {
-                        let plan = fp_element::plan_element_action(
+                        let plan = fp_element::UnifiedElementExecutor::plan(
                             &m,
                             fp_element::ElementActionKind::Tap,
                             fp_element::ActionExecutionMode::ClickableParent,
@@ -1388,10 +1419,12 @@ impl WorkflowExecutor {
                         )
                         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-                        let receipt = self
-                            .driver
-                            .tap(plan.safe_point.x as u32, plan.safe_point.y as u32)
-                            .await?;
+                        let receipt = fp_element::UnifiedElementExecutor::execute(
+                            self.driver.as_ref(),
+                            &plan,
+                        )
+                        .await
+                        .map_err(|e| anyhow::anyhow!("{}", e))?;
                         ctx.last_receipt = Some(receipt);
                     } else if node.node_type == "element.set_text" {
                         let text_val = node
@@ -1399,7 +1432,7 @@ impl WorkflowExecutor {
                             .get("inputText")
                             .and_then(|v| v.as_str())
                             .unwrap_or("");
-                        let plan = fp_element::plan_element_action(
+                        let plan = fp_element::UnifiedElementExecutor::plan(
                             &m,
                             fp_element::ElementActionKind::SetText {
                                 text: text_val.to_string(),
@@ -1409,10 +1442,13 @@ impl WorkflowExecutor {
                             None,
                         )
                         .map_err(|e| anyhow::anyhow!("{}", e))?;
-                        let _ = self
-                            .driver
-                            .tap(plan.safe_point.x as u32, plan.safe_point.y as u32)
-                            .await?;
+                        let receipt = fp_element::UnifiedElementExecutor::execute(
+                            self.driver.as_ref(),
+                            &plan,
+                        )
+                        .await
+                        .map_err(|e| anyhow::anyhow!("{}", e))?;
+                        ctx.last_receipt = Some(receipt);
                     }
                 } else if node.node_type == "element.find" {
                     ctx.variables

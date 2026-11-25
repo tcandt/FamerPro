@@ -1339,7 +1339,11 @@ fn main() {
             element_ipc::element_find_matches,
             element_ipc::element_generate_selectors,
             element_ipc::element_find_at_point,
-            element_ipc::element_execute_action
+            element_ipc::element_test_detection,
+            element_ipc::element_execute_action,
+            element_ipc::element_save_to_library,
+            element_ipc::element_list_library,
+            element_ipc::element_delete_from_library
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

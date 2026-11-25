@@ -7,6 +7,32 @@ pub const DEFAULT_LEGACY_PROJECT_SLUG: &str = "jx2-mobile";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct LibraryElementRecord {
+    pub id: String,
+    pub project_id: String,
+    pub name: String,
+    pub package_filter: Option<String>,
+    pub primary_strategy: String,
+    pub selector_json: String,
+    #[serde(default = "default_empty_json_array")]
+    pub fallback_selectors_json: String,
+    pub bounds_json: Option<String>,
+    #[serde(default = "default_version_one")]
+    pub version: u32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+fn default_empty_json_array() -> String {
+    "[]".to_string()
+}
+
+fn default_version_one() -> u32 {
+    1
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct GameProjectRecord {
     pub id: String,
     pub slug: String,

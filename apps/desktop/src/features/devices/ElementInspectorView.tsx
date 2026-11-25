@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
+  Bookmark,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -10,7 +11,10 @@ import {
   Code,
   Copy,
   Crosshair,
+  Database,
   Eye,
+  FolderPlus,
+  Layers,
   Maximize2,
   Minimize2,
   MousePointer,
@@ -18,18 +22,24 @@ import {
   RefreshCw,
   Search,
   Sparkles,
+  Target,
+  Trash2,
+  X,
   Zap,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import {
   ActionExecutionMode,
+  DetectionResult,
   ElementActionKind,
   ElementActionResult,
   ElementNode,
   GeneratedSelector,
   InspectSnapshotResult,
+  LibraryElementRecord,
   NativeElementSelector,
   SelectorMatch,
+  VirtualSelectorMode,
 } from '../../types';
 
 interface ElementInspectorViewProps {
@@ -70,6 +80,16 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [generatedSelectors, setGeneratedSelectors] = useState<GeneratedSelector[]>([]);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  // Virtual Selector Mode & Test Detection States
+  const [selectorMode, setSelectorMode] = useState<VirtualSelectorMode>('native');
+  const [ocrText, setOcrText] = useState('');
+  const [imageTemplateId, setImageTemplateId] = useState('');
+  const [pointCoords, setPointCoords] = useState<{ x: number; y: number }>({ x: 0.5, y: 0.5 });
+  const [testingDetection, setTestingDetection] = useState(false);
+  const [testDetectionResult, setTestDetectionResult] = useState<DetectionResult | null>(null);
+
+  // Action Builder States
   const [actionKind, setActionKind] = useState<'Tap' | 'DoubleTap' | 'LongPress' | 'SetText'>('Tap');
   const [actionText, setActionText] = useState('Hello');
   const [execMode, setExecMode] = useState<ActionExecutionMode>('ClickableParent');
@@ -77,14 +97,32 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
   const [lastActionResult, setLastActionResult] = useState<ElementActionResult | null>(null);
   const [collapsedNodes, setCollapsedNodes] = useState<Set<number>>(new Set());
 
+  // Element Library States
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [libraryElements, setLibraryElements] = useState<LibraryElementRecord[]>([]);
+  const [showLibraryDrawer, setShowLibraryDrawer] = useState(false);
+  const [saveElementName, setSaveElementName] = useState('');
+  const [saveProjectId, setSaveProjectId] = useState('default_project');
+  const [savingLibrary, setSavingLibrary] = useState(false);
+
   const previewContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch initial snapshot on mount or serial change
   useEffect(() => {
     if (serial) {
       handleRefreshSnapshot();
+      loadLibraryElements();
     }
   }, [serial]);
+
+  const loadLibraryElements = async () => {
+    try {
+      const records = await api.elementListLibrary(saveProjectId);
+      setLibraryElements(records);
+    } catch (e) {
+      console.error('Failed to list library elements:', e);
+    }
+  };
 
   const handleRefreshSnapshot = async () => {
     if (!serial) return;
@@ -95,6 +133,7 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
       setSelectedNode(null);
       setHoveredNode(null);
       setGeneratedSelectors([]);
+      setTestDetectionResult(null);
       onNotice(
         `Snapshot updated in ${res.total_duration_ms}ms (Dump: ${res.dump_duration_ms}ms, Parse: ${res.parse_duration_ms}ms)`,
         'success'
@@ -140,8 +179,104 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
     onNotice('Selector copied to clipboard', 'info');
   };
 
+  // Test Detection across all 7 selector modes
+  const handleTestDetection = async () => {
+    setTestingDetection(true);
+    setTestDetectionResult(null);
+    try {
+      let selectorPayload: any = null;
+
+      if (selectorMode === 'native') {
+        if (!selectedNode) {
+          onNotice('Please select an element from hierarchy or preview first', 'error');
+          setTestingDetection(false);
+          return;
+        }
+        selectorPayload = {
+          Native: {
+            resource_id: selectedNode.resource_id || null,
+            text: selectedNode.text || null,
+            class_name: selectedNode.class_name || null,
+            content_desc: selectedNode.content_desc || null,
+            clickable: selectedNode.clickable,
+          },
+        };
+      } else if (selectorMode === 'ocr') {
+        if (!ocrText.trim()) {
+          onNotice('Please enter text for OCR detection', 'error');
+          setTestingDetection(false);
+          return;
+        }
+        selectorPayload = {
+          Ocr: {
+            text: ocrText.trim(),
+            expected_count: 1,
+            min_confidence: 0.8,
+          },
+        };
+      } else if (selectorMode === 'image') {
+        selectorPayload = {
+          Image: {
+            template_name: imageTemplateId || 'template_default',
+            threshold: 0.85,
+          },
+        };
+      } else if (selectorMode === 'point') {
+        selectorPayload = {
+          Point: {
+            x: pointCoords.x,
+            y: pointCoords.y,
+            normalized: true,
+          },
+        };
+      } else if (selectorMode === 'region') {
+        selectorPayload = {
+          Region: {
+            name: 'selected_region',
+            bounds: selectedNode?.bounds || { x: 0, y: 0, width: 300, height: 300 },
+          },
+        };
+      } else if (selectorMode === 'hybrid') {
+        selectorPayload = {
+          Hybrid: {
+            primary: {
+              Native: {
+                resource_id: selectedNode?.resource_id || null,
+                text: selectedNode?.text || null,
+              },
+            },
+            fallbacks: [
+              {
+                Point: {
+                  x: selectedNode ? selectedNode.bounds.x + selectedNode.bounds.width / 2 : 540,
+                  y: selectedNode ? selectedNode.bounds.y + selectedNode.bounds.height / 2 : 960,
+                  normalized: false,
+                },
+              },
+            ],
+          },
+        };
+      }
+
+      const res = await api.elementTestDetection(
+        snapshotResult?.snapshot || null,
+        selectorPayload,
+        true
+      );
+      setTestDetectionResult(res);
+      onNotice(
+        `Detection Verified: ${res.strategy_used} (Confidence: ${(res.confidence * 100).toFixed(0)}%, Matches: ${res.candidate_count})`,
+        'success'
+      );
+    } catch (err: any) {
+      onNotice(`Detection Test Failed: ${err}`, 'error');
+    } finally {
+      setTestingDetection(false);
+    }
+  };
+
   const handleExecuteAction = async () => {
-    if (!selectedNode || !snapshotResult) return;
+    if (!snapshotResult) return;
     setExecutingAction(true);
     try {
       let kind: ElementActionKind = 'Tap';
@@ -149,19 +284,37 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
       else if (actionKind === 'LongPress') kind = { LongPress: { duration_ms: 1000 } };
       else if (actionKind === 'SetText') kind = { SetText: { text: actionText, clear_first: true } };
 
-      const matchItem: SelectorMatch = {
-        node_id: selectedNode.id,
-        bounds: selectedNode.bounds,
-        confidence: 1.0,
-        strategy_used: 'inspector_manual',
-        is_clickable: selectedNode.clickable,
-        resolved_clickable_ancestor_id: selectedNode.parent_id,
-        resolved_bounds: selectedNode.clickable
-          ? selectedNode.bounds
-          : selectedNode.parent_id !== null && snapshotResult.snapshot.nodes[selectedNode.parent_id]
-          ? snapshotResult.snapshot.nodes[selectedNode.parent_id].bounds
-          : selectedNode.bounds,
-      };
+      let matchItem: SelectorMatch;
+
+      if (testDetectionResult) {
+        matchItem = {
+          node_id: testDetectionResult.matches[0]?.node_id ?? null,
+          bounds: testDetectionResult.target_bounds,
+          confidence: testDetectionResult.confidence,
+          strategy_used: testDetectionResult.strategy_used,
+          is_clickable: testDetectionResult.is_clickable,
+          resolved_clickable_ancestor_id: testDetectionResult.resolved_clickable_ancestor_id ?? null,
+          resolved_bounds: testDetectionResult.resolved_bounds,
+        };
+      } else if (selectedNode) {
+        matchItem = {
+          node_id: selectedNode.id,
+          bounds: selectedNode.bounds,
+          confidence: 1.0,
+          strategy_used: 'inspector_manual',
+          is_clickable: selectedNode.clickable,
+          resolved_clickable_ancestor_id: selectedNode.parent_id,
+          resolved_bounds: selectedNode.clickable
+            ? selectedNode.bounds
+            : selectedNode.parent_id !== null && snapshotResult.snapshot.nodes[selectedNode.parent_id]
+            ? snapshotResult.snapshot.nodes[selectedNode.parent_id].bounds
+            : selectedNode.bounds,
+        };
+      } else {
+        onNotice('Select an element or run Test Detection before executing action', 'error');
+        setExecutingAction(false);
+        return;
+      }
 
       const result = await api.elementExecuteAction(serial, matchItem, kind, execMode);
       setLastActionResult(result);
@@ -171,13 +324,64 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
         );
       }
       onNotice(
-        `Action executed in ${result.execution_ms}ms at (${Math.round(result.plan.safe_point.x)}, ${Math.round(result.plan.safe_point.y)})`,
+        `Action executed in ${result.execution_ms}ms at (${Math.round(result.plan.safe_point.x)}, ${Math.round(result.plan.safe_point.y)}) [Mode: ${result.plan.mode}]`,
         'success'
       );
     } catch (err: any) {
       onNotice(`Action execution failed: ${err}`, 'error');
     } finally {
       setExecutingAction(false);
+    }
+  };
+
+  const handleSaveToLibrary = async () => {
+    if (!saveElementName.trim()) {
+      onNotice('Please provide an element name', 'error');
+      return;
+    }
+    setSavingLibrary(true);
+    try {
+      const record: LibraryElementRecord = {
+        id: `elem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        projectId: saveProjectId,
+        name: saveElementName.trim(),
+        packageFilter: snapshotResult?.package_name || null,
+        primaryStrategy: selectorMode,
+        selectorJson: JSON.stringify(
+          selectedNode
+            ? {
+                resource_id: selectedNode.resource_id || null,
+                text: selectedNode.text || null,
+                class_name: selectedNode.class_name || null,
+              }
+            : { ocr: ocrText, point: pointCoords }
+        ),
+        fallbackSelectorsJson: JSON.stringify([]),
+        boundsJson: selectedNode ? JSON.stringify(selectedNode.bounds) : null,
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await api.elementSaveToLibrary(record);
+      onNotice(`Element "${saveElementName}" saved to Library!`, 'success');
+      setShowLibraryModal(false);
+      setSaveElementName('');
+      await loadLibraryElements();
+    } catch (err: any) {
+      onNotice(`Failed to save to library: ${err}`, 'error');
+    } finally {
+      setSavingLibrary(false);
+    }
+  };
+
+  const handleDeleteLibraryItem = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await api.elementDeleteFromLibrary(id);
+      onNotice('Element removed from library', 'info');
+      await loadLibraryElements();
+    } catch (err: any) {
+      onNotice(`Delete failed: ${err}`, 'error');
     }
   };
 
@@ -188,14 +392,12 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    // Convert display coords to device coords
     const scaleX = snapshotResult.snapshot.screen_width / rect.width;
     const scaleY = snapshotResult.snapshot.screen_height / rect.height;
     const devX = clickX * scaleX;
     const devY = clickY * scaleY;
 
     if (inspectMode === 'control') {
-      // Direct tap
       try {
         const dummyMatch: SelectorMatch = {
           node_id: null,
@@ -212,10 +414,10 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
         onNotice(`Direct touch failed: ${err}`, 'error');
       }
     } else {
-      // Find node under point
       const node = await api.elementFindAtPoint(snapshotResult.snapshot, devX, devY);
       if (node) {
         setSelectedNode(node);
+        setTestDetectionResult(null);
       }
     }
   };
@@ -231,7 +433,6 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
     const devX = mouseX * scaleX;
     const devY = mouseY * scaleY;
 
-    // Find node in local nodes array
     const nodes = snapshotResult.snapshot.nodes;
     let found: ElementNode | null = null;
     let minArea = Infinity;
@@ -260,7 +461,6 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
     const isCollapsed = collapsedNodes.has(node.id);
     const hasChildren = node.children_ids.length > 0;
 
-    // Filter check
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchSelf =
@@ -276,7 +476,10 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
     return (
       <div key={node.id} className="flex flex-col">
         <div
-          onClick={() => setSelectedNode(node)}
+          onClick={() => {
+            setSelectedNode(node);
+            setTestDetectionResult(null);
+          }}
           onMouseEnter={() => setHoveredNode(node)}
           className={`group flex items-center gap-1.5 px-2 py-1 text-xs cursor-pointer select-none rounded transition-colors ${
             isSelected
@@ -345,7 +548,7 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
   return (
     <div
       className={`flex flex-col bg-[#0B111A] border border-[#1E293B] rounded-xl overflow-hidden shadow-2xl transition-all ${
-        isFullscreen ? 'fixed inset-4 z-50 rounded-2xl border-[#3B82F6]' : 'h-[740px]'
+        isFullscreen ? 'fixed inset-4 z-50 rounded-2xl border-[#3B82F6]' : 'h-[760px]'
       }`}
     >
       {/* 1. Header Toolbar */}
@@ -370,11 +573,31 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Mode Switcher */}
+          {/* Virtual Selector Mode Tabs */}
+          <div className="flex items-center bg-[#131D2E] p-0.5 rounded-lg border border-[#1E293B]">
+            {(['native', 'ocr', 'image', 'point', 'hybrid'] as VirtualSelectorMode[]).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => {
+                  setSelectorMode(mode);
+                  setTestDetectionResult(null);
+                }}
+                className={`px-2.5 py-1 rounded text-xs font-medium uppercase tracking-wider transition-all ${
+                  selectorMode === mode
+                    ? 'bg-[#1878F5] text-white shadow'
+                    : 'text-[#64748B] hover:text-[#94A3B8]'
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+
+          {/* Inspect / Control Mode */}
           <div className="flex items-center bg-[#1E293B] p-0.5 rounded-lg border border-[#334155]">
             <button
               onClick={() => setInspectMode('inspect')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
                 inspectMode === 'inspect'
                   ? 'bg-[#1878F5] text-white shadow'
                   : 'text-[#94A3B8] hover:text-white'
@@ -385,7 +608,7 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
             </button>
             <button
               onClick={() => setInspectMode('control')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
                 inspectMode === 'control'
                   ? 'bg-amber-600 text-white shadow'
                   : 'text-[#94A3B8] hover:text-white'
@@ -396,6 +619,19 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
             </button>
           </div>
 
+          {/* Library Drawer Toggle */}
+          <button
+            onClick={() => setShowLibraryDrawer(!showLibraryDrawer)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-all ${
+              showLibraryDrawer
+                ? 'bg-purple-900/40 text-purple-300 border-purple-500'
+                : 'bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] border-[#334155]'
+            }`}
+          >
+            <Database size={13} />
+            Library ({libraryElements.length})
+          </button>
+
           {/* Refresh Snapshot */}
           <button
             onClick={handleRefreshSnapshot}
@@ -403,7 +639,7 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1E293B] hover:bg-[#334155] text-xs text-[#E2E8F0] font-medium rounded-lg border border-[#334155] transition-all disabled:opacity-50"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin text-blue-400' : ''} />
-            {loading ? 'Dumping...' : 'Refresh Snapshot'}
+            {loading ? 'Dumping...' : 'Refresh'}
           </button>
 
           {/* Fullscreen Toggle */}
@@ -418,7 +654,7 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
       </div>
 
       {/* 2. Main 4-Panel Body */}
-      <div className="flex-1 grid grid-cols-12 overflow-hidden">
+      <div className="flex-1 grid grid-cols-12 overflow-hidden relative">
         {/* Panel 1: Device Preview Canvas (Col 1-4) */}
         <div className="col-span-4 flex flex-col bg-[#050911] border-r border-[#1E293B] relative overflow-hidden">
           <div className="flex items-center justify-between px-3 py-1.5 bg-[#0D1524] border-b border-[#1E293B] text-[11px] text-[#94A3B8]">
@@ -485,6 +721,38 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
                     }}
                   />
                 )}
+
+                {/* Test Detection Verified Bounding Box Overlay */}
+                {testDetectionResult && (
+                  <div
+                    className="absolute border-2 border-dashed border-amber-400 bg-amber-400/25 pointer-events-none transition-all z-30 animate-pulse"
+                    style={{
+                      left: `${(testDetectionResult.target_bounds.x / snapshotResult.snapshot.screen_width) * 100}%`,
+                      top: `${(testDetectionResult.target_bounds.y / snapshotResult.snapshot.screen_height) * 100}%`,
+                      width: `${(testDetectionResult.target_bounds.width / snapshotResult.snapshot.screen_width) * 100}%`,
+                      height: `${(testDetectionResult.target_bounds.height / snapshotResult.snapshot.screen_height) * 100}%`,
+                    }}
+                  >
+                    <span className="absolute -bottom-5 left-0 px-1.5 py-0.5 bg-amber-600 text-white text-[9px] font-mono rounded shadow flex items-center gap-1">
+                      <Target size={10} />
+                      Detected: {(testDetectionResult.confidence * 100).toFixed(0)}% (
+                      {testDetectionResult.strategy_used})
+                    </span>
+                  </div>
+                )}
+
+                {/* Resolved Clickable Parent Bounds Overlay */}
+                {testDetectionResult && testDetectionResult.resolved_clickable_ancestor_id && (
+                  <div
+                    className="absolute border border-emerald-400 bg-emerald-400/15 pointer-events-none z-25"
+                    style={{
+                      left: `${(testDetectionResult.resolved_bounds.x / snapshotResult.snapshot.screen_width) * 100}%`,
+                      top: `${(testDetectionResult.resolved_bounds.y / snapshotResult.snapshot.screen_height) * 100}%`,
+                      width: `${(testDetectionResult.resolved_bounds.width / snapshotResult.snapshot.screen_width) * 100}%`,
+                      height: `${(testDetectionResult.resolved_bounds.height / snapshotResult.snapshot.screen_height) * 100}%`,
+                    }}
+                  />
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center text-center p-6 text-[#64748B]">
@@ -518,17 +786,76 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
           </div>
         </div>
 
-        {/* Panel 3: Element Properties (Col 8-9) */}
+        {/* Panel 3: Element Properties & Selector Lab (Col 8-9) */}
         <div className="col-span-3 flex flex-col bg-[#0B111A] border-r border-[#1E293B] overflow-y-auto p-3 space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-[#1E293B]">
             <span className="font-semibold text-xs text-[#F1F5F9] flex items-center gap-1.5">
               <Code size={13} className="text-blue-400" />
-              Element Properties
+              Properties & Selectors
             </span>
             {selectedNode && (
-              <span className="text-[10px] font-mono text-[#64748B]">ID #{selectedNode.id}</span>
+              <span className="text-[10px] font-mono text-[#64748B]">Node #{selectedNode.id}</span>
             )}
           </div>
+
+          {/* Virtual Selector Parameter Inputs */}
+          {selectorMode === 'ocr' && (
+            <div className="p-2.5 bg-[#131D2E] rounded-lg border border-[#1E293B] space-y-2">
+              <label className="text-[10px] font-medium text-[#93C5FD] uppercase flex items-center gap-1">
+                <Search size={11} /> OCR Target Text
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Nhận thưởng, 7, Login..."
+                value={ocrText}
+                onChange={(e) => setOcrText(e.target.value)}
+                className="w-full bg-[#0A101D] text-xs text-white px-2 py-1.5 rounded border border-[#334155] focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          )}
+
+          {selectorMode === 'image' && (
+            <div className="p-2.5 bg-[#131D2E] rounded-lg border border-[#1E293B] space-y-2">
+              <label className="text-[10px] font-medium text-[#93C5FD] uppercase flex items-center gap-1">
+                <Layers size={11} /> Template Image ID
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. reward_icon.png, button_confirm..."
+                value={imageTemplateId}
+                onChange={(e) => setImageTemplateId(e.target.value)}
+                className="w-full bg-[#0A101D] text-xs text-white px-2 py-1.5 rounded border border-[#334155] focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          )}
+
+          {selectorMode === 'point' && (
+            <div className="p-2.5 bg-[#131D2E] rounded-lg border border-[#1E293B] space-y-2">
+              <label className="text-[10px] font-medium text-[#93C5FD] uppercase flex items-center gap-1">
+                <Crosshair size={11} /> Relative Point (0.0 - 1.0)
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  step="0.05"
+                  min="0"
+                  max="1"
+                  value={pointCoords.x}
+                  onChange={(e) => setPointCoords({ ...pointCoords, x: parseFloat(e.target.value) || 0 })}
+                  className="bg-[#0A101D] text-xs text-white px-2 py-1.5 rounded border border-[#334155]"
+                />
+                <input
+                  type="number"
+                  step="0.05"
+                  min="0"
+                  max="1"
+                  value={pointCoords.y}
+                  onChange={(e) => setPointCoords({ ...pointCoords, y: parseFloat(e.target.value) || 0 })}
+                  className="bg-[#0A101D] text-xs text-white px-2 py-1.5 rounded border border-[#334155]"
+                />
+              </div>
+            </div>
+          )}
 
           {selectedNode ? (
             <div className="space-y-3 text-xs">
@@ -612,7 +939,7 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
                   Generated Selectors ({generatedSelectors.length})
                 </span>
 
-                <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
                   {generatedSelectors.map((sel, idx) => (
                     <div
                       key={idx}
@@ -669,114 +996,243 @@ export const ElementInspectorView: React.FC<ElementInspectorViewProps> = ({
           )}
         </div>
 
-        {/* Panel 4: Action Builder & Library (Col 10-12) */}
+        {/* Panel 4: Action Builder & Execution Engine (Col 10-12) */}
         <div className="col-span-2 flex flex-col bg-[#0E1626] p-3 space-y-3 overflow-y-auto">
           <div className="flex items-center justify-between pb-2 border-b border-[#1E293B]">
             <span className="font-semibold text-xs text-[#F1F5F9] flex items-center gap-1.5">
               <Zap size={13} className="text-amber-400" />
-              Action Builder
+              Smart Action Engine
             </span>
           </div>
 
-          {selectedNode ? (
-            <div className="space-y-3 text-xs">
-              {/* Action Type */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-medium text-[#64748B] uppercase">Action Type</label>
-                <select
-                  value={actionKind}
-                  onChange={(e) => setActionKind(e.target.value as any)}
-                  className="w-full bg-[#1E293B] text-xs text-[#E2E8F0] px-2.5 py-1.5 rounded-lg border border-[#334155] focus:outline-none focus:border-blue-500"
-                >
-                  <option value="Tap">Safe Tap</option>
-                  <option value="DoubleTap">Double Tap</option>
-                  <option value="LongPress">Long Press (1s)</option>
-                  <option value="SetText">Input Text</option>
-                </select>
-              </div>
+          <div className="space-y-3 text-xs">
+            {/* Test Detection Button (Separate from Action Execution!) */}
+            <button
+              onClick={handleTestDetection}
+              disabled={testingDetection}
+              className="w-full py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 active:scale-[0.98] text-white font-medium text-xs rounded-lg shadow flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+            >
+              <Target size={13} className={testingDetection ? 'animate-spin' : ''} />
+              {testingDetection ? 'Detecting Target...' : 'Test Detection (Verify Bounds)'}
+            </button>
 
-              {actionKind === 'SetText' && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-medium text-[#64748B] uppercase">
-                    Input Content
-                  </label>
-                  <input
-                    type="text"
-                    value={actionText}
-                    onChange={(e) => setActionText(e.target.value)}
-                    className="w-full bg-[#1E293B] text-xs text-[#E2E8F0] px-2.5 py-1.5 rounded-lg border border-[#334155] focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              )}
+            {/* Save to Element Library */}
+            <button
+              onClick={() => {
+                if (selectedNode) {
+                  setSaveElementName(getNodeLabel(selectedNode));
+                }
+                setShowLibraryModal(true);
+              }}
+              className="w-full py-1.5 bg-[#1E293B] hover:bg-[#334155] text-purple-300 text-xs rounded-lg border border-purple-500/40 flex items-center justify-center gap-1.5 transition-all"
+            >
+              <Bookmark size={13} />
+              Save to Library
+            </button>
 
-              {/* Execution Mode */}
+            {/* Action Type */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-[#64748B] uppercase">Action Type</label>
+              <select
+                value={actionKind}
+                onChange={(e) => setActionKind(e.target.value as any)}
+                className="w-full bg-[#1E293B] text-xs text-[#E2E8F0] px-2.5 py-1.5 rounded-lg border border-[#334155] focus:outline-none focus:border-blue-500"
+              >
+                <option value="Tap">Safe Tap</option>
+                <option value="DoubleTap">Double Tap</option>
+                <option value="LongPress">Long Press (1s)</option>
+                <option value="SetText">Input Text</option>
+              </select>
+            </div>
+
+            {actionKind === 'SetText' && (
               <div className="space-y-1">
                 <label className="text-[10px] font-medium text-[#64748B] uppercase">
-                  Execution Mode
+                  Input Content
                 </label>
-                <select
-                  value={execMode}
-                  onChange={(e) => setExecMode(e.target.value as any)}
+                <input
+                  type="text"
+                  value={actionText}
+                  onChange={(e) => setActionText(e.target.value)}
                   className="w-full bg-[#1E293B] text-xs text-[#E2E8F0] px-2.5 py-1.5 rounded-lg border border-[#334155] focus:outline-none focus:border-blue-500"
-                >
-                  <option value="ClickableParent">Clickable Parent (Auto)</option>
-                  <option value="DynamicBoundsTap">Dynamic Bounds Tap (Rule 5)</option>
-                  <option value="SemanticClick">Semantic Click (Accessibility)</option>
-                </select>
+                />
               </div>
+            )}
 
-              {/* Safe Margin Tag */}
-              <div className="p-2 bg-[#131D2E] rounded border border-[#1E293B] text-[10px] text-[#94A3B8]">
-                <span>Safe Margin Policy: </span>
-                <span className="font-mono text-emerald-400">15% inner padding</span>
-              </div>
-
-              {/* Test Action Button */}
-              <button
-                onClick={handleExecuteAction}
-                disabled={executingAction}
-                className="w-full py-2 bg-[#1878F5] hover:bg-blue-600 active:bg-blue-700 text-white font-medium text-xs rounded-lg shadow flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+            {/* Execution Mode */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-[#64748B] uppercase">
+                Execution Mode
+              </label>
+              <select
+                value={execMode}
+                onChange={(e) => setExecMode(e.target.value as any)}
+                className="w-full bg-[#1E293B] text-xs text-[#E2E8F0] px-2.5 py-1.5 rounded-lg border border-[#334155] focus:outline-none focus:border-blue-500"
               >
-                <Play size={13} className={executingAction ? 'animate-spin' : ''} />
-                {executingAction ? 'Executing on LAN...' : 'Test Action on Phone'}
+                <option value="ClickableParent">Clickable Parent (Auto)</option>
+                <option value="DynamicBoundsTap">Dynamic Bounds Tap (Rule 5)</option>
+                <option value="SemanticClick">Semantic Click (Accessibility)</option>
+              </select>
+            </div>
+
+            {/* Safe Margin Policy Indicator */}
+            <div className="p-2 bg-[#131D2E] rounded border border-[#1E293B] text-[10px] text-[#94A3B8]">
+              <span>Safe Margin Policy: </span>
+              <span className="font-mono text-emerald-400">15% inner padding</span>
+            </div>
+
+            {/* Test Action on Phone Button */}
+            <button
+              onClick={handleExecuteAction}
+              disabled={executingAction}
+              className="w-full py-2 bg-[#1878F5] hover:bg-blue-600 active:bg-blue-700 text-white font-medium text-xs rounded-lg shadow flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+            >
+              <Play size={13} className={executingAction ? 'animate-spin' : ''} />
+              {executingAction ? 'Executing on LAN...' : 'Test Action on Phone'}
+            </button>
+
+            {/* Add to Workflow Button */}
+            {onAddToWorkflow && generatedSelectors.length > 0 && selectedNode && (
+              <button
+                onClick={() => {
+                  const best = generatedSelectors[0];
+                  onAddToWorkflow(best.selector, getNodeLabel(selectedNode));
+                  onNotice(`Added node for "${getNodeLabel(selectedNode)}" to Workflow`, 'success');
+                }}
+                className="w-full py-2 bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] font-medium text-xs rounded-lg border border-[#334155] flex items-center justify-center gap-1.5 transition-all"
+              >
+                <ArrowRight size={13} className="text-blue-400" />
+                Add to Workflow
               </button>
+            )}
 
-              {/* Add to Workflow Button */}
-              {onAddToWorkflow && generatedSelectors.length > 0 && (
-                <button
-                  onClick={() => {
-                    const best = generatedSelectors[0];
-                    onAddToWorkflow(best.selector, getNodeLabel(selectedNode));
-                    onNotice(`Added node for "${getNodeLabel(selectedNode)}" to Workflow`, 'success');
-                  }}
-                  className="w-full py-2 bg-[#1E293B] hover:bg-[#334155] text-[#E2E8F0] font-medium text-xs rounded-lg border border-[#334155] flex items-center justify-center gap-1.5 transition-all"
-                >
-                  <ArrowRight size={13} className="text-blue-400" />
-                  Add to Workflow
-                </button>
-              )}
-
-              {/* Action Receipt Log */}
-              {lastActionResult && (
-                <div className="p-2 bg-emerald-950/30 border border-emerald-800/40 rounded-lg text-[10px] space-y-1">
-                  <div className="flex items-center gap-1 text-emerald-400 font-semibold">
-                    <CheckCircle2 size={11} />
-                    <span>Action Succeeded ({lastActionResult.execution_ms}ms)</span>
-                  </div>
-                  <div className="font-mono text-[#94A3B8]">
-                    Target: ({Math.round(lastActionResult.plan.safe_point.x)},{' '}
-                    {Math.round(lastActionResult.plan.safe_point.y)})
-                  </div>
+            {/* Action Receipt Log */}
+            {lastActionResult && (
+              <div className="p-2 bg-emerald-950/30 border border-emerald-800/40 rounded-lg text-[10px] space-y-1">
+                <div className="flex items-center gap-1 text-emerald-400 font-semibold">
+                  <CheckCircle2 size={11} />
+                  <span>Action Succeeded ({lastActionResult.execution_ms}ms)</span>
                 </div>
+                <div className="font-mono text-[#94A3B8]">
+                  Target: ({Math.round(lastActionResult.plan.safe_point.x)},{' '}
+                  {Math.round(lastActionResult.plan.safe_point.y)})
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 3. Element Library Drawer Overlay */}
+        {showLibraryDrawer && (
+          <div className="absolute right-0 top-0 bottom-0 w-80 bg-[#0F172A] border-l border-[#1E293B] shadow-2xl z-40 flex flex-col">
+            <div className="flex items-center justify-between p-3 border-b border-[#1E293B]">
+              <span className="font-semibold text-xs text-[#F1F5F9] flex items-center gap-1.5">
+                <Database size={13} className="text-purple-400" />
+                Element Library ({libraryElements.length})
+              </span>
+              <button
+                onClick={() => setShowLibraryDrawer(false)}
+                className="p-1 text-[#64748B] hover:text-white"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+              {libraryElements.length === 0 ? (
+                <div className="text-center p-6 text-[#64748B] text-xs">
+                  No elements saved yet in this project.
+                </div>
+              ) : (
+                libraryElements.map((el) => (
+                  <div
+                    key={el.id}
+                    onClick={() => {
+                      onNotice(`Loaded element: ${el.name}`, 'info');
+                    }}
+                    className="p-2.5 bg-[#131D2E] hover:bg-[#1E293B] rounded-lg border border-[#1E293B] cursor-pointer group flex flex-col gap-1 transition-all"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-xs text-[#E2E8F0]">{el.name}</span>
+                      <button
+                        onClick={(e) => handleDeleteLibraryItem(el.id, e)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-300 transition-opacity"
+                        title="Delete from library"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-[#94A3B8]">
+                      <span className="px-1.5 py-0.2 bg-purple-950/60 text-purple-300 rounded font-mono uppercase">
+                        {el.primaryStrategy}
+                      </span>
+                      <span>v{el.version}</span>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
-          ) : (
-            <div className="text-center p-4 text-[#64748B] text-xs">
-              Select an element to test actions.
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      {/* 4. Save to Library Modal */}
+      {showLibraryModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0F172A] border border-[#1E293B] rounded-xl p-4 w-96 shadow-2xl flex flex-col gap-3">
+            <div className="flex items-center justify-between pb-2 border-b border-[#1E293B]">
+              <span className="font-semibold text-sm text-[#F1F5F9] flex items-center gap-1.5">
+                <Bookmark size={15} className="text-purple-400" />
+                Save Element to Library
+              </span>
+              <button
+                onClick={() => setShowLibraryModal(false)}
+                className="p-1 text-[#64748B] hover:text-white"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="space-y-1 text-xs">
+              <label className="text-[#94A3B8]">Element Name</label>
+              <input
+                type="text"
+                value={saveElementName}
+                onChange={(e) => setSaveElementName(e.target.value)}
+                placeholder="e.g. btn_confirm_reward"
+                className="w-full bg-[#1E293B] text-xs text-white px-2.5 py-1.5 rounded-lg border border-[#334155] focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            <div className="space-y-1 text-xs">
+              <label className="text-[#94A3B8]">Project Scope</label>
+              <input
+                type="text"
+                value={saveProjectId}
+                onChange={(e) => setSaveProjectId(e.target.value)}
+                className="w-full bg-[#1E293B] text-xs text-white px-2.5 py-1.5 rounded-lg border border-[#334155] focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#1E293B]">
+              <button
+                onClick={() => setShowLibraryModal(false)}
+                className="px-3 py-1.5 bg-[#1E293B] hover:bg-[#334155] text-xs text-[#CBD5E1] rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveToLibrary}
+                disabled={savingLibrary}
+                className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-xs text-white font-medium rounded-lg disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <FolderPlus size={13} />
+                {savingLibrary ? 'Saving...' : 'Save Element'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

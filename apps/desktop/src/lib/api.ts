@@ -15,6 +15,7 @@ import type {
   CreateProjectRequest,
   CredentialMetadata,
   DbOptimizeReport,
+  DetectionResult,
   DeviceDetail,
   DeviceHealthReport,
   DevicePortMapping,
@@ -32,6 +33,7 @@ import type {
   JobResumeDetail,
   Jx2MigrationSummary,
   LdPlayerInstance,
+  LibraryElementRecord,
   ManagedInstallInspection,
   MiniTaskDef,
   MiniToolUiSchema,
@@ -85,6 +87,35 @@ function requireTauri(cmd: string): void {
     throw new Error(`Tauri Desktop IPC '${cmd}' không khả dụng ở chế độ xem web thuần.`);
   }
 }
+
+const inMemoryElementLibrary: LibraryElementRecord[] = [
+  {
+    id: 'elem_saved_1',
+    projectId: 'default_project',
+    name: 'btn_browser_app',
+    packageFilter: 'com.android.launcher3',
+    primaryStrategy: 'native',
+    selectorJson: JSON.stringify({ resource_id: null, text: 'Browser', class_name: 'android.widget.TextView' }),
+    fallbackSelectorsJson: '[]',
+    boundsJson: JSON.stringify({ x: 321, y: 822, width: 101, height: 135 }),
+    version: 1,
+    createdAt: '2026-11-25T03:00:00Z',
+    updatedAt: '2026-11-25T03:00:00Z',
+  },
+  {
+    id: 'elem_saved_2',
+    projectId: 'default_project',
+    name: 'ocr_reward_claim',
+    packageFilter: 'com.demo.game',
+    primaryStrategy: 'ocr',
+    selectorJson: JSON.stringify({ ocr: { text: 'Nhận thưởng', min_confidence: 0.85 } }),
+    fallbackSelectorsJson: '[]',
+    boundsJson: JSON.stringify({ x: 180, y: 450, width: 180, height: 60 }),
+    version: 1,
+    createdAt: '2026-11-25T03:10:00Z',
+    updatedAt: '2026-11-25T03:10:00Z',
+  },
+];
 
 export const api = {
   // -------------------------------------------------------------------------
@@ -846,6 +877,316 @@ export const api = {
 
   // --- Element Inspector & Smart Action API ---
   async elementInspectSnapshot(serial: string): Promise<InspectSnapshotResult> {
+    if (!isTauri()) {
+      const nodes: ElementNode[] = [
+        {
+          id: 0,
+          parent_id: null,
+          children_ids: [1],
+          index: 0,
+          text: '',
+          resource_id: '',
+          class_name: 'android.widget.FrameLayout',
+          package: 'com.android.launcher3',
+          content_desc: '',
+          checkable: false,
+          checked: false,
+          clickable: false,
+          enabled: true,
+          focusable: false,
+          focused: false,
+          scrollable: false,
+          long_clickable: false,
+          password: false,
+          selected: false,
+          bounds: { x: 0, y: 0, width: 540, height: 960 },
+          raw_bounds: { x: 0, y: 0, width: 540, height: 960 },
+          depth: 0,
+          path: '/hierarchy/android.widget.FrameLayout[0]',
+          is_visible: true,
+        },
+        {
+          id: 1,
+          parent_id: 0,
+          children_ids: [2, 3, 4, 5, 6, 7, 8, 9],
+          index: 0,
+          text: '',
+          resource_id: 'com.android.launcher3:id/drag_layer',
+          class_name: 'android.widget.FrameLayout',
+          package: 'com.android.launcher3',
+          content_desc: '',
+          checkable: false,
+          checked: false,
+          clickable: false,
+          enabled: true,
+          focusable: false,
+          focused: false,
+          scrollable: false,
+          long_clickable: false,
+          password: false,
+          selected: false,
+          bounds: { x: 0, y: 0, width: 540, height: 960 },
+          raw_bounds: { x: 0, y: 0, width: 540, height: 960 },
+          depth: 1,
+          path: '/hierarchy/android.widget.FrameLayout[0]/FrameLayout[0]',
+          is_visible: true,
+        },
+        {
+          id: 2,
+          parent_id: 1,
+          children_ids: [],
+          index: 0,
+          text: '10:16',
+          resource_id: 'com.android.deskclock:id/clock',
+          class_name: 'android.widget.TextView',
+          package: 'com.android.deskclock',
+          content_desc: '10:16',
+          checkable: false,
+          checked: false,
+          clickable: false,
+          enabled: true,
+          focusable: false,
+          focused: false,
+          scrollable: false,
+          long_clickable: false,
+          password: false,
+          selected: false,
+          bounds: { x: 99, y: 57, width: 342, height: 169 },
+          raw_bounds: { x: 99, y: 57, width: 342, height: 169 },
+          depth: 2,
+          path: '/hierarchy/clock',
+          is_visible: true,
+        },
+        {
+          id: 3,
+          parent_id: 1,
+          children_ids: [],
+          index: 1,
+          text: 'Phone',
+          resource_id: '',
+          class_name: 'android.widget.TextView',
+          package: 'com.android.launcher3',
+          content_desc: 'Phone',
+          checkable: false,
+          checked: false,
+          clickable: true,
+          enabled: true,
+          focusable: true,
+          focused: false,
+          scrollable: false,
+          long_clickable: true,
+          password: false,
+          selected: false,
+          bounds: { x: 18, y: 335, width: 101, height: 145 },
+          raw_bounds: { x: 18, y: 335, width: 101, height: 145 },
+          depth: 2,
+          path: '/hierarchy/phone',
+          is_visible: true,
+        },
+        {
+          id: 4,
+          parent_id: 1,
+          children_ids: [],
+          index: 2,
+          text: 'Play Store',
+          resource_id: '',
+          class_name: 'android.widget.TextView',
+          package: 'com.android.launcher3',
+          content_desc: 'Play Store',
+          checkable: false,
+          checked: false,
+          clickable: true,
+          enabled: true,
+          focusable: true,
+          focused: false,
+          scrollable: false,
+          long_clickable: true,
+          password: false,
+          selected: false,
+          bounds: { x: 220, y: 335, width: 101, height: 145 },
+          raw_bounds: { x: 220, y: 335, width: 101, height: 145 },
+          depth: 2,
+          path: '/hierarchy/playstore',
+          is_visible: true,
+        },
+        {
+          id: 5,
+          parent_id: 1,
+          children_ids: [],
+          index: 3,
+          text: 'Võ Hiệp Truyền Kỳ 2',
+          resource_id: '',
+          class_name: 'android.widget.TextView',
+          package: 'com.android.launcher3',
+          content_desc: 'Võ Hiệp Truyền Kỳ 2',
+          checkable: false,
+          checked: false,
+          clickable: true,
+          enabled: true,
+          focusable: true,
+          focused: false,
+          scrollable: false,
+          long_clickable: true,
+          password: false,
+          selected: false,
+          bounds: { x: 119, y: 480, width: 101, height: 145 },
+          raw_bounds: { x: 119, y: 480, width: 101, height: 145 },
+          depth: 2,
+          path: '/hierarchy/game',
+          is_visible: true,
+        },
+        {
+          id: 6,
+          parent_id: 1,
+          children_ids: [],
+          index: 4,
+          text: 'Messaging',
+          resource_id: '',
+          class_name: 'android.widget.TextView',
+          package: 'com.android.launcher3',
+          content_desc: 'Messaging',
+          checkable: false,
+          checked: false,
+          clickable: true,
+          enabled: true,
+          focusable: true,
+          focused: false,
+          scrollable: false,
+          long_clickable: true,
+          password: false,
+          selected: false,
+          bounds: { x: 119, y: 822, width: 101, height: 135 },
+          raw_bounds: { x: 119, y: 822, width: 101, height: 135 },
+          depth: 2,
+          path: '/hierarchy/messaging',
+          is_visible: true,
+        },
+        {
+          id: 7,
+          parent_id: 1,
+          children_ids: [],
+          index: 5,
+          text: 'Contacts',
+          resource_id: '',
+          class_name: 'android.widget.TextView',
+          package: 'com.android.launcher3',
+          content_desc: 'Contacts',
+          checkable: false,
+          checked: false,
+          clickable: true,
+          enabled: true,
+          focusable: true,
+          focused: false,
+          scrollable: false,
+          long_clickable: true,
+          password: false,
+          selected: false,
+          bounds: { x: 220, y: 822, width: 101, height: 135 },
+          raw_bounds: { x: 220, y: 822, width: 101, height: 135 },
+          depth: 2,
+          path: '/hierarchy/contacts',
+          is_visible: true,
+        },
+        {
+          id: 8,
+          parent_id: 1,
+          children_ids: [10],
+          index: 6,
+          text: 'Browser',
+          resource_id: 'com.android.launcher3:id/icon_browser',
+          class_name: 'android.widget.FrameLayout',
+          package: 'com.android.launcher3',
+          content_desc: 'Browser',
+          checkable: false,
+          checked: false,
+          clickable: true,
+          enabled: true,
+          focusable: true,
+          focused: false,
+          scrollable: false,
+          long_clickable: true,
+          password: false,
+          selected: false,
+          bounds: { x: 321, y: 822, width: 101, height: 135 },
+          raw_bounds: { x: 321, y: 822, width: 101, height: 135 },
+          depth: 2,
+          path: '/hierarchy/browser_frame',
+          is_visible: true,
+        },
+        {
+          id: 9,
+          parent_id: 1,
+          children_ids: [],
+          index: 7,
+          text: 'Camera',
+          resource_id: '',
+          class_name: 'android.widget.TextView',
+          package: 'com.android.launcher3',
+          content_desc: 'Camera',
+          checkable: false,
+          checked: false,
+          clickable: true,
+          enabled: true,
+          focusable: true,
+          focused: false,
+          scrollable: false,
+          long_clickable: true,
+          password: false,
+          selected: false,
+          bounds: { x: 422, y: 822, width: 100, height: 135 },
+          raw_bounds: { x: 422, y: 822, width: 100, height: 135 },
+          depth: 2,
+          path: '/hierarchy/camera',
+          is_visible: true,
+        },
+        {
+          id: 10,
+          parent_id: 8,
+          children_ids: [],
+          index: 0,
+          text: 'Browser',
+          resource_id: 'com.android.launcher3:id/title',
+          class_name: 'android.widget.TextView',
+          package: 'com.android.launcher3',
+          content_desc: 'Browser',
+          checkable: false,
+          checked: false,
+          clickable: false,
+          enabled: true,
+          focusable: false,
+          focused: false,
+          scrollable: false,
+          long_clickable: false,
+          password: false,
+          selected: false,
+          bounds: { x: 330, y: 910, width: 83, height: 35 },
+          raw_bounds: { x: 330, y: 910, width: 83, height: 35 },
+          depth: 3,
+          path: '/hierarchy/browser_frame/title',
+          is_visible: true,
+        },
+      ];
+
+      return {
+        snapshot: {
+          id: 'snap_galaxy_s7_live',
+          timestamp_ms: Date.now(),
+          rotation_deg: 0,
+          screen_width: 540,
+          screen_height: 960,
+          package_name: 'com.android.launcher3',
+          nodes,
+          root_ids: [0],
+        },
+        screenshot_base64: '/live_device_screen.png',
+        capture_duration_ms: 38,
+        dump_duration_ms: 104,
+        parse_duration_ms: 2,
+        total_duration_ms: 144,
+        device_serial: serial,
+        package_name: 'com.android.launcher3',
+      };
+    }
     requireTauri('element_inspect_snapshot');
     return await invoke<InspectSnapshotResult>('element_inspect_snapshot', { serial });
   },
@@ -855,6 +1196,22 @@ export const api = {
     selector: NativeElementSelector,
     requireUnique = true
   ): Promise<SelectorMatch[]> {
+    if (!isTauri()) {
+      const matchNode = snapshot.nodes.find(
+        (n) => (selector.text && n.text === selector.text) || (selector.resource_id && n.resource_id === selector.resource_id)
+      ) || snapshot.nodes[8];
+      return [
+        {
+          node_id: matchNode.id,
+          bounds: matchNode.bounds,
+          confidence: 1.0,
+          strategy_used: 'MockNativeMatch',
+          is_clickable: matchNode.clickable,
+          resolved_clickable_ancestor_id: matchNode.clickable ? null : matchNode.parent_id,
+          resolved_bounds: matchNode.bounds,
+        },
+      ];
+    }
     requireTauri('element_find_matches');
     return await invoke<SelectorMatch[]>('element_find_matches', {
       snapshot,
@@ -867,6 +1224,47 @@ export const api = {
     snapshot: ElementSnapshot,
     nodeId: number
   ): Promise<GeneratedSelector[]> {
+    if (!isTauri()) {
+      const node = snapshot.nodes[nodeId] || snapshot.nodes[0];
+      const selectors: GeneratedSelector[] = [];
+      if (node.resource_id) {
+        selectors.push({
+          strategy_name: 'Resource ID',
+          selector: { resource_id: node.resource_id },
+          uniqueness_score: 100,
+          match_count: 1,
+          expression: `element.id("${node.resource_id}")`,
+          is_recommended: true,
+        });
+      }
+      if (node.text) {
+        selectors.push({
+          strategy_name: 'Exact Text',
+          selector: { text: node.text },
+          uniqueness_score: 100,
+          match_count: 1,
+          expression: `element.text("${node.text}")`,
+          is_recommended: !node.resource_id,
+        });
+      }
+      selectors.push({
+        strategy_name: 'Class & Hierarchy',
+        selector: { class_name: node.class_name },
+        uniqueness_score: 85,
+        match_count: 1,
+        expression: `element.class("${node.class_name}")`,
+        is_recommended: false,
+      });
+      selectors.push({
+        strategy_name: 'Absolute XPath',
+        selector: { xpath: node.path },
+        uniqueness_score: 100,
+        match_count: 1,
+        expression: `xpath("${node.path}")`,
+        is_recommended: false,
+      });
+      return selectors;
+    }
     requireTauri('element_generate_selectors');
     return await invoke<GeneratedSelector[]>('element_generate_selectors', {
       snapshot,
@@ -879,6 +1277,26 @@ export const api = {
     x: number,
     y: number
   ): Promise<ElementNode | null> {
+    if (!isTauri()) {
+      let candidate: ElementNode | null = null;
+      let minArea = Infinity;
+      for (const n of snapshot.nodes) {
+        if (
+          n.is_visible &&
+          x >= n.bounds.x &&
+          x <= n.bounds.x + n.bounds.width &&
+          y >= n.bounds.y &&
+          y <= n.bounds.y + n.bounds.height
+        ) {
+          const area = n.bounds.width * n.bounds.height;
+          if (area < minArea) {
+            minArea = area;
+            candidate = n;
+          }
+        }
+      }
+      return candidate;
+    }
     requireTauri('element_find_at_point');
     return await invoke<ElementNode | null>('element_find_at_point', {
       snapshot,
@@ -893,6 +1311,24 @@ export const api = {
     actionKind: ElementActionKind,
     mode: ActionExecutionMode = 'ClickableParent'
   ): Promise<ElementActionResult> {
+    if (!isTauri()) {
+      const safeX = matchItem.bounds.x + matchItem.bounds.width * 0.5;
+      const safeY = matchItem.bounds.y + matchItem.bounds.height * 0.5;
+      return {
+        success: true,
+        execution_ms: 38,
+        plan: {
+          mode,
+          target_bounds: matchItem.bounds,
+          safe_point: { x: safeX, y: safeY },
+          is_clickable_parent_used: mode === 'ClickableParent' && !matchItem.is_clickable,
+          execution_kind: actionKind,
+        },
+        new_screenshot_base64: null,
+        post_verification_success: true,
+        message: `Action executed at (${Math.round(safeX)}, ${Math.round(safeY)}) via ${mode}`,
+      };
+    }
     requireTauri('element_execute_action');
     return await invoke<ElementActionResult>('element_execute_action', {
       serial,
@@ -900,5 +1336,68 @@ export const api = {
       actionKind,
       mode,
     });
+  },
+
+  async elementTestDetection(
+    snapshot: ElementSnapshot | null,
+    selector: any,
+    requireUnique = true
+  ): Promise<DetectionResult> {
+    if (!isTauri()) {
+      const targetBounds = { x: 321, y: 822, width: 101, height: 135 };
+      return {
+        target_bounds: targetBounds,
+        resolved_bounds: targetBounds,
+        confidence: 0.99,
+        candidate_count: 1,
+        strategy_used: 'Native: com.android.launcher3:id/icon_browser',
+        is_clickable: true,
+        resolved_clickable_ancestor_id: null,
+        matches: [
+          {
+            node_id: 8,
+            bounds: targetBounds,
+            confidence: 0.99,
+            strategy_used: 'Native',
+            is_clickable: true,
+            resolved_clickable_ancestor_id: null,
+            resolved_bounds: targetBounds,
+          },
+        ],
+      };
+    }
+    requireTauri('element_test_detection');
+    return await invoke<DetectionResult>('element_test_detection', {
+      snapshot,
+      selector,
+      requireUnique,
+    });
+  },
+
+  async elementSaveToLibrary(record: LibraryElementRecord): Promise<void> {
+    if (!isTauri()) {
+      inMemoryElementLibrary.unshift(record);
+      return;
+    }
+    requireTauri('element_save_to_library');
+    return await invoke<void>('element_save_to_library', { record });
+  },
+
+  async elementListLibrary(projectId: string): Promise<LibraryElementRecord[]> {
+    if (!isTauri()) {
+      return [...inMemoryElementLibrary];
+    }
+    requireTauri('element_list_library');
+    return await invoke<LibraryElementRecord[]>('element_list_library', { projectId });
+  },
+
+  async elementDeleteFromLibrary(id: string): Promise<void> {
+    if (!isTauri()) {
+      const idx = inMemoryElementLibrary.findIndex((e) => e.id === id);
+      if (idx !== -1) inMemoryElementLibrary.splice(idx, 1);
+      return;
+    }
+    requireTauri('element_delete_from_library');
+    return await invoke<void>('element_delete_from_library', { id });
   },
 };

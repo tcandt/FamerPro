@@ -362,6 +362,12 @@ pub trait DeviceDriver: Send + Sync {
     async fn key_event(&self, keycode: u32) -> anyhow::Result<ActionReceipt>;
     async fn launch_app(&self, package: &str) -> anyhow::Result<ActionReceipt>;
     async fn stop_app(&self, package: &str) -> anyhow::Result<ActionReceipt>;
+    async fn get_ui_tree(&self) -> anyhow::Result<String> {
+        anyhow::bail!("get_ui_tree not supported on this driver")
+    }
+    async fn input_text(&self, _text: &str) -> anyhow::Result<ActionReceipt> {
+        anyhow::bail!("input_text not supported on this driver")
+    }
 }
 
 #[cfg(test)]

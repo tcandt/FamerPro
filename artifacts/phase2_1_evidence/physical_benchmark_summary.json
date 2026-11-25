@@ -1,0 +1,54 @@
+{
+  "benchmark_name": "FarmerPro Phase 2.1 - 100-Cycle Hardware Physical Benchmark",
+  "device_serial": "192.168.1.168:5555",
+  "device_model": "Samsung Galaxy S7 (SM-G930F)",
+  "android_version": "10 (LineageOS 17.1)",
+  "transport": "ADB TCP/IP LAN",
+  "package_tested": "com.android.calculator2",
+  "total_cycles_planned": 100,
+  "total_cycles_executed": 100,
+  "successful_cycles": 93,
+  "failed_cycles": 7,
+  "success_rate_percent": 93.0,
+  "first_pass_success_percent": 93.0,
+  "retry_rate_percent": 21.0,
+  "total_duration_seconds": 277.42,
+  "safe_margin_policy": "15% inner padding",
+  "telemetry_stats": {
+    "ui_tree_dump_ms": {
+      "min": 1634.68,
+      "max": 2461.12,
+      "avg": 1891.81,
+      "p95": 2163.76
+    },
+    "xml_parse_ms": {
+      "min": 0.51,
+      "max": 4.86,
+      "avg": 1.05,
+      "p95": 2.59
+    },
+    "safe_plan_ms": {
+      "min": 0.0,
+      "max": 0.86,
+      "avg": 0.23,
+      "p95": 0.63
+    },
+    "action_dispatch_ms": {
+      "min": 0.0,
+      "max": 818.2,
+      "avg": 558.42,
+      "p95": 701.86
+    },
+    "total_cycle_ms": {
+      "min": 2226.04,
+      "max": 6995.39,
+      "avg": 2774.01,
+      "p95": 6298.43
+    }
+  },
+  "artifacts": {
+    "csv": "artifacts\\phase2_1_evidence\\physical_benchmark_raw.csv",
+    "json_raw": "artifacts\\phase2_1_evidence\\physical_benchmark_raw.json",
+    "receipts_jsonl": "artifacts\\phase2_1_evidence\\execution_receipts.jsonl"
+  }
+}

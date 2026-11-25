@@ -115,12 +115,14 @@ pub mod os_wincred {
 
     #[repr(C)]
     #[derive(Copy, Clone)]
+    #[allow(clippy::upper_case_acronyms)]
     struct FILETIME {
         dw_low_date_time: u32,
         dw_high_date_time: u32,
     }
 
     #[repr(C)]
+    #[allow(clippy::upper_case_acronyms)]
     struct CREDENTIALW {
         flags: u32,
         cred_type: u32,

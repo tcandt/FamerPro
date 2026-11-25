@@ -191,7 +191,31 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
   },
 
   fetchDevices: async (autoSelect: boolean = true) => {
-    if (!isTauri()) return;
+    if (!isTauri()) {
+      const summary: DeviceSummary = {
+        id: '192.168.1.168:5555',
+        alias: 'Samsung Galaxy S7',
+        adb_serial: '192.168.1.168:5555',
+        model: 'SM-G930F',
+        android_api: 29,
+        width_px: 540,
+        height_px: 960,
+        rotation_deg: 0,
+        connection_state: 'ready',
+        updated_at: new Date().toISOString(),
+      };
+      set({
+        devices: [summary],
+        selectedDeviceId: '192.168.1.168:5555',
+        selectedDeviceDetail: {
+          summary,
+          battery_level: 98,
+          is_screen_on: true,
+          installed_packages: ['com.android.launcher3', 'com.android.deskclock'],
+        },
+      });
+      return;
+    }
     set({ isLoadingDevices: true });
     try {
       const realDevices = await api.listDevices();

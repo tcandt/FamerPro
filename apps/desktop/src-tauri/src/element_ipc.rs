@@ -1,13 +1,18 @@
 use base64::Engine;
-use fp_adb::AdbRunner;
-use fp_domain::{Bounds, ScreenGeometry};
+use fp_adb::{AdbDeviceDriver, AdbRunner};
+use fp_domain::DeviceDriver;
 use fp_element::{
-    evaluate_native_selector, generate_selectors_for_node, parse_ui_hierarchy, plan_element_action,
-    ActionExecutionMode, ElementActionKind, ElementActionPlan, ElementNode, ElementSnapshot,
-    GeneratedSelector, NativeElementSelector, SelectorMatch,
+    evaluate_native_selector, generate_selectors_for_node, parse_ui_hierarchy, ActionExecutionMode,
+    DetectionResult, ElementActionKind, ElementActionPlan, ElementNode, ElementSnapshot,
+    GeneratedSelector, NativeElementSelector, Selector, SelectorMatch, UnifiedElementExecutor,
 };
+use fp_storage::LibraryElementRecord;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use tauri::State;
+
+use crate::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InspectSnapshotResult {
@@ -31,29 +36,16 @@ pub struct ElementActionResult {
     pub message: String,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct LibraryElementRecord {
-    pub id: String,
-    pub project_id: String,
-    pub name: String,
-    pub package_filter: Option<String>,
-    pub primary_strategy: String,
-    pub selector: NativeElementSelector,
-    pub fallback_selectors: Vec<NativeElementSelector>,
-    pub bounds: Option<Bounds>,
-    pub created_at_ms: u64,
-}
-
 #[tauri::command]
 pub async fn element_inspect_snapshot(serial: String) -> Result<InspectSnapshotResult, String> {
     let runner = AdbRunner::new(None);
+    let driver = AdbDeviceDriver::new(serial.clone(), runner);
     let total_start = Instant::now();
 
-    // 1. Capture screen
+    // 1. Capture screen via DeviceDriver
     let cap_start = Instant::now();
-    let screencap_bytes = runner
-        .run_raw_bytes(&["-s", &serial, "exec-out", "screencap", "-p"])
+    let frame = driver
+        .snapshot()
         .await
         .map_err(|e| format!("Screencap failed on {}: {}", serial, e))?;
     let capture_ms = cap_start.elapsed().as_millis() as u64;
@@ -61,54 +53,20 @@ pub async fn element_inspect_snapshot(serial: String) -> Result<InspectSnapshotR
     // Convert to base64
     let screenshot_b64 = format!(
         "data:image/png;base64,{}",
-        base64::engine::general_purpose::STANDARD.encode(&screencap_bytes)
+        base64::engine::general_purpose::STANDARD.encode(&frame.bytes)
     );
 
-    // 2. Dump UI hierarchy
+    // 2. Dump UI hierarchy via DeviceDriver
     let dump_start = Instant::now();
-    let _ = runner
-        .run_args(&[
-            "-s",
-            &serial,
-            "shell",
-            "uiautomator",
-            "dump",
-            "/sdcard/window.xml",
-        ])
+    let xml_output = driver
+        .get_ui_tree()
         .await
         .map_err(|e| format!("uiautomator dump failed on {}: {}", serial, e))?;
-
-    let xml_output = runner
-        .run_args(&["-s", &serial, "shell", "cat", "/sdcard/window.xml"])
-        .await
-        .map_err(|e| format!("Failed to read hierarchy XML: {}", e))?;
     let dump_ms = dump_start.elapsed().as_millis() as u64;
 
-    // 3. Get Geometry
-    let size_out = runner
-        .run_args(&["-s", &serial, "shell", "wm", "size"])
-        .await
-        .unwrap_or_default();
-    let (mut width, mut height) = (540, 960);
-    for line in size_out.lines() {
-        if line.contains("size:") {
-            if let Some(dim) = line.split(':').nth(1) {
-                let parts: Vec<&str> = dim.trim().split('x').collect();
-                if parts.len() == 2 {
-                    if let (Ok(w), Ok(h)) = (parts[0].parse(), parts[1].parse()) {
-                        width = w;
-                        height = h;
-                    }
-                }
-            }
-        }
-    }
-
-    let geom = ScreenGeometry::new(width, height, 0);
-
-    // 4. Parse UI Hierarchy in native Rust
+    // 3. Parse UI Hierarchy in native Rust
     let parse_start = Instant::now();
-    let snapshot = parse_ui_hierarchy(&xml_output, &geom)
+    let snapshot = parse_ui_hierarchy(&xml_output, &frame.geometry)
         .map_err(|e| format!("Failed to parse UI hierarchy: {}", e))?;
     let parse_ms = parse_start.elapsed().as_millis() as u64;
 
@@ -149,6 +107,18 @@ pub fn element_find_at_point(snapshot: ElementSnapshot, x: f32, y: f32) -> Optio
     snapshot.find_node_at_point(x, y).cloned()
 }
 
+/// Tests detection across any selector strategy without executing any action on the device.
+#[tauri::command]
+pub fn element_test_detection(
+    snapshot: Option<ElementSnapshot>,
+    selector: Selector,
+    require_unique: bool,
+) -> Result<DetectionResult, String> {
+    UnifiedElementExecutor::detect(snapshot.as_ref(), &selector, None, require_unique)
+        .map_err(|e| e.to_string())
+}
+
+/// Executes planned action using the Unified Execution Engine across the DeviceDriver abstraction.
 #[tauri::command]
 pub async fn element_execute_action(
     serial: String,
@@ -157,126 +127,76 @@ pub async fn element_execute_action(
     mode: ActionExecutionMode,
 ) -> Result<ElementActionResult, String> {
     let runner = AdbRunner::new(None);
-    let plan = plan_element_action(&match_item, action_kind.clone(), mode, None)
+    let driver = AdbDeviceDriver::new(serial.clone(), runner);
+
+    // 1. Plan action using Unified Element Engine
+    let plan = UnifiedElementExecutor::plan(&match_item, action_kind.clone(), mode, None)
         .map_err(|e| e.to_string())?;
 
     let exec_start = Instant::now();
 
-    match plan.execution_kind {
-        ElementActionKind::Tap | ElementActionKind::DoubleTap => {
-            let tap_x = plan.safe_point.x as u32;
-            let tap_y = plan.safe_point.y as u32;
-
-            let _ = runner
-                .run_args(&[
-                    "-s",
-                    &serial,
-                    "shell",
-                    "input",
-                    "tap",
-                    &tap_x.to_string(),
-                    &tap_y.to_string(),
-                ])
-                .await
-                .map_err(|e| format!("Tap dispatch failed: {}", e))?;
-
-            if matches!(plan.execution_kind, ElementActionKind::DoubleTap) {
-                tokio::time::sleep(std::time::Duration::from_millis(80)).await;
-                let _ = runner
-                    .run_args(&[
-                        "-s",
-                        &serial,
-                        "shell",
-                        "input",
-                        "tap",
-                        &tap_x.to_string(),
-                        &tap_y.to_string(),
-                    ])
-                    .await;
-            }
-        }
-        ElementActionKind::LongPress { duration_ms } => {
-            let tap_x = plan.safe_point.x as u32;
-            let tap_y = plan.safe_point.y as u32;
-            let dur = duration_ms.to_string();
-
-            let _ = runner
-                .run_args(&[
-                    "-s",
-                    &serial,
-                    "shell",
-                    "input",
-                    "swipe",
-                    &tap_x.to_string(),
-                    &tap_y.to_string(),
-                    &tap_x.to_string(),
-                    &tap_y.to_string(),
-                    &dur,
-                ])
-                .await
-                .map_err(|e| format!("Long press dispatch failed: {}", e))?;
-        }
-        ElementActionKind::SetText {
-            ref text,
-            clear_first,
-        } => {
-            if clear_first {
-                // Focus element first
-                let tap_x = plan.safe_point.x as u32;
-                let tap_y = plan.safe_point.y as u32;
-                let _ = runner
-                    .run_args(&[
-                        "-s",
-                        &serial,
-                        "shell",
-                        "input",
-                        "tap",
-                        &tap_x.to_string(),
-                        &tap_y.to_string(),
-                    ])
-                    .await;
-                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-            }
-
-            // Replace spaces with %s for adb shell input text
-            let escaped_text = text.replace(' ', "%s");
-            let _ = runner
-                .run_args(&["-s", &serial, "shell", "input", "text", &escaped_text])
-                .await
-                .map_err(|e| format!("Text input failed: {}", e))?;
-        }
-        ElementActionKind::AssertExists => {
-            // Already matched in selector_match
-        }
-        _ => {}
-    }
+    // 2. Dispatch via unified DeviceDriver
+    let receipt = UnifiedElementExecutor::execute(&driver, &plan)
+        .await
+        .map_err(|e| format!("Action execution failed: {}", e))?;
 
     let execution_ms = exec_start.elapsed().as_millis() as u64;
 
-    // Small delay for UI transition
-    tokio::time::sleep(std::time::Duration::from_millis(600)).await;
-
-    // Post-verification screenshot capture
-    let new_b64 = match runner
-        .run_raw_bytes(&["-s", &serial, "exec-out", "screencap", "-p"])
-        .await
-    {
-        Ok(bytes) => Some(format!(
+    // 3. Post-execution transition verification
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    let new_b64 = match driver.snapshot().await {
+        Ok(frame) => Some(format!(
             "data:image/png;base64,{}",
-            base64::engine::general_purpose::STANDARD.encode(&bytes)
+            base64::engine::general_purpose::STANDARD.encode(&frame.bytes)
         )),
         Err(_) => None,
     };
 
     Ok(ElementActionResult {
-        success: true,
+        success: receipt.success,
         plan,
         execution_ms,
         new_screenshot_base64: new_b64,
-        post_verification_success: true,
+        post_verification_success: receipt.verify_passed,
         message: format!(
-            "Successfully executed {:?} on device {}",
-            action_kind, serial
+            "Successfully executed {:?} on device {} at ({:.1}, {:.1})",
+            action_kind,
+            serial,
+            receipt.point_tapped.as_ref().map(|p| p.x).unwrap_or(0.0),
+            receipt.point_tapped.as_ref().map(|p| p.y).unwrap_or(0.0)
         ),
     })
+}
+
+// ========================================================================
+// Phase 2.1: Element Library Persistence IPC Commands
+// ========================================================================
+
+#[tauri::command]
+pub fn element_save_to_library(
+    state: State<'_, Arc<Mutex<AppState>>>,
+    record: LibraryElementRecord,
+) -> Result<(), String> {
+    let st = state.lock().unwrap();
+    st.storage.save_element(&record).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn element_list_library(
+    state: State<'_, Arc<Mutex<AppState>>>,
+    project_id: String,
+) -> Result<Vec<LibraryElementRecord>, String> {
+    let st = state.lock().unwrap();
+    st.storage
+        .list_elements(&project_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn element_delete_from_library(
+    state: State<'_, Arc<Mutex<AppState>>>,
+    id: String,
+) -> Result<(), String> {
+    let st = state.lock().unwrap();
+    st.storage.delete_element(&id).map_err(|e| e.to_string())
 }

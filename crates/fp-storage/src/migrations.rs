@@ -176,6 +176,21 @@ CREATE TABLE IF NOT EXISTS project_releases (
     build_report_json TEXT NOT NULL,
     built_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS element_library (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    package_filter TEXT,
+    primary_strategy TEXT NOT NULL,
+    selector_json TEXT NOT NULL,
+    fallback_selectors_json TEXT NOT NULL DEFAULT '[]',
+    bounds_json TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(project_id, name)
+);
 "#;
 
 pub const MIGRATION_V2_INDEXES_SQL: &str = r#"
@@ -186,6 +201,7 @@ CREATE INDEX IF NOT EXISTS idx_accounts_project ON accounts(project_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_project ON jobs(project_id);
 CREATE INDEX IF NOT EXISTS idx_checkpoints_job ON checkpoints(job_id);
 CREATE INDEX IF NOT EXISTS idx_templates_project ON vision_templates(project_id);
+CREATE INDEX IF NOT EXISTS idx_element_library_project ON element_library(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_project_priority ON task_definitions(project_id, priority ASC);
 CREATE INDEX IF NOT EXISTS idx_releases_project_time ON project_releases(project_id, built_at DESC);
 "#;
@@ -611,6 +627,7 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
         && applied.contains(&6)
     {
         verify_v6_provenance_columns(conn)?;
+        ensure_element_library_table(conn)?;
         return list_applied_versions(conn);
     }
     let now = Utc::now().to_rfc3339();
@@ -951,7 +968,30 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
         verify_v6_provenance_columns(conn)?;
     }
 
+    ensure_element_library_table(conn)?;
+
     list_applied_versions(conn)
+}
+
+pub fn ensure_element_library_table(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS element_library (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            package_filter TEXT,
+            primary_strategy TEXT NOT NULL,
+            selector_json TEXT NOT NULL,
+            fallback_selectors_json TEXT NOT NULL DEFAULT '[]',
+            bounds_json TEXT,
+            version INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(project_id, name)
+        );
+        CREATE INDEX IF NOT EXISTS idx_element_library_project ON element_library(project_id);",
+    )?;
+    Ok(())
 }
 
 /// Applies an explicit transactional migration script (used for future versions or rollback testing).

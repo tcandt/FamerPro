@@ -1,10 +1,12 @@
 pub mod action;
+pub mod executor;
 pub mod generator;
 pub mod model;
 pub mod parser;
 pub mod selectors;
 
 pub use action::*;
+pub use executor::*;
 pub use generator::*;
 pub use model::*;
 pub use parser::*;
@@ -13,7 +15,7 @@ pub use selectors::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fp_domain::ScreenGeometry;
+    use fp_domain::{Bounds, ScreenGeometry};
 
     const SAMPLE_SETTINGS_XML: &str = r#"<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
 <hierarchy rotation="0">
@@ -194,5 +196,54 @@ mod tests {
             assert_eq!(matches[0].bounds.height, 33.0);
             assert!(matches[0].resolved_clickable_ancestor_id.is_some());
         }
+    }
+
+    #[tokio::test]
+    async fn test_unified_element_executor_flow() {
+        let geom = ScreenGeometry::new(540, 960, 0);
+        let snapshot = parse_ui_hierarchy(SAMPLE_SETTINGS_XML, &geom).expect("parse failed");
+
+        // 1. Test Detection (Virtual Selector - Native)
+        let sel = Selector::Native(NativeElementSelector::by_text("Display"));
+        let detect = UnifiedElementExecutor::detect(Some(&snapshot), &sel, None, true)
+            .expect("detect failed");
+        assert_eq!(detect.candidate_count, 1);
+        assert!(!detect.is_clickable); // Node itself is static label
+        assert!(detect.resolved_clickable_ancestor_id.is_some()); // Clickable parent resolved!
+
+        // 2. Test Planning
+        let plan = UnifiedElementExecutor::plan(
+            &detect.matches[0],
+            ElementActionKind::Tap,
+            ActionExecutionMode::ClickableParent,
+            None,
+        )
+        .expect("plan failed");
+        assert!(plan.is_clickable_parent_used);
+        assert!(plan.safe_point.x >= 0.0 && plan.safe_point.x <= 540.0);
+        assert!(plan.safe_point.y >= 860.0 && plan.safe_point.y <= 960.0);
+
+        // 3. Test Execution via DeviceDriver (FakeDeviceDriver)
+        let driver = fp_testkit::FakeDeviceDriver::new("test-device", 540, 960);
+        let receipt = UnifiedElementExecutor::execute(&driver, &plan)
+            .await
+            .expect("execute failed");
+        assert!(receipt.success);
+        assert_eq!(
+            driver.tap_count.load(std::sync::atomic::Ordering::SeqCst),
+            1
+        );
+
+        // 4. Test Detection on Point Selector
+        let pt_sel = Selector::Point(PointSelector {
+            x: 0.5,
+            y: 0.5,
+            is_relative: true,
+        });
+        let screen_bounds = Bounds::new(0.0, 0.0, 540.0, 960.0);
+        let pt_detect = UnifiedElementExecutor::detect(None, &pt_sel, Some(&screen_bounds), true)
+            .expect("point detect failed");
+        assert_eq!(pt_detect.target_bounds.x, 266.0); // 270 - 4
+        assert_eq!(pt_detect.target_bounds.y, 476.0); // 480 - 4
     }
 }

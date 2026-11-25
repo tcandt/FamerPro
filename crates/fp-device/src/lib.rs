@@ -34,6 +34,13 @@ pub enum DeviceCommand {
         package: String,
         responder: oneshot::Sender<Result<ActionReceipt>>,
     },
+    GetUiTree {
+        responder: oneshot::Sender<Result<String>>,
+    },
+    InputText {
+        text: String,
+        responder: oneshot::Sender<Result<ActionReceipt>>,
+    },
 }
 
 #[derive(Clone)]
@@ -85,6 +92,14 @@ impl DeviceActorHandle {
                     }
                     DeviceCommand::StopApp { package, responder } => {
                         let res = driver.stop_app(&package).await;
+                        let _ = responder.send(res);
+                    }
+                    DeviceCommand::GetUiTree { responder } => {
+                        let res = driver.get_ui_tree().await;
+                        let _ = responder.send(res);
+                    }
+                    DeviceCommand::InputText { text, responder } => {
+                        let res = driver.input_text(&text).await;
                         let _ = responder.send(res);
                     }
                 }
@@ -220,6 +235,27 @@ impl DeviceActorHandle {
         self.verify_generation(generation)?;
         self.stop_app(package).await
     }
+
+    pub async fn get_ui_tree(&self) -> Result<String> {
+        let (tx, rx) = oneshot::channel();
+        self.sender
+            .send(DeviceCommand::GetUiTree { responder: tx })
+            .await
+            .map_err(|_| anyhow::anyhow!("Device actor closed"))?;
+        rx.await.map_err(|_| anyhow::anyhow!("Canceled"))?
+    }
+
+    pub async fn input_text(&self, text: &str) -> Result<ActionReceipt> {
+        let (tx, rx) = oneshot::channel();
+        self.sender
+            .send(DeviceCommand::InputText {
+                text: text.to_string(),
+                responder: tx,
+            })
+            .await
+            .map_err(|_| anyhow::anyhow!("Device actor closed"))?;
+        rx.await.map_err(|_| anyhow::anyhow!("Canceled"))?
+    }
 }
 
 /// Generation-fenced `DeviceDriver` wrapper backed by a single-writer `DeviceActorHandle`.
@@ -271,6 +307,16 @@ impl DeviceDriver for FencedDeviceDriver {
         self.actor
             .stop_app_fenced(package, self.pinned_generation)
             .await
+    }
+
+    async fn get_ui_tree(&self) -> Result<String> {
+        self.actor.verify_generation(self.pinned_generation)?;
+        self.actor.get_ui_tree().await
+    }
+
+    async fn input_text(&self, text: &str) -> Result<ActionReceipt> {
+        self.actor.verify_generation(self.pinned_generation)?;
+        self.actor.input_text(text).await
     }
 }
 

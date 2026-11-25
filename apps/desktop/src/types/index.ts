@@ -1001,15 +1001,30 @@ export interface ElementActionResult {
   message: string;
 }
 
+export interface DetectionResult {
+  target_bounds: ElementBounds;
+  resolved_bounds: ElementBounds;
+  confidence: number;
+  candidate_count: number;
+  strategy_used: string;
+  is_clickable: boolean;
+  resolved_clickable_ancestor_id?: number | null;
+  matches: SelectorMatch[];
+}
+
+export type VirtualSelectorMode = 'native' | 'ocr' | 'image' | 'point' | 'region' | 'hybrid';
+
 export interface LibraryElementRecord {
   id: string;
-  project_id: string;
+  projectId: string;
   name: string;
-  package_filter?: string | null;
-  primary_strategy: string;
-  selector: NativeElementSelector;
-  fallback_selectors: NativeElementSelector[];
-  bounds?: ElementBounds | null;
-  created_at_ms: number;
+  packageFilter?: string | null;
+  primaryStrategy: string;
+  selectorJson: string;
+  fallbackSelectorsJson?: string;
+  boundsJson?: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
 }
 

@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 pub mod fs_atomic;
 pub mod jx2_seed;
 pub mod migrations;
@@ -4588,6 +4590,117 @@ impl StorageManager {
         tx.commit()?;
         Ok(true)
     }
+
+    // ========================================================================
+    // Phase 2.1: Element Library & Selector Versioning per Project
+    // ========================================================================
+
+    pub fn save_element(&self, record: &LibraryElementRecord) -> Result<()> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+        let now = chrono::Utc::now().to_rfc3339();
+        tx.execute(
+            "INSERT INTO element_library (
+                id, project_id, name, package_filter, primary_strategy,
+                selector_json, fallback_selectors_json, bounds_json, version,
+                created_at, updated_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+            ON CONFLICT(project_id, name) DO UPDATE SET
+                package_filter = excluded.package_filter,
+                primary_strategy = excluded.primary_strategy,
+                selector_json = excluded.selector_json,
+                fallback_selectors_json = excluded.fallback_selectors_json,
+                bounds_json = excluded.bounds_json,
+                version = element_library.version + 1,
+                updated_at = excluded.updated_at;",
+            params![
+                record.id,
+                record.project_id,
+                record.name,
+                record.package_filter,
+                record.primary_strategy,
+                record.selector_json,
+                record.fallback_selectors_json,
+                record.bounds_json,
+                record.version,
+                now,
+                now
+            ],
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn list_elements(&self, project_id: &str) -> Result<Vec<LibraryElementRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, project_id, name, package_filter, primary_strategy,
+                    selector_json, fallback_selectors_json, bounds_json, version,
+                    created_at, updated_at
+             FROM element_library
+             WHERE project_id = ?1
+             ORDER BY updated_at DESC;",
+        )?;
+        let rows = stmt.query_map(params![project_id], |row| {
+            Ok(LibraryElementRecord {
+                id: row.get(0)?,
+                project_id: row.get(1)?,
+                name: row.get(2)?,
+                package_filter: row.get(3)?,
+                primary_strategy: row.get(4)?,
+                selector_json: row.get(5)?,
+                fallback_selectors_json: row.get(6)?,
+                bounds_json: row.get(7)?,
+                version: row.get::<_, i64>(8)? as u32,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+            })
+        })?;
+        let mut list = Vec::new();
+        for r in rows {
+            list.push(r?);
+        }
+        Ok(list)
+    }
+
+    pub fn get_element(
+        &self,
+        project_id: &str,
+        name: &str,
+    ) -> Result<Option<LibraryElementRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, project_id, name, package_filter, primary_strategy,
+                    selector_json, fallback_selectors_json, bounds_json, version,
+                    created_at, updated_at
+             FROM element_library
+             WHERE project_id = ?1 AND name = ?2 LIMIT 1;",
+        )?;
+        let mut rows = stmt.query(params![project_id, name])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(LibraryElementRecord {
+                id: row.get(0)?,
+                project_id: row.get(1)?,
+                name: row.get(2)?,
+                package_filter: row.get(3)?,
+                primary_strategy: row.get(4)?,
+                selector_json: row.get(5)?,
+                fallback_selectors_json: row.get(6)?,
+                bounds_json: row.get(7)?,
+                version: row.get::<_, i64>(8)? as u32,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn delete_element(&self, id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM element_library WHERE id = ?1;", params![id])?;
+        Ok(())
+    }
 }
 
 fn query_events_for_streams(
@@ -4787,6 +4900,44 @@ mod tests {
         storage.upsert_device(&dev).unwrap();
         let devices = storage.list_devices().unwrap();
         assert_eq!(devices.len(), 1);
+
+        // Test Element Library CRUD & Versioning
+        let elem = LibraryElementRecord {
+            id: "elem-btn-confirm".to_string(),
+            project_id: DEFAULT_LEGACY_PROJECT_ID.to_string(),
+            name: "btn_confirm".to_string(),
+            package_filter: Some("com.android.settings".to_string()),
+            primary_strategy: "NativeElement".to_string(),
+            selector_json: r#"{"type":"Native","spec":{"resourceId":"android:id/button1"}}"#
+                .to_string(),
+            fallback_selectors_json: "[]".to_string(),
+            bounds_json: Some(r#"{"x":100,"y":200,"width":80,"height":40}"#.to_string()),
+            version: 1,
+            created_at: Utc::now().to_rfc3339(),
+            updated_at: Utc::now().to_rfc3339(),
+        };
+        storage.save_element(&elem).unwrap();
+
+        let list = storage.list_elements(DEFAULT_LEGACY_PROJECT_ID).unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].name, "btn_confirm");
+        assert_eq!(list[0].version, 1);
+
+        // Update element -> Version auto increments to 2
+        let mut elem_v2 = elem.clone();
+        elem_v2.bounds_json = Some(r#"{"x":105,"y":205,"width":80,"height":40}"#.to_string());
+        storage.save_element(&elem_v2).unwrap();
+
+        let updated = storage
+            .get_element(DEFAULT_LEGACY_PROJECT_ID, "btn_confirm")
+            .unwrap()
+            .unwrap();
+        assert_eq!(updated.version, 2);
+
+        // Delete element
+        storage.delete_element("elem-btn-confirm").unwrap();
+        let empty_list = storage.list_elements(DEFAULT_LEGACY_PROJECT_ID).unwrap();
+        assert_eq!(empty_list.len(), 0);
         assert_eq!(devices[0].alias, "Pixel 6");
 
         storage

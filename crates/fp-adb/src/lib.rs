@@ -889,6 +889,40 @@ impl DeviceDriver for AdbDeviceDriver {
             verify_passed: false,
         })
     }
+
+    async fn get_ui_tree(&self) -> Result<String> {
+        let dump_path = "/sdcard/window_dump.xml";
+        self.runner
+            .run_args(&[
+                "-s",
+                &self.serial,
+                "shell",
+                "uiautomator",
+                "dump",
+                dump_path,
+            ])
+            .await?;
+        let xml = self
+            .runner
+            .run_args(&["-s", &self.serial, "shell", "cat", dump_path])
+            .await?;
+        Ok(xml)
+    }
+
+    async fn input_text(&self, text: &str) -> Result<ActionReceipt> {
+        let start = std::time::Instant::now();
+        let escaped = text.replace(' ', "%s");
+        self.runner
+            .run_args(&["-s", &self.serial, "shell", "input", "text", &escaped])
+            .await?;
+        Ok(ActionReceipt {
+            success: true,
+            duration_ms: start.elapsed().as_millis() as u64,
+            error: None,
+            point_tapped: None,
+            verify_passed: false,
+        })
+    }
 }
 
 #[cfg(test)]
