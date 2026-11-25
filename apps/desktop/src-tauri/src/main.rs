@@ -1343,7 +1343,17 @@ fn main() {
             element_ipc::element_execute_action,
             element_ipc::element_save_to_library,
             element_ipc::element_list_library,
-            element_ipc::element_delete_from_library
+            element_ipc::element_delete_from_library,
+            element_ipc::device_press_key,
+            element_ipc::device_tap,
+            element_ipc::device_swipe,
+            element_ipc::device_input_text,
+            element_ipc::device_stream_frame,
+            element_ipc::recorder_record_touch,
+            element_ipc::recorder_replay_step,
+            element_ipc::recorder_replay_all,
+            element_ipc::recorder_export_workflow,
+            element_ipc::recorder_save_workflow
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

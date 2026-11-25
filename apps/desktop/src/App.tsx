@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppShell } from './components/shell/AppShell';
 import { ProjectsDashboardView } from './features/projects/ProjectsDashboardView';
 import { OverviewView } from './features/overview/OverviewView';
 import { DevicesView } from './features/devices/DevicesView';
+import { DeviceStudioView } from './features/devices/DeviceStudioView';
 import { WorkflowsView } from './features/workflows/WorkflowsView';
 import { WorkflowStudioView } from './features/studio/WorkflowStudioView';
 import { TasksView } from './features/tasks/TasksView';
@@ -20,18 +21,45 @@ export const App: React.FC = () => {
       const viewParam = params.get('view');
       if (viewParam) return viewParam;
       if (window.location.hash) {
-        const hash = window.location.hash.replace('#', '');
+        const hash = window.location.hash.replace('#', '').split('/')[0];
         if (hash) return hash;
       }
     }
-    return 'projects';
+    return 'device-studio';
   });
+
+  useEffect(() => {
+    (window as any).__setFarmerProView = (view: string) => {
+      setCurrentView(view);
+    };
+
+    const handleHash = () => {
+      const hash = window.location.hash.replace('#', '').split('/')[0];
+      if (hash) setCurrentView(hash);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey) {
+        if (e.key === 'D') setCurrentView('devices');
+        if (e.key === 'S') setCurrentView('device-studio');
+        if (e.key === 'P') setCurrentView('projects');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHash);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('hashchange', handleHash);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   return (
     <AppShell currentView={currentView} onSelectView={setCurrentView}>
       {currentView === 'projects' && <ProjectsDashboardView onNavigate={setCurrentView} />}
       {currentView === 'overview' && <OverviewView onNavigate={setCurrentView} />}
       {currentView === 'devices' && <DevicesView onNavigate={setCurrentView} />}
+      {currentView === 'device-studio' && <DeviceStudioView onNavigate={setCurrentView} />}
       {currentView === 'workflows' && (
         <WorkflowsView onOpenStudio={() => setCurrentView('studio')} />
       )}

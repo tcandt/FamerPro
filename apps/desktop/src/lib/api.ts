@@ -17,6 +17,7 @@ import type {
   DbOptimizeReport,
   DetectionResult,
   DeviceDetail,
+  ActionReceipt,
   DeviceHealthReport,
   DevicePortMapping,
   DeviceSummary,
@@ -48,6 +49,10 @@ import type {
   ProjectWorkflowRecord,
   ProxyConfig,
   ProxyProbeReport,
+  RecordedWorkflowStep,
+  StepExecutionResult,
+  StreamFrameResponse,
+  WorkflowReplayReport,
   ReconcileOutcome,
   ReleaseTransitionRecord,
   RoiRect,
@@ -1399,5 +1404,119 @@ export const api = {
     }
     requireTauri('element_delete_from_library');
     return await invoke<void>('element_delete_from_library', { id });
+  },
+
+  // ========================================================================
+  // Phase 2.2: Device Studio Direct Hardware Control & Streaming
+  // ========================================================================
+
+  async devicePressKey(serial: string, keycode: number): Promise<ActionReceipt> {
+    requireTauri('device_press_key');
+    return await invoke<ActionReceipt>('device_press_key', { serial, keycode });
+  },
+
+  async deviceTap(serial: string, x: number, y: number): Promise<ActionReceipt> {
+    requireTauri('device_tap');
+    return await invoke<ActionReceipt>('device_tap', { serial, x, y });
+  },
+
+  async deviceSwipe(
+    serial: string,
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    durationMs: number
+  ): Promise<ActionReceipt> {
+    requireTauri('device_swipe');
+    return await invoke<ActionReceipt>('device_swipe', {
+      serial,
+      startX,
+      startY,
+      endX,
+      endY,
+      durationMs,
+    });
+  },
+
+  async deviceInputText(serial: string, text: string): Promise<ActionReceipt> {
+    requireTauri('device_input_text');
+    return await invoke<ActionReceipt>('device_input_text', { serial, text });
+  },
+
+  async deviceStreamFrame(serial: string): Promise<StreamFrameResponse> {
+    requireTauri('device_stream_frame');
+    return await invoke<StreamFrameResponse>('device_stream_frame', { serial });
+  },
+
+  // ========================================================================
+  // Phase 2.2: Smart Workflow Recorder API
+  // ========================================================================
+
+  async recorderRecordTouch(
+    serial: string,
+    x: number,
+    y: number,
+    stepNumber: number,
+    actionType: string,
+    textInput?: string
+  ): Promise<RecordedWorkflowStep> {
+    requireTauri('recorder_record_touch');
+    return await invoke<RecordedWorkflowStep>('recorder_record_touch', {
+      serial,
+      x,
+      y,
+      stepNumber,
+      actionType,
+      textInput,
+    });
+  },
+
+  async recorderReplayStep(
+    serial: string,
+    step: RecordedWorkflowStep
+  ): Promise<StepExecutionResult> {
+    requireTauri('recorder_replay_step');
+    return await invoke<StepExecutionResult>('recorder_replay_step', {
+      serial,
+      step,
+    });
+  },
+
+  async recorderReplayAll(
+    serial: string,
+    steps: RecordedWorkflowStep[]
+  ): Promise<WorkflowReplayReport> {
+    requireTauri('recorder_replay_all');
+    return await invoke<WorkflowReplayReport>('recorder_replay_all', {
+      serial,
+      steps,
+    });
+  },
+
+  async recorderExportWorkflow(
+    workflowId: string,
+    name: string,
+    steps: RecordedWorkflowStep[]
+  ): Promise<any> {
+    requireTauri('recorder_export_workflow');
+    return await invoke<any>('recorder_export_workflow', {
+      workflowId,
+      name,
+      steps,
+    });
+  },
+
+  async recorderSaveWorkflow(
+    workflowId: string,
+    name: string,
+    docJson: string
+  ): Promise<boolean> {
+    requireTauri('recorder_save_workflow');
+    return await invoke<boolean>('recorder_save_workflow', {
+      workflowId,
+      name,
+      docJson,
+    });
   },
 };

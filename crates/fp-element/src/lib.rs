@@ -3,6 +3,7 @@ pub mod executor;
 pub mod generator;
 pub mod model;
 pub mod parser;
+pub mod recorder;
 pub mod selectors;
 
 pub use action::*;
@@ -10,6 +11,7 @@ pub use executor::*;
 pub use generator::*;
 pub use model::*;
 pub use parser::*;
+pub use recorder::*;
 pub use selectors::*;
 
 #[cfg(test)]
@@ -245,5 +247,37 @@ mod tests {
             .expect("point detect failed");
         assert_eq!(pt_detect.target_bounds.x, 266.0); // 270 - 4
         assert_eq!(pt_detect.target_bounds.y, 476.0); // 480 - 4
+    }
+
+    #[tokio::test]
+    async fn test_smart_workflow_recorder_flow() {
+        let geom = ScreenGeometry::new(540, 960, 0);
+        let snapshot = parse_ui_hierarchy(SAMPLE_SETTINGS_XML, &geom).expect("parse failed");
+
+        // Touch on "Display" (x: 120, y: 900)
+        let step = build_step_from_touch(&snapshot, 120.0, 900.0, 1, "tap", None);
+
+        assert_eq!(step.step_number, 1);
+        assert_eq!(step.action_type, "tap");
+        assert_eq!(step.uniqueness_score, 100);
+        assert!(step.label.contains("Display"));
+        assert!(step.selector.is_some());
+
+        // Convert to WorkflowDocument
+        let doc =
+            recorded_steps_to_workflow_document("wf-rec-test", "Recorded Flow", &[step.clone()]);
+        assert_eq!(doc.workflow_id, "wf-rec-test");
+        assert_eq!(doc.graph.nodes.len(), 3); // start + 1 action + end
+        assert_eq!(doc.graph.edges.len(), 2);
+
+        // Execute step with mock device driver
+        let driver = fp_testkit::FakeDeviceDriver::new("rec-dev", 540, 960);
+        let res = execute_recorded_step(&driver, &step, Some(&snapshot)).await;
+        assert!(res.success);
+        assert!(res.verified);
+        assert_eq!(
+            driver.tap_count.load(std::sync::atomic::Ordering::SeqCst),
+            1
+        );
     }
 }

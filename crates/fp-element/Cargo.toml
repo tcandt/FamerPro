@@ -9,6 +9,7 @@ description = "FarmerPro Native Rust Element Core & Selector Engine"
 [dependencies]
 fp-domain = { path = "../fp-domain" }
 fp-actions = { path = "../fp-actions" }
+fp-workflow-schema = { path = "../fp-workflow-schema" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 quick-xml = { workspace = true }

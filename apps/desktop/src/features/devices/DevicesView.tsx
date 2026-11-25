@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { useDeviceStore } from '../../stores/deviceStore';
 import { formatAndroidVersion, ConnectionState } from '../../types';
-import { DeviceLabInspector } from './DeviceLabInspector';
 
 interface DevicesViewProps {
   onNavigate?: (view: string) => void;
@@ -173,7 +172,7 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
   const handleOpenInStudio = (devId: string) => {
     selectDevice(devId);
     if (onNavigate) {
-      onNavigate('studio');
+      onNavigate('device-studio');
     }
   };
 
@@ -562,11 +561,11 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
                           )}
                           <button
                             onClick={() => handleOpenInStudio(dev.id)}
-                            className="px-2.5 py-1 bg-[#192434] hover:bg-[#1F334E] text-[#38BDF8] rounded border border-[#2A3647] font-medium flex items-center gap-1 transition-colors"
-                            title="Mở thiết bị này trong Workflow Studio"
+                            className="px-3 py-1 bg-[#172554] hover:bg-[#1E40AF] text-[#60A5FA] hover:text-white rounded-lg border border-[#1E3A8A] font-semibold text-xs flex items-center gap-1.5 transition shadow"
+                            title="Mở Device Studio (Live Control, Inspector, Smart Recorder)"
                           >
-                            <ExternalLink size={11} />
-                            <span>Studio</span>
+                            <ExternalLink size={12} />
+                            <span>Mở Device Studio</span>
                           </button>
                         </div>
                       </td>
@@ -578,13 +577,6 @@ export const DevicesView: React.FC<DevicesViewProps> = ({ onNavigate }) => {
           </table>
         </div>
       </div>
-
-      {/* Right: Device Lab Inspector (Health, Reconnect, ROI Capture/Templates, Port Map) */}
-      <DeviceLabInspector
-        currentDevice={currentDevice}
-        onNotice={showNotice}
-        onOpenInStudio={handleOpenInStudio}
-      />
 
       {/* Scan Range Modal */}
       {showScanModal && (

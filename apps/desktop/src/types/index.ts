@@ -1014,6 +1014,13 @@ export interface DetectionResult {
 
 export type VirtualSelectorMode = 'native' | 'ocr' | 'image' | 'point' | 'region' | 'hybrid';
 
+export type Selector =
+  | { Point: { x: number; y: number; is_relative: boolean } }
+  | { Native: NativeElementSelector }
+  | { Ocr: { text: string; confidence_threshold?: number; exact_match?: boolean } }
+  | { Image: { template_id: string; threshold?: number } }
+  | { Region: { x: number; y: number; width: number; height: number } };
+
 export interface LibraryElementRecord {
   id: string;
   projectId: string;
@@ -1026,5 +1033,67 @@ export interface LibraryElementRecord {
   version: number;
   createdAt: string;
   updatedAt: string;
+}
+
+// ========================================================================
+// Phase 2.2: Device Studio & Smart Workflow Recorder Types
+// ========================================================================
+
+export interface StreamFrameResponse {
+  screenshot_base64: string;
+  width: number;
+  height: number;
+  rotation_deg: number;
+  timestamp_ms: number;
+  latency_ms: number;
+}
+
+export interface ActionReceipt {
+  success: boolean;
+  duration_ms: number;
+  error?: string | null;
+  point_tapped?: { x: number; y: number } | null;
+  verify_passed: boolean;
+}
+
+export interface RecordedWorkflowStep {
+  id: string;
+  stepNumber: number;
+  actionType: string;
+  label: string;
+  selector?: Selector | null;
+  resolvedBounds?: ElementBounds | null;
+  point?: { x: number; y: number } | null;
+  swipePath?: { start_x: number; start_y: number; end_x: number; end_y: number; duration_ms: number } | null;
+  keyCode?: number | null;
+  inputText?: string | null;
+  waitMs?: number | null;
+  assertionRule?: string | null;
+  beforeScreenshot?: string | null;
+  afterScreenshot?: string | null;
+  durationMs: number;
+  status: string;
+  enabled: boolean;
+  uniquenessScore: number;
+  strategyUsed: string;
+  notes?: string | null;
+}
+
+export interface StepExecutionResult {
+  stepId: string;
+  success: boolean;
+  durationMs: number;
+  errorMessage?: string | null;
+  verified: boolean;
+  targetPoint?: { x: number; y: number } | null;
+}
+
+export interface WorkflowReplayReport {
+  totalSteps: number;
+  executedSteps: number;
+  passedSteps: number;
+  failedSteps: number;
+  totalDurationMs: number;
+  results: StepExecutionResult[];
 }
 

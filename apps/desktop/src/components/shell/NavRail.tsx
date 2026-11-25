@@ -71,13 +71,20 @@ export const NavRail: React.FC<NavRailProps> = ({
       items: [
         {
           id: 'devices',
-          label: 'Device Lab',
+          label: 'Device Manager',
           icon: Smartphone,
-          badge: readyCount > 0 ? `${readyCount} LIVE` : devices.length > 0 ? `${devices.length}` : '0',
+          badge: devices.length > 0 ? `${devices.length}` : '0',
+          badgeColor: 'bg-[#202B3B] text-[#94A3B8]',
+        },
+        {
+          id: 'device-studio',
+          label: 'Device Studio',
+          icon: Smartphone,
+          badge: readyCount > 0 ? `${readyCount} LIVE` : 'Studio',
           badgeColor:
             readyCount > 0
               ? 'bg-[#133528] text-[#3BC38D]'
-              : 'bg-[#202B3B] text-[#74869D]',
+              : 'bg-[#172554] text-[#60A5FA]',
         },
         {
           id: 'runs',

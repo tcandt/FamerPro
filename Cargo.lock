@@ -1350,6 +1350,7 @@ dependencies = [
  "fp-actions",
  "fp-domain",
  "fp-testkit",
+ "fp-workflow-schema",
  "quick-xml",
  "rand",
  "regex",
