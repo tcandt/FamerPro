@@ -1,4 +1,5 @@
 mod verify_p3;
+mod verify_p2_3;
 
 use anyhow::Context;
 use clap::{Parser, Subcommand};
@@ -107,6 +108,15 @@ enum Commands {
     VerifyP3 {
         #[arg(long)]
         repo_root: Option<PathBuf>,
+
+        #[arg(long)]
+        out_dir: Option<PathBuf>,
+    },
+
+    /// Execute Phase 2.3 Real-Time Device Engine & Recorder Correctness physical verification
+    VerifyP23 {
+        #[arg(long, default_value = "192.168.1.168:5555")]
+        serial: String,
 
         #[arg(long)]
         out_dir: Option<PathBuf>,
@@ -310,6 +320,10 @@ async fn main() -> anyhow::Result<()> {
             let ev_dir = out_dir.unwrap_or_else(|| root.join("artifacts").join("p3_evidence"));
             let report = verify_p3::run_p3_verification(&root, &ev_dir).await?;
             println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+
+        Commands::VerifyP23 { serial, out_dir } => {
+            verify_p2_3::run_verify_p2_3(serial, out_dir).await?;
         }
 
         Commands::CrashWorker {

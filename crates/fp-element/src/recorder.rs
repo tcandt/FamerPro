@@ -45,6 +45,7 @@ pub struct StepExecutionResult {
     pub success: bool,
     pub duration_ms: u64,
     pub error_message: Option<String>,
+    pub status: String, // "DETECTED", "DISPATCHED", "ACTION_COMPLETED", "VERIFIED", "FAILED", "UNVERIFIED"
     pub verified: bool,
     pub target_point: Option<Point>,
 }
@@ -77,28 +78,20 @@ pub fn build_step_from_touch(
 ) -> RecordedWorkflowStep {
     let step_id = format!("step-{}", uuid_simple(step_number));
 
-    // 1. Locate innermost node under the touch coordinates
-    if let Some(innermost_node) = snapshot.find_node_at_point(x, y) {
-        let mut resolved_bounds = innermost_node.bounds;
+    // 1. Locate innermost leaf node under touch using structured hit-testing
+    if let Some(target) = snapshot.hit_test_element(x, y) {
+        let innermost_node = target.target_node;
+        let action_target = target.action_target;
+        let resolved_bounds = target.resolved_bounds;
 
-        // If the node itself is not clickable, look up clickable ancestor for bounds
-        if !innermost_node.clickable {
-            let mut curr = innermost_node;
-            while let Some(parent_id) = curr.parent_id {
-                if let Some(parent) = snapshot.nodes.iter().find(|n| n.id == parent_id) {
-                    if parent.clickable {
-                        resolved_bounds = parent.bounds;
-                        break;
-                    }
-                    curr = parent;
-                } else {
-                    break;
-                }
-            }
+        // Generate selectors for the targeted node (where text / id live)
+        let mut candidates = generate_selectors_for_node(snapshot, innermost_node.id);
+
+        // If target node itself is not unique or not clickable, also include action_target candidates
+        if action_target.id != innermost_node.id {
+            let parent_candidates = generate_selectors_for_node(snapshot, action_target.id);
+            candidates.extend(parent_candidates);
         }
-
-        // Generate selectors for the innermost targeted node (where text / id live)
-        let candidates = generate_selectors_for_node(snapshot, innermost_node.id);
 
         // Pick the best candidate (uniqueness score == 100 preferred)
         let best_candidate = candidates
@@ -231,40 +224,90 @@ pub fn recorded_steps_to_workflow_document(
         let node_id = format!("node-action-{}", idx + 1);
 
         let (node_type, config) = match step.action_type.as_str() {
-            "tap" => (
-                "action.elementTap".to_string(),
-                serde_json::json!({
-                    "label": step.label,
-                    "selector": step.selector,
-                    "targetBounds": step.resolved_bounds,
-                    "strategy": step.strategy_used,
-                    "uniquenessScore": step.uniqueness_score,
-                    "fallbackPoint": step.point,
-                    "waitAfterMs": step.wait_ms.unwrap_or(500),
-                }),
-            ),
+            "tap" => {
+                let (res_id, text, xpath, class_name) = match &step.selector {
+                    Some(Selector::Native(n)) => (
+                        n.resource_id.clone(),
+                        n.text.clone(),
+                        n.xpath.clone(),
+                        n.class_name.clone(),
+                    ),
+                    _ => (None, None, None, None),
+                };
+                (
+                    "element.click".to_string(),
+                    serde_json::json!({
+                        "label": step.label,
+                        "selector": step.selector,
+                        "resourceId": res_id,
+                        "text": text,
+                        "xpath": xpath,
+                        "className": class_name,
+                        "targetBounds": step.resolved_bounds,
+                        "strategy": step.strategy_used,
+                        "uniquenessScore": step.uniqueness_score,
+                        "requireUnique": true,
+                        "pointX": step.point.as_ref().map(|p| p.x),
+                        "pointY": step.point.as_ref().map(|p| p.y),
+                        "waitAfterMs": step.wait_ms.unwrap_or(500),
+                    }),
+                )
+            }
             "swipe" => (
                 "action.swipe".to_string(),
                 serde_json::json!({
                     "label": step.label,
                     "path": step.swipe_path,
+                    "startX": step.swipe_path.as_ref().map(|p| p.start_x),
+                    "startY": step.swipe_path.as_ref().map(|p| p.start_y),
+                    "endX": step.swipe_path.as_ref().map(|p| p.end_x),
+                    "endY": step.swipe_path.as_ref().map(|p| p.end_y),
+                    "durationMs": step.swipe_path.as_ref().map(|p| p.duration_ms).unwrap_or(300),
                     "waitAfterMs": step.wait_ms.unwrap_or(500),
                 }),
             ),
-            "input_text" => (
-                "action.inputText".to_string(),
-                serde_json::json!({
-                    "label": step.label,
-                    "selector": step.selector,
-                    "text": step.input_text.as_deref().unwrap_or(""),
-                    "waitAfterMs": step.wait_ms.unwrap_or(500),
-                }),
-            ),
+            "input_text" => {
+                let (res_id, xpath) = match &step.selector {
+                    Some(Selector::Native(n)) => (n.resource_id.clone(), n.xpath.clone()),
+                    _ => (None, None),
+                };
+                (
+                    "element.set_text".to_string(),
+                    serde_json::json!({
+                        "label": step.label,
+                        "selector": step.selector,
+                        "resourceId": res_id,
+                        "xpath": xpath,
+                        "inputText": step.input_text.as_deref().unwrap_or(""),
+                        "requireUnique": true,
+                        "waitAfterMs": step.wait_ms.unwrap_or(500),
+                    }),
+                )
+            }
+            "assert" | "assert_exists" => {
+                let (res_id, text, xpath) = match &step.selector {
+                    Some(Selector::Native(n)) => (n.resource_id.clone(), n.text.clone(), n.xpath.clone()),
+                    _ => (None, None, None),
+                };
+                (
+                    "element.assert".to_string(),
+                    serde_json::json!({
+                        "label": step.label,
+                        "selector": step.selector,
+                        "resourceId": res_id,
+                        "text": text,
+                        "xpath": xpath,
+                        "assertionRule": step.assertion_rule,
+                        "waitAfterMs": step.wait_ms.unwrap_or(500),
+                    }),
+                )
+            }
             "key_event" => (
-                "action.keyEvent".to_string(),
+                "action.key".to_string(),
                 serde_json::json!({
                     "label": step.label,
                     "keyCode": step.key_code,
+                    "keycode": step.key_code,
                     "waitAfterMs": step.wait_ms.unwrap_or(500),
                 }),
             ),
@@ -276,11 +319,12 @@ pub fn recorded_steps_to_workflow_document(
                 }),
             ),
             _ => (
-                "action.elementTap".to_string(),
+                "element.click".to_string(),
                 serde_json::json!({
                     "label": step.label,
                     "selector": step.selector,
-                    "point": step.point,
+                    "pointX": step.point.as_ref().map(|p| p.x),
+                    "pointY": step.point.as_ref().map(|p| p.y),
                 }),
             ),
         };
@@ -354,9 +398,9 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
 
     match step.action_type.as_str() {
         "tap" => {
-            // If selector exists, attempt detection first
+            // If selector exists, attempt detection first with require_unique = true (FAIL-CLOSED)
             if let Some(sel) = &step.selector {
-                match UnifiedElementExecutor::detect(snapshot, sel, None, false) {
+                match UnifiedElementExecutor::detect(snapshot, sel, None, true) {
                     Ok(detection) => {
                         let target_match = match detection.matches.first() {
                             Some(m) => m,
@@ -365,7 +409,11 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                                     step_id: step.id.clone(),
                                     success: false,
                                     duration_ms: start.elapsed().as_millis() as u64,
-                                    error_message: Some("No match found in detection".to_string()),
+                                    error_message: Some(format!(
+                                        "ELEMENT_NOT_FOUND: Selector '{:?}' not found in snapshot",
+                                        sel
+                                    )),
+                                    status: "FAILED".to_string(),
                                     verified: false,
                                     target_point: None,
                                 };
@@ -383,7 +431,8 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                                     step_id: step.id.clone(),
                                     success: false,
                                     duration_ms: start.elapsed().as_millis() as u64,
-                                    error_message: Some(format!("Planning error: {}", e)),
+                                    error_message: Some(format!("PLANNING_FAILED: {}", e)),
+                                    status: "FAILED".to_string(),
                                     verified: false,
                                     target_point: None,
                                 };
@@ -391,76 +440,84 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                         };
 
                         match UnifiedElementExecutor::execute(driver, &plan).await {
-                            Ok(receipt) => StepExecutionResult {
-                                step_id: step.id.clone(),
-                                success: receipt.success,
-                                duration_ms: start.elapsed().as_millis() as u64,
-                                error_message: receipt.error,
-                                verified: receipt.success,
-                                target_point: receipt.point_tapped,
-                            },
+                            Ok(receipt) => {
+                                let (status, verified) = if receipt.success {
+                                    if receipt.verify_passed {
+                                        ("VERIFIED".to_string(), true)
+                                    } else {
+                                        ("ACTION_COMPLETED".to_string(), false)
+                                    }
+                                } else {
+                                    ("FAILED".to_string(), false)
+                                };
+                                StepExecutionResult {
+                                    step_id: step.id.clone(),
+                                    success: receipt.success,
+                                    duration_ms: start.elapsed().as_millis() as u64,
+                                    error_message: receipt.error,
+                                    status,
+                                    verified,
+                                    target_point: receipt.point_tapped,
+                                }
+                            }
                             Err(e) => StepExecutionResult {
                                 step_id: step.id.clone(),
                                 success: false,
                                 duration_ms: start.elapsed().as_millis() as u64,
-                                error_message: Some(format!("Execution failed: {}", e)),
+                                error_message: Some(format!("EXECUTION_FAILED: {}", e)),
+                                status: "FAILED".to_string(),
                                 verified: false,
                                 target_point: None,
                             },
                         }
                     }
                     Err(e) => {
-                        // Detection failed, fallback to recorded coordinates if available
-                        if let Some(pt) = &step.point {
-                            match driver.tap(pt.x as u32, pt.y as u32).await {
-                                Ok(receipt) => StepExecutionResult {
-                                    step_id: step.id.clone(),
-                                    success: receipt.success,
-                                    duration_ms: start.elapsed().as_millis() as u64,
-                                    error_message: None,
-                                    verified: true,
-                                    target_point: Some(pt.clone()),
-                                },
-                                Err(err) => StepExecutionResult {
-                                    step_id: step.id.clone(),
-                                    success: false,
-                                    duration_ms: start.elapsed().as_millis() as u64,
-                                    error_message: Some(format!(
-                                        "Detection error '{}' & fallback tap failed: {}",
-                                        e, err
-                                    )),
-                                    verified: false,
-                                    target_point: None,
-                                },
+                        // FAIL-CLOSED: Stop immediately on ambiguous or missing selector!
+                        let err_msg = match &e {
+                            crate::ElementError::AmbiguousMatch { selector, count } => {
+                                format!(
+                                    "AMBIGUOUS_MATCH: Selector '{}' matched {} elements. Replay aborted for safety.",
+                                    selector, count
+                                )
                             }
-                        } else {
-                            StepExecutionResult {
-                                step_id: step.id.clone(),
-                                success: false,
-                                duration_ms: start.elapsed().as_millis() as u64,
-                                error_message: Some(format!("Detection failed: {}", e)),
-                                verified: false,
-                                target_point: None,
+                            crate::ElementError::NotFound(s) => {
+                                format!("ELEMENT_NOT_FOUND: Selector '{}' was not found in snapshot.", s)
                             }
+                            other => format!("DETECTION_FAILED: {}", other),
+                        };
+                        StepExecutionResult {
+                            step_id: step.id.clone(),
+                            success: false,
+                            duration_ms: start.elapsed().as_millis() as u64,
+                            error_message: Some(err_msg),
+                            status: "FAILED".to_string(),
+                            verified: false,
+                            target_point: None,
                         }
                     }
                 }
             } else if let Some(pt) = &step.point {
-                // Direct point tap
+                // Direct point tap (only when explicitly recorded without a selector)
                 match driver.tap(pt.x as u32, pt.y as u32).await {
                     Ok(receipt) => StepExecutionResult {
                         step_id: step.id.clone(),
                         success: receipt.success,
                         duration_ms: start.elapsed().as_millis() as u64,
-                        error_message: None,
-                        verified: true,
+                        error_message: receipt.error,
+                        status: if receipt.success {
+                            "ACTION_COMPLETED".to_string()
+                        } else {
+                            "FAILED".to_string()
+                        },
+                        verified: false, // Point taps without assertions are unverified
                         target_point: Some(pt.clone()),
                     },
                     Err(e) => StepExecutionResult {
                         step_id: step.id.clone(),
                         success: false,
                         duration_ms: start.elapsed().as_millis() as u64,
-                        error_message: Some(e.to_string()),
+                        error_message: Some(format!("TAP_FAILED: {}", e)),
+                        status: "FAILED".to_string(),
                         verified: false,
                         target_point: None,
                     },
@@ -471,6 +528,7 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                     success: false,
                     duration_ms: start.elapsed().as_millis() as u64,
                     error_message: Some("No selector or point provided for tap".to_string()),
+                    status: "FAILED".to_string(),
                     verified: false,
                     target_point: None,
                 }
@@ -483,8 +541,13 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                         step_id: step.id.clone(),
                         success: receipt.success,
                         duration_ms: start.elapsed().as_millis() as u64,
-                        error_message: None,
-                        verified: true,
+                        error_message: receipt.error,
+                        status: if receipt.success {
+                            "ACTION_COMPLETED".to_string()
+                        } else {
+                            "FAILED".to_string()
+                        },
+                        verified: false,
                         target_point: None,
                     },
                     Err(e) => StepExecutionResult {
@@ -492,6 +555,7 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                         success: false,
                         duration_ms: start.elapsed().as_millis() as u64,
                         error_message: Some(e.to_string()),
+                        status: "FAILED".to_string(),
                         verified: false,
                         target_point: None,
                     },
@@ -502,6 +566,7 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                     success: false,
                     duration_ms: start.elapsed().as_millis() as u64,
                     error_message: Some("Swipe path missing".to_string()),
+                    status: "FAILED".to_string(),
                     verified: false,
                     target_point: None,
                 }
@@ -514,8 +579,13 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                         step_id: step.id.clone(),
                         success: receipt.success,
                         duration_ms: start.elapsed().as_millis() as u64,
-                        error_message: None,
-                        verified: true,
+                        error_message: receipt.error,
+                        status: if receipt.success {
+                            "ACTION_COMPLETED".to_string()
+                        } else {
+                            "FAILED".to_string()
+                        },
+                        verified: false,
                         target_point: None,
                     },
                     Err(e) => StepExecutionResult {
@@ -523,6 +593,7 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                         success: false,
                         duration_ms: start.elapsed().as_millis() as u64,
                         error_message: Some(e.to_string()),
+                        status: "FAILED".to_string(),
                         verified: false,
                         target_point: None,
                     },
@@ -533,6 +604,7 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                     success: false,
                     duration_ms: start.elapsed().as_millis() as u64,
                     error_message: Some("Key code missing".to_string()),
+                    status: "FAILED".to_string(),
                     verified: false,
                     target_point: None,
                 }
@@ -545,8 +617,13 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                         step_id: step.id.clone(),
                         success: receipt.success,
                         duration_ms: start.elapsed().as_millis() as u64,
-                        error_message: None,
-                        verified: true,
+                        error_message: receipt.error,
+                        status: if receipt.success {
+                            "ACTION_COMPLETED".to_string()
+                        } else {
+                            "FAILED".to_string()
+                        },
+                        verified: false,
                         target_point: None,
                     },
                     Err(e) => StepExecutionResult {
@@ -554,6 +631,7 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                         success: false,
                         duration_ms: start.elapsed().as_millis() as u64,
                         error_message: Some(e.to_string()),
+                        status: "FAILED".to_string(),
                         verified: false,
                         target_point: None,
                     },
@@ -564,6 +642,7 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                     success: false,
                     duration_ms: start.elapsed().as_millis() as u64,
                     error_message: Some("Input text missing".to_string()),
+                    status: "FAILED".to_string(),
                     verified: false,
                     target_point: None,
                 }
@@ -577,8 +656,46 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
                 success: true,
                 duration_ms: wait_dur,
                 error_message: None,
+                status: "ACTION_COMPLETED".to_string(),
                 verified: true,
                 target_point: None,
+            }
+        }
+        "assert_exists" | "assert" => {
+            if let Some(sel) = &step.selector {
+                match UnifiedElementExecutor::detect(snapshot, sel, None, false) {
+                    Ok(detection) if detection.candidate_count > 0 => StepExecutionResult {
+                        step_id: step.id.clone(),
+                        success: true,
+                        duration_ms: start.elapsed().as_millis() as u64,
+                        error_message: None,
+                        status: "VERIFIED".to_string(),
+                        verified: true,
+                        target_point: None,
+                    },
+                    _ => StepExecutionResult {
+                        step_id: step.id.clone(),
+                        success: false,
+                        duration_ms: start.elapsed().as_millis() as u64,
+                        error_message: Some(format!(
+                            "ASSERTION_FAILED: Selector '{:?}' not found in snapshot",
+                            sel
+                        )),
+                        status: "FAILED".to_string(),
+                        verified: false,
+                        target_point: None,
+                    },
+                }
+            } else {
+                StepExecutionResult {
+                    step_id: step.id.clone(),
+                    success: false,
+                    duration_ms: start.elapsed().as_millis() as u64,
+                    error_message: Some("Selector missing for assertion step".to_string()),
+                    status: "FAILED".to_string(),
+                    verified: false,
+                    target_point: None,
+                }
             }
         }
         other => StepExecutionResult {
@@ -586,6 +703,7 @@ pub async fn execute_recorded_step<D: DeviceDriver>(
             success: false,
             duration_ms: start.elapsed().as_millis() as u64,
             error_message: Some(format!("Unknown action type: {}", other)),
+            status: "FAILED".to_string(),
             verified: false,
             target_point: None,
         },

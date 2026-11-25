@@ -1349,6 +1349,8 @@ fn main() {
             element_ipc::device_swipe,
             element_ipc::device_input_text,
             element_ipc::device_stream_frame,
+            element_ipc::device_launch_scrcpy_mirror,
+            element_ipc::device_crop_region,
             element_ipc::recorder_record_touch,
             element_ipc::recorder_replay_step,
             element_ipc::recorder_replay_all,

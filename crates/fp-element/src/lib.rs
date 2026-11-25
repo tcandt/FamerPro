@@ -274,10 +274,46 @@ mod tests {
         let driver = fp_testkit::FakeDeviceDriver::new("rec-dev", 540, 960);
         let res = execute_recorded_step(&driver, &step, Some(&snapshot)).await;
         assert!(res.success);
-        assert!(res.verified);
+        assert_eq!(res.status, "ACTION_COMPLETED");
+        assert!(!res.verified); // Action completed, not yet verified by assertion
         assert_eq!(
             driver.tap_count.load(std::sync::atomic::Ordering::SeqCst),
             1
         );
+
+        // Now test an explicit assertion step verifying result
+        let mut assert_step = step.clone();
+        assert_step.action_type = "assert_exists".to_string();
+        let assert_res = execute_recorded_step(&driver, &assert_step, Some(&snapshot)).await;
+        assert!(assert_res.success);
+        assert_eq!(assert_res.status, "VERIFIED");
+        assert!(assert_res.verified);
+    }
+
+    #[test]
+    fn test_calculator_hit_test_prefers_digit7_over_pad_numeric() {
+        const CALC_XML: &str = r#"<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<hierarchy rotation="1">
+  <node index="0" text="" resource-id="" class="android.widget.FrameLayout" package="com.android.calculator2" bounds="[0,0][960,540]">
+    <node index="0" text="" resource-id="com.android.calculator2:id/pad_numeric" class="android.view.ViewGroup" package="com.android.calculator2" clickable="false" bounds="[0,173][369,540]">
+      <node index="0" text="7" resource-id="com.android.calculator2:id/digit_7" class="android.widget.Button" package="com.android.calculator2" clickable="true" bounds="[18,176][129,264]" />
+      <node index="1" text="8" resource-id="com.android.calculator2:id/digit_8" class="android.widget.Button" package="com.android.calculator2" clickable="true" bounds="[138,176][249,264]" />
+    </node>
+  </node>
+</hierarchy>"#;
+
+        let geom = ScreenGeometry::new(960, 540, 90);
+        let snapshot = parse_ui_hierarchy(CALC_XML, &geom).expect("parse failed");
+
+        // Touch inside digit_7 at (75.0, 220.0)
+        let resolved = snapshot.hit_test_element(75.0, 220.0).expect("hit test failed");
+        assert_eq!(resolved.target_node.resource_id, "com.android.calculator2:id/digit_7");
+        assert_eq!(resolved.action_target.resource_id, "com.android.calculator2:id/digit_7");
+        assert_eq!(resolved.target_node.text, "7");
+
+        let step = build_step_from_touch(&snapshot, 75.0, 220.0, 1, "tap", None);
+        assert!(step.label.contains("7") || step.label.contains("digit_7"));
+        assert!(!step.label.contains("pad_numeric"));
     }
 }
+

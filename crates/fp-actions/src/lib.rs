@@ -245,4 +245,127 @@ mod tests {
         assert_eq!(rotated_180.x, 1080.0 - 1.0 - 100.0);
         assert_eq!(rotated_180.y, 1920.0 - 1.0 - 200.0);
     }
+
+    #[test]
+    fn test_rendered_bounds_letterbox_and_rejection() {
+        // Container 800x1200, Image Landscape 960x540
+        let bounds = ScreenGeometryTransform::calculate_rendered_bounds(800.0, 1200.0, 960.0, 540.0);
+        assert_eq!(bounds.offset_x, 0.0);
+        assert_eq!(bounds.rendered_width, 800.0);
+        // aspect 960/540 = 1.7777778 -> height = 800 / (16/9) = 450.0
+        assert!((bounds.rendered_height - 450.0).abs() < 0.01);
+        // offsetY = (1200 - 450) / 2 = 375.0
+        assert!((bounds.offset_y - 375.0).abs() < 0.01);
+
+        // Click in top letterbox (y=100) -> Rejected
+        let pt = ScreenGeometryTransform::client_to_device(
+            400.0, 100.0, 0.0, 0.0, 800.0, 1200.0, 960.0, 540.0,
+        );
+        assert!(pt.is_none());
+
+        // Click in active area (x=400, y=600) -> (400, 600 - 375) / 450 = 225/450 = 0.5 -> device (480, 270)
+        let pt = ScreenGeometryTransform::client_to_device(
+            400.0, 600.0, 0.0, 0.0, 800.0, 1200.0, 960.0, 540.0,
+        )
+        .unwrap();
+        assert_eq!(pt.x, 480.0);
+        assert_eq!(pt.y, 270.0);
+    }
 }
+
+/// Precise layout of an image rendered inside a container using object-fit: contain.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RenderedImageBounds {
+    pub offset_x: f32,
+    pub offset_y: f32,
+    pub rendered_width: f32,
+    pub rendered_height: f32,
+    pub container_width: f32,
+    pub container_height: f32,
+    pub scale: f32,
+}
+
+pub struct ScreenGeometryTransform;
+
+impl ScreenGeometryTransform {
+    pub fn calculate_rendered_bounds(
+        container_w: f32,
+        container_h: f32,
+        image_w: f32,
+        image_h: f32,
+    ) -> RenderedImageBounds {
+        if container_w <= 0.0 || container_h <= 0.0 || image_w <= 0.0 || image_h <= 0.0 {
+            return RenderedImageBounds {
+                offset_x: 0.0,
+                offset_y: 0.0,
+                rendered_width: 0.0,
+                rendered_height: 0.0,
+                container_width: container_w,
+                container_height: container_h,
+                scale: 1.0,
+            };
+        }
+
+        let image_aspect = image_w / image_h;
+        let container_aspect = container_w / container_h;
+
+        let (rendered_w, rendered_h, offset_x, offset_y) = if image_aspect > container_aspect {
+            let rw = container_w;
+            let rh = container_w / image_aspect;
+            let ox = 0.0;
+            let oy = (container_h - rh) / 2.0;
+            (rw, rh, ox, oy)
+        } else {
+            let rh = container_h;
+            let rw = container_h * image_aspect;
+            let oy = 0.0;
+            let ox = (container_w - rw) / 2.0;
+            (rw, rh, ox, oy)
+        };
+
+        let scale = rendered_w / image_w;
+
+        RenderedImageBounds {
+            offset_x,
+            offset_y,
+            rendered_width: rendered_w,
+            rendered_height: rendered_h,
+            container_width: container_w,
+            container_height: container_h,
+            scale,
+        }
+    }
+
+    pub fn client_to_device(
+        client_x: f32,
+        client_y: f32,
+        container_left: f32,
+        container_top: f32,
+        container_w: f32,
+        container_h: f32,
+        image_w: f32,
+        image_h: f32,
+    ) -> Option<Point> {
+        let rendered = Self::calculate_rendered_bounds(container_w, container_h, image_w, image_h);
+
+        let rel_x = client_x - container_left;
+        let rel_y = client_y - container_top;
+
+        if rel_x < rendered.offset_x
+            || rel_x > rendered.offset_x + rendered.rendered_width
+            || rel_y < rendered.offset_y
+            || rel_y > rendered.offset_y + rendered.rendered_height
+        {
+            return None; // Out of bounds (in letterbox/pillarbox)
+        }
+
+        let norm_x = ((rel_x - rendered.offset_x) / rendered.rendered_width).clamp(0.0, 1.0);
+        let norm_y = ((rel_y - rendered.offset_y) / rendered.rendered_height).clamp(0.0, 1.0);
+
+        Some(Point {
+            x: (norm_x * image_w).round().clamp(0.0, image_w),
+            y: (norm_y * image_h).round().clamp(0.0, image_h),
+        })
+    }
+}
+

@@ -22,8 +22,11 @@ import {
   Volume1,
   Volume2,
   X,
+  Crop,
+  Zap,
 } from 'lucide-react';
 import { api, isTauri } from '../../lib/api';
+import { ScreenGeometryTransform } from '../../lib/ScreenGeometryTransform';
 import { useDeviceStore } from '../../stores/deviceStore';
 import { useProjectStore } from '../../stores/projectStore';
 import {
@@ -33,6 +36,7 @@ import {
   LibraryElementRecord,
   RecordedWorkflowStep,
   Selector,
+  SelectorMatch,
 } from '../../types';
 
 interface DeviceStudioViewProps {
@@ -88,6 +92,16 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
   const [recordedSteps, setRecordedSteps] = useState<RecordedWorkflowStep[]>([]);
   const [isReplaying, setIsReplaying] = useState(false);
   const [replayingStepIndex, setReplayingStepIndex] = useState<number | null>(null);
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
+
+  // Region Selector & Visual Inspection States
+  const [selectedRegion, setSelectedRegion] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [isDrawingRegion, setIsDrawingRegion] = useState(false);
+  const [regionStartPt, setRegionStartPt] = useState<{ clientX: number; clientY: number } | null>(null);
+  const [, setRegionCurrentPt] = useState<{ clientX: number; clientY: number } | null>(null);
+
+  // Right-Click Context Menu State
+  const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; node: ElementNode | null } | null>(null);
 
   // Element Library States
   const [libraryElements, setLibraryElements] = useState<LibraryElementRecord[]>([]);
@@ -149,16 +163,18 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
             setScreenRotation(resp.rotation_deg || 0);
             setIsLandscape(resp.rotation_deg === 90 || resp.rotation_deg === 270);
             setStreamLatency(resp.latency_ms || Date.now() - start);
+            // Only increment frame count on verified successfully decoded frame (FP-010)
+            frameCount++;
           }
         } else {
           // Web Preview fallback
           setStreamLatency(18);
+          frameCount++;
         }
       } catch (err: any) {
-        // Stream frame error
+        // Stream frame error: do not increment frame count
       }
 
-      frameCount++;
       const now = Date.now();
       if (now - lastFpsCalc >= 1000) {
         setStreamFps(Math.round((frameCount * 1000) / (now - lastFpsCalc)));
@@ -263,30 +279,35 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
     }
   }, [activeTab]);
 
-  // 4. Handle Touch / Click on Screen Canvas
+  // 4. Handle Touch / Click on Screen Canvas with ScreenGeometryTransform
   const handleCanvasClick = async (e: React.MouseEvent<HTMLDivElement>) => {
+    if (controlMode === 'region') return; // Handled by mouse down/up for region drag
     if (!screenImgRef.current) return;
     const rect = screenImgRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
 
-    // Convert to actual device screen coordinates
-    const scaleX = screenWidth / rect.width;
-    const scaleY = screenHeight / rect.height;
-    const devX = Math.round(clickX * scaleX);
-    const devY = Math.round(clickY * scaleY);
+    // Transform client coordinate to device coordinate with letterbox rejection
+    const devPt = ScreenGeometryTransform.clientToDevice(
+      e.clientX,
+      e.clientY,
+      rect,
+      screenWidth,
+      screenHeight
+    );
 
-    if (devX < 0 || devX > screenWidth || devY < 0 || devY > screenHeight) return;
+    if (!devPt) {
+      addLog('[Geometry] Bỏ qua thao tác: tọa độ click nằm trong vùng viền đen letterbox.', 'info');
+      return;
+    }
+
+    const { deviceX: devX, deviceY: devY } = devPt;
 
     if (controlMode === 'inspect') {
-      // Find node under touch in snapshot
       if (snapshotResult) {
-        const found = snapshotResult.snapshot.nodes.find(
-          (n) =>
-            devX >= n.bounds.x &&
-            devX <= n.bounds.x + n.bounds.width &&
-            devY >= n.bounds.y &&
-            devY <= n.bounds.y + n.bounds.height
+        // High-precision leaf-first hit test
+        const found = ScreenGeometryTransform.findNodeAtPoint(
+          snapshotResult.snapshot.nodes,
+          devX,
+          devY
         );
         if (found) {
           handleSelectNode(found);
@@ -296,7 +317,6 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
     }
 
     if (isRecording && !isRecordingPaused) {
-      // Smart Recorder: Intercept touch -> generate selector -> real execute -> record step!
       addLog(`[Recorder] Chạm tại (${devX}, ${devY}). Đang phân tích element & ghi lại...`, 'info');
       try {
         const stepNum = recordedSteps.length + 1;
@@ -327,33 +347,144 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
     }
   };
 
-  // Canvas Hover for Inspect Mode
+  // Canvas Mouse Move: Handles Hover for Inspect Mode & Live Dragging for Region Mode
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (controlMode !== 'inspect' || !screenImgRef.current || !snapshotResult) return;
+    if (!screenImgRef.current) return;
     const rect = screenImgRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
 
-    const scaleX = screenWidth / rect.width;
-    const scaleY = screenHeight / rect.height;
-    const devX = clickX * scaleX;
-    const devY = clickY * scaleY;
+    // Live Region Dragging
+    if (controlMode === 'region' && isDrawingRegion && regionStartPt) {
+      setRegionCurrentPt({ clientX: e.clientX, clientY: e.clientY });
+      const bounds = ScreenGeometryTransform.containerRegionToDeviceBounds(
+        regionStartPt.clientX - rect.left,
+        regionStartPt.clientY - rect.top,
+        e.clientX - rect.left,
+        e.clientY - rect.top,
+        rect.width,
+        rect.height,
+        screenWidth,
+        screenHeight
+      );
+      if (bounds) {
+        setSelectedRegion(bounds);
+      }
+      return;
+    }
 
-    // Find innermost node under pointer
-    const matchingNodes = snapshotResult.snapshot.nodes.filter(
-      (n) =>
-        devX >= n.bounds.x &&
-        devX <= n.bounds.x + n.bounds.width &&
-        devY >= n.bounds.y &&
-        devY <= n.bounds.y + n.bounds.height
+    // Inspect Hover
+    if (controlMode !== 'inspect' || !snapshotResult) return;
+
+    const devPt = ScreenGeometryTransform.clientToDevice(
+      e.clientX,
+      e.clientY,
+      rect,
+      screenWidth,
+      screenHeight
+    );
+    if (!devPt) {
+      setHoveredNode(null);
+      return;
+    }
+
+    const found = ScreenGeometryTransform.findNodeAtPoint(
+      snapshotResult.snapshot.nodes,
+      devPt.deviceX,
+      devPt.deviceY
+    );
+    setHoveredNode(found);
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (controlMode !== 'region' || e.button !== 0) return;
+    setIsDrawingRegion(true);
+    setRegionStartPt({ clientX: e.clientX, clientY: e.clientY });
+    setRegionCurrentPt({ clientX: e.clientX, clientY: e.clientY });
+  };
+
+  const handleCanvasMouseUp = () => {
+    if (controlMode === 'region') {
+      setIsDrawingRegion(false);
+    }
+  };
+
+  const handleCanvasContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!screenImgRef.current || !snapshotResult) return;
+    const rect = screenImgRef.current.getBoundingClientRect();
+
+    const devPt = ScreenGeometryTransform.clientToDevice(
+      e.clientX,
+      e.clientY,
+      rect,
+      screenWidth,
+      screenHeight
+    );
+    if (!devPt) return;
+
+    const found = ScreenGeometryTransform.findNodeAtPoint(
+      snapshotResult.snapshot.nodes,
+      devPt.deviceX,
+      devPt.deviceY
     );
 
-    if (matchingNodes.length > 0) {
-      // Pick node with highest depth (innermost child)
-      matchingNodes.sort((a, b) => b.depth - a.depth);
-      setHoveredNode(matchingNodes[0]);
-    } else {
-      setHoveredNode(null);
+    if (found) {
+      setSelectedNode(found);
+      setContextMenu({
+        visible: true,
+        x: e.clientX,
+        y: e.clientY,
+        node: found,
+      });
+    }
+  };
+
+  const handleLaunchScrcpy = async () => {
+    try {
+      addLog(`Đang khởi chạy Direct3D Scrcpy Mirror cho ${serial}...`, 'info');
+      const pid = await api.deviceLaunchScrcpyMirror(serial);
+      addLog(`Scrcpy Direct3D Mirror đang chạy với PID: ${pid} (30-60 FPS, độ trễ <30ms)`, 'success');
+      onNotice('Đã mở cửa sổ Scrcpy 60FPS!', 'success');
+    } catch (e: any) {
+      addLog(`Lỗi mở Scrcpy: ${e}`, 'error');
+      onNotice(`Lỗi mở Scrcpy: ${e}`, 'error');
+    }
+  };
+
+  const handleCropSelectedRegion = async () => {
+    if (!selectedRegion) return;
+    try {
+      addLog(`Đang trích xuất vùng ảnh [${selectedRegion.x}, ${selectedRegion.y}, ${selectedRegion.width}, ${selectedRegion.height}]...`, 'info');
+      const res = await api.deviceCropRegion({
+        serial,
+        x: selectedRegion.x,
+        y: selectedRegion.y,
+        width: selectedRegion.width,
+        height: selectedRegion.height,
+      });
+      const record: LibraryElementRecord = {
+        id: `crop_${Date.now()}`,
+        projectId: activeProjectDetail?.project.id || 'default_project',
+        name: `Crop Region [${res.width}x${res.height}]`,
+        primaryStrategy: 'Image',
+        selectorJson: JSON.stringify({
+          strategy: 'image',
+          width: res.width,
+          height: res.height,
+          region: selectedRegion,
+          templateBase64: res.cropped_base64,
+        }),
+        boundsJson: JSON.stringify(selectedRegion),
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await api.elementSaveToLibrary(record);
+      await loadLibrary();
+      addLog(`Đã lưu vùng ảnh vào Element Library thành công!`, 'success');
+      onNotice('Đã lưu mẫu ảnh thành công!', 'success');
+    } catch (e: any) {
+      addLog(`Lỗi cắt vùng ảnh: ${e}`, 'error');
+      onNotice(`Lỗi cắt vùng ảnh: ${e}`, 'error');
     }
   };
 
@@ -775,44 +906,88 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
         {/* LEFT / CENTER: INTERACTIVE PHONE CANVAS */}
         <div className="flex-1 flex flex-col bg-[#070A11] border-r border-[#1E293B] relative overflow-hidden">
           {/* Zoom & Viewport Bar */}
-          <div className="h-9 px-4 flex items-center justify-between border-b border-[#141C2A] bg-[#0A0E18] text-xs text-[#94A3B8] shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] uppercase tracking-wider text-[#64748B] font-semibold">
-                Device Canvas
-              </span>
-              <span className="text-[11px] font-mono text-[#38BDF8]">
-                {controlMode === 'touch'
-                  ? isRecording
-                    ? '🔴 RECORDING TOUCHES'
-                    : '⚡ INTERACTIVE TOUCH'
-                  : '🔍 INSPECT DOM'}
-              </span>
+          <div className="h-10 px-4 flex items-center justify-between border-b border-[#141C2A] bg-[#0A0E18] text-xs text-[#94A3B8] shrink-0">
+            <div className="flex items-center gap-3">
+              {/* Interaction Modes Toolbar */}
+              <div className="flex rounded-lg bg-[#131C2D] p-0.5 border border-[#1E293B]">
+                <button
+                  onClick={() => setControlMode('touch')}
+                  className={`px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition ${
+                    controlMode === 'touch' ? 'bg-[#2563EB] text-white' : 'text-[#64748B] hover:text-white'
+                  }`}
+                  title="Touch Control (T)"
+                >
+                  <MousePointer className="w-3.5 h-3.5" />
+                  Touch
+                </button>
+                <button
+                  onClick={() => {
+                    setControlMode('inspect');
+                    if (!snapshotResult) refreshSnapshot();
+                  }}
+                  className={`px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition ${
+                    controlMode === 'inspect' ? 'bg-[#10B981] text-black font-semibold' : 'text-[#64748B] hover:text-white'
+                  }`}
+                  title="Inspect DOM Element (I)"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  Inspect
+                </button>
+                <button
+                  onClick={() => setControlMode('region')}
+                  className={`px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition ${
+                    controlMode === 'region' ? 'bg-[#F59E0B] text-black font-semibold' : 'text-[#64748B] hover:text-white'
+                  }`}
+                  title="Drag Region Selection (M)"
+                >
+                  <Crop className="w-3.5 h-3.5" />
+                  Region
+                </button>
+              </div>
+
+              {/* Scrcpy 60FPS Direct3D Mirror Button */}
+              <button
+                onClick={handleLaunchScrcpy}
+                className="px-2.5 py-1 rounded-lg bg-[#1E293B] hover:bg-[#2A3B54] text-[#38BDF8] border border-[#38BDF8]/30 flex items-center gap-1.5 text-xs font-medium transition"
+                title="Khởi chạy cửa sổ Scrcpy Direct3D 60FPS Native"
+              >
+                <Zap className="w-3.5 h-3.5 text-[#F59E0B]" />
+                Scrcpy 60FPS
+              </button>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-[11px]">Tỉ lệ:</span>
-              <div className="flex rounded bg-[#131C2D] p-0.5 border border-[#1E293B]">
-                {(['fit', '50', '75', '100'] as const).map((z) => (
-                  <button
-                    key={z}
-                    onClick={() => setZoomLevel(z)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase transition ${
-                      zoomLevel === z ? 'bg-[#2563EB] text-white' : 'text-[#64748B] hover:text-white'
-                    }`}
-                  >
-                    {z}
-                  </button>
-                ))}
+            <div className="flex items-center gap-3">
+              {/* Orientation & Resolution Badge */}
+              <span className="px-2 py-0.5 rounded bg-[#131C2D] border border-[#1E293B] text-[11px] font-mono text-[#94A3B8]">
+                {screenWidth}x{screenHeight} · {isLandscape ? 'Landscape (16:9)' : 'Portrait (9:16)'}
+              </span>
+
+              {/* Zoom Controls */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-[#64748B]">Tỉ lệ:</span>
+                <div className="flex rounded bg-[#131C2D] p-0.5 border border-[#1E293B]">
+                  {(['fit', '50', '75', '100'] as const).map((z) => (
+                    <button
+                      key={z}
+                      onClick={() => setZoomLevel(z)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase transition ${
+                        zoomLevel === z ? 'bg-[#2563EB] text-white' : 'text-[#64748B] hover:text-white'
+                      }`}
+                    >
+                      {z}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
           {/* Canvas Wrapper */}
-          <div className="flex-1 flex items-center justify-center p-4 overflow-auto relative">
+          <div className="flex-1 flex flex-col items-center justify-center p-3 overflow-auto relative">
             <div
               className={`relative bg-black rounded-2xl shadow-2xl overflow-hidden border-4 border-[#1E293B] transition-all flex items-center justify-center ${
                 zoomLevel === 'fit'
-                  ? 'max-h-[calc(100vh-210px)] max-w-full'
+                  ? 'max-h-[calc(100vh-250px)] max-w-full'
                   : zoomLevel === '50'
                   ? 'scale-50'
                   : zoomLevel === '75'
@@ -825,7 +1000,10 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
                 maxWidth: '100%',
               }}
               onClick={handleCanvasClick}
+              onMouseDown={handleCanvasMouseDown}
               onMouseMove={handleCanvasMouseMove}
+              onMouseUp={handleCanvasMouseUp}
+              onContextMenu={handleCanvasContextMenu}
             >
               {/* Screen Image */}
               {screenFrame ? (
@@ -844,36 +1022,58 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
                 </div>
               )}
 
-              {/* Region Selector Mode Overlay */}
-              {controlMode === 'region' && (
+              {/* Real Draggable Region Selector Overlay (FP-008) */}
+              {controlMode === 'region' && selectedRegion && screenImgRef.current && (
                 <div
-                  className="absolute pointer-events-none border-2 border-dashed border-[#F59E0B] bg-[#F59E0B]/20 transition-all z-20 flex flex-col justify-between p-2 shadow-[0_0_20px_rgba(245,158,11,0.3)]"
-                  style={{
-                    left: '12%',
-                    top: '25%',
-                    width: '76%',
-                    height: '52%',
-                  }}
+                  className="absolute pointer-events-auto border-2 border-dashed border-[#F59E0B] bg-[#F59E0B]/20 transition-all z-20 flex flex-col justify-between p-2 shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+                  style={ScreenGeometryTransform.deviceBoundsToOverlayStyle(
+                    selectedRegion,
+                    screenImgRef.current.getBoundingClientRect().width,
+                    screenImgRef.current.getBoundingClientRect().height,
+                    screenWidth,
+                    screenHeight
+                  )}
                 >
-                  <span className="self-start text-[10px] font-mono font-bold bg-[#78350F] text-[#FDE68A] px-2 py-0.5 rounded border border-[#F59E0B]">
-                    Region Selector: Search Scope [64, 240, 476, 740]
-                  </span>
-                  <span className="self-end text-[10px] font-mono text-[#FDE68A] bg-[#000000]/60 px-1.5 py-0.5 rounded">
-                    Non-clickable Boundary Mask
-                  </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-mono font-bold bg-[#78350F] text-[#FDE68A] px-2 py-0.5 rounded border border-[#F59E0B]">
+                      Search Scope [{selectedRegion.x}, {selectedRegion.y}, {selectedRegion.width}, {selectedRegion.height}]
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedRegion(null);
+                      }}
+                      className="px-1.5 py-0.5 bg-[#EF4444] text-white rounded text-[9px] hover:bg-[#DC2626]"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1.5 self-end mt-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCropSelectedRegion();
+                      }}
+                      className="px-2 py-1 bg-[#10B981] hover:bg-[#059669] text-black font-bold rounded text-[10px] shadow flex items-center gap-1"
+                    >
+                      <Crop className="w-3 h-3" />
+                      Cắt & Lưu Template
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* Inspector Overlays: Selected Node Bounding Box */}
-              {controlMode === 'inspect' && selectedNode && (
+              {/* Inspector Overlays: Selected Node Bounding Box (Mapped via ScreenGeometryTransform) */}
+              {controlMode === 'inspect' && selectedNode && screenImgRef.current && (
                 <div
                   className="absolute pointer-events-none border-2 border-[#10B981] bg-[#10B981]/20 transition-all z-10"
-                  style={{
-                    left: `${(selectedNode.bounds.x / screenWidth) * 100}%`,
-                    top: `${(selectedNode.bounds.y / screenHeight) * 100}%`,
-                    width: `${(selectedNode.bounds.width / screenWidth) * 100}%`,
-                    height: `${(selectedNode.bounds.height / screenHeight) * 100}%`,
-                  }}
+                  style={ScreenGeometryTransform.deviceBoundsToOverlayStyle(
+                    selectedNode.bounds,
+                    screenImgRef.current.getBoundingClientRect().width,
+                    screenImgRef.current.getBoundingClientRect().height,
+                    screenWidth,
+                    screenHeight
+                  )}
                 >
                   <span className="absolute -top-5 left-0 px-1 py-0.5 rounded text-[9px] font-mono bg-[#10B981] text-black font-bold whitespace-nowrap shadow">
                     {selectedNode.text || selectedNode.resource_id.split('/').pop() || selectedNode.class_name.split('.').pop()}
@@ -882,26 +1082,235 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
               )}
 
               {/* Inspector Overlays: Hovered Node Bounding Box */}
-              {controlMode === 'inspect' && hoveredNode && hoveredNode !== selectedNode && (
+              {controlMode === 'inspect' && hoveredNode && hoveredNode !== selectedNode && screenImgRef.current && (
                 <div
                   className="absolute pointer-events-none border border-[#38BDF8] bg-[#38BDF8]/15 transition-all z-10"
-                  style={{
-                    left: `${(hoveredNode.bounds.x / screenWidth) * 100}%`,
-                    top: `${(hoveredNode.bounds.y / screenHeight) * 100}%`,
-                    width: `${(hoveredNode.bounds.width / screenWidth) * 100}%`,
-                    height: `${(hoveredNode.bounds.height / screenHeight) * 100}%`,
-                  }}
+                  style={ScreenGeometryTransform.deviceBoundsToOverlayStyle(
+                    hoveredNode.bounds,
+                    screenImgRef.current.getBoundingClientRect().width,
+                    screenImgRef.current.getBoundingClientRect().height,
+                    screenWidth,
+                    screenHeight
+                  )}
                 />
               )}
 
-              {/* Recording Indicator Overlay */}
+              {/* Recording / Paused Status Indicator (FP-011) */}
               {isRecording && (
-                <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-red-950/80 border border-red-500/60 text-red-200 text-xs font-semibold backdrop-blur shadow-lg pointer-events-none z-20">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-                  REC ({recordedSteps.length} steps)
+                <div
+                  className={`absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur shadow-lg pointer-events-none z-20 ${
+                    isRecordingPaused
+                      ? 'bg-amber-950/80 border border-amber-500/60 text-amber-200'
+                      : 'bg-red-950/80 border border-red-500/60 text-red-200'
+                  }`}
+                >
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full ${
+                      isRecordingPaused ? 'bg-amber-400' : 'bg-red-500 animate-ping'
+                    }`}
+                  />
+                  {isRecordingPaused
+                    ? `⏸️ PAUSED (${recordedSteps.length} steps)`
+                    : `🔴 REC (${recordedSteps.length} steps)`}
                 </div>
               )}
             </div>
+
+            {/* Right-Click Context Menu on Canvas Elements (Card 11) */}
+            {contextMenu && contextMenu.visible && contextMenu.node && (
+              <div
+                className="fixed bg-[#101726] border border-[#25364E] rounded-xl shadow-2xl p-1 z-50 min-w-[200px]"
+                style={{ left: contextMenu.x, top: contextMenu.y }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="px-2.5 py-1 text-[10px] text-[#64748B] font-mono border-b border-[#1E293B] mb-1">
+                  {contextMenu.node.text || contextMenu.node.resource_id.split('/').pop() || 'Element Action'}
+                </div>
+                <button
+                  onClick={() => {
+                    if (contextMenu.node) {
+                      const matchItem: SelectorMatch = {
+                        node_id: contextMenu.node.id,
+                        bounds: contextMenu.node.bounds,
+                        confidence: 1.0,
+                        strategy_used: 'ContextMenu',
+                        is_clickable: contextMenu.node.clickable,
+                        resolved_clickable_ancestor_id: null,
+                        resolved_bounds: contextMenu.node.bounds,
+                      };
+                      api.elementExecuteAction(serial, matchItem, 'Tap', 'ClickableParent')
+                        .then(() => addLog(`Đã click element ${contextMenu.node?.id}`, 'success'))
+                        .catch((err) => addLog(`Lỗi click: ${err}`, 'error'));
+                    }
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs text-white hover:bg-[#1E293B] flex items-center gap-2"
+                >
+                  <MousePointer className="w-3.5 h-3.5 text-[#10B981]" />
+                  Click Element
+                </button>
+                <button
+                  onClick={() => {
+                    if (contextMenu.node) {
+                      handleSelectNode(contextMenu.node);
+                      setActiveTab('inspector');
+                    }
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs text-white hover:bg-[#1E293B] flex items-center gap-2"
+                >
+                  <Search className="w-3.5 h-3.5 text-[#38BDF8]" />
+                  Inspect in Tree
+                </button>
+                <button
+                  onClick={() => {
+                    if (contextMenu.node) {
+                      const stepNum = recordedSteps.length + 1;
+                      const newStep: RecordedWorkflowStep = {
+                        id: `step-${Date.now()}`,
+                        stepNumber: stepNum,
+                        actionType: 'tap',
+                        label: `Click ${contextMenu.node.text || contextMenu.node.resource_id.split('/').pop() || 'Element'}`,
+                        selector: {
+                          Native: {
+                            resource_id: contextMenu.node.resource_id || undefined,
+                            text: contextMenu.node.text || undefined,
+                            class_name: contextMenu.node.class_name || undefined,
+                            content_desc: contextMenu.node.content_desc || undefined,
+                          },
+                        },
+                        resolvedBounds: contextMenu.node.bounds,
+                        durationMs: 0,
+                        status: 'recorded',
+                        enabled: true,
+                        uniquenessScore: 100,
+                        strategyUsed: 'Context Menu Target',
+                      };
+                      setRecordedSteps((prev) => [...prev, newStep]);
+                      onNotice('Đã thêm bước vào Recorder!', 'success');
+                    }
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs text-white hover:bg-[#1E293B] flex items-center gap-2"
+                >
+                  <Plus className="w-3.5 h-3.5 text-[#F59E0B]" />
+                  Add to Recorder
+                </button>
+                <div className="border-t border-[#1E293B] my-1" />
+                <button
+                  onClick={() => setContextMenu(null)}
+                  className="w-full text-left px-2.5 py-1 rounded-lg text-xs text-[#64748B] hover:text-white hover:bg-[#1E293B]"
+                >
+                  Đóng menu
+                </button>
+              </div>
+            )}
+            </div>
+
+            {/* Step Editor Drawer (Card 10, FP-012) */}
+            {editingStepIndex !== null && recordedSteps[editingStepIndex] && (
+              <div className="w-full bg-[#0D1322] border-t border-[#1E293B] p-3 mt-2 rounded-t-xl shadow-2xl flex flex-col gap-2 shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-bold bg-[#38BDF8]/10 text-[#38BDF8] px-2 py-0.5 rounded border border-[#38BDF8]/30">
+                      Step {recordedSteps[editingStepIndex].stepNumber.toString().padStart(2, '0')} - Element Configuration
+                    </span>
+                    <span className="text-xs font-semibold text-white truncate max-w-sm">
+                      {recordedSteps[editingStepIndex].label}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setEditingStepIndex(null)}
+                    className="p-1 text-[#64748B] hover:text-white rounded"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-5 gap-3 text-xs">
+                  <div>
+                    <label className="text-[10px] text-[#64748B] block mb-1">Thao tác (Action)</label>
+                    <select
+                      value={recordedSteps[editingStepIndex].actionType}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setRecordedSteps((prev) =>
+                          prev.map((s, i) => (i === editingStepIndex ? { ...s, actionType: val } : s))
+                        );
+                      }}
+                      className="w-full bg-[#131C2D] border border-[#1E293B] rounded px-2 py-1 text-white"
+                    >
+                      <option value="tap">Click Element</option>
+                      <option value="input_text">Input Text</option>
+                      <option value="assert_exists">Assert Exists</option>
+                      <option value="wait">Wait Delay</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#64748B] block mb-1">Chiến lược Selector</label>
+                    <input
+                      type="text"
+                      value={recordedSteps[editingStepIndex].strategyUsed || 'Native ID'}
+                      readOnly
+                      className="w-full bg-[#131C2D] border border-[#1E293B] rounded px-2 py-1 text-[#94A3B8]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#64748B] block mb-1">Thời gian chờ (Timeout ms)</label>
+                    <input
+                      type="number"
+                      value={recordedSteps[editingStepIndex].waitMs || 500}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 500;
+                        setRecordedSteps((prev) =>
+                          prev.map((s, i) => (i === editingStepIndex ? { ...s, waitMs: val } : s))
+                        );
+                      }}
+                      className="w-full bg-[#131C2D] border border-[#1E293B] rounded px-2 py-1 text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#64748B] block mb-1">Điều kiện xác minh (Verify)</label>
+                    <input
+                      type="text"
+                      value={recordedSteps[editingStepIndex].assertionRule || ''}
+                      placeholder="e.g. text == '12'"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setRecordedSteps((prev) =>
+                          prev.map((s, i) => (i === editingStepIndex ? { ...s, assertionRule: val } : s))
+                        );
+                      }}
+                      className="w-full bg-[#131C2D] border border-[#1E293B] rounded px-2 py-1 text-white"
+                    />
+                  </div>
+
+                  <div className="flex items-end gap-2">
+                    <button
+                      onClick={() => handleReplaySingleStep(recordedSteps[editingStepIndex], editingStepIndex)}
+                      disabled={replayingStepIndex === editingStepIndex}
+                      className="px-3 py-1 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50"
+                    >
+                      <Play className="w-3 h-3" />
+                      Test Step
+                    </button>
+                    <button
+                      onClick={() => {
+                        setRecordedSteps((prev) => prev.filter((_, i) => i !== editingStepIndex));
+                        setEditingStepIndex(null);
+                      }}
+                      className="px-2 py-1 bg-[#EF4444]/20 hover:bg-[#EF4444]/30 text-[#EF4444] rounded text-xs transition"
+                      title="Xóa bước này"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* UNDER CANVAS: HARDWARE BUTTONS TOOLBAR */}
@@ -978,7 +1387,6 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
                 Gửi
               </button>
             </div>
-          </div>
         </div>
 
         {/* RIGHT WORKSPACE: DYNAMIC TABS (Inspector / Recorder / Library / Logs) */}
@@ -1359,58 +1767,118 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
               {/* Recorded Steps Timeline */}
               <div className="flex-1 p-3 overflow-y-auto space-y-2 bg-[#090D16]">
                 {recordedSteps.length > 0 ? (
-                  recordedSteps.map((step, idx) => (
-                    <div
-                      key={step.id}
-                      className={`p-3 rounded-xl border transition ${
-                        step.status === 'failed'
-                          ? 'bg-[#291316] border-[#EF4444]/40'
-                          : step.status === 'replayed'
-                          ? 'bg-[#0E2A1E] border-[#10B981]/40'
-                          : 'bg-[#101726] border-[#1E293B]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-[#1E293B] text-white font-mono text-[10px] font-bold flex items-center justify-center">
-                            {idx + 1}
-                          </span>
-                          <span className="font-semibold text-xs text-white truncate max-w-[240px]">
-                            {step.label}
-                          </span>
-                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-[#172554] text-[#60A5FA]">
-                            {step.actionType}
-                          </span>
+                  recordedSteps.map((step, idx) => {
+                    const isEditing = editingStepIndex === idx;
+                    return (
+                      <div
+                        key={step.id}
+                        onClick={() => setEditingStepIndex(idx)}
+                        className={`p-3 rounded-xl border transition cursor-pointer ${
+                          isEditing
+                            ? 'bg-[#182338] border-[#38BDF8] ring-1 ring-[#38BDF8]/50'
+                            : step.status === 'failed'
+                            ? 'bg-[#291316] border-[#EF4444]/40 hover:border-[#EF4444]'
+                            : step.status === 'verified'
+                            ? 'bg-[#0E2A1E] border-[#10B981]/40 hover:border-[#10B981]'
+                            : 'bg-[#101726] border-[#1E293B] hover:border-[#334155]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-[#1E293B] text-white font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            {/* Step Thumbnail if available */}
+                            {step.beforeScreenshot && (
+                              <img
+                                src={step.beforeScreenshot}
+                                alt="thumb"
+                                className="w-6 h-10 object-cover rounded border border-[#1E293B] shrink-0"
+                              />
+                            )}
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-semibold text-xs text-white truncate max-w-[200px]">
+                                {step.label}
+                              </span>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-[#172554] text-[#60A5FA]">
+                                  {step.actionType}
+                                </span>
+                                {step.status === 'verified' && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-[#064E3B] text-[#34D399]">
+                                    VERIFIED
+                                  </span>
+                                )}
+                                {step.status === 'failed' && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-[#7F1D1D] text-[#FCA5A5]">
+                                    FAILED
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {/* Move Up / Down Buttons */}
+                            <button
+                              onClick={() => {
+                                if (idx > 0) {
+                                  const next = [...recordedSteps];
+                                  const [item] = next.splice(idx, 1);
+                                  next.splice(idx - 1, 0, item);
+                                  setRecordedSteps(next.map((s, i) => ({ ...s, stepNumber: i + 1 })));
+                                }
+                              }}
+                              disabled={idx === 0}
+                              className="px-1 py-0.5 rounded bg-[#1E293B] hover:bg-[#2A3B54] text-[#94A3B8] text-[9px] disabled:opacity-30"
+                              title="Di chuyển lên"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (idx < recordedSteps.length - 1) {
+                                  const next = [...recordedSteps];
+                                  const [item] = next.splice(idx, 1);
+                                  next.splice(idx + 1, 0, item);
+                                  setRecordedSteps(next.map((s, i) => ({ ...s, stepNumber: i + 1 })));
+                                }
+                              }}
+                              disabled={idx === recordedSteps.length - 1}
+                              className="px-1 py-0.5 rounded bg-[#1E293B] hover:bg-[#2A3B54] text-[#94A3B8] text-[9px] disabled:opacity-30"
+                              title="Di chuyển xuống"
+                            >
+                              ▼
+                            </button>
+                            <button
+                              onClick={() => handleReplaySingleStep(step, idx)}
+                              disabled={replayingStepIndex === idx}
+                              className="p-1 rounded bg-[#1E293B] hover:bg-[#2A3B54] text-[#34D399] transition"
+                              title="Chạy thử bước này"
+                            >
+                              <Play className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setRecordedSteps((prev) => prev.filter((_, i) => i !== idx));
+                                if (editingStepIndex === idx) setEditingStepIndex(null);
+                              }}
+                              className="p-1 rounded bg-[#1E293B] hover:bg-[#2A3B54] text-[#EF4444] transition"
+                              title="Xóa bước"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleReplaySingleStep(step, idx)}
-                            disabled={replayingStepIndex === idx}
-                            className="p-1 rounded bg-[#1E293B] hover:bg-[#2A3B54] text-[#34D399] transition"
-                            title="Chạy thử bước này"
-                          >
-                            <Play className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setRecordedSteps((prev) => prev.filter((_, i) => i !== idx));
-                            }}
-                            className="p-1 rounded bg-[#1E293B] hover:bg-[#2A3B54] text-[#EF4444] transition"
-                            title="Xóa bước"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
+                        <div className="flex items-center justify-between text-[10px] text-[#64748B] font-mono mt-1 pt-1 border-t border-[#162032]">
+                          <span>Chiến lược: {step.strategyUsed}</span>
+                          <span>Độ đặc thù: {step.uniquenessScore}%</span>
+                          <span>Thời gian: {step.durationMs}ms</span>
                         </div>
                       </div>
-
-                      <div className="flex items-center justify-between text-[10px] text-[#64748B] font-mono mt-1 pt-1 border-t border-[#162032]">
-                        <span>Chiến lược: {step.strategyUsed}</span>
-                        <span>Độ đặc thù: {step.uniquenessScore}%</span>
-                        <span>Thời gian: {step.durationMs}ms</span>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-center p-6 text-[#64748B]">
                     <Play className="w-10 h-10 text-[#38BDF8] opacity-30 mb-2" />

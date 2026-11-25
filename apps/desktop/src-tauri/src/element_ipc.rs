@@ -216,6 +216,23 @@ pub struct StreamFrameResponse {
     pub rotation_deg: u32,
     pub timestamp_ms: u64,
     pub latency_ms: u64,
+    pub stream_mode: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CropRegionRequest {
+    pub serial: String,
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CropRegionResponse {
+    pub cropped_base64: String,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[tauri::command]
@@ -235,20 +252,20 @@ pub async fn device_tap(serial: String, x: u32, y: u32) -> Result<ActionReceipt,
 #[tauri::command]
 pub async fn device_swipe(
     serial: String,
-    start_x: f32,
-    start_y: f32,
-    end_x: f32,
-    end_y: f32,
-    duration_ms: u32,
+    start_x: u32,
+    start_y: u32,
+    end_x: u32,
+    end_y: u32,
+    duration_ms: Option<u64>,
 ) -> Result<ActionReceipt, String> {
     let runner = AdbRunner::new(None);
     let driver = AdbDeviceDriver::new(serial, runner);
     let path = SwipePath {
-        start_x: start_x as u32,
-        start_y: start_y as u32,
-        end_x: end_x as u32,
-        end_y: end_y as u32,
-        duration_ms: duration_ms as u64,
+        start_x,
+        start_y,
+        end_x,
+        end_y,
+        duration_ms: duration_ms.unwrap_or(300),
     };
     driver.swipe(path).await.map_err(|e| e.to_string())
 }
@@ -258,6 +275,66 @@ pub async fn device_input_text(serial: String, text: String) -> Result<ActionRec
     let runner = AdbRunner::new(None);
     let driver = AdbDeviceDriver::new(serial, runner);
     driver.input_text(&text).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn device_launch_scrcpy_mirror(serial: String) -> Result<u32, String> {
+    let scrcpy_path = "bin/scrcpy.exe";
+    let child = tokio::process::Command::new(scrcpy_path)
+        .args([
+            "-s",
+            &serial,
+            "--window-title",
+            &format!("FarmerPro Live Mirror - {}", serial),
+            "--max-size",
+            "960",
+            "--max-fps",
+            "30",
+        ])
+        .spawn()
+        .map_err(|e| format!("Failed to spawn scrcpy from '{}': {}", scrcpy_path, e))?;
+
+    let pid = child.id().unwrap_or(0);
+    tracing::info!("Spawned scrcpy mirror for {} with PID {}", serial, pid);
+    Ok(pid)
+}
+
+#[tauri::command]
+pub async fn device_crop_region(req: CropRegionRequest) -> Result<CropRegionResponse, String> {
+    let runner = AdbRunner::new(None);
+    let driver = AdbDeviceDriver::new(req.serial.clone(), runner);
+
+    let frame = driver
+        .snapshot()
+        .await
+        .map_err(|e| format!("Failed to take snapshot for crop: {}", e))?;
+
+    let img = image::load_from_memory(&frame.bytes)
+        .map_err(|e| format!("Failed to decode frame bytes: {}", e))?;
+
+    let clamped_w = req.width.min(img.width().saturating_sub(req.x));
+    let clamped_h = req.height.min(img.height().saturating_sub(req.y));
+
+    if clamped_w == 0 || clamped_h == 0 {
+        return Err("Invalid crop dimensions".to_string());
+    }
+
+    let cropped = image::imageops::crop_imm(&img, req.x, req.y, clamped_w, clamped_h).to_image();
+    let mut buf = std::io::Cursor::new(Vec::new());
+    cropped
+        .write_to(&mut buf, image::ImageFormat::Png)
+        .map_err(|e| format!("Failed to encode cropped image: {}", e))?;
+
+    let b64 = format!(
+        "data:image/png;base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(buf.into_inner())
+    );
+
+    Ok(CropRegionResponse {
+        cropped_base64: b64,
+        width: clamped_w,
+        height: clamped_h,
+    })
 }
 
 #[tauri::command]
@@ -284,6 +361,7 @@ pub async fn device_stream_frame(serial: String) -> Result<StreamFrameResponse, 
         rotation_deg: frame.geometry.rotation_deg as u32,
         timestamp_ms: frame.timestamp_ms,
         latency_ms,
+        stream_mode: "polling_fallback".to_string(),
     })
 }
 

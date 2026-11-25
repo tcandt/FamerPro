@@ -156,8 +156,10 @@ impl ElementSnapshot {
         list
     }
 
+    /// High-precision leaf-first hit testing.
+    /// Prioritizes interactive leaf controls (Button, CheckBox, clickable controls)
+    /// over large layout containers (ViewGroup, LinearLayout, pad_numeric).
     pub fn find_node_at_point(&self, x: f32, y: f32) -> Option<&ElementNode> {
-        // Find all nodes containing the point, pick the deepest / smallest area
         let mut matches: Vec<&ElementNode> = self
             .nodes
             .iter()
@@ -168,17 +170,90 @@ impl ElementSnapshot {
             return None;
         }
 
-        // Sort by area ascending (smallest node first) then depth descending (deepest first)
+        // Score each candidate:
+        // +10000 if clickable or checkable or focusable
+        // +5000 if leaf node (no children)
+        // +3000 if has specific ID or text
+        // +500 * depth
+        // -area (prefer smaller bounds)
         matches.sort_by(|a, b| {
-            let area_a = a.bounds.area();
-            let area_b = b.bounds.area();
-            area_a
-                .partial_cmp(&area_b)
+            let score_node = |n: &ElementNode| -> f32 {
+                let mut score = 0.0;
+                if n.clickable || n.checkable || n.focusable {
+                    score += 10000.0;
+                }
+                if n.children_ids.is_empty() {
+                    score += 5000.0;
+                }
+                if !n.text.is_empty() || !n.resource_id.is_empty() {
+                    score += 3000.0;
+                }
+                let is_control = n.class_name.contains("Button")
+                    || n.class_name.contains("Edit")
+                    || n.class_name.contains("Check")
+                    || n.class_name.contains("Switch")
+                    || n.class_name.contains("Text");
+                if is_control {
+                    score += 2000.0;
+                }
+                score += (n.depth as f32) * 500.0;
+                // Penalize large container area (scaled down to avoid total domination)
+                score -= (n.bounds.area() / 50.0).min(8000.0);
+                score
+            };
+
+            let score_a = score_node(a);
+            let score_b = score_node(b);
+
+            score_b
+                .partial_cmp(&score_a)
                 .unwrap_or(std::cmp::Ordering::Equal)
-                .then_with(|| b.depth.cmp(&a.depth))
         });
 
         Some(matches[0])
+    }
+
+    /// Resolves target node, action target, clickable ancestor, and search scope.
+    pub fn hit_test_element(&self, x: f32, y: f32) -> Option<ResolvedElementTarget<'_>> {
+        let target_node = self.find_node_at_point(x, y)?;
+
+        // If target_node is already clickable, action_target is itself
+        if target_node.clickable {
+            let search_scope = target_node.parent_id.and_then(|pid| self.get_node(pid));
+            return Some(ResolvedElementTarget {
+                target_node,
+                action_target: target_node,
+                clickable_ancestor: None,
+                search_scope,
+                resolved_bounds: target_node.bounds,
+            });
+        }
+
+        // Walk up to find clickable ancestor
+        let mut curr = target_node;
+        let mut clickable_ancestor = None;
+        while let Some(parent_id) = curr.parent_id {
+            if let Some(parent) = self.get_node(parent_id) {
+                if parent.clickable {
+                    clickable_ancestor = Some(parent);
+                    break;
+                }
+                curr = parent;
+            } else {
+                break;
+            }
+        }
+
+        let action_target = clickable_ancestor.unwrap_or(target_node);
+        let search_scope = action_target.parent_id.and_then(|pid| self.get_node(pid));
+
+        Some(ResolvedElementTarget {
+            target_node,
+            action_target,
+            clickable_ancestor,
+            search_scope,
+            resolved_bounds: action_target.bounds,
+        })
     }
 
     pub fn validate_freshness(
@@ -205,3 +280,14 @@ impl ElementSnapshot {
         Ok(())
     }
 }
+
+/// Structured target resolution from a screen touch.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct ResolvedElementTarget<'a> {
+    pub target_node: &'a ElementNode,
+    pub action_target: &'a ElementNode,
+    pub clickable_ancestor: Option<&'a ElementNode>,
+    pub search_scope: Option<&'a ElementNode>,
+    pub resolved_bounds: Bounds,
+}
+

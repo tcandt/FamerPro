@@ -27,6 +27,7 @@ fp-builder = { path = "../../../crates/fp-builder" }
 fp-updater = { path = "../../../crates/fp-updater" }
 fp-proxy = { path = "../../../crates/fp-proxy" }
 base64 = "0.21"
+image.workspace = true
 tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -1449,6 +1449,16 @@ export const api = {
     return await invoke<StreamFrameResponse>('device_stream_frame', { serial });
   },
 
+  async deviceLaunchScrcpyMirror(serial: string): Promise<number> {
+    requireTauri('device_launch_scrcpy_mirror');
+    return await invoke<number>('device_launch_scrcpy_mirror', { serial });
+  },
+
+  async deviceCropRegion(req: { serial: string; x: number; y: number; width: number; height: number }): Promise<{ cropped_base64: string; width: number; height: number }> {
+    requireTauri('device_crop_region');
+    return await invoke<{ cropped_base64: string; width: number; height: number }>('device_crop_region', { req });
+  },
+
   // ========================================================================
   // Phase 2.2: Smart Workflow Recorder API
   // ========================================================================

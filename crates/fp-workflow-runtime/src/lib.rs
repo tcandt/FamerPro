@@ -1287,7 +1287,15 @@ impl WorkflowExecutor {
                 }
             }
 
-            "element.find" | "element.click" | "element.set_text" | "element.assert"
+            "element.find"
+            | "element.click"
+            | "element.tap"
+            | "action.elementTap"
+            | "element.set_text"
+            | "action.inputText"
+            | "element.assert"
+            | "assert"
+            | "assert_exists"
             | "element.wait" => {
                 let strategy = node
                     .config
@@ -1386,11 +1394,34 @@ impl WorkflowExecutor {
                     tokio::time::sleep(Duration::from_millis(300)).await;
                 }
 
-                if node.node_type == "element.assert" && matched_item.is_none() {
-                    bail!(
-                        "Element assertion failed: selector {:?} not found",
-                        selector
-                    );
+                let is_assert = node.node_type == "element.assert"
+                    || node.node_type == "assert"
+                    || node.node_type == "assert_exists";
+                let is_click = node.node_type == "element.click"
+                    || node.node_type == "element.tap"
+                    || node.node_type == "action.elementTap";
+                let is_set_text = node.node_type == "element.set_text"
+                    || node.node_type == "action.inputText";
+
+                if matched_item.is_none() {
+                    if is_assert {
+                        bail!(
+                            "Element assertion failed: selector {:?} not found",
+                            selector
+                        );
+                    }
+                    if is_click {
+                        bail!(
+                            "ELEMENT_NOT_FOUND: Element with selector {:?} not found for click",
+                            selector
+                        );
+                    }
+                    if is_set_text {
+                        bail!(
+                            "ELEMENT_NOT_FOUND: Element with selector {:?} not found for set_text",
+                            selector
+                        );
+                    }
                 }
 
                 if let Some(m) = matched_item {
@@ -1410,7 +1441,7 @@ impl WorkflowExecutor {
                         geometry: geom,
                     });
 
-                    if node.node_type == "element.click" {
+                    if is_click {
                         let plan = fp_element::UnifiedElementExecutor::plan(
                             &m,
                             fp_element::ElementActionKind::Tap,
@@ -1426,10 +1457,11 @@ impl WorkflowExecutor {
                         .await
                         .map_err(|e| anyhow::anyhow!("{}", e))?;
                         ctx.last_receipt = Some(receipt);
-                    } else if node.node_type == "element.set_text" {
+                    } else if is_set_text {
                         let text_val = node
                             .config
                             .get("inputText")
+                            .or_else(|| node.config.get("text"))
                             .and_then(|v| v.as_str())
                             .unwrap_or("");
                         let plan = fp_element::UnifiedElementExecutor::plan(
@@ -1459,8 +1491,11 @@ impl WorkflowExecutor {
             }
 
             other => {
-                tracing::warn!("Pass-through node execution: {}", other);
-                Ok(NodeOutcome::Continue(None))
+                bail!(
+                    "UNSUPPORTED_NODE_TYPE: Node '{}' (type: '{}') is not supported by Workflow Runtime. Failing closed.",
+                    node.id,
+                    other
+                );
             }
         }
     }
