@@ -1,0 +1,220 @@
+{
+  "Root Workspace DB": {
+    "path": "e:/DATA/FarmerPro/farmerpro.db",
+    "exists": true,
+    "tables": {
+      "accounts": {
+        "row_count": 0,
+        "columns": [
+          "id",
+          "alias",
+          "game_profile_id",
+          "secret_ref",
+          "state",
+          "updated_at"
+        ]
+      },
+      "checkpoints": {
+        "row_count": 0,
+        "columns": [
+          "id",
+          "job_id",
+          "node_id",
+          "state_json",
+          "evidence_ref",
+          "created_at"
+        ]
+      },
+      "device_leases": {
+        "row_count": 0,
+        "columns": [
+          "device_id",
+          "job_id",
+          "generation",
+          "expires_at"
+        ]
+      },
+      "devices": {
+        "row_count": 0,
+        "columns": [
+          "id",
+          "adb_serial",
+          "alias",
+          "android_api",
+          "model",
+          "width_px",
+          "height_px",
+          "rotation_deg",
+          "connection_state",
+          "updated_at"
+        ]
+      },
+      "jobs": {
+        "row_count": 0,
+        "columns": [
+          "id",
+          "device_id",
+          "account_id",
+          "workflow_version_id",
+          "priority",
+          "state",
+          "fencing_generation",
+          "current_node_id",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "schema_migrations": {
+        "row_count": 0,
+        "columns": [
+          "version",
+          "applied_at"
+        ]
+      },
+      "step_events": {
+        "row_count": 0,
+        "columns": [
+          "id",
+          "job_id",
+          "node_id",
+          "event_type",
+          "attempt_no",
+          "at",
+          "payload_json"
+        ]
+      },
+      "workflow_versions": {
+        "row_count": 0,
+        "columns": [
+          "id",
+          "workflow_id",
+          "version_no",
+          "graph_json",
+          "sha256",
+          "created_at"
+        ]
+      },
+      "workflows": {
+        "row_count": 0,
+        "columns": [
+          "id",
+          "name",
+          "draft_json",
+          "draft_updated_at",
+          "archived_at"
+        ]
+      }
+    },
+    "size_bytes": 4096,
+    "journal_mode": "wal"
+  },
+  "Portable Release DB": {
+    "path": "e:/DATA/FarmerPro/dist-portable/FarmerPro/data/farmerpro.db",
+    "exists": true,
+    "tables": {
+      "accounts": {
+        "row_count": 0,
+        "columns": [
+          "id",
+          "alias",
+          "game_profile_id",
+          "secret_ref",
+          "state",
+          "updated_at"
+        ]
+      },
+      "checkpoints": {
+        "row_count": 0,
+        "columns": [
+          "id",
+          "job_id",
+          "node_id",
+          "state_json",
+          "evidence_ref",
+          "created_at"
+        ]
+      },
+      "device_leases": {
+        "row_count": 0,
+        "columns": [
+          "device_id",
+          "job_id",
+          "generation",
+          "expires_at"
+        ]
+      },
+      "devices": {
+        "row_count": 2,
+        "columns": [
+          "id",
+          "adb_serial",
+          "alias",
+          "android_api",
+          "model",
+          "width_px",
+          "height_px",
+          "rotation_deg",
+          "connection_state",
+          "updated_at"
+        ]
+      },
+      "jobs": {
+        "row_count": 2,
+        "columns": [
+          "id",
+          "device_id",
+          "account_id",
+          "workflow_version_id",
+          "priority",
+          "state",
+          "fencing_generation",
+          "current_node_id",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "schema_migrations": {
+        "row_count": 0,
+        "columns": [
+          "version",
+          "applied_at"
+        ]
+      },
+      "step_events": {
+        "row_count": 31,
+        "columns": [
+          "id",
+          "job_id",
+          "node_id",
+          "event_type",
+          "attempt_no",
+          "at",
+          "payload_json"
+        ]
+      },
+      "workflow_versions": {
+        "row_count": 2,
+        "columns": [
+          "id",
+          "workflow_id",
+          "version_no",
+          "graph_json",
+          "sha256",
+          "created_at"
+        ]
+      },
+      "workflows": {
+        "row_count": 2,
+        "columns": [
+          "id",
+          "name",
+          "draft_json",
+          "draft_updated_at",
+          "archived_at"
+        ]
+      }
+    },
+    "size_bytes": 94208,
+    "journal_mode": "wal"
+  }
+}

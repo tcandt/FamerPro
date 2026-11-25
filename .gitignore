@@ -13,10 +13,21 @@ Thumbs.db
 .env.*
 !.env.example
 
-/bin/
-
+bin/
+**/bin/
 
 *.db
 *.db-wal
 *.db-shm
 
+*.zip
+*.exe
+*.dll
+/releases/
+/dist-portable/
+/backups/
+/projects/
+sandbox/
+acl_readonly_test/
+dist_releases/
+rc4_ro_stage/

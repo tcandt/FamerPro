@@ -1,0 +1,24 @@
+{
+  "milestone": "P4.3",
+  "executedAtUtc": "2026-11-22T05:02:35.161Z",
+  "studioCheck": {
+    "savedWorkflowsCount": 1,
+    "hasValidBadge": true,
+    "hasBreakpointBadge": true,
+    "hasCommandSentEvents": true,
+    "noFakeStatic965": true
+  },
+  "consoleErrors": [],
+  "screenshots": [
+    {
+      "filename": "p4_3_studio_1600x900.png",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "filename": "p4_3_studio_1280x720.png",
+      "width": 1280,
+      "height": 720
+    }
+  ]
+}

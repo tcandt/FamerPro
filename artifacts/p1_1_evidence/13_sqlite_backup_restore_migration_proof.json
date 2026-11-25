@@ -1,0 +1,34 @@
+{
+  "test": "sqlite_safe_backup_integrity_restore_and_migration",
+  "sourceDbPath": "e:/DATA/FarmerPro\\dist-portable\\FarmerPro\\data\\farmerpro.db",
+  "backupDbPath": "e:/DATA/FarmerPro\\backups\\p1_1_verified_backup\\farmerpro_online_backup.db",
+  "restoredTestDbPath": "e:/DATA/FarmerPro\\artifacts\\p1_1_evidence\\restored_migration_test.db",
+  "sourcePragmaIntegrityCheck": "ok",
+  "backupPragmaIntegrityCheck": "ok",
+  "backupForeignKeyViolations": 0,
+  "rowCountsBeforeMigration": {
+    "devices": 2,
+    "workflows": 2,
+    "workflow_versions": 2,
+    "jobs": 2,
+    "step_events": 31,
+    "accounts": 0,
+    "checkpoints": 0
+  },
+  "rowCountsAfterMigrationOnCopy": {
+    "devices": 2,
+    "workflows": 2,
+    "workflow_versions": 2,
+    "jobs": 2,
+    "step_events": 31,
+    "game_projects": 1
+  },
+  "appliedMigrationVersions": [
+    1,
+    2
+  ],
+  "faultyV3MigrationRolledBackCleanly": true,
+  "postMigrationPragmaIntegrityCheck": "ok",
+  "productionDbUntouched": true,
+  "passed": true
+}
