@@ -172,7 +172,8 @@ impl ExecutionContext {
         rule_matched: Option<bool>,
     ) -> RuntimeVariableEnvelope {
         let (clean_val, redacted) = fp_security::sanitize_runtime_variable(var_name, &raw_value);
-        self.variables.insert(var_name.to_string(), clean_val.clone());
+        self.variables
+            .insert(var_name.to_string(), clean_val.clone());
         let src = source_override.unwrap_or(self.runtime_source_mode);
         let effective_verified = if src.is_simulated() || redacted {
             false
@@ -744,10 +745,26 @@ impl WorkflowExecutor {
             }
 
             "action.swipe" | "action.drag" | "action.swipe_region" => {
-                let s_x = node.config.get("startX").and_then(|v| v.as_u64()).unwrap_or(500) as u32;
-                let s_y = node.config.get("startY").and_then(|v| v.as_u64()).unwrap_or(1500) as u32;
-                let e_x = node.config.get("endX").and_then(|v| v.as_u64()).unwrap_or(500) as u32;
-                let e_y = node.config.get("endY").and_then(|v| v.as_u64()).unwrap_or(500) as u32;
+                let s_x = node
+                    .config
+                    .get("startX")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(500) as u32;
+                let s_y = node
+                    .config
+                    .get("startY")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(1500) as u32;
+                let e_x = node
+                    .config
+                    .get("endX")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(500) as u32;
+                let e_y = node
+                    .config
+                    .get("endY")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(500) as u32;
                 let dur = node
                     .config
                     .get("durationMs")
@@ -859,7 +876,10 @@ impl WorkflowExecutor {
                                 (serde_json::Value::String(full_text.clone()), false)
                             }
                         } else {
-                            (serde_json::Value::String(full_text.clone()), !trimmed.is_empty())
+                            (
+                                serde_json::Value::String(full_text.clone()),
+                                !trimmed.is_empty(),
+                            )
                         };
 
                         let ocr_src = if ctx.runtime_source_mode.is_live() {
@@ -1110,7 +1130,11 @@ impl WorkflowExecutor {
                     .get("valueType")
                     .and_then(|v| v.as_str())
                     .unwrap_or("string");
-                let raw_val = node.config.get("value").cloned().unwrap_or(serde_json::Value::Null);
+                let raw_val = node
+                    .config
+                    .get("value")
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null);
                 let typed_val = match value_type {
                     "number" => {
                         if let Some(n) = raw_val.as_i64() {
@@ -1177,7 +1201,10 @@ impl WorkflowExecutor {
                 let delta = node
                     .config
                     .get("delta")
-                    .and_then(|v| v.as_i64().or_else(|| v.as_str().and_then(|s| s.trim().parse::<i64>().ok())))
+                    .and_then(|v| {
+                        v.as_i64()
+                            .or_else(|| v.as_str().and_then(|s| s.trim().parse::<i64>().ok()))
+                    })
                     .unwrap_or(1);
                 let cur = ctx
                     .variables
@@ -1254,6 +1281,147 @@ impl WorkflowExecutor {
                 }
             }
 
+            "element.find" | "element.click" | "element.set_text" | "element.assert"
+            | "element.wait" => {
+                let text_sel = node.config.get("text").and_then(|v| v.as_str());
+                let id_sel = node.config.get("resourceId").and_then(|v| v.as_str());
+                let xpath_sel = node.config.get("xpath").and_then(|v| v.as_str());
+                let class_sel = node.config.get("className").and_then(|v| v.as_str());
+                let desc_sel = node.config.get("contentDesc").and_then(|v| v.as_str());
+
+                let mut native_sel = fp_element::NativeElementSelector::default();
+                if let Some(t) = text_sel {
+                    native_sel.text = Some(t.to_string());
+                }
+                if let Some(i) = id_sel {
+                    native_sel.resource_id = Some(i.to_string());
+                }
+                if let Some(x) = xpath_sel {
+                    native_sel.xpath = Some(x.to_string());
+                }
+                if let Some(c) = class_sel {
+                    native_sel.class_name = Some(c.to_string());
+                }
+                if let Some(d) = desc_sel {
+                    native_sel.content_desc = Some(d.to_string());
+                }
+
+                let require_unique = node
+                    .config
+                    .get("requireUnique")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+                let timeout_ms = node
+                    .config
+                    .get("timeoutMs")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(5000);
+
+                let geom = self.driver.geometry().await?;
+                let start_wait = std::time::Instant::now();
+
+                let mut matched_item = None;
+                while start_wait.elapsed().as_millis() as u64 <= timeout_ms {
+                    let xml = if let Ok(_out) = fp_adb::AdbRunner::new(None)
+                        .run_args(&["shell", "uiautomator", "dump", "/sdcard/window.xml"])
+                        .await
+                    {
+                        fp_adb::AdbRunner::new(None)
+                            .run_args(&["shell", "cat", "/sdcard/window.xml"])
+                            .await
+                            .unwrap_or_default()
+                    } else {
+                        String::new()
+                    };
+
+                    if !xml.is_empty() {
+                        if let Ok(snapshot) = fp_element::parse_ui_hierarchy(&xml, &geom) {
+                            if let Ok(matches) = fp_element::evaluate_native_selector(
+                                &snapshot,
+                                &native_sel,
+                                require_unique,
+                            ) {
+                                if let Some(first) = matches.into_iter().next() {
+                                    matched_item = Some(first);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if !node.node_type.contains("wait") {
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(300)).await;
+                }
+
+                if node.node_type == "element.assert" && matched_item.is_none() {
+                    bail!(
+                        "Element assertion failed: selector {:?} not found",
+                        native_sel
+                    );
+                }
+
+                if let Some(m) = matched_item {
+                    ctx.variables
+                        .insert("element_found".to_string(), serde_json::Value::Bool(true));
+                    ctx.variables.insert(
+                        "last_target_x".to_string(),
+                        serde_json::Value::from(m.resolved_bounds.x),
+                    );
+                    ctx.variables.insert(
+                        "last_target_y".to_string(),
+                        serde_json::Value::from(m.resolved_bounds.y),
+                    );
+                    ctx.last_target = Some(VisionTarget {
+                        bounds: m.resolved_bounds,
+                        confidence: 1.0,
+                        geometry: geom,
+                    });
+
+                    if node.node_type == "element.click" {
+                        let plan = fp_element::plan_element_action(
+                            &m,
+                            fp_element::ElementActionKind::Tap,
+                            fp_element::ActionExecutionMode::ClickableParent,
+                            None,
+                        )
+                        .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+                        let receipt = self
+                            .driver
+                            .tap(plan.safe_point.x as u32, plan.safe_point.y as u32)
+                            .await?;
+                        ctx.last_receipt = Some(receipt);
+                    } else if node.node_type == "element.set_text" {
+                        let text_val = node
+                            .config
+                            .get("inputText")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+                        let plan = fp_element::plan_element_action(
+                            &m,
+                            fp_element::ElementActionKind::SetText {
+                                text: text_val.to_string(),
+                                clear_first: true,
+                            },
+                            fp_element::ActionExecutionMode::ClickableParent,
+                            None,
+                        )
+                        .map_err(|e| anyhow::anyhow!("{}", e))?;
+                        let _ = self
+                            .driver
+                            .tap(plan.safe_point.x as u32, plan.safe_point.y as u32)
+                            .await?;
+                    }
+                } else if node.node_type == "element.find" {
+                    ctx.variables
+                        .insert("element_found".to_string(), serde_json::Value::Bool(false));
+                }
+
+                Ok(NodeOutcome::Continue(None))
+            }
+
             other => {
                 tracing::warn!("Pass-through node execution: {}", other);
                 Ok(NodeOutcome::Continue(None))
@@ -1277,7 +1445,10 @@ impl WorkflowExecutor {
         if let Some(path_str) = node.config.get("templateRef").and_then(|v| v.as_str()) {
             let trimmed = path_str.trim();
             if trimmed.is_empty() || trimmed.contains('\0') {
-                bail!("PROJECT_ISOLATION_VIOLATION: Invalid templateRef '{}'", path_str);
+                bail!(
+                    "PROJECT_ISOLATION_VIOLATION: Invalid templateRef '{}'",
+                    path_str
+                );
             }
             let path = Path::new(trimmed);
 
@@ -1341,7 +1512,10 @@ impl WorkflowExecutor {
                         }
                     }
                     let canonical_cand = std::fs::canonicalize(candidate).with_context(|| {
-                        format!("Failed to canonicalize template path: {}", candidate.display())
+                        format!(
+                            "Failed to canonicalize template path: {}",
+                            candidate.display()
+                        )
                     })?;
                     if !canonical_cand.starts_with(&canonical_proj) {
                         bail!(
@@ -1463,7 +1637,10 @@ impl WorkflowExecutor {
             bail!("Template file not found on disk: '{}'", path_str);
         }
 
-        bail!("WorkflowNode '{}' has neither templateBase64 nor templateRef", node.id)
+        bail!(
+            "WorkflowNode '{}' has neither templateBase64 nor templateRef",
+            node.id
+        )
     }
 
     pub async fn perform_ocr(image_bytes: &[u8]) -> Result<(String, Vec<(String, Bounds)>)> {
@@ -1779,7 +1956,10 @@ mod tests {
             geometry: fp_domain::ScreenGeometry::new(1080, 1920, 0),
         });
 
-        let state = executor.execute_workflow(&doc, &mut ctx, None).await.unwrap();
+        let state = executor
+            .execute_workflow(&doc, &mut ctx, None)
+            .await
+            .unwrap();
         assert_eq!(state, JobState::Succeeded);
         assert_eq!(
             ctx.variables.get("ocr_matched"),
@@ -1799,10 +1979,8 @@ mod tests {
 
     #[test]
     fn test_project_scoped_template_resolution_isolation() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_runtime_tpl_isolation_{}",
-            Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_runtime_tpl_isolation_{}", Uuid::new_v4()));
         let proj_a_tpl = temp_dir.join("projects").join("game-a").join("templates");
         let proj_b_tpl = temp_dir.join("projects").join("game-b").join("templates");
         std::fs::create_dir_all(&proj_a_tpl).unwrap();
@@ -1965,12 +2143,22 @@ mod tests {
         let (_tx, rx) = watch::channel(ExecutionSignal::Running);
         let mut exec = WorkflowExecutor::new(driver, rx);
         let mut ctx = ExecutionContext::new("job-vars-unit".to_string(), "fake-vars".to_string());
-        ctx.variables.insert("resource_count".to_string(), serde_json::json!(100));
+        ctx.variables
+            .insert("resource_count".to_string(), serde_json::json!(100));
         let state = exec.execute_workflow(&doc, &mut ctx, None).await.unwrap();
         assert_eq!(state, JobState::Succeeded);
-        assert_eq!(ctx.variables.get("zone").and_then(|v| v.as_str()), Some("A1"));
-        assert_eq!(ctx.variables.get("resource_count").and_then(|v| v.as_i64()), Some(150));
-        let zone_env = ctx.variable_envelopes.get("zone").expect("envelope recorded");
+        assert_eq!(
+            ctx.variables.get("zone").and_then(|v| v.as_str()),
+            Some("A1")
+        );
+        assert_eq!(
+            ctx.variables.get("resource_count").and_then(|v| v.as_i64()),
+            Some(150)
+        );
+        let zone_env = ctx
+            .variable_envelopes
+            .get("zone")
+            .expect("envelope recorded");
         assert_eq!(zone_env.source, VariableSource::TestkitMock);
         assert!(!zone_env.verified);
     }
@@ -2030,7 +2218,12 @@ mod tests {
         assert!(joined.contains("Sector-B7"));
         assert!(joined.contains("TESTKIT_MOCK"));
         assert!(ctx.variable_envelopes.get("account_pin").unwrap().redacted);
-        assert!(ctx.variable_envelopes.get("session_payload").unwrap().redacted);
+        assert!(
+            ctx.variable_envelopes
+                .get("session_payload")
+                .unwrap()
+                .redacted
+        );
     }
 
     #[tokio::test]

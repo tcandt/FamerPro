@@ -185,10 +185,16 @@ mod win_ver_res {
             );
             if ok == 0 {
                 let _ = EndUpdateResourceW(h_upd, 1);
-                bail!("UpdateResourceW(RT_VERSION #1) failed on {}", exe_path.display());
+                bail!(
+                    "UpdateResourceW(RT_VERSION #1) failed on {}",
+                    exe_path.display()
+                );
             }
             if EndUpdateResourceW(h_upd, 0) == 0 {
-                bail!("EndUpdateResourceW(RT_VERSION) failed on {}", exe_path.display());
+                bail!(
+                    "EndUpdateResourceW(RT_VERSION) failed on {}",
+                    exe_path.display()
+                );
             }
         }
         Ok(())

@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
+  ActionExecutionMode,
   ActiveDeviceLeaseView,
   AdbPortMappingsOverview,
   AppPackageInfo,
@@ -18,9 +19,15 @@ import type {
   DeviceHealthReport,
   DevicePortMapping,
   DeviceSummary,
+  ElementActionKind,
+  ElementActionResult,
+  ElementNode,
+  ElementSnapshot,
   GameProjectDetail,
   GameProjectRecord,
   GameProjectSummary,
+  GeneratedSelector,
+  InspectSnapshotResult,
   IntegrityReport,
   JobResumeDetail,
   Jx2MigrationSummary,
@@ -28,6 +35,7 @@ import type {
   ManagedInstallInspection,
   MiniTaskDef,
   MiniToolUiSchema,
+  NativeElementSelector,
   ProducerKeyMetadata,
   ProjectAccountInput,
   ProjectAccountRecord,
@@ -45,6 +53,7 @@ import type {
   RunWorkflowExecutionSummary,
   RuntimeVariablesSnapshot,
   ScanRangeResult,
+  SelectorMatch,
   StepEvent,
   TaskCategoryDef,
   TemplateMatchPreviewReport,
@@ -832,6 +841,64 @@ export const api = {
     requireTauri('studio_inspect_minitool_install');
     return await invoke<ManagedInstallInspection>('studio_inspect_minitool_install', {
       installRoot,
+    });
+  },
+
+  // --- Element Inspector & Smart Action API ---
+  async elementInspectSnapshot(serial: string): Promise<InspectSnapshotResult> {
+    requireTauri('element_inspect_snapshot');
+    return await invoke<InspectSnapshotResult>('element_inspect_snapshot', { serial });
+  },
+
+  async elementFindMatches(
+    snapshot: ElementSnapshot,
+    selector: NativeElementSelector,
+    requireUnique = true
+  ): Promise<SelectorMatch[]> {
+    requireTauri('element_find_matches');
+    return await invoke<SelectorMatch[]>('element_find_matches', {
+      snapshot,
+      selector,
+      requireUnique,
+    });
+  },
+
+  async elementGenerateSelectors(
+    snapshot: ElementSnapshot,
+    nodeId: number
+  ): Promise<GeneratedSelector[]> {
+    requireTauri('element_generate_selectors');
+    return await invoke<GeneratedSelector[]>('element_generate_selectors', {
+      snapshot,
+      nodeId,
+    });
+  },
+
+  async elementFindAtPoint(
+    snapshot: ElementSnapshot,
+    x: number,
+    y: number
+  ): Promise<ElementNode | null> {
+    requireTauri('element_find_at_point');
+    return await invoke<ElementNode | null>('element_find_at_point', {
+      snapshot,
+      x,
+      y,
+    });
+  },
+
+  async elementExecuteAction(
+    serial: string,
+    matchItem: SelectorMatch,
+    actionKind: ElementActionKind,
+    mode: ActionExecutionMode = 'ClickableParent'
+  ): Promise<ElementActionResult> {
+    requireTauri('element_execute_action');
+    return await invoke<ElementActionResult>('element_execute_action', {
+      serial,
+      matchItem,
+      actionKind,
+      mode,
     });
   },
 };

@@ -1,0 +1,64 @@
+{
+  "device": {
+    "serial": "192.168.1.168:5555",
+    "model": "SM-G930F",
+    "android_version": "10",
+    "display": "Physical size: 1440x2560\nOverride size: 540x960"
+  },
+  "test_results": {
+    "calculator_arithmetic": "PASSED (Evaluated: 7 + 5 = 12)",
+    "native_selectors": "PASSED (Text, Regex, ID, Ambiguity Guard, Ancestor Resolution)",
+    "game_boundary_proof": "PASSED (Empirically verified SurfaceView opacity & necessity of Vision OCR)"
+  },
+  "benchmarks": {
+    "ui_tree_acquisition_cli": {
+      "min": 1601.35,
+      "max": 2051.4,
+      "p50": 1794.69,
+      "p95": 1897.05,
+      "p99": 2051.4,
+      "count": 21
+    },
+    "selector_resolution_rust": {
+      "min": 0.0,
+      "max": 0.07,
+      "p50": 0.01,
+      "p95": 0.03,
+      "p99": 0.07,
+      "count": 100
+    },
+    "action_dispatch_lan": {
+      "min": 356.58,
+      "max": 677.47,
+      "p50": 561.15,
+      "p95": 643.91,
+      "p99": 677.47,
+      "count": 24
+    },
+    "screencap_lan": {
+      "min": 213.18,
+      "max": 483.17,
+      "p50": 355.17,
+      "p95": 483.17,
+      "p99": 483.17,
+      "count": 11
+    },
+    "e2e_cycle_duration": {
+      "min": 0.01,
+      "max": 2938.48,
+      "p50": 0.02,
+      "p95": 1897.08,
+      "p99": 2938.48,
+      "count": 100
+    }
+  },
+  "success_rate": "100%",
+  "wrong_target_count": 0,
+  "evidence_files": [
+    "calculator_result.png",
+    "calculator_result.xml",
+    "settings_suite.xml",
+    "game_boundary.png",
+    "game_boundary.xml"
+  ]
+}

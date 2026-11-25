@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod element_ipc;
 mod studio_p2;
 mod studio_p3;
 
@@ -246,7 +247,10 @@ async fn inspect_device(device_id: String) -> Result<DeviceDetail, String> {
     }
     if installed_packages.is_empty() {
         // Fallback to all packages if no 3rd-party packages found
-        if let Ok(all_pkgs) = runner.run_args(&["-s", &device_id, "shell", "pm", "list", "packages"]).await {
+        if let Ok(all_pkgs) = runner
+            .run_args(&["-s", &device_id, "shell", "pm", "list", "packages"])
+            .await
+        {
             for line in all_pkgs.lines() {
                 if let Some(pkg) = line.trim().strip_prefix("package:") {
                     let clean = pkg.trim();
@@ -548,7 +552,10 @@ async fn adb_disconnect_endpoint(
     if cleaned.is_empty() {
         return Err("Địa chỉ IP:Port không được để trống".to_string());
     }
-    let res = runner.disconnect(&cleaned).await.map_err(|e| e.to_string())?;
+    let res = runner
+        .disconnect(&cleaned)
+        .await
+        .map_err(|e| e.to_string())?;
     let _ = scheduler.release_leases_for_disconnected_device(&cleaned);
     Ok(res)
 }
@@ -805,9 +812,11 @@ async fn list_device_packages(
     }
 
     result.sort_by(|a, b| {
-        b.is_game
-            .cmp(&a.is_game)
-            .then_with(|| a.display_name.to_lowercase().cmp(&b.display_name.to_lowercase()))
+        b.is_game.cmp(&a.is_game).then_with(|| {
+            a.display_name
+                .to_lowercase()
+                .cmp(&b.display_name.to_lowercase())
+        })
     });
 
     Ok(result)
@@ -993,7 +1002,10 @@ async fn ldplayer_action(action: String, index: Option<u32>) -> Result<String, S
             }
             cmd.args(["launch", "--index", &idx.to_string()]);
             cmd.output().await.map_err(|e| e.to_string())?;
-            Ok(format!("Đã yêu cầu mở / kích hoạt LDPlayer instance {}", idx))
+            Ok(format!(
+                "Đã yêu cầu mở / kích hoạt LDPlayer instance {}",
+                idx
+            ))
         }
         "reboot" => {
             let mut cmd = tokio::process::Command::new(&ldconsole);
@@ -1003,7 +1015,10 @@ async fn ldplayer_action(action: String, index: Option<u32>) -> Result<String, S
             }
             cmd.args(["reboot", "--index", &idx.to_string()]);
             cmd.output().await.map_err(|e| e.to_string())?;
-            Ok(format!("Đã yêu cầu khởi động lại LDPlayer instance {}", idx))
+            Ok(format!(
+                "Đã yêu cầu khởi động lại LDPlayer instance {}",
+                idx
+            ))
         }
         "quit" | "kill" => {
             let mut cmd = tokio::process::Command::new(&ldconsole);
@@ -1319,7 +1334,12 @@ fn main() {
             studio_p3::studio_deploy_minitool_release,
             studio_p3::studio_rollback_minitool_install,
             studio_p3::studio_reconcile_minitool_install,
-            studio_p3::studio_inspect_minitool_install
+            studio_p3::studio_inspect_minitool_install,
+            element_ipc::element_inspect_snapshot,
+            element_ipc::element_find_matches,
+            element_ipc::element_generate_selectors,
+            element_ipc::element_find_at_point,
+            element_ipc::element_execute_action
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

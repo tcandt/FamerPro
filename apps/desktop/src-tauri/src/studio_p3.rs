@@ -4,18 +4,17 @@ use fp_actions::{SafeRegionSampler, SafeTapPolicy};
 use fp_adb::{validate_adb_token, AdbDeviceDriver};
 use fp_builder::{
     authenticode::{
-        create_self_signed_qa_cert, discover_signing_toolchain,
-        QaSelfSignedCertInfo, SigningToolchainStatus,
+        create_self_signed_qa_cert, discover_signing_toolchain, QaSelfSignedCertInfo,
+        SigningToolchainStatus,
     },
     security::{ProducerKeyManager, ProducerKeyMetadata},
     verify_final_distributed_release, BuildPreflightReport, BuildReport, MiniToolPackager,
     ReleaseBuildOptions,
 };
-use fp_security::ProducerKeystore;
 use fp_bundle_contract::{
     evaluate_bundle_compatibility, AuthenticodeTrustStatus, CompatibilityReport,
-    CompatibilityVersions, FinalReleaseVerificationReport, KeyRotationDelegation, PeVersionInfoSpec,
-    PublisherIdentitySpec, RuntimeCompatibilityProfile, SemVer, SigningMode,
+    CompatibilityVersions, FinalReleaseVerificationReport, KeyRotationDelegation,
+    PeVersionInfoSpec, PublisherIdentitySpec, RuntimeCompatibilityProfile, SemVer, SigningMode,
     TimestampVerificationPolicy, CURRENT_RUNTIME_VERSION, CURRENT_SQLITE_SCHEMA_VERSION,
     SUPPORTED_MODULE_API_VERSION, SUPPORTED_UI_SCHEMA_VERSION, SUPPORTED_WORKFLOW_SCHEMA_VERSION,
 };
@@ -26,6 +25,7 @@ use fp_domain::{
 };
 use fp_proxy::{probe_proxy, ProxyConfig, ProxyProbeReport};
 use fp_scheduler::DeviceLease;
+use fp_security::ProducerKeystore;
 use fp_storage::{
     JobResumeContext, ProjectJobRecord, ProjectReleaseRecord, PublisherProfileInput,
     PublisherProfileRecord, ReleaseTransitionRecord, RuntimeVariablesSnapshot, StorageManager,
@@ -35,11 +35,11 @@ use fp_updater::{
     ActiveVersionPointer, MiniToolUpdater, ReconcileOutcome, UpdateExecutionOptions, UpdateJournal,
     UpdateOutcome,
 };
-use fp_workflow_schema::WorkflowDocument;
 use fp_vision::{
     annotate_match_and_tap_png, crop_roi_png, scale_bounds_for_geometry, RoiRect, VisionEngine,
 };
 use fp_workflow_runtime::coordinator::{RunProjectWorkflowRequest, RunWorkflowExecutionSummary};
+use fp_workflow_schema::WorkflowDocument;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -400,7 +400,9 @@ pub(crate) fn handle_builder_export_release_with_options(
         .or_else(|| proj.publisher_profile_id.clone());
 
     let profile_rec = if let Some(ref pid) = effective_profile_id {
-        storage.get_publisher_profile(pid).map_err(|e| e.to_string())?
+        storage
+            .get_publisher_profile(pid)
+            .map_err(|e| e.to_string())?
     } else {
         None
     };
@@ -649,9 +651,18 @@ pub async fn studio_run_project_workflow(
         })
         .collect();
     for (k, v) in [
-        ("last_task_state", serde_json::Value::String(summary.state.clone())),
-        ("last_data_source", serde_json::Value::String(format!("{:?}", summary.adapter_kind))),
-        ("last_updated_utc", serde_json::Value::String(now_utc.clone())),
+        (
+            "last_task_state",
+            serde_json::Value::String(summary.state.clone()),
+        ),
+        (
+            "last_data_source",
+            serde_json::Value::String(format!("{:?}", summary.adapter_kind)),
+        ),
+        (
+            "last_updated_utc",
+            serde_json::Value::String(now_utc.clone()),
+        ),
     ] {
         vars.insert(k.to_string(), v.clone());
         envelopes.push(fp_domain::RuntimeVariableEnvelope {
@@ -758,7 +769,12 @@ pub async fn studio_resume_job_from_checkpoint(
         (st.coordinator.clone(), Arc::clone(&st.storage))
     };
     let summary = coord
-        .resume_from_checkpoint(&job_id, lease_ttl_secs.unwrap_or(30), workflow_timeout_ms, None)
+        .resume_from_checkpoint(
+            &job_id,
+            lease_ttl_secs.unwrap_or(30),
+            workflow_timeout_ms,
+            None,
+        )
         .await
         .map_err(|e| e.to_string())?;
     let _ = storage.save_runtime_variables(&summary.project_id, &summary.variables);
@@ -852,7 +868,10 @@ pub async fn studio_list_device_ports(
         .forward_list(Some(&serial))
         .await
         .map_err(|e| e.to_string())?;
-    let reverses = runner.reverse_list(&serial).await.map_err(|e| e.to_string())?;
+    let reverses = runner
+        .reverse_list(&serial)
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(AdbPortMappingsOverview {
         serial,
         forwards,
@@ -1039,7 +1058,13 @@ pub fn studio_builder_preflight(
         .map(PathBuf::from)
         .unwrap_or(default_runtime);
     let st = state.lock().unwrap();
-    handle_builder_preflight(&st.storage, &project_id, &runtime_exe, bin_dir.as_deref(), None)
+    handle_builder_preflight(
+        &st.storage,
+        &project_id,
+        &runtime_exe,
+        bin_dir.as_deref(),
+        None,
+    )
 }
 
 #[tauri::command]
@@ -1161,13 +1186,11 @@ pub fn studio_signing_preflight(
         None
     };
 
-    let effective_cert = cert_ref
-        .filter(|s| !s.trim().is_empty())
-        .or_else(|| {
-            profile
-                .as_ref()
-                .and_then(|p| p.authenticode_cert_ref.clone())
-        });
+    let effective_cert = cert_ref.filter(|s| !s.trim().is_empty()).or_else(|| {
+        profile
+            .as_ref()
+            .and_then(|p| p.authenticode_cert_ref.clone())
+    });
 
     let toolchain = discover_signing_toolchain();
     let (signtool_available, signtool_path) = (
@@ -1305,7 +1328,10 @@ pub fn studio_rotate_project_ed25519_key_with_delegation(
 }
 
 fn parse_hex_bgra(accent_hex: Option<&str>) -> [u8; 4] {
-    let raw = accent_hex.unwrap_or("#1878F5").trim().trim_start_matches('#');
+    let raw = accent_hex
+        .unwrap_or("#1878F5")
+        .trim()
+        .trim_start_matches('#');
     if raw.len() == 6 {
         if let (Ok(r), Ok(g), Ok(b)) = (
             u8::from_str_radix(&raw[0..2], 16),
@@ -1533,9 +1559,7 @@ pub fn studio_rollback_minitool_install(
 }
 
 #[tauri::command]
-pub fn studio_reconcile_minitool_install(
-    install_root: String,
-) -> Result<ReconcileOutcome, String> {
+pub fn studio_reconcile_minitool_install(install_root: String) -> Result<ReconcileOutcome, String> {
     let updater = MiniToolUpdater::new(&install_root);
     updater
         .reconcile_incomplete_journal(false)
@@ -1799,7 +1823,13 @@ mod tests {
         })
         .to_string();
         storage
-            .save_project_workflow(&proj_a.id, "wf-scifi-deploy", "Deploy Squad", "Daily", &wf_json)
+            .save_project_workflow(
+                &proj_a.id,
+                "wf-scifi-deploy",
+                "Deploy Squad",
+                "Daily",
+                &wf_json,
+            )
             .unwrap();
 
         let runtime_exe = std::env::current_exe().unwrap();

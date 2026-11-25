@@ -762,10 +762,9 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
             }
         }
         for (scope_key, vars_json, updated_at) in legacy_rows {
-            if let Ok(map) =
-                serde_json::from_str::<std::collections::HashMap<String, serde_json::Value>>(
-                    &vars_json,
-                )
+            if let Ok(map) = serde_json::from_str::<
+                std::collections::HashMap<String, serde_json::Value>,
+            >(&vars_json)
             {
                 let mut scrubbed_map = std::collections::HashMap::new();
                 let mut has_vars = false;
@@ -892,10 +891,9 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<Vec<i64>> {
     // Upgrades pre-existing RC.1/RC.2/RC.3 v5 databases safely without relying on unversioned post-fast-path code.
     if !applied.contains(&6) {
         let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-        let cols_before: HashSet<String> =
-            list_table_columns(&tx, "runtime_variable_envelopes")?
-                .into_iter()
-                .collect();
+        let cols_before: HashSet<String> = list_table_columns(&tx, "runtime_variable_envelopes")?
+            .into_iter()
+            .collect();
 
         for (col, sql) in V6_PROVENANCE_COLUMNS {
             if !cols_before.contains(*col) {

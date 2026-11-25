@@ -57,7 +57,10 @@ pub fn validate_segment(value: &str, field_name: &str) -> Result<()> {
         bail!("{} cannot be empty", field_name);
     }
     if trimmed != value {
-        bail!("{} must not contain leading/trailing whitespace", field_name);
+        bail!(
+            "{} must not contain leading/trailing whitespace",
+            field_name
+        );
     }
     if trimmed.contains("..") {
         bail!("{} must not contain '..'", field_name);

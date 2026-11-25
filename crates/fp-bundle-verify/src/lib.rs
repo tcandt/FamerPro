@@ -138,8 +138,8 @@ impl SignedBundleEnvelope {
             );
         }
 
-        let pubkey_bytes_vec = hex_decode(&self.publisher_public_key_hex)
-            .context("ED25519_PUBKEY_INVALID_HEX")?;
+        let pubkey_bytes_vec =
+            hex_decode(&self.publisher_public_key_hex).context("ED25519_PUBKEY_INVALID_HEX")?;
         if pubkey_bytes_vec.len() != 32 {
             bail!(
                 "ED25519_PUBKEY_INVALID_LEN: Expected 32 bytes, got {}",
@@ -151,8 +151,8 @@ impl SignedBundleEnvelope {
         let verifying_key = VerifyingKey::from_bytes(&pubkey_arr)
             .map_err(|e| anyhow::anyhow!("ED25519_PUBKEY_DECODE_ERROR: {}", e))?;
 
-        let sig_bytes_vec = hex_decode(&self.signature_ed25519_hex)
-            .context("ED25519_SIG_INVALID_HEX")?;
+        let sig_bytes_vec =
+            hex_decode(&self.signature_ed25519_hex).context("ED25519_SIG_INVALID_HEX")?;
         if sig_bytes_vec.len() != 64 {
             bail!(
                 "ED25519_SIG_INVALID_LEN: Expected 64 bytes, got {}",
@@ -449,10 +449,16 @@ pub fn verify_key_rotation_delegation(
         bail!("KEY_ROTATION_INVALID_WINDOW: expiresAtUtc <= issuedAtUtc");
     }
     if now > exp {
-        bail!("KEY_ROTATION_EXPIRED: delegation expired at {}", exp.to_rfc3339());
+        bail!(
+            "KEY_ROTATION_EXPIRED: delegation expired at {}",
+            exp.to_rfc3339()
+        );
     }
     if now < iat - chrono::Duration::minutes(5) {
-        bail!("KEY_ROTATION_NOT_YET_VALID: issuedAtUtc {} is in the future", iat.to_rfc3339());
+        bail!(
+            "KEY_ROTATION_NOT_YET_VALID: issuedAtUtc {} is in the future",
+            iat.to_rfc3339()
+        );
     }
 
     let old_bytes = hex_decode(&delegation.old_pubkey_hex).context("KEY_ROTATION_OLD_HEX")?;
@@ -471,7 +477,8 @@ pub fn verify_key_rotation_delegation(
     let _ = VerifyingKey::from_bytes(&new_arr)
         .map_err(|e| anyhow::anyhow!("KEY_ROTATION_NEW_VK: {}", e))?;
 
-    let sig_bytes = hex_decode(&delegation.signature_by_old_key_hex).context("KEY_ROTATION_SIG_HEX")?;
+    let sig_bytes =
+        hex_decode(&delegation.signature_by_old_key_hex).context("KEY_ROTATION_SIG_HEX")?;
     if sig_bytes.len() != 64 {
         bail!("KEY_ROTATION_SIG_LEN: expected 64 bytes");
     }
@@ -630,7 +637,9 @@ mod win_authenticode_and_version {
         s.encode_wide().chain(std::iter::once(0)).collect()
     }
 
-    fn query_embedded_signer_cert_info(exe_wide: &[u16]) -> (Option<String>, Option<String>, Option<String>) {
+    fn query_embedded_signer_cert_info(
+        exe_wide: &[u16],
+    ) -> (Option<String>, Option<String>, Option<String>) {
         unsafe {
             let mut h_store: HANDLE = std::ptr::null_mut();
             let mut h_msg: LPVOID = std::ptr::null_mut();
@@ -757,7 +766,8 @@ mod win_authenticode_and_version {
             p_signature_settings: std::ptr::null_mut(),
         };
 
-        let status = unsafe { WinVerifyTrust(std::ptr::null_mut(), &mut action_guid, &mut wvt) } as u32;
+        let status =
+            unsafe { WinVerifyTrust(std::ptr::null_mut(), &mut action_guid, &mut wvt) } as u32;
         wvt.dw_state_action = WTD_STATEACTION_CLOSE;
         unsafe {
             let _ = WinVerifyTrust(std::ptr::null_mut(), &mut action_guid, &mut wvt);
@@ -842,10 +852,15 @@ mod win_authenticode_and_version {
         let mut handle: DWORD = 0;
         let sz = unsafe { GetFileVersionInfoSizeW(wide_path.as_ptr(), &mut handle) };
         if sz == 0 {
-            bail!("PE_VERSIONINFO_MISSING: GetFileVersionInfoSizeW returned 0 for {}", exe_path.display());
+            bail!(
+                "PE_VERSIONINFO_MISSING: GetFileVersionInfoSizeW returned 0 for {}",
+                exe_path.display()
+            );
         }
         let mut buf = vec![0u8; sz as usize];
-        let ok = unsafe { GetFileVersionInfoW(wide_path.as_ptr(), handle, sz, buf.as_mut_ptr() as LPVOID) };
+        let ok = unsafe {
+            GetFileVersionInfoW(wide_path.as_ptr(), handle, sz, buf.as_mut_ptr() as LPVOID)
+        };
         if ok == 0 {
             bail!("PE_VERSIONINFO_READ_FAILED on {}", exe_path.display());
         }
@@ -853,12 +868,23 @@ mod win_authenticode_and_version {
         let mut query_str = |key: &str| -> String {
             for lang_cp in ["040904B0", "040904b0", "000004B0"] {
                 let sub = format!("\\StringFileInfo\\{}\\{}", lang_cp, key);
-                let wsub: Vec<u16> = OsStr::new(&sub).encode_wide().chain(std::iter::once(0)).collect();
+                let wsub: Vec<u16> = OsStr::new(&sub)
+                    .encode_wide()
+                    .chain(std::iter::once(0))
+                    .collect();
                 let mut ptr: LPVOID = std::ptr::null_mut();
                 let mut len: u32 = 0;
-                let ok_q = unsafe { VerQueryValueW(buf.as_mut_ptr() as LPVOID, wsub.as_ptr(), &mut ptr, &mut len) };
+                let ok_q = unsafe {
+                    VerQueryValueW(
+                        buf.as_mut_ptr() as LPVOID,
+                        wsub.as_ptr(),
+                        &mut ptr,
+                        &mut len,
+                    )
+                };
                 if ok_q != 0 && !ptr.is_null() && len > 0 {
-                    let slice = unsafe { std::slice::from_raw_parts(ptr as *const u16, len as usize) };
+                    let slice =
+                        unsafe { std::slice::from_raw_parts(ptr as *const u16, len as usize) };
                     let s = String::from_utf16_lossy(slice)
                         .trim_end_matches('\0')
                         .to_string();
@@ -938,11 +964,19 @@ mod tests {
         let pub_hex_2 = "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
         let sig_hex_2 = "92a009a9f0d4cab8720e820b5f642540a2b27b5416503f8fb3762223ebdb69da085ac1e43e15996e458f3613d0f11d8c387b2eaeb4302aeeb00d291612bb0c00";
         let vk2 = VerifyingKey::from_bytes(
-            hex_decode(pub_hex_2).unwrap().as_slice().try_into().unwrap(),
+            hex_decode(pub_hex_2)
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
         )
         .unwrap();
         let sig2 = Signature::from_bytes(
-            hex_decode(sig_hex_2).unwrap().as_slice().try_into().unwrap(),
+            hex_decode(sig_hex_2)
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
         );
         assert!(vk2.verify(&[0x72], &sig2).is_ok());
         assert!(vk2.verify(&[0x73], &sig2).is_err());
@@ -1016,40 +1050,50 @@ mod tests {
         // 1) Breaking Runtime Version requirement
         let mut bad_rt = manifest.clone();
         bad_rt.compatibility.min_runtime_version = "9.9.0".to_string();
-        assert!(verify_bundle_compatibility_gate(&bad_rt, &ui, &[1], &profile)
-            .unwrap_err()
-            .to_string()
-            .contains("RUNTIME_VERSION_INCOMPATIBLE"));
+        assert!(
+            verify_bundle_compatibility_gate(&bad_rt, &ui, &[1], &profile)
+                .unwrap_err()
+                .to_string()
+                .contains("RUNTIME_VERSION_INCOMPATIBLE")
+        );
 
         // 2) Unsupported Workflow Schema Version
-        assert!(verify_bundle_compatibility_gate(&manifest, &ui, &[99], &profile)
-            .unwrap_err()
-            .to_string()
-            .contains("WORKFLOW_SCHEMA_INCOMPATIBLE"));
+        assert!(
+            verify_bundle_compatibility_gate(&manifest, &ui, &[99], &profile)
+                .unwrap_err()
+                .to_string()
+                .contains("WORKFLOW_SCHEMA_INCOMPATIBLE")
+        );
 
         // 3) Unsupported UI Schema Version
         let mut bad_ui = ui.clone();
         bad_ui.schema_version = 7;
-        assert!(verify_bundle_compatibility_gate(&manifest, &bad_ui, &[1], &profile)
-            .unwrap_err()
-            .to_string()
-            .contains("UI_SCHEMA_INCOMPATIBLE"));
+        assert!(
+            verify_bundle_compatibility_gate(&manifest, &bad_ui, &[1], &profile)
+                .unwrap_err()
+                .to_string()
+                .contains("UI_SCHEMA_INCOMPATIBLE")
+        );
 
         // 4) Unsupported Module API Major Version
         let mut bad_mod = manifest.clone();
         bad_mod.compatibility.module_api_version = "2.0.0".to_string();
-        assert!(verify_bundle_compatibility_gate(&bad_mod, &ui, &[1], &profile)
-            .unwrap_err()
-            .to_string()
-            .contains("MODULE_API_INCOMPATIBLE"));
+        assert!(
+            verify_bundle_compatibility_gate(&bad_mod, &ui, &[1], &profile)
+                .unwrap_err()
+                .to_string()
+                .contains("MODULE_API_INCOMPATIBLE")
+        );
 
         // 5) Unsupported SQLite Schema Version & Downgrade Guard
         let mut bad_sql = manifest.clone();
         bad_sql.compatibility.sqlite_schema_version = 99;
-        assert!(verify_bundle_compatibility_gate(&bad_sql, &ui, &[1], &profile)
-            .unwrap_err()
-            .to_string()
-            .contains("SQLITE_SCHEMA_INCOMPATIBLE"));
+        assert!(
+            verify_bundle_compatibility_gate(&bad_sql, &ui, &[1], &profile)
+                .unwrap_err()
+                .to_string()
+                .contains("SQLITE_SCHEMA_INCOMPATIBLE")
+        );
         assert!(check_sqlite_downgrade_compatibility(4, 3)
             .unwrap_err()
             .to_string()

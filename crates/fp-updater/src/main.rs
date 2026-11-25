@@ -1,9 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use fp_bundle_contract::RuntimeCompatibilityProfile;
-use fp_updater::{
-    FaultInjectionPoint, MiniToolUpdater, UpdateExecutionOptions,
-};
+use fp_updater::{FaultInjectionPoint, MiniToolUpdater, UpdateExecutionOptions};
 use std::path::PathBuf;
 
 #[derive(Parser)]

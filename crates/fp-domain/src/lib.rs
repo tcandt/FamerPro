@@ -210,20 +210,15 @@ pub enum StepEventType {
     CheckpointSaved,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum VariableSource {
     LiveAdbOcr,
     LiveState,
     TestkitMock,
     LegacyUnverified,
+    #[default]
     Unverified,
-}
-
-impl Default for VariableSource {
-    fn default() -> Self {
-        Self::Unverified
-    }
 }
 
 impl VariableSource {

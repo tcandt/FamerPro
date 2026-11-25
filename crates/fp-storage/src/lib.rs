@@ -72,7 +72,10 @@ fn default_exe_name_from_slug(slug: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join("_");
-    format!("Auto_{}.exe", if pascal.is_empty() { "Tool" } else { &pascal })
+    format!(
+        "Auto_{}.exe",
+        if pascal.is_empty() { "Tool" } else { &pascal }
+    )
 }
 
 fn ensure_default_fallback_project_conn(conn: &Connection, now: &str) -> Result<String> {
@@ -352,7 +355,11 @@ impl StorageManager {
         migrations::list_applied_versions(&conn)
     }
 
-    pub fn apply_transactional_migration(&self, target_version: i64, sql_script: &str) -> Result<()> {
+    pub fn apply_transactional_migration(
+        &self,
+        target_version: i64,
+        sql_script: &str,
+    ) -> Result<()> {
         let mut conn = self.conn.lock().unwrap();
         migrations::apply_transactional_migration(&mut conn, target_version, sql_script)
     }
@@ -440,7 +447,9 @@ impl StorageManager {
         envelopes: Vec<RuntimeVariableEnvelope>,
     ) -> Result<RuntimeVarDeltaEvent> {
         let clean_base = base_scope_key.trim_end_matches("::testkit");
-        let is_testkit_batch = envelopes.iter().any(|e| e.source == VariableSource::TestkitMock);
+        let is_testkit_batch = envelopes
+            .iter()
+            .any(|e| e.source == VariableSource::TestkitMock);
         let target_scope = if is_testkit_batch {
             // Even when running in TestKit mode, ensure NO entry is mixed with Live scope
             format!("{}::testkit", clean_base)
@@ -740,8 +749,8 @@ impl StorageManager {
         let mut stream_seqs = HashMap::new();
         for sid in [clean_base, testkit_scope.as_str()] {
             let seq: i64 = {
-                let mut st = conn
-                    .prepare("SELECT last_seq FROM runtime_var_streams WHERE stream_id = ?1;")?;
+                let mut st =
+                    conn.prepare("SELECT last_seq FROM runtime_var_streams WHERE stream_id = ?1;")?;
                 let mut rows = st.query(params![sid])?;
                 rows.next()?.map(|r| r.get(0)).transpose()?.unwrap_or(0)
             };
@@ -801,10 +810,12 @@ impl StorageManager {
         let clean_base = base_scope_key.trim_end_matches("::testkit");
         let testkit_scope = format!("{}::testkit", clean_base);
         let conn = self.conn.lock().unwrap();
-        let data_version: i64 =
-            conn.query_row("PRAGMA data_version;", [], |r| r.get(0)).unwrap_or(0);
+        let data_version: i64 = conn
+            .query_row("PRAGMA data_version;", [], |r| r.get(0))
+            .unwrap_or(0);
 
-        let events = query_events_for_streams(&conn, &[clean_base, testkit_scope.as_str()], after_seqs)?;
+        let events =
+            query_events_for_streams(&conn, &[clean_base, testkit_scope.as_str()], after_seqs)?;
         Ok((data_version, events))
     }
 
@@ -1377,26 +1388,25 @@ impl StorageManager {
     }
 
     pub fn insert_step_event(&self, event: &StepEvent) -> Result<()> {
-        let scrubbed_payload = if let Ok(mut pj) =
-            serde_json::from_str::<serde_json::Value>(&event.payload_json)
-        {
-            if let Some(var_key) = pj
-                .get("varKey")
-                .and_then(|v| v.as_str())
-                .map(str::trim)
-                .filter(|s| !s.is_empty())
-                .map(|s| s.to_string())
-            {
-                if let Some(raw_v) = pj.get("value").cloned() {
-                    let (clean_v, _) = fp_security::sanitize_runtime_variable(&var_key, &raw_v);
-                    pj["value"] = clean_v;
+        let scrubbed_payload =
+            if let Ok(mut pj) = serde_json::from_str::<serde_json::Value>(&event.payload_json) {
+                if let Some(var_key) = pj
+                    .get("varKey")
+                    .and_then(|v| v.as_str())
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.to_string())
+                {
+                    if let Some(raw_v) = pj.get("value").cloned() {
+                        let (clean_v, _) = fp_security::sanitize_runtime_variable(&var_key, &raw_v);
+                        pj["value"] = clean_v;
+                    }
                 }
-            }
-            let (clean_pj, _) = fp_security::sanitize_runtime_variable("step_event", &pj);
-            serde_json::to_string(&clean_pj).unwrap_or_else(|_| event.payload_json.clone())
-        } else {
-            fp_security::SecretRedactor::new().redact(&event.payload_json)
-        };
+                let (clean_pj, _) = fp_security::sanitize_runtime_variable("step_event", &pj);
+                serde_json::to_string(&clean_pj).unwrap_or_else(|_| event.payload_json.clone())
+            } else {
+                fp_security::SecretRedactor::new().redact(&event.payload_json)
+            };
 
         let conn = self.conn.lock().unwrap();
         let type_str = serde_json::to_string(&event.event_type)?.replace('"', "");
@@ -1487,7 +1497,10 @@ impl StorageManager {
         })
     }
 
-    fn fetch_project_by_id_conn(conn: &Connection, project_id: &str) -> Result<Option<GameProjectRecord>> {
+    fn fetch_project_by_id_conn(
+        conn: &Connection,
+        project_id: &str,
+    ) -> Result<Option<GameProjectRecord>> {
         let mut stmt = conn.prepare(
             "SELECT id, slug, name, game_package_id, version, exe_name, window_title,
                     icon_rel_path, target_width_px, target_height_px, bundle_adb,
@@ -1594,7 +1607,11 @@ impl StorageManager {
         // 1. Prepare staging directory outside active projects/ namespace
         let staging_root = projects_base_dir.join(STAGING_DIR_NAME);
         std::fs::create_dir_all(&staging_root)?;
-        let staging_dir = staging_root.join(format!("{}.{}", slug, &uuid::Uuid::new_v4().to_string()[..8]));
+        let staging_dir = staging_root.join(format!(
+            "{}.{}",
+            slug,
+            &uuid::Uuid::new_v4().to_string()[..8]
+        ));
         std::fs::create_dir_all(staging_dir.join("workflows"))?;
         std::fs::create_dir_all(staging_dir.join("templates"))?;
         std::fs::create_dir_all(staging_dir.join("branding"))?;
@@ -1677,7 +1694,10 @@ impl StorageManager {
             target_dir: proj_dir.to_string_lossy().to_string(),
             created_at: now.clone(),
         };
-        atomic_write_bytes(&create_journal_path, &serde_json::to_vec_pretty(&create_entry)?)?;
+        atomic_write_bytes(
+            &create_journal_path,
+            &serde_json::to_vec_pretty(&create_entry)?,
+        )?;
 
         self.emit_crash_stage("create:after_staging_before_rename");
 
@@ -1983,17 +2003,21 @@ impl StorageManager {
                     .transpose()?
             };
             if let Some((ver, raw_ui)) = ui_row {
-                let updated_ui = if let Ok(mut parsed) = serde_json::from_str::<MiniToolUiSchema>(&raw_ui) {
-                    if parsed.window_title == existing.window_title || parsed.window_title != window_title && window_title != existing.window_title {
-                        parsed.window_title = window_title.clone();
-                    }
-                    if parsed.version_badge == format!("v{}", existing.version) {
-                        parsed.version_badge = format!("v{}", version);
-                    }
-                    serde_json::to_string_pretty(&parsed)?
-                } else {
-                    raw_ui
-                };
+                let updated_ui =
+                    if let Ok(mut parsed) = serde_json::from_str::<MiniToolUiSchema>(&raw_ui) {
+                        if parsed.window_title == existing.window_title
+                            || parsed.window_title != window_title
+                                && window_title != existing.window_title
+                        {
+                            parsed.window_title = window_title.clone();
+                        }
+                        if parsed.version_badge == format!("v{}", existing.version) {
+                            parsed.version_badge = format!("v{}", version);
+                        }
+                        serde_json::to_string_pretty(&parsed)?
+                    } else {
+                        raw_ui
+                    };
                 tx.execute(
                     "UPDATE mini_tool_schemas SET schema_version = ?1, ui_schema_json = ?2, updated_at = ?3
                      WHERE project_id = ?4;",
@@ -2064,7 +2088,9 @@ impl StorageManager {
                     cleanup_mutation_journal(mutation_journal);
                     bail!("INJECTED_CRASH_FAULT: simulated manifest write failure during update_project");
                 }
-                if let Err(e) = atomic_write_bytes(&manifest_path, &serde_json::to_vec_pretty(&manifest)?) {
+                if let Err(e) =
+                    atomic_write_bytes(&manifest_path, &serde_json::to_vec_pretty(&manifest)?)
+                {
                     restore_disk_files();
                     cleanup_mutation_journal(mutation_journal);
                     return Err(e);
@@ -2302,7 +2328,16 @@ impl StorageManager {
                 "SELECT name, rel_path, width_px, height_px, source_crop_x, source_crop_y, default_confidence, sha256
                  FROM vision_templates WHERE project_id = ?1 ORDER BY rel_path ASC;",
             )?;
-            let tpls: Vec<(String, String, i64, i64, Option<i32>, Option<i32>, f64, String)> = t_stmt
+            let tpls: Vec<(
+                String,
+                String,
+                i64,
+                i64,
+                Option<i32>,
+                Option<i32>,
+                f64,
+                String,
+            )> = t_stmt
                 .query_map(params![src.id], |r| {
                     Ok((
                         r.get(0)?,
@@ -2337,25 +2372,37 @@ impl StorageManager {
                         title, priority, estimate_sec, default_enabled, settings_schema_json
                  FROM task_definitions WHERE project_id = ?1;",
             )?;
-            let tasks: Vec<(String, String, String, String, String, String, i32, i64, i64, String)> =
-                tk_stmt
-                    .query_map(params![src.id], |r| {
-                        Ok((
-                            r.get(0)?,
-                            r.get(1)?,
-                            r.get(2)?,
-                            r.get(3)?,
-                            r.get(4)?,
-                            r.get(5)?,
-                            r.get(6)?,
-                            r.get(7)?,
-                            r.get(8)?,
-                            r.get(9)?,
-                        ))
-                    })?
-                    .collect::<std::result::Result<Vec<_>, _>>()?;
-            for (idx, (old_wf_id, cat_id, cat_tag, cat_name, cat_col, title, prio, est, def_en, sch)) in
-                tasks.into_iter().enumerate()
+            let tasks: Vec<(
+                String,
+                String,
+                String,
+                String,
+                String,
+                String,
+                i32,
+                i64,
+                i64,
+                String,
+            )> = tk_stmt
+                .query_map(params![src.id], |r| {
+                    Ok((
+                        r.get(0)?,
+                        r.get(1)?,
+                        r.get(2)?,
+                        r.get(3)?,
+                        r.get(4)?,
+                        r.get(5)?,
+                        r.get(6)?,
+                        r.get(7)?,
+                        r.get(8)?,
+                        r.get(9)?,
+                    ))
+                })?
+                .collect::<std::result::Result<Vec<_>, _>>()?;
+            for (
+                idx,
+                (old_wf_id, cat_id, cat_tag, cat_name, cat_col, title, prio, est, def_en, sch),
+            ) in tasks.into_iter().enumerate()
             {
                 if let Some(mapped_wf_id) = wf_id_map.get(&old_wf_id) {
                     let new_task_id = format!("task-{}-{:02}", new_slug, idx + 1);
@@ -2396,18 +2443,19 @@ impl StorageManager {
                 .transpose()?
         };
         if let Some((ver, ui_json)) = cloned_ui_opt {
-            let new_ui_json = if let Ok(mut parsed) = serde_json::from_str::<MiniToolUiSchema>(&ui_json) {
-                parsed.project_slug = new_slug.clone();
-                parsed.window_title = new_window_title.clone();
-                for t in &mut parsed.tasks {
-                    if let Some(mapped) = wf_id_map.get(&t.workflow_id) {
-                        t.workflow_id = mapped.clone();
+            let new_ui_json =
+                if let Ok(mut parsed) = serde_json::from_str::<MiniToolUiSchema>(&ui_json) {
+                    parsed.project_slug = new_slug.clone();
+                    parsed.window_title = new_window_title.clone();
+                    for t in &mut parsed.tasks {
+                        if let Some(mapped) = wf_id_map.get(&t.workflow_id) {
+                            t.workflow_id = mapped.clone();
+                        }
                     }
-                }
-                serde_json::to_string_pretty(&parsed).unwrap_or(ui_json)
-            } else {
-                ui_json
-            };
+                    serde_json::to_string_pretty(&parsed).unwrap_or(ui_json)
+                } else {
+                    ui_json
+                };
             tx.execute(
                 "INSERT INTO mini_tool_schemas (project_id, schema_version, ui_schema_json, updated_at)
                  VALUES (?1, ?2, ?3, ?4);",
@@ -2453,7 +2501,10 @@ impl StorageManager {
             target_dir: new_proj_dir.to_string_lossy().to_string(),
             created_at: now.clone(),
         };
-        atomic_write_bytes(&clone_journal_path, &serde_json::to_vec_pretty(&clone_entry)?)?;
+        atomic_write_bytes(
+            &clone_journal_path,
+            &serde_json::to_vec_pretty(&clone_entry)?,
+        )?;
 
         self.emit_crash_stage("clone:after_staging_before_rename");
 
@@ -2849,7 +2900,14 @@ impl StorageManager {
                 category = excluded.category,
                 draft_json = excluded.draft_json,
                 draft_updated_at = excluded.draft_updated_at;",
-            params![wf_id_clean, pid_clean, name_clean, category, draft_json, now],
+            params![
+                wf_id_clean,
+                pid_clean,
+                name_clean,
+                category,
+                draft_json,
+                now
+            ],
         )?;
 
         let max_ver: Option<i64> = tx.query_row(
@@ -2904,22 +2962,28 @@ impl StorageManager {
                 &now,
             )?;
 
-            let restore_wf_disk = |wf_p: &Path, prev_wf: &Option<Vec<u8>>, mf_p: &Path, prev_mf: &Option<Vec<u8>>| {
-                match prev_wf {
-                    Some(b) => {
-                        let _ = atomic_write_bytes(wf_p, b);
+            let restore_wf_disk =
+                |wf_p: &Path, prev_wf: &Option<Vec<u8>>, mf_p: &Path, prev_mf: &Option<Vec<u8>>| {
+                    match prev_wf {
+                        Some(b) => {
+                            let _ = atomic_write_bytes(wf_p, b);
+                        }
+                        None => {
+                            let _ = std::fs::remove_file(wf_p);
+                        }
                     }
-                    None => {
-                        let _ = std::fs::remove_file(wf_p);
+                    if let Some(b) = prev_mf {
+                        let _ = atomic_write_bytes(mf_p, b);
                     }
-                }
-                if let Some(b) = prev_mf {
-                    let _ = atomic_write_bytes(mf_p, b);
-                }
-            };
+                };
 
             if let Err(e) = atomic_write_bytes(&wf_disk_path, draft_json.as_bytes()) {
-                restore_wf_disk(&wf_disk_path, &prev_wf_bytes, &manifest_path, &prev_manifest_bytes);
+                restore_wf_disk(
+                    &wf_disk_path,
+                    &prev_wf_bytes,
+                    &manifest_path,
+                    &prev_manifest_bytes,
+                );
                 cleanup_mutation_journal(mutation_journal);
                 return Err(e);
             }
@@ -2927,7 +2991,12 @@ impl StorageManager {
             self.emit_crash_stage("workflow:after_wf_write_before_manifest");
 
             if fault == CrashFaultPoint::FailManifestWrite {
-                restore_wf_disk(&wf_disk_path, &prev_wf_bytes, &manifest_path, &prev_manifest_bytes);
+                restore_wf_disk(
+                    &wf_disk_path,
+                    &prev_wf_bytes,
+                    &manifest_path,
+                    &prev_manifest_bytes,
+                );
                 cleanup_mutation_journal(mutation_journal);
                 bail!("INJECTED_CRASH_FAULT: simulated manifest write failure during save_project_workflow");
             }
@@ -2937,15 +3006,28 @@ impl StorageManager {
                     if !manifest.workflow_files.iter().any(|f| f == &norm_rel) {
                         manifest.workflow_files.push(norm_rel);
                         manifest.workflow_files.sort();
-                        if let Err(e) = atomic_write_bytes(&manifest_path, &serde_json::to_vec_pretty(&manifest)?) {
-                            restore_wf_disk(&wf_disk_path, &prev_wf_bytes, &manifest_path, &prev_manifest_bytes);
+                        if let Err(e) = atomic_write_bytes(
+                            &manifest_path,
+                            &serde_json::to_vec_pretty(&manifest)?,
+                        ) {
+                            restore_wf_disk(
+                                &wf_disk_path,
+                                &prev_wf_bytes,
+                                &manifest_path,
+                                &prev_manifest_bytes,
+                            );
                             cleanup_mutation_journal(mutation_journal);
                             return Err(e);
                         }
                     }
                 }
             }
-            disk_rollback = Some((wf_disk_path, prev_wf_bytes, manifest_path, prev_manifest_bytes));
+            disk_rollback = Some((
+                wf_disk_path,
+                prev_wf_bytes,
+                manifest_path,
+                prev_manifest_bytes,
+            ));
         }
 
         self.emit_crash_stage("workflow:after_disk_writes_before_db_commit");
@@ -2965,7 +3047,9 @@ impl StorageManager {
                 }
             }
             cleanup_mutation_journal(mutation_journal);
-            bail!("INJECTED_CRASH_FAULT: simulated crash before DB commit in save_project_workflow");
+            bail!(
+                "INJECTED_CRASH_FAULT: simulated crash before DB commit in save_project_workflow"
+            );
         }
 
         if let Err(e) = tx.commit() {
@@ -3241,7 +3325,9 @@ impl StorageManager {
                 if !manifest.template_files.iter().any(|f| f == &rel_clean) {
                     manifest.template_files.push(rel_clean.clone());
                     manifest.template_files.sort();
-                    if let Err(e) = atomic_write_bytes(&manifest_path, &serde_json::to_vec_pretty(&manifest)?) {
+                    if let Err(e) =
+                        atomic_write_bytes(&manifest_path, &serde_json::to_vec_pretty(&manifest)?)
+                    {
                         restore_tpl_disk();
                         cleanup_mutation_journal(mutation_journal);
                         return Err(e);
@@ -4081,7 +4167,10 @@ impl StorageManager {
                 release.project_id,
                 release.id,
                 release.lifecycle_state,
-                format!("Created release v{} [{}]", release.version, release.release_channel),
+                format!(
+                    "Created release v{} [{}]",
+                    release.version, release.release_channel
+                ),
                 release.built_at
             ],
         )?;
@@ -4360,8 +4449,14 @@ impl StorageManager {
                 publisher_id,
                 display_name,
                 organization,
-                input.website.map(|s| s.trim().to_string()).filter(|s| !s.is_empty()),
-                input.support_contact.map(|s| s.trim().to_string()).filter(|s| !s.is_empty()),
+                input
+                    .website
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty()),
+                input
+                    .support_contact
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty()),
                 if copyright.is_empty() {
                     format!("Copyright (C) {} {}", Utc::now().format("%Y"), organization)
                 } else {
@@ -4369,7 +4464,10 @@ impl StorageManager {
                 },
                 input.ed25519_key_id.unwrap_or_default(),
                 input.ed25519_pubkey_hex.unwrap_or_default(),
-                input.authenticode_cert_ref.map(|s| s.trim().to_string()).filter(|s| !s.is_empty()),
+                input
+                    .authenticode_cert_ref
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty()),
                 if input.release_channel.trim().is_empty() {
                     "internal".to_string()
                 } else {
@@ -4458,7 +4556,8 @@ impl StorageManager {
             "UPDATE projects SET publisher_profile_id = NULL WHERE publisher_profile_id = ?1;",
             params![id],
         )?;
-        let affected = conn.execute("DELETE FROM publisher_profiles WHERE id = ?1;", params![id])?;
+        let affected =
+            conn.execute("DELETE FROM publisher_profiles WHERE id = ?1;", params![id])?;
         Ok(affected > 0)
     }
 
@@ -4626,7 +4725,10 @@ impl ExternalWalReader {
             }
         }
 
-        let changed = self.last_data_version.map(|prev| prev != dv).unwrap_or(true);
+        let changed = self
+            .last_data_version
+            .map(|prev| prev != dv)
+            .unwrap_or(true);
         self.last_data_version = Some(dv);
         if !changed {
             return Ok((false, Vec::new()));
@@ -4635,13 +4737,21 @@ impl ExternalWalReader {
         let mut events = Vec::new();
         backoff_ms = 15;
         for attempt in 0..=5 {
-            match query_events_for_streams(&self.conn, &[clean_base, testkit_scope.as_str()], after_seqs)
-            {
+            match query_events_for_streams(
+                &self.conn,
+                &[clean_base, testkit_scope.as_str()],
+                after_seqs,
+            ) {
                 Ok(ev) => {
                     events = ev;
                     break;
                 }
-                Err(e) if e.downcast_ref::<rusqlite::Error>().map(is_sqlite_busy_err).unwrap_or(false) && attempt < 5 => {
+                Err(e)
+                    if e.downcast_ref::<rusqlite::Error>()
+                        .map(is_sqlite_busy_err)
+                        .unwrap_or(false)
+                        && attempt < 5 =>
+                {
                     self.busy_retry_count += 1;
                     std::thread::sleep(Duration::from_millis(backoff_ms));
                     backoff_ms = (backoff_ms * 2).min(120);
@@ -4794,10 +4904,8 @@ mod tests {
 
     #[test]
     fn test_p2_v1_to_v2_migration_idempotency_and_data_preservation() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p2_mig_test_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p2_mig_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
         let db_file = temp_dir.join("v1_legacy.db");
 
@@ -4815,7 +4923,8 @@ mod tests {
                 "INSERT INTO workflows (id, name, draft_json, draft_updated_at)
                  VALUES ('wf-legacy-01', 'Legacy Workflow', '{\"nodes\":[]}', ?1);",
                 params![now],
-            ).unwrap();
+            )
+            .unwrap();
             conn.execute(
                 "INSERT INTO workflow_versions (id, workflow_id, version_no, graph_json, sha256, created_at)
                  VALUES ('wf-legacy-01-v1', 'wf-legacy-01', 1, '{\"nodes\":[]}', 'abc', ?1);",
@@ -4840,11 +4949,17 @@ mod tests {
 
         // 2. Open with StorageManager -> runs v1..v6 migrations atomically
         let storage = StorageManager::new(&db_file).unwrap();
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
+        assert_eq!(
+            storage.applied_migration_versions().unwrap(),
+            vec![1, 2, 3, 4, 5, 6]
+        );
 
         // 3. Verify idempotency: running migrations again causes zero errors and keeps versions [1, 2, 3, 4, 5, 6]
         storage.run_migrations().unwrap();
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
+        assert_eq!(
+            storage.applied_migration_versions().unwrap(),
+            vec![1, 2, 3, 4, 5, 6]
+        );
 
         // 4. Verify 100% data preservation + attachment to default GameProject
         let integrity = storage.check_integrity().unwrap();
@@ -4861,7 +4976,9 @@ mod tests {
         assert_eq!(legacy_wfs.len(), 1);
         assert_eq!(legacy_wfs[0].id, "wf-legacy-01");
 
-        let legacy_jobs = storage.list_project_jobs(DEFAULT_LEGACY_PROJECT_ID).unwrap();
+        let legacy_jobs = storage
+            .list_project_jobs(DEFAULT_LEGACY_PROJECT_ID)
+            .unwrap();
         assert_eq!(legacy_jobs.len(), 1);
         assert_eq!(legacy_jobs[0].id, "job-legacy-01");
 
@@ -4884,7 +5001,10 @@ mod tests {
         assert!(res.is_err());
 
         // Version 7 must NOT be recorded and `should_not_exist` table must NOT exist
-        assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
+        assert_eq!(
+            storage.applied_migration_versions().unwrap(),
+            vec![1, 2, 3, 4, 5, 6]
+        );
         let integrity = storage.check_integrity().unwrap();
         assert!(integrity.is_healthy);
         assert!(!integrity.table_counts.contains_key("should_not_exist"));
@@ -4893,10 +5013,8 @@ mod tests {
 
     #[test]
     fn test_p2_online_backup_integrity_and_restore() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p2_backup_test_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p2_backup_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
         let live_db = temp_dir.join("live.db");
         let backup_db = temp_dir.join("backup.db");
@@ -4961,10 +5079,8 @@ mod tests {
             panic!("Expected legacy JX2 assets at {}", legacy_jx2_dir.display());
         }
 
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p2_jx2_mig_test_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p2_jx2_mig_test_{}", uuid::Uuid::new_v4()));
         let db_file = temp_dir.join("jx2_mig.db");
         let projects_dir = temp_dir.join("projects");
 
@@ -5004,10 +5120,8 @@ mod tests {
 
     #[test]
     fn test_p2_project_crud_clone_and_strict_isolation() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p2_isolation_test_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p2_isolation_test_{}", uuid::Uuid::new_v4()));
         let projects_root = temp_dir.join("projects");
         let storage = StorageManager::new_in_memory().unwrap();
 
@@ -5052,7 +5166,13 @@ mod tests {
 
         // 2. Add workflow, template, task, account, job to Project A
         storage
-            .save_project_workflow(&proj_a.id, "wf-alpha-01", "Alpha Quest", "NV", "{\"nodes\":[]}")
+            .save_project_workflow(
+                &proj_a.id,
+                "wf-alpha-01",
+                "Alpha Quest",
+                "NV",
+                "{\"nodes\":[]}",
+            )
             .unwrap();
         storage
             .register_vision_template(VisionTemplateInput {
@@ -5119,13 +5239,8 @@ mod tests {
         assert_eq!(storage.list_project_jobs(&proj_b.id).unwrap().len(), 0);
 
         // 4. Verify cross-project tampering/linking is blocked with PROJECT_ISOLATION_VIOLATION
-        let cross_wf_err = storage.save_project_workflow(
-            &proj_b.id,
-            "wf-alpha-01",
-            "Hijack",
-            "NV",
-            "{}",
-        );
+        let cross_wf_err =
+            storage.save_project_workflow(&proj_b.id, "wf-alpha-01", "Hijack", "NV", "{}");
         assert!(cross_wf_err
             .unwrap_err()
             .to_string()
@@ -5192,10 +5307,8 @@ mod tests {
 
     #[test]
     fn test_p2_disk_manifest_sync_duplicate_slug_and_legacy_version_job() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p2_edge_test_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p2_edge_test_{}", uuid::Uuid::new_v4()));
         let projects_root = temp_dir.join("projects");
         let storage = StorageManager::new_in_memory().unwrap();
 
@@ -5297,10 +5410,8 @@ mod tests {
 
     #[test]
     fn test_p2_1_direct_sql_project_isolation_blocks_cross_project_writes() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p2_1_sql_iso_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p2_1_sql_iso_{}", uuid::Uuid::new_v4()));
         let projects_root = temp_dir.join("projects");
         let storage = StorageManager::new_in_memory().unwrap();
 
@@ -5556,10 +5667,8 @@ mod tests {
 
     #[test]
     fn test_p2_1_crash_consistency_create_clone_update_delete_workflow_template() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p2_1_crash_test_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p2_1_crash_test_{}", uuid::Uuid::new_v4()));
         let projects_root = temp_dir.join("projects");
         let storage = StorageManager::new_in_memory().unwrap();
 
@@ -5582,7 +5691,10 @@ mod tests {
             CrashFaultPoint::FailBeforeDbCommit,
         );
         assert!(bad_create.is_err());
-        assert!(storage.get_project_by_slug("crashed-create").unwrap().is_none());
+        assert!(storage
+            .get_project_by_slug("crashed-create")
+            .unwrap()
+            .is_none());
         assert!(!projects_root.join("crashed-create").exists());
         assert_eq!(
             std::fs::read_dir(projects_root.join(STAGING_DIR_NAME))
@@ -5686,7 +5798,10 @@ mod tests {
         let wf_on_disk =
             std::fs::read_to_string(src_dir.join("workflows").join("wf-solid-1.json")).unwrap();
         assert_eq!(wf_on_disk, "{\"v\":1}");
-        assert_eq!(storage.list_project_workflows(&src.id).unwrap()[0].draft_json, "{\"v\":1}");
+        assert_eq!(
+            storage.list_project_workflows(&src.id).unwrap()[0].draft_json,
+            "{\"v\":1}"
+        );
 
         // 4. Fault during save_project_template_file -> rolls back BOTH DB and disk PNG/manifest
         let tpl_fault = storage.save_project_template_file_with_fault(
@@ -5710,7 +5825,10 @@ mod tests {
             std::fs::read(src_dir.join("templates").join("btn_solid.png")).unwrap(),
             b"fake-png-v1"
         );
-        assert_eq!(storage.list_vision_templates(&src.id).unwrap()[0].name, "btn_solid");
+        assert_eq!(
+            storage.list_vision_templates(&src.id).unwrap()[0].name,
+            "btn_solid"
+        );
 
         // 5. Fault during update_project -> rolls back DB, project.json, AND ui-schema.json
         let upd_fault = storage.update_project_with_fault(
@@ -5731,7 +5849,8 @@ mod tests {
             serde_json::from_slice(&std::fs::read(src_dir.join("project.json")).unwrap()).unwrap();
         assert_eq!(manifest_disk.name, "Solid Base");
         let ui_disk: MiniToolUiSchema =
-            serde_json::from_slice(&std::fs::read(src_dir.join("ui-schema.json")).unwrap()).unwrap();
+            serde_json::from_slice(&std::fs::read(src_dir.join("ui-schema.json")).unwrap())
+                .unwrap();
         assert_eq!(ui_disk.window_title, src.window_title);
 
         // 6. Fault during clone_project (template copy & before commit) -> 0 orphan dirs, 0 DB clone rows
@@ -5752,7 +5871,10 @@ mod tests {
                 fault,
             );
             assert!(clone_err.is_err());
-            assert!(storage.get_project_by_slug("crashed-clone").unwrap().is_none());
+            assert!(storage
+                .get_project_by_slug("crashed-clone")
+                .unwrap()
+                .is_none());
             assert!(!projects_root.join("crashed-clone").exists());
         }
 
@@ -5863,10 +5985,8 @@ mod tests {
 
     #[test]
     fn test_p2_1_template_path_and_project_dir_containment() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p2_1_path_guard_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p2_1_path_guard_{}", uuid::Uuid::new_v4()));
         let projects_root = temp_dir.join("projects");
         let outside_dir = temp_dir.join("outside_secret");
         std::fs::create_dir_all(&outside_dir).unwrap();
@@ -5964,10 +6084,8 @@ mod tests {
         let repo_root = manifest_dir.parent().unwrap().parent().unwrap();
         let legacy_jx2_dir = repo_root.join("games").join("jx2mobile");
 
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p2_1_jx2_preserve_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p2_1_jx2_preserve_{}", uuid::Uuid::new_v4()));
         let db_file = temp_dir.join("jx2_user_custom.db");
         let projects_dir = temp_dir.join("projects");
 
@@ -5977,7 +6095,10 @@ mod tests {
             .migrate_legacy_jx2_assets(&legacy_jx2_dir, &projects_dir)
             .unwrap();
         assert_eq!(sum1.workflow_migrations.len(), 10);
-        assert!(sum1.workflow_migrations.iter().all(|m| m.action == "INSERT"));
+        assert!(sum1
+            .workflow_migrations
+            .iter()
+            .all(|m| m.action == "INSERT"));
 
         // User edits `wf-jx2-02-char` graph in Studio
         let user_custom_json = r#"{"schemaVersion":1,"workflowId":"wf-jx2-02-char","name":"Custom User Char","status":"draft","graph":{"nodes":[{"id":"custom-start","type":"flow.start","position":{"x":0,"y":0}},{"id":"custom-end","type":"flow.end","position":{"x":100,"y":0}}],"edges":[{"id":"ce1","source":"custom-start","sourcePort":"flow","target":"custom-end","targetPort":"flow"}]}}"#;
@@ -6002,7 +6123,10 @@ mod tests {
             .find(|m| m.dest_workflow_id == "wf-jx2-02-char")
             .unwrap();
         assert_eq!(skipped.action, "SKIP");
-        assert_eq!(skipped.content_comparison, "PRESERVED_USER_CUSTOMIZED_WORKFLOW");
+        assert_eq!(
+            skipped.content_comparison,
+            "PRESERVED_USER_CUSTOMIZED_WORKFLOW"
+        );
 
         let wfs = storage
             .list_project_workflows(DEFAULT_LEGACY_PROJECT_ID)
@@ -6017,10 +6141,8 @@ mod tests {
 
     #[test]
     fn test_p2_1_wal_rollback_runbook_roundtrip() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p2_1_rollback_runbook_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p2_1_rollback_runbook_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
         let live_db = temp_dir.join("live.db");
         let pre_v2_backup = temp_dir.join("pre_v2_backup.db");
@@ -6045,7 +6167,9 @@ mod tests {
                 params![now],
             )
             .unwrap();
-            let _ = conn.query_row("PRAGMA wal_checkpoint(TRUNCATE);", [], |r| r.get::<_, i64>(0));
+            let _ = conn.query_row("PRAGMA wal_checkpoint(TRUNCATE);", [], |r| {
+                r.get::<_, i64>(0)
+            });
             let mut bk_conn = Connection::open(&pre_v2_backup).unwrap();
             let bk = rusqlite::backup::Backup::new(&conn, &mut bk_conn).unwrap();
             bk.run_to_completion(100, Duration::from_millis(5), None)
@@ -6055,7 +6179,10 @@ mod tests {
         // 2. Upgrade live DB to latest and write project data
         {
             let storage = StorageManager::new(&live_db).unwrap();
-            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
+            assert_eq!(
+                storage.applied_migration_versions().unwrap(),
+                vec![1, 2, 3, 4, 5, 6]
+            );
             let _ = storage
                 .create_project(
                     CreateProjectRequest {
@@ -6112,16 +6239,15 @@ mod tests {
         let repo_root = manifest_dir.parent().unwrap().parent().unwrap();
         let legacy_jx2_dir = repo_root.join("games").join("jx2mobile");
 
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p2_hotfix_wf_upgrade_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p2_hotfix_wf_upgrade_{}", uuid::Uuid::new_v4()));
         let db_file = temp_dir.join("jx2_draft_upgrade.db");
         let projects_dir = temp_dir.join("projects");
         std::fs::create_dir_all(&temp_dir).unwrap();
 
         // 1. Seed a v1 DB containing `wf-jx2-01-login` as `"status":"draft"` with the exact same graph as `01_start_and_login.json`
-        let published_src = std::fs::read_to_string(legacy_jx2_dir.join("01_start_and_login.json")).unwrap();
+        let published_src =
+            std::fs::read_to_string(legacy_jx2_dir.join("01_start_and_login.json")).unwrap();
         let mut draft_val: serde_json::Value = serde_json::from_str(&published_src).unwrap();
         draft_val
             .as_object_mut()
@@ -6164,7 +6290,10 @@ mod tests {
                 params![
                     DEFAULT_LEGACY_PROJECT_ID,
                     DEFAULT_LEGACY_PROJECT_SLUG,
-                    projects_dir.join(DEFAULT_LEGACY_PROJECT_SLUG).to_string_lossy().to_string(),
+                    projects_dir
+                        .join(DEFAULT_LEGACY_PROJECT_SLUG)
+                        .to_string_lossy()
+                        .to_string(),
                     now
                 ],
             )
@@ -6208,10 +6337,15 @@ mod tests {
             .find(|w| w.id == "wf-jx2-01-login")
             .unwrap();
         let wf1_val: serde_json::Value = serde_json::from_str(&wf1.draft_json).unwrap();
-        assert_eq!(wf1_val.get("status").and_then(|v| v.as_str()), Some("published"));
+        assert_eq!(
+            wf1_val.get("status").and_then(|v| v.as_str()),
+            Some("published")
+        );
 
         // CRITICAL CHECK: Unapproved task MUST remain disabled (default_enabled = false), and ZERO jobs auto-queued!
-        let tasks = storage.list_project_tasks(DEFAULT_LEGACY_PROJECT_ID).unwrap();
+        let tasks = storage
+            .list_project_tasks(DEFAULT_LEGACY_PROJECT_ID)
+            .unwrap();
         let unapproved = tasks
             .iter()
             .find(|t| t.id == "task-unapproved-login")
@@ -6220,7 +6354,8 @@ mod tests {
 
         let jobs_count: i64 = {
             let conn = storage.conn.lock().unwrap();
-            conn.query_row("SELECT COUNT(*) FROM jobs;", [], |r| r.get(0)).unwrap()
+            conn.query_row("SELECT COUNT(*) FROM jobs;", [], |r| r.get(0))
+                .unwrap()
         };
         assert_eq!(jobs_count, 0);
 
@@ -6239,22 +6374,24 @@ mod tests {
                 &serde_json::to_string_pretty(&custom_draft).unwrap(),
             )
             .unwrap();
-        let tasks_after = storage.list_project_tasks(DEFAULT_LEGACY_PROJECT_ID).unwrap();
-        assert!(!tasks_after
-            .iter()
-            .find(|t| t.id == "task-unapproved-login")
-            .unwrap()
-            .default_enabled);
+        let tasks_after = storage
+            .list_project_tasks(DEFAULT_LEGACY_PROJECT_ID)
+            .unwrap();
+        assert!(
+            !tasks_after
+                .iter()
+                .find(|t| t.id == "task-unapproved-login")
+                .unwrap()
+                .default_enabled
+        );
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
 
     #[test]
     fn test_p5_1_migration_v3_legacy_upgrade_and_wal_rollback() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p5_1_v3_mig_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p5_1_v3_mig_{}", uuid::Uuid::new_v4()));
         let db_file = temp_dir.join("runtime_legacy_p4.db");
         let pre_v3_backup = temp_dir.join("runtime_pre_v3.bak.db");
         let safety_snap = temp_dir.join("runtime_safety.db");
@@ -6271,23 +6408,29 @@ mod tests {
                 [],
             ).unwrap();
             conn.execute_batch(migrations::MIGRATION_V1_SQL).unwrap();
-            conn.execute_batch(migrations::MIGRATION_V2_TABLES_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_TABLES_SQL)
+                .unwrap();
             conn.execute_batch(
                 "ALTER TABLE workflows ADD COLUMN project_id TEXT REFERENCES projects(id);
                  ALTER TABLE workflows ADD COLUMN category TEXT NOT NULL DEFAULT 'Chung';
                  ALTER TABLE accounts ADD COLUMN project_id TEXT REFERENCES projects(id);
                  ALTER TABLE jobs ADD COLUMN project_id TEXT REFERENCES projects(id);",
-            ).unwrap();
-            conn.execute_batch(migrations::MIGRATION_V2_INDEXES_SQL).unwrap();
-            conn.execute_batch(migrations::MIGRATION_V2_ISOLATION_TRIGGERS_SQL).unwrap();
+            )
+            .unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_INDEXES_SQL)
+                .unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_ISOLATION_TRIGGERS_SQL)
+                .unwrap();
             conn.execute(
                 "INSERT INTO schema_migrations (version, applied_at) VALUES (1, ?1);",
                 params![now],
-            ).unwrap();
+            )
+            .unwrap();
             conn.execute(
                 "INSERT INTO schema_migrations (version, applied_at) VALUES (2, ?1);",
                 params![now],
-            ).unwrap();
+            )
+            .unwrap();
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS runtime_variable_snapshots (
                     scope_key TEXT PRIMARY KEY,
@@ -6295,40 +6438,57 @@ mod tests {
                     updated_at TEXT NOT NULL
                 );",
                 [],
-            ).unwrap();
+            )
+            .unwrap();
             conn.execute(
                 "INSERT INTO runtime_variable_snapshots (scope_key, variables_json, updated_at)
                  VALUES ('mini:jx2-mobile', '{\"char_gold\":5000,\"api_token\":\"live-tok-99\"}', ?1);",
                 params![now],
             ).unwrap();
 
-            let _ = conn.query_row("PRAGMA wal_checkpoint(TRUNCATE);", [], |r| r.get::<_, i64>(0));
+            let _ = conn.query_row("PRAGMA wal_checkpoint(TRUNCATE);", [], |r| {
+                r.get::<_, i64>(0)
+            });
             let mut bk_conn = Connection::open(&pre_v3_backup).unwrap();
             let bk = rusqlite::backup::Backup::new(&conn, &mut bk_conn).unwrap();
-            bk.run_to_completion(100, Duration::from_millis(5), None).unwrap();
+            bk.run_to_completion(100, Duration::from_millis(5), None)
+                .unwrap();
         }
 
         // 2. Open with v6 StorageManager -> migrates legacy P4 snapshots to LEGACY_UNVERIFIED + scrubs secrets
         {
             let storage = StorageManager::new(&db_file).unwrap();
-            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
+            assert_eq!(
+                storage.applied_migration_versions().unwrap(),
+                vec![1, 2, 3, 4, 5, 6]
+            );
             let snap = storage
                 .load_runtime_snapshot_with_recovery("mini:jx2-mobile", None)
                 .unwrap();
 
-            let gold_env = snap.live_envelopes.get("char_gold").expect("char_gold preserved");
+            let gold_env = snap
+                .live_envelopes
+                .get("char_gold")
+                .expect("char_gold preserved");
             assert_eq!(gold_env.value, serde_json::json!(5000));
             assert_eq!(gold_env.source, VariableSource::LegacyUnverified);
             assert!(!gold_env.verified);
 
-            let tok_env = snap.live_envelopes.get("api_token").expect("api_token entry");
+            let tok_env = snap
+                .live_envelopes
+                .get("api_token")
+                .expect("api_token entry");
             assert!(tok_env.redacted);
-            assert_eq!(tok_env.value, serde_json::json!(fp_security::REDACTED_PLACEHOLDER));
+            assert_eq!(
+                tok_env.value,
+                serde_json::json!(fp_security::REDACTED_PLACEHOLDER)
+            );
         }
 
         // 3. Verify rollback back to pre-v3 backup cleanly restores pre-v3 schema versions [1, 2]
-        let rb = StorageManager::rollback_database_from_backup(&db_file, &pre_v3_backup, &safety_snap)
-            .unwrap();
+        let rb =
+            StorageManager::rollback_database_from_backup(&db_file, &pre_v3_backup, &safety_snap)
+                .unwrap();
         assert_eq!(rb.pre_rollback_versions, vec![1, 2, 3, 4, 5, 6]);
         assert_eq!(rb.post_rollback_versions, vec![1, 2]);
         assert!(rb.post_rollback_integrity.is_healthy);
@@ -6452,9 +6612,15 @@ mod tests {
         let rec = storage
             .load_runtime_snapshot_with_recovery("mini:alpha", Some(&since))
             .unwrap();
-        assert_eq!(rec.live_envelopes.get("char_gold").unwrap().value, serde_json::json!(88800));
+        assert_eq!(
+            rec.live_envelopes.get("char_gold").unwrap().value,
+            serde_json::json!(88800)
+        );
         assert!(rec.live_envelopes.get("char_gold").unwrap().verified);
-        assert_eq!(rec.testkit_envelopes.get("char_gold").unwrap().value, serde_json::json!(111));
+        assert_eq!(
+            rec.testkit_envelopes.get("char_gold").unwrap().value,
+            serde_json::json!(111)
+        );
         assert!(!rec.testkit_envelopes.get("char_gold").unwrap().verified);
         assert_eq!(rec.missed_events.len(), 1);
         assert_eq!(rec.missed_events[0].seq, 2);
@@ -6463,10 +6629,8 @@ mod tests {
 
     #[test]
     fn test_p5_1_backlog_persistent_wal_reader_concurrency_stress_and_compaction() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p5_1_wal_stress_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p5_1_wal_stress_{}", uuid::Uuid::new_v4()));
         let db_file = temp_dir.join("wal_stress.db");
         let projects_dir = temp_dir.join("projects");
         std::fs::create_dir_all(&projects_dir).unwrap();
@@ -6484,7 +6648,8 @@ mod tests {
 
         // Concurrent writers (w1 & w2) writing 120 events across two threads (60 each = 120 total)
         // Measure commit latency distribution + test PRAGMA data_version change detection on persistent connection!
-        let latencies_us = std::sync::Arc::new(std::sync::Mutex::new(Vec::<u64>::with_capacity(120)));
+        let latencies_us =
+            std::sync::Arc::new(std::sync::Mutex::new(Vec::<u64>::with_capacity(120)));
         let l1 = latencies_us.clone();
         let l2 = latencies_us.clone();
         let s1 = storage_w1.clone();
@@ -6512,8 +6677,15 @@ mod tests {
                     seq: 0,
                     redacted: false,
                 };
-                s1.record_runtime_var_deltas("mini:stress", "stress", "w1", "j1", "wf@v1", vec![env])
-                    .unwrap();
+                s1.record_runtime_var_deltas(
+                    "mini:stress",
+                    "stress",
+                    "w1",
+                    "j1",
+                    "wf@v1",
+                    vec![env],
+                )
+                .unwrap();
                 l1.lock().unwrap().push(t0.elapsed().as_micros() as u64);
             }
         });
@@ -6539,8 +6711,15 @@ mod tests {
                     seq: 0,
                     redacted: false,
                 };
-                s2.record_runtime_var_deltas("mini:stress", "stress", "w2", "j2", "wf@v1", vec![env])
-                    .unwrap();
+                s2.record_runtime_var_deltas(
+                    "mini:stress",
+                    "stress",
+                    "w2",
+                    "j2",
+                    "wf@v1",
+                    vec![env],
+                )
+                .unwrap();
                 l2.lock().unwrap().push(t0.elapsed().as_micros() as u64);
             }
         });
@@ -6595,10 +6774,8 @@ mod tests {
 
     #[test]
     fn test_p5_2_release_lifecycle_transitions_and_semver() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p5_2_rel_lifecycle_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p5_2_rel_lifecycle_{}", uuid::Uuid::new_v4()));
         let projects_root = temp_dir.join("projects");
         let db_file = temp_dir.join("studio.db");
         let storage = StorageManager::new(&db_file).unwrap();
@@ -6675,7 +6852,12 @@ mod tests {
 
         // 3. Rollback to rel-100 -> reactivates rel-100 as Published and marks rel-110 as RolledBack!
         let rb = storage
-            .transition_project_release_lifecycle(&proj.id, "rel-100", "Published", "Rollback from 1.1.0")
+            .transition_project_release_lifecycle(
+                &proj.id,
+                "rel-100",
+                "Published",
+                "Rollback from 1.1.0",
+            )
             .unwrap();
         assert_eq!(rb.lifecycle_state, "Published");
         let new_after = storage.get_project_release("rel-110").unwrap().unwrap();
@@ -6689,10 +6871,8 @@ mod tests {
 
     #[test]
     fn test_p5_1_long_run_multi_worker_wal_stress_compaction_metrics() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_p5_1_long_stress_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_p5_1_long_stress_{}", uuid::Uuid::new_v4()));
         let db_path = temp_dir.join("wal_long_stress.db");
         let setup = StorageManager::new(&db_path).unwrap();
         setup
@@ -6753,10 +6933,22 @@ mod tests {
             }
             unsafe {
                 let h = GetCurrentProcess();
-                let mut c = FileTime { dw_low: 0, dw_high: 0 };
-                let mut e = FileTime { dw_low: 0, dw_high: 0 };
-                let mut k = FileTime { dw_low: 0, dw_high: 0 };
-                let mut u = FileTime { dw_low: 0, dw_high: 0 };
+                let mut c = FileTime {
+                    dw_low: 0,
+                    dw_high: 0,
+                };
+                let mut e = FileTime {
+                    dw_low: 0,
+                    dw_high: 0,
+                };
+                let mut k = FileTime {
+                    dw_low: 0,
+                    dw_high: 0,
+                };
+                let mut u = FileTime {
+                    dw_low: 0,
+                    dw_high: 0,
+                };
                 GetProcessTimes(h, &mut c, &mut e, &mut k, &mut u);
                 let cpu_100ns = ((k.dw_high as u64) << 32 | k.dw_low as u64)
                     + ((u.dw_high as u64) << 32 | u.dw_low as u64);
@@ -6781,8 +6973,12 @@ mod tests {
         const TOTAL_EVENTS: usize = WORKERS * EVENTS_PER_WORKER;
 
         let writers_done = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let all_latencies = std::sync::Arc::new(std::sync::Mutex::new(Vec::<u64>::with_capacity(TOTAL_EVENTS)));
-        let reader_seen_seqs = std::sync::Arc::new(std::sync::Mutex::new(Vec::<u64>::with_capacity(TOTAL_EVENTS)));
+        let all_latencies = std::sync::Arc::new(std::sync::Mutex::new(Vec::<u64>::with_capacity(
+            TOTAL_EVENTS,
+        )));
+        let reader_seen_seqs = std::sync::Arc::new(std::sync::Mutex::new(
+            Vec::<u64>::with_capacity(TOTAL_EVENTS),
+        ));
 
         let r_done = writers_done.clone();
         let r_seqs = reader_seen_seqs.clone();
@@ -6799,7 +6995,11 @@ mod tests {
                         for ev in evs {
                             let cur = seen_map.entry(ev.stream_id.clone()).or_insert(0);
                             if ev.seq > *cur {
-                                assert_eq!(ev.seq, *cur + 1, "Lost or out-of-order seq during concurrent compaction!");
+                                assert_eq!(
+                                    ev.seq,
+                                    *cur + 1,
+                                    "Lost or out-of-order seq during concurrent compaction!"
+                                );
                                 *cur = ev.seq;
                                 g.push(ev.seq);
                             }
@@ -6807,7 +7007,11 @@ mod tests {
                     }
                 }
                 if r_done.load(std::sync::atomic::Ordering::Relaxed)
-                    && seen_map.get("mini:long-stress::testkit").copied().unwrap_or(0) >= TOTAL_EVENTS as u64
+                    && seen_map
+                        .get("mini:long-stress::testkit")
+                        .copied()
+                        .unwrap_or(0)
+                        >= TOTAL_EVENTS as u64
                 {
                     break;
                 }
@@ -6822,7 +7026,9 @@ mod tests {
             let compactor = StorageManager::new(&c_db).unwrap();
             let mut total_deleted = 0usize;
             while !c_done.load(std::sync::atomic::Ordering::Relaxed) {
-                if let Ok(d) = compactor.compact_runtime_var_events("mini:long-stress::testkit", 300) {
+                if let Ok(d) =
+                    compactor.compact_runtime_var_events("mini:long-stress::testkit", 300)
+                {
                     total_deleted += d;
                 }
                 std::thread::sleep(Duration::from_millis(25));
@@ -6888,7 +7094,10 @@ mod tests {
         let snap = verifier
             .load_runtime_snapshot_with_recovery("mini:long-stress", None)
             .unwrap();
-        assert_eq!(snap.stream_seqs.get("mini:long-stress::testkit"), Some(&(TOTAL_EVENTS as u64)));
+        assert_eq!(
+            snap.stream_seqs.get("mini:long-stress::testkit"),
+            Some(&(TOTAL_EVENTS as u64))
+        );
         assert_eq!(reader_seen_seqs.lock().unwrap().len(), TOTAL_EVENTS);
         assert!(verifier.check_integrity().unwrap().is_healthy);
 
@@ -6975,10 +7184,8 @@ mod tests {
 
     #[test]
     fn test_p6_rc4_sqlite_v5_rc2_upgrade_to_v6_preserves_data_and_backfills_safely() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_rc4_v5_upgrade_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_rc4_v5_upgrade_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
         let db_file = temp_dir.join("rc2_v5.db");
         let now = "2026-11-22T18:00:00Z";
@@ -6992,7 +7199,8 @@ mod tests {
             )
             .unwrap();
             conn.execute_batch(migrations::MIGRATION_V1_SQL).unwrap();
-            conn.execute_batch(migrations::MIGRATION_V2_TABLES_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_TABLES_SQL)
+                .unwrap();
             conn.execute_batch(
                 "ALTER TABLE workflows ADD COLUMN project_id TEXT REFERENCES projects(id);
                  ALTER TABLE workflows ADD COLUMN category TEXT NOT NULL DEFAULT 'Chung';
@@ -7000,10 +7208,14 @@ mod tests {
                  ALTER TABLE jobs ADD COLUMN project_id TEXT REFERENCES projects(id);",
             )
             .unwrap();
-            conn.execute_batch(migrations::MIGRATION_V2_INDEXES_SQL).unwrap();
-            conn.execute_batch(migrations::MIGRATION_V2_ISOLATION_TRIGGERS_SQL).unwrap();
-            conn.execute_batch(migrations::MIGRATION_V3_RUNTIME_PROVENANCE_SQL).unwrap();
-            conn.execute_batch(migrations::MIGRATION_V4_RELEASE_LIFECYCLE_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_INDEXES_SQL)
+                .unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_ISOLATION_TRIGGERS_SQL)
+                .unwrap();
+            conn.execute_batch(migrations::MIGRATION_V3_RUNTIME_PROVENANCE_SQL)
+                .unwrap();
+            conn.execute_batch(migrations::MIGRATION_V4_RELEASE_LIFECYCLE_SQL)
+                .unwrap();
             conn.execute_batch(
                 "ALTER TABLE project_releases ADD COLUMN lifecycle_state TEXT NOT NULL DEFAULT 'Published';
                  ALTER TABLE project_releases ADD COLUMN release_channel TEXT NOT NULL DEFAULT 'internal';
@@ -7019,7 +7231,8 @@ mod tests {
                  ALTER TABLE project_releases ADD COLUMN rolled_back_from_id TEXT;",
             )
             .unwrap();
-            conn.execute_batch(migrations::MIGRATION_V5_PUBLISHER_PROFILES_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V5_PUBLISHER_PROFILES_SQL)
+                .unwrap();
             conn.execute_batch(
                 "ALTER TABLE projects ADD COLUMN publisher_profile_id TEXT;
                  ALTER TABLE projects ADD COLUMN signing_mode TEXT NOT NULL DEFAULT 'unsigned_internal';
@@ -7075,7 +7288,8 @@ mod tests {
                 "INSERT INTO runtime_var_streams (stream_id, project_id, last_seq, updated_at)
                  VALUES ('proj-rc2', 'proj-rc2', 7, ?1);",
                 params![now],
-            ).unwrap();
+            )
+            .unwrap();
             // Insert legacy unverified + malformed empty-source row + historical RC.2 LIVE_STATE row
             conn.execute(
                 "INSERT INTO runtime_variable_envelopes (scope_key, var_name, project_id, session_id, job_id, value_type, value_json, source, verified, confidence, updated_at_utc, workflow_version, seq, redacted)
@@ -7092,14 +7306,18 @@ mod tests {
         // Verify raw pre-upgrade DB has only 14 columns (missing the 4 v6 provenance columns)
         {
             let pre_conn = Connection::open(&db_file).unwrap();
-            let pre_cols = migrations::list_table_columns(&pre_conn, "runtime_variable_envelopes").unwrap();
+            let pre_cols =
+                migrations::list_table_columns(&pre_conn, "runtime_variable_envelopes").unwrap();
             assert!(!pre_cols.contains(&"confidence_source".to_string()));
         }
 
         // 2. Open with v6 StorageManager (and reopen a second time for idempotency)
         {
             let storage = StorageManager::new(&db_file).unwrap();
-            assert_eq!(storage.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
+            assert_eq!(
+                storage.applied_migration_versions().unwrap(),
+                vec![1, 2, 3, 4, 5, 6]
+            );
 
             // Query runtime vars (exact path that failed with `no such column: confidence_source` on RC.3!)
             let vars = storage.load_runtime_variables("proj-rc2").unwrap();
@@ -7108,7 +7326,10 @@ mod tests {
             assert_eq!(leg.value, serde_json::json!("Settings"));
             assert_eq!(leg.source, VariableSource::LegacyUnverified);
             assert!(!leg.verified, "Legacy rows must NOT claim verified=true");
-            assert_eq!(leg.confidence, None, "Legacy rows must NOT claim fake confidence");
+            assert_eq!(
+                leg.confidence, None,
+                "Legacy rows must NOT claim fake confidence"
+            );
             assert_eq!(leg.confidence_source, None);
             assert_eq!(leg.measured_confidence, None);
 
@@ -7163,10 +7384,16 @@ mod tests {
         // 3. Reopen again -> strictly idempotent
         {
             let storage2 = StorageManager::new(&db_file).unwrap();
-            assert_eq!(storage2.applied_migration_versions().unwrap(), vec![1, 2, 3, 4, 5, 6]);
+            assert_eq!(
+                storage2.applied_migration_versions().unwrap(),
+                vec![1, 2, 3, 4, 5, 6]
+            );
             let vars2 = storage2.load_runtime_variables("proj-rc2").unwrap();
             let ocr_env = vars2.envelopes.get("ocr_status_text").unwrap();
-            assert_eq!(ocr_env.confidence_source, Some(fp_domain::ConfidenceSource::Heuristic));
+            assert_eq!(
+                ocr_env.confidence_source,
+                Some(fp_domain::ConfidenceSource::Heuristic)
+            );
             assert_eq!(ocr_env.device_id.as_deref(), Some("emulator-5554"));
             assert_eq!(ocr_env.rule_matched, Some(true));
         }
@@ -7176,10 +7403,8 @@ mod tests {
 
     #[test]
     fn test_p6_rc4_sqlite_incompatible_future_or_missing_column_fails_closed() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "fp_rc4_incompat_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_rc4_incompat_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
 
         // 1. Future schema version (v99) blocked with SQLITE_DOWNGRADE_INCOMPATIBLE
@@ -7196,15 +7421,21 @@ mod tests {
             Ok(_) => panic!("Expected SQLITE_DOWNGRADE_INCOMPATIBLE error"),
             Err(e) => e.to_string(),
         };
-        assert!(err_future.contains("SQLITE_DOWNGRADE_INCOMPATIBLE"), "got: {}", err_future);
+        assert!(
+            err_future.contains("SQLITE_DOWNGRADE_INCOMPATIBLE"),
+            "got: {}",
+            err_future
+        );
 
         // 2. Corrupt/incomplete DB claiming v6 while missing required provenance column -> blocked with SQLITE_SCHEMA_INCOMPATIBLE
         let missing_col_db = temp_dir.join("missing_col_v6.db");
         {
             let conn = Connection::open(&missing_col_db).unwrap();
             conn.execute_batch(migrations::MIGRATION_V1_SQL).unwrap();
-            conn.execute_batch(migrations::MIGRATION_V2_TABLES_SQL).unwrap();
-            conn.execute_batch(migrations::MIGRATION_V3_RUNTIME_PROVENANCE_SQL).unwrap();
+            conn.execute_batch(migrations::MIGRATION_V2_TABLES_SQL)
+                .unwrap();
+            conn.execute_batch(migrations::MIGRATION_V3_RUNTIME_PROVENANCE_SQL)
+                .unwrap();
             for v in 1..=6 {
                 conn.execute(
                     "INSERT INTO schema_migrations (version, applied_at) VALUES (?1, '2026-11-23T00:00:00Z');",
@@ -7216,7 +7447,11 @@ mod tests {
             Ok(_) => panic!("Expected SQLITE_SCHEMA_INCOMPATIBLE error"),
             Err(e) => e.to_string(),
         };
-        assert!(err_missing.contains("SQLITE_SCHEMA_INCOMPATIBLE"), "got: {}", err_missing);
+        assert!(
+            err_missing.contains("SQLITE_SCHEMA_INCOMPATIBLE"),
+            "got: {}",
+            err_missing
+        );
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
@@ -7263,7 +7498,12 @@ mod tests {
             })
             .unwrap();
         storage
-            .upsert_device_lease_record("emulator-5554", "job-dead-crash", 3, "2026-11-23T23:59:59Z")
+            .upsert_device_lease_record(
+                "emulator-5554",
+                "job-dead-crash",
+                3,
+                "2026-11-23T23:59:59Z",
+            )
             .unwrap();
 
         let _ = storage

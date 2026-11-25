@@ -126,7 +126,11 @@ pub fn classify_device_adapter(serial: &str, model: Option<&str>) -> DeviceAdapt
     if m.contains("bluestacks") || m.contains("bst") {
         return DeviceAdapterKind::BlueStacks;
     }
-    if s.starts_with("emulator-") || m.contains("ldplayer") || s.contains(":555") || s.contains(":556") {
+    if s.starts_with("emulator-")
+        || m.contains("ldplayer")
+        || s.contains(":555")
+        || s.contains(":556")
+    {
         return DeviceAdapterKind::LdPlayer;
     }
     DeviceAdapterKind::PhysicalAdb
@@ -225,7 +229,13 @@ impl AdbRunner {
 
         let output = tokio::time::timeout(self.timeout, cmd.output())
             .await
-            .map_err(|_| anyhow::anyhow!("ADB_TIMEOUT: ADB command {:?} timed out after {:?}", args, self.timeout))?
+            .map_err(|_| {
+                anyhow::anyhow!(
+                    "ADB_TIMEOUT: ADB command {:?} timed out after {:?}",
+                    args,
+                    self.timeout
+                )
+            })?
             .context("ADB_EXEC_FAILED: Failed to execute ADB command")?;
 
         if !output.status.success() {
@@ -237,11 +247,7 @@ impl AdbRunner {
             if msg.contains("unauthorized") {
                 bail!("ADB_UNAUTHORIZED: {}", msg);
             }
-            bail!(
-                "ADB error (exit code {:?}): {}",
-                output.status.code(),
-                msg
-            );
+            bail!("ADB error (exit code {:?}): {}", output.status.code(), msg);
         }
 
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
@@ -314,7 +320,9 @@ impl AdbRunner {
             let runner = self.clone();
             set.spawn(async move {
                 let canonical = if dev.connection_state == ConnectionState::Ready {
-                    runner.probe_canonical_device_identity(&dev.adb_serial).await
+                    runner
+                        .probe_canonical_device_identity(&dev.adb_serial)
+                        .await
                 } else {
                     infer_local_emulator_canonical_key(&dev.adb_serial)
                 };
@@ -364,7 +372,11 @@ impl AdbRunner {
         Ok(packages)
     }
 
-    pub fn parse_port_mappings(output: &str, direction: &str, filter_serial: Option<&str>) -> Vec<DevicePortMapping> {
+    pub fn parse_port_mappings(
+        output: &str,
+        direction: &str,
+        filter_serial: Option<&str>,
+    ) -> Vec<DevicePortMapping> {
         let mut list = Vec::new();
         for line in output.lines() {
             let parts: Vec<&str> = line.split_whitespace().collect();
@@ -393,7 +405,12 @@ impl AdbRunner {
         list
     }
 
-    pub async fn forward_add(&self, serial: &str, local: &str, remote: &str) -> Result<DevicePortMapping> {
+    pub async fn forward_add(
+        &self,
+        serial: &str,
+        local: &str,
+        remote: &str,
+    ) -> Result<DevicePortMapping> {
         let s = validate_adb_token("serial", serial)?;
         let l = validate_adb_token("local_spec", local)?;
         let r = validate_adb_token("remote_spec", remote)?;
@@ -414,11 +431,17 @@ impl AdbRunner {
     pub async fn forward_remove(&self, serial: &str, local: &str) -> Result<()> {
         let s = validate_adb_token("serial", serial)?;
         let l = validate_adb_token("local_spec", local)?;
-        self.run_args(&["-s", &s, "forward", "--remove", &l]).await?;
+        self.run_args(&["-s", &s, "forward", "--remove", &l])
+            .await?;
         Ok(())
     }
 
-    pub async fn reverse_add(&self, serial: &str, remote: &str, local: &str) -> Result<DevicePortMapping> {
+    pub async fn reverse_add(
+        &self,
+        serial: &str,
+        remote: &str,
+        local: &str,
+    ) -> Result<DevicePortMapping> {
         let s = validate_adb_token("serial", serial)?;
         let r = validate_adb_token("remote_spec", remote)?;
         let l = validate_adb_token("local_spec", local)?;
@@ -445,7 +468,8 @@ impl AdbRunner {
     pub async fn reverse_remove(&self, serial: &str, remote: &str) -> Result<()> {
         let s = validate_adb_token("serial", serial)?;
         let r = validate_adb_token("remote_spec", remote)?;
-        self.run_args(&["-s", &s, "reverse", "--remove", &r]).await?;
+        self.run_args(&["-s", &s, "reverse", "--remove", &r])
+            .await?;
         Ok(())
     }
 
@@ -462,7 +486,8 @@ impl AdbRunner {
 
     pub async fn reverse_remove_all(&self, serial: &str) -> Result<()> {
         let s = validate_adb_token("serial", serial)?;
-        self.run_args(&["-s", &s, "reverse", "--remove-all"]).await?;
+        self.run_args(&["-s", &s, "reverse", "--remove-all"])
+            .await?;
         Ok(())
     }
 
@@ -894,7 +919,8 @@ emulator-5554          device product:sdk_gphone64_x86_64 model:Pixel_6 device:e
 
     #[test]
     fn test_parse_forward_reverse_and_validate_specs() {
-        let fwd = "emulator-5554 tcp:18080 tcp:8080\nemulator-5556 tcp:18081 localabstract:scrcpy\n";
+        let fwd =
+            "emulator-5554 tcp:18080 tcp:8080\nemulator-5556 tcp:18081 localabstract:scrcpy\n";
         let all = AdbRunner::parse_port_mappings(fwd, "forward", None);
         assert_eq!(all.len(), 2);
         let one = AdbRunner::parse_port_mappings(fwd, "forward", Some("emulator-5554"));
@@ -911,7 +937,9 @@ emulator-5554          device product:sdk_gphone64_x86_64 model:Pixel_6 device:e
 
         // Empty port mapping output and filtered serial mismatch return cleanly
         assert!(AdbRunner::parse_port_mappings("", "reverse", None).is_empty());
-        assert!(AdbRunner::parse_port_mappings("   \n\n", "forward", Some("emulator-5554")).is_empty());
+        assert!(
+            AdbRunner::parse_port_mappings("   \n\n", "forward", Some("emulator-5554")).is_empty()
+        );
         assert!(AdbRunner::parse_port_mappings(fwd, "forward", Some("host-22")).is_empty());
 
         assert!(validate_adb_token("local", "tcp:18080").is_ok());
@@ -961,7 +989,10 @@ USB-PIXEL-9            device product:tokay model:Pixel_9 transport_id:4
 
         let deduped = coalesce_device_summaries(entries);
         let serials: Vec<&str> = deduped.iter().map(|d| d.adb_serial.as_str()).collect();
-        assert_eq!(serials, vec!["emulator-5554", "emulator-5556", "USB-PIXEL-9"]);
+        assert_eq!(
+            serials,
+            vec!["emulator-5554", "emulator-5556", "USB-PIXEL-9"]
+        );
 
         // Also works deterministically via fallback inference without shell boot_id probe
         assert_eq!(
@@ -980,9 +1011,8 @@ List of devices attached
 192.168.1.81:5555      device product:phone model:SameModel transport_id:11
         "#;
         let unknown_raw = AdbRunner::parse_devices_output(unknown_out).unwrap();
-        let unknown_dedup = coalesce_device_summaries(
-            unknown_raw.into_iter().map(|d| (d, None)).collect(),
-        );
+        let unknown_dedup =
+            coalesce_device_summaries(unknown_raw.into_iter().map(|d| (d, None)).collect());
         assert_eq!(unknown_dedup.len(), 2);
         assert_eq!(unknown_dedup[0].adb_serial, "192.168.1.80:5555");
         assert_eq!(unknown_dedup[1].adb_serial, "192.168.1.81:5555");

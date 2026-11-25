@@ -416,7 +416,11 @@ pub fn reconcile_project_storage_with_witness(
                         && !tgt_p
                             .file_name()
                             .and_then(|n| n.to_str())
-                            .map(|n| n == STAGING_DIR_NAME || n == TRASH_DIR_NAME || n == JOURNAL_DIR_NAME)
+                            .map(|n| {
+                                n == STAGING_DIR_NAME
+                                    || n == TRASH_DIR_NAME
+                                    || n == JOURNAL_DIR_NAME
+                            })
                             .unwrap_or(false);
 
                     let mut resolved = false;
@@ -441,7 +445,9 @@ pub fn reconcile_project_storage_with_witness(
                             let id_matches_or_incomplete = if mf_path.exists() {
                                 std::fs::read_to_string(&mf_path)
                                     .ok()
-                                    .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+                                    .and_then(|s| {
+                                        serde_json::from_str::<serde_json::Value>(&s).ok()
+                                    })
                                     .and_then(|m| {
                                         m.get("projectId")
                                             .and_then(|x| x.as_str())
@@ -461,10 +467,9 @@ pub fn reconcile_project_storage_with_witness(
                                 resolved = true;
                             }
                         } else if !tgt_p.exists() {
-                            report.actions.push(format!(
-                                "create_aborted_in_staging:{}",
-                                item.project_id
-                            ));
+                            report
+                                .actions
+                                .push(format!("create_aborted_in_staging:{}", item.project_id));
                             resolved = true;
                         }
                     }
@@ -591,7 +596,8 @@ pub fn reconcile_project_storage_with_witness(
                                 journal_resolved = true;
                             } else {
                                 protected_trash_paths.insert(
-                                    std::fs::canonicalize(&trash_p).unwrap_or_else(|_| trash_p.clone()),
+                                    std::fs::canonicalize(&trash_p)
+                                        .unwrap_or_else(|_| trash_p.clone()),
                                 );
                             }
                         } else if !trash_p.exists() {
@@ -694,6 +700,7 @@ pub fn reconcile_project_storage_orphans(
     projects_root: &Path,
     active_project_ids: &[String],
 ) -> Result<usize> {
-    let rep = reconcile_project_storage_with_witness(projects_root, &IdListWitness(active_project_ids))?;
+    let rep =
+        reconcile_project_storage_with_witness(projects_root, &IdListWitness(active_project_ids))?;
     Ok(rep.total_resolved)
 }

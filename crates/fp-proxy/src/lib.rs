@@ -138,11 +138,8 @@ pub async fn probe_proxy(config: &ProxyConfig) -> ProxyProbeReport {
             checked_at_utc: chrono::Utc::now().to_rfc3339(),
         },
         ProxyProtocol::Socks5 => {
-            let res = tokio::time::timeout(
-                timeout_dur,
-                run_socks5_handshake(&mut stream, config),
-            )
-            .await;
+            let res =
+                tokio::time::timeout(timeout_dur, run_socks5_handshake(&mut stream, config)).await;
             match res {
                 Ok(Ok((auth_status, target_ok))) => ProxyProbeReport {
                     host: config.host.clone(),
@@ -189,11 +186,9 @@ pub async fn probe_proxy(config: &ProxyConfig) -> ProxyProbeReport {
             }
         }
         ProxyProtocol::HttpConnect => {
-            let res = tokio::time::timeout(
-                timeout_dur,
-                run_http_connect_probe(&mut stream, config),
-            )
-            .await;
+            let res =
+                tokio::time::timeout(timeout_dur, run_http_connect_probe(&mut stream, config))
+                    .await;
             match res {
                 Ok(Ok((auth_status, target_ok))) => ProxyProbeReport {
                     host: config.host.clone(),
@@ -257,21 +252,28 @@ async fn run_socks5_handshake(
     } else {
         vec![0x05, 0x01, 0x00] // NoAuth
     };
-    stream
-        .write_all(&greeting)
-        .await
-        .map_err(|e| ("io_error".to_string(), format!("SOCKS5 greeting write failed: {}", e)))?;
+    stream.write_all(&greeting).await.map_err(|e| {
+        (
+            "io_error".to_string(),
+            format!("SOCKS5 greeting write failed: {}", e),
+        )
+    })?;
 
     let mut choice = [0u8; 2];
-    stream
-        .read_exact(&mut choice)
-        .await
-        .map_err(|e| ("io_error".to_string(), format!("SOCKS5 greeting read failed: {}", e)))?;
+    stream.read_exact(&mut choice).await.map_err(|e| {
+        (
+            "io_error".to_string(),
+            format!("SOCKS5 greeting read failed: {}", e),
+        )
+    })?;
 
     if choice[0] != 0x05 {
         return Err((
             "protocol_error".to_string(),
-            format!("SOCKS5_PROTOCOL_ERROR: Unexpected SOCKS version 0x{:02x}", choice[0]),
+            format!(
+                "SOCKS5_PROTOCOL_ERROR: Unexpected SOCKS version 0x{:02x}",
+                choice[0]
+            ),
         ));
     }
 
@@ -293,17 +295,26 @@ async fn run_socks5_handshake(
             pkt.push(pass.len() as u8);
             pkt.extend_from_slice(pass.as_bytes());
             stream.write_all(&pkt).await.map_err(|e| {
-                ("io_error".to_string(), format!("SOCKS5 auth write failed: {}", e))
+                (
+                    "io_error".to_string(),
+                    format!("SOCKS5 auth write failed: {}", e),
+                )
             })?;
 
             let mut auth_rep = [0u8; 2];
             stream.read_exact(&mut auth_rep).await.map_err(|e| {
-                ("io_error".to_string(), format!("SOCKS5 auth read failed: {}", e))
+                (
+                    "io_error".to_string(),
+                    format!("SOCKS5 auth read failed: {}", e),
+                )
             })?;
             if auth_rep[1] != 0x00 {
                 return Err((
                     "auth_failed".to_string(),
-                    format!("PROXY_AUTH_FAILED: SOCKS5 rejected credentials (status=0x{:02x})", auth_rep[1]),
+                    format!(
+                        "PROXY_AUTH_FAILED: SOCKS5 rejected credentials (status=0x{:02x})",
+                        auth_rep[1]
+                    ),
                 ));
             }
             "authenticated".to_string()
@@ -311,7 +322,8 @@ async fn run_socks5_handshake(
         0xff => {
             return Err((
                 "auth_required".to_string(),
-                "PROXY_AUTH_METHODS_REJECTED: No acceptable SOCKS5 authentication method".to_string(),
+                "PROXY_AUTH_METHODS_REJECTED: No acceptable SOCKS5 authentication method"
+                    .to_string(),
             ));
         }
         other => {
@@ -323,23 +335,35 @@ async fn run_socks5_handshake(
     };
 
     if let (Some(target_host), Some(target_port)) = (
-        config.target_probe_host.as_deref().filter(|h| !h.trim().is_empty()),
+        config
+            .target_probe_host
+            .as_deref()
+            .filter(|h| !h.trim().is_empty()),
         config.target_probe_port,
     ) {
         let host_bytes = target_host.trim().as_bytes();
         if host_bytes.len() > 255 {
-            return Err((auth_status, "Target probe host exceeds 255 bytes".to_string()));
+            return Err((
+                auth_status,
+                "Target probe host exceeds 255 bytes".to_string(),
+            ));
         }
         let mut req = Vec::with_capacity(7 + host_bytes.len());
         req.extend_from_slice(&[0x05, 0x01, 0x00, 0x03, host_bytes.len() as u8]);
         req.extend_from_slice(host_bytes);
         req.extend_from_slice(&target_port.to_be_bytes());
         stream.write_all(&req).await.map_err(|e| {
-            (auth_status.clone(), format!("SOCKS5 CONNECT write failed: {}", e))
+            (
+                auth_status.clone(),
+                format!("SOCKS5 CONNECT write failed: {}", e),
+            )
         })?;
         let mut hdr = [0u8; 4];
         stream.read_exact(&mut hdr).await.map_err(|e| {
-            (auth_status.clone(), format!("SOCKS5 CONNECT reply failed: {}", e))
+            (
+                auth_status.clone(),
+                format!("SOCKS5 CONNECT reply failed: {}", e),
+            )
         })?;
         if hdr[1] != 0x00 {
             return Err((
@@ -382,16 +406,20 @@ async fn run_http_connect_probe(
     }
     req.push_str("\r\n");
 
-    stream
-        .write_all(req.as_bytes())
-        .await
-        .map_err(|e| ("io_error".to_string(), format!("HTTP CONNECT write failed: {}", e)))?;
+    stream.write_all(req.as_bytes()).await.map_err(|e| {
+        (
+            "io_error".to_string(),
+            format!("HTTP CONNECT write failed: {}", e),
+        )
+    })?;
 
     let mut buf = [0u8; 1024];
-    let n = stream
-        .read(&mut buf)
-        .await
-        .map_err(|e| ("io_error".to_string(), format!("HTTP CONNECT read failed: {}", e)))?;
+    let n = stream.read(&mut buf).await.map_err(|e| {
+        (
+            "io_error".to_string(),
+            format!("HTTP CONNECT read failed: {}", e),
+        )
+    })?;
     let resp = String::from_utf8_lossy(&buf[..n]);
     let status_line = resp.lines().next().unwrap_or("").trim().to_string();
 
@@ -400,7 +428,12 @@ async fn run_http_connect_probe(
         Ok((auth.to_string(), true))
     } else if status_line.contains(" 407 ") {
         Err((
-            if has_creds { "auth_failed" } else { "auth_required" }.to_string(),
+            if has_creds {
+                "auth_failed"
+            } else {
+                "auth_required"
+            }
+            .to_string(),
             format!("PROXY_AUTH_407: {}", status_line),
         ))
     } else {
@@ -507,7 +540,9 @@ mod tests {
                                         let _ = sock.read_exact(&mut rest).await;
                                     }
                                 }
-                                let _ = sock.write_all(&[0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0]).await;
+                                let _ = sock
+                                    .write_all(&[0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0])
+                                    .await;
                                 let _ = sock.shutdown().await;
                             }
                         } else {

@@ -187,9 +187,9 @@ async fn main() -> anyhow::Result<()> {
             mock,
             serial,
         } => {
-            let target_wf = workflow
-                .or(path)
-                .context("Must provide a workflow JSON file via --workflow or positional argument")?;
+            let target_wf = workflow.or(path).context(
+                "Must provide a workflow JSON file via --workflow or positional argument",
+            )?;
             println!("Loading workflow: {}", target_wf.display());
             let content = fs::read_to_string(&target_wf)?;
             let doc = WorkflowValidator::parse_and_validate(&content)?;
@@ -229,7 +229,10 @@ async fn main() -> anyhow::Result<()> {
 
         Commands::ExportPoc { repo_root } => {
             let root = repo_root.unwrap_or_else(|| std::env::current_dir().unwrap());
-            let runtime_exe = root.join("target").join("release").join("fp-mini-runtime.exe");
+            let runtime_exe = root
+                .join("target")
+                .join("release")
+                .join("fp-mini-runtime.exe");
             let bin_dir = root.join("bin");
             let (jx2_proj, slg_proj) = seed_two_poc_projects(&root)?;
 
@@ -401,7 +404,8 @@ fn run_p2_sandbox_verification(
 
     // Restore from the v1 online backup into `03_migrated_v2.db` and run StorageManager v1->v2 migration
     let migrated_db_path = sandbox_dir.join("03_migrated_v2.db");
-    let pre_restore_report = StorageManager::restore_from_backup(&online_bk_path, &migrated_db_path)?;
+    let pre_restore_report =
+        StorageManager::restore_from_backup(&online_bk_path, &migrated_db_path)?;
     let storage = StorageManager::new(&migrated_db_path)?;
 
     // Idempotency check (second run_migrations call)
@@ -425,14 +429,17 @@ fn run_p2_sandbox_verification(
 
     // 4. Migrate 10 Legacy JX2 Workflows + 8 Template PNGs non-destructively into sandbox projects dir
     let sandbox_projects = sandbox_dir.join("projects");
-    let jx2_summary =
-        storage.migrate_legacy_jx2_assets(&repo_root.join("games").join("jx2mobile"), &sandbox_projects)?;
+    let jx2_summary = storage.migrate_legacy_jx2_assets(
+        &repo_root.join("games").join("jx2mobile"),
+        &sandbox_projects,
+    )?;
 
     // 5. Post-migration Online Backup & Restore verification
     let v2_backup_path = sandbox_dir.join("04_online_backup_v2.db");
     let v2_backup_report = storage.online_backup_to(&v2_backup_path)?;
     let v2_restored_path = sandbox_dir.join("05_restored_v2.db");
-    let v2_restore_integrity = StorageManager::restore_from_backup(&v2_backup_path, &v2_restored_path)?;
+    let v2_restore_integrity =
+        StorageManager::restore_from_backup(&v2_backup_path, &v2_restored_path)?;
 
     // 6. Project CRUD + Clone + Strict Isolation verification (Project A vs Project B)
     let proj_slg = storage.create_project(
@@ -842,11 +849,8 @@ fn run_rollback_runbook_verification(
     }
     std::fs::copy(backup_db, &backup_copy)?;
 
-    let report = StorageManager::rollback_database_from_backup(
-        &sandbox_target,
-        &backup_copy,
-        &safety_snap,
-    )?;
+    let report =
+        StorageManager::rollback_database_from_backup(&sandbox_target, &backup_copy, &safety_snap)?;
 
     Ok(serde_json::json!({
         "command": "verify-rollback-runbook",
@@ -978,7 +982,13 @@ fn run_crash_worker(
         | "workflow:after_db_commit_before_cleanup" => {
             let tid = target_id.context("target_id required for workflow crash scenario")?;
             let new_wf = r#"{"schemaVersion":1,"workflowId":"wf-target-01","name":"Target V2 CLI Crash","status":"published","graph":{"nodes":[{"id":"c2-start","type":"flow.start","position":{"x":0,"y":0}},{"id":"c2-end","type":"flow.end","position":{"x":200,"y":0}}],"edges":[{"id":"ce2","source":"c2-start","sourcePort":"flow","target":"c2-end","targetPort":"flow"}]}}"#;
-            let _ = storage.save_project_workflow(tid, "wf-target-01", "Target V2 CLI Crash", "Chung", new_wf);
+            let _ = storage.save_project_workflow(
+                tid,
+                "wf-target-01",
+                "Target V2 CLI Crash",
+                "Chung",
+                new_wf,
+            );
         }
         "update:after_disk_writes_before_db_commit" => {
             let tid = target_id.context("target_id required for update crash scenario")?;
@@ -1047,8 +1057,8 @@ fn spawn_and_kill_cli_worker(
 
 fn run_hotfix_verification(out_dir: &std::path::Path) -> anyhow::Result<serde_json::Value> {
     use fp_security::{
-        keystore, ProducerKeystore, PORTABLE_RECOVERY_AEAD, PORTABLE_RECOVERY_RETIRED_EXPERIMENTAL_SCHEME,
-        PORTABLE_RECOVERY_SCHEME,
+        keystore, ProducerKeystore, PORTABLE_RECOVERY_AEAD,
+        PORTABLE_RECOVERY_RETIRED_EXPERIMENTAL_SCHEME, PORTABLE_RECOVERY_SCHEME,
     };
     use fp_storage::{CreateProjectRequest, StorageManager};
     use std::time::Instant;
@@ -1090,9 +1100,10 @@ fn run_hotfix_verification(out_dir: &std::path::Path) -> anyhow::Result<serde_js
     let import_ms = t1.elapsed().as_millis() as u64;
     let (sk_b, _) = ProducerKeystore::load_or_create_signing_key(&ks_b)?;
 
-    let wrong_pass_err = ProducerKeystore::import_portable_recovery_bundle(&rec1, &ks_b, "WrongPass123!")
-        .unwrap_err()
-        .to_string();
+    let wrong_pass_err =
+        ProducerKeystore::import_portable_recovery_bundle(&rec1, &ks_b, "WrongPass123!")
+            .unwrap_err()
+            .to_string();
 
     // Tamper AAD metadata check
     let rec_tampered = sec_dir.join("recovery_tampered_meta.json");
@@ -1136,15 +1147,51 @@ fn run_hotfix_verification(out_dir: &std::path::Path) -> anyhow::Result<serde_js
     // Part B: Forced OS TerminateProcess Crash Recovery Matrix (Isolated Sandboxes)
     let mut crash_results = Vec::new();
     let scenarios = [
-        ("1_after_staging_before_rename", "create:after_staging_before_rename", false),
-        ("2_after_rename_before_db_commit", "create:after_rename_before_db_commit", false),
-        ("3_after_db_commit_before_cleanup", "create:after_db_commit_before_cleanup", false),
-        ("4a_workflow_after_write_before_manifest", "workflow:after_wf_write_before_manifest", true),
-        ("4b_workflow_after_disk_before_commit", "workflow:after_disk_writes_before_db_commit", true),
-        ("4c_workflow_after_commit_before_cleanup", "workflow:after_db_commit_before_cleanup", true),
-        ("4d_update_manifest_before_commit", "update:after_disk_writes_before_db_commit", true),
-        ("5_after_delete_to_trash_before_commit", "delete:after_move_to_trash_before_commit", true),
-        ("6_after_delete_commit_before_cleanup", "delete:after_db_commit_before_cleanup", true),
+        (
+            "1_after_staging_before_rename",
+            "create:after_staging_before_rename",
+            false,
+        ),
+        (
+            "2_after_rename_before_db_commit",
+            "create:after_rename_before_db_commit",
+            false,
+        ),
+        (
+            "3_after_db_commit_before_cleanup",
+            "create:after_db_commit_before_cleanup",
+            false,
+        ),
+        (
+            "4a_workflow_after_write_before_manifest",
+            "workflow:after_wf_write_before_manifest",
+            true,
+        ),
+        (
+            "4b_workflow_after_disk_before_commit",
+            "workflow:after_disk_writes_before_db_commit",
+            true,
+        ),
+        (
+            "4c_workflow_after_commit_before_cleanup",
+            "workflow:after_db_commit_before_cleanup",
+            true,
+        ),
+        (
+            "4d_update_manifest_before_commit",
+            "update:after_disk_writes_before_db_commit",
+            true,
+        ),
+        (
+            "5_after_delete_to_trash_before_commit",
+            "delete:after_move_to_trash_before_commit",
+            true,
+        ),
+        (
+            "6_after_delete_commit_before_cleanup",
+            "delete:after_db_commit_before_cleanup",
+            true,
+        ),
     ];
 
     for (label, stage, needs_target) in scenarios {
@@ -1194,7 +1241,8 @@ fn run_hotfix_verification(out_dir: &std::path::Path) -> anyhow::Result<serde_js
             )?;
             let wf_v1 = "{\"schemaVersion\":1,\"workflowId\":\"wf-target-01\",\"name\":\"Target V1\",\"status\":\"draft\",\"graph\":{\"nodes\":[{\"id\":\"t1\",\"type\":\"flow.start\",\"position\":{\"x\":0,\"y\":0}},{\"id\":\"t2\",\"type\":\"flow.end\",\"position\":{\"x\":100,\"y\":0}}],\"edges\":[{\"id\":\"te1\",\"source\":\"t1\",\"sourcePort\":\"flow\",\"target\":\"t2\",\"targetPort\":\"flow\"}]}}";
             st.save_project_workflow(&t.id, "wf-target-01", "Target V1", "Chung", wf_v1)?;
-            let vmf = std::fs::read_to_string(PathBuf::from(&v.project_dir_path).join("project.json"))?;
+            let vmf =
+                std::fs::read_to_string(PathBuf::from(&v.project_dir_path).join("project.json"))?;
             (v.id, t.id, vmf, wf_v1.to_string())
         };
 
@@ -1208,7 +1256,8 @@ fn run_hotfix_verification(out_dir: &std::path::Path) -> anyhow::Result<serde_js
         let (reopened, rep) = StorageManager::open_and_reconcile(&db_p, &proot)?;
         let integ = reopened.check_integrity()?;
         let victim_ok = reopened.get_project(&victim_id)?.is_some()
-            && std::fs::read_to_string(proot.join("victim-sentinel").join("project.json"))? == victim_mf;
+            && std::fs::read_to_string(proot.join("victim-sentinel").join("project.json"))?
+                == victim_mf;
 
         let final_state_ok = match stage {
             "create:after_staging_before_rename" | "create:after_rename_before_db_commit" => {
@@ -1219,20 +1268,32 @@ fn run_hotfix_verification(out_dir: &std::path::Path) -> anyhow::Result<serde_js
                 reopened.get_project_by_slug("cli-killed-proj")?.is_some()
                     && proot.join("cli-killed-proj").join("project.json").exists()
             }
-            "workflow:after_wf_write_before_manifest" | "workflow:after_disk_writes_before_db_commit" => {
-                std::fs::read_to_string(proot.join("target-crash-proj").join("workflows").join("wf-target-01.json"))?
-                    == target_wf_pre
+            "workflow:after_wf_write_before_manifest"
+            | "workflow:after_disk_writes_before_db_commit" => {
+                std::fs::read_to_string(
+                    proot
+                        .join("target-crash-proj")
+                        .join("workflows")
+                        .join("wf-target-01.json"),
+                )? == target_wf_pre
             }
             "workflow:after_db_commit_before_cleanup" => std::fs::read_to_string(
-                proot.join("target-crash-proj").join("workflows").join("wf-target-01.json"),
+                proot
+                    .join("target-crash-proj")
+                    .join("workflows")
+                    .join("wf-target-01.json"),
             )?
             .contains("Target V2 CLI Crash"),
-            "update:after_disk_writes_before_db_commit" => {
-                reopened.get_project(&target_id)?.map(|p| p.version == "1.0.0").unwrap_or(false)
-            }
+            "update:after_disk_writes_before_db_commit" => reopened
+                .get_project(&target_id)?
+                .map(|p| p.version == "1.0.0")
+                .unwrap_or(false),
             "delete:after_move_to_trash_before_commit" => {
                 reopened.get_project(&target_id)?.is_some()
-                    && proot.join("target-crash-proj").join("project.json").exists()
+                    && proot
+                        .join("target-crash-proj")
+                        .join("project.json")
+                        .exists()
             }
             "delete:after_db_commit_before_cleanup" => {
                 reopened.get_project(&target_id)?.is_none()

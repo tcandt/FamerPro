@@ -5,6 +5,7 @@ import {
   Camera,
   CheckCircle2,
   Crop,
+  Crosshair,
   Layers,
   Monitor,
   Network,
@@ -15,6 +16,7 @@ import {
   Square as StopSquare,
   Trash2,
 } from 'lucide-react';
+import { ElementInspectorView } from './ElementInspectorView';
 import { api, isTauri } from '../../lib/api';
 import { useDeviceStore } from '../../stores/deviceStore';
 import { useProjectStore } from '../../stores/projectStore';
@@ -76,7 +78,7 @@ export const DeviceLabInspector: React.FC<DeviceLabInspectorProps> = ({
   } = useDeviceStore();
   const { activeProjectId, activeProjectDetail, refreshActiveProject } = useProjectStore();
 
-  const [tab, setTab] = useState<'health' | 'vision' | 'ports'>('health');
+  const [tab, setTab] = useState<'inspector' | 'health' | 'vision' | 'ports'>('inspector');
   const [showAllSystemPackages, setShowAllSystemPackages] = useState(false);
 
   // Health & Reconnect state
@@ -324,10 +326,19 @@ export const DeviceLabInspector: React.FC<DeviceLabInspectorProps> = ({
         </div>
 
         {/* Inspector Sub-tabs */}
-        <div className="grid grid-cols-3 gap-1 bg-[#101722] p-1 rounded-md border border-[#2A3647] text-[11px]">
+        <div className="grid grid-cols-4 gap-1 bg-[#101722] p-1 rounded-md border border-[#2A3647] text-[11px]">
+          <button
+            onClick={() => setTab('inspector')}
+            className={`py-1 rounded font-medium flex items-center justify-center gap-1 cursor-pointer transition-colors ${
+              tab === 'inspector' ? 'bg-[#1878F5] text-white shadow' : 'text-[#A9B8CC] hover:text-white'
+            }`}
+          >
+            <Crosshair size={12} />
+            <span>Element Inspector</span>
+          </button>
           <button
             onClick={() => setTab('health')}
-            className={`py-1 rounded font-medium flex items-center justify-center gap-1 cursor-pointer ${
+            className={`py-1 rounded font-medium flex items-center justify-center gap-1 cursor-pointer transition-colors ${
               tab === 'health' ? 'bg-[#173355] text-white' : 'text-[#A9B8CC] hover:text-white'
             }`}
           >
@@ -336,7 +347,7 @@ export const DeviceLabInspector: React.FC<DeviceLabInspectorProps> = ({
           </button>
           <button
             onClick={() => setTab('vision')}
-            className={`py-1 rounded font-medium flex items-center justify-center gap-1 cursor-pointer ${
+            className={`py-1 rounded font-medium flex items-center justify-center gap-1 cursor-pointer transition-colors ${
               tab === 'vision' ? 'bg-[#173355] text-white' : 'text-[#A9B8CC] hover:text-white'
             }`}
           >
@@ -345,7 +356,7 @@ export const DeviceLabInspector: React.FC<DeviceLabInspectorProps> = ({
           </button>
           <button
             onClick={() => setTab('ports')}
-            className={`py-1 rounded font-medium flex items-center justify-center gap-1 cursor-pointer ${
+            className={`py-1 rounded font-medium flex items-center justify-center gap-1 cursor-pointer transition-colors ${
               tab === 'ports' ? 'bg-[#173355] text-white' : 'text-[#A9B8CC] hover:text-white'
             }`}
           >
@@ -357,6 +368,19 @@ export const DeviceLabInspector: React.FC<DeviceLabInspectorProps> = ({
 
       {/* Tab Body */}
       <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 text-xs">
+        {tab === 'inspector' && (
+          <ElementInspectorView
+            serial={currentDevice?.adb_serial || probeSerial}
+            onNotice={onNotice}
+            onAddToWorkflow={(_sel, name) => {
+              onNotice(`Selector for "${name}" sent to Workflow Studio`, 'success');
+              if (currentDevice) {
+                onOpenInStudio(currentDevice.adb_serial);
+              }
+            }}
+          />
+        )}
+
         {tab === 'health' && (
           <>
             {/* Live Health Probe & Reconnect (P3 IPC) */}

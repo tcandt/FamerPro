@@ -239,14 +239,22 @@ impl RuntimeCoordinator {
             })
     }
 
-    fn validate_task_binding(&self, project_id: &str, workflow_id: &str, task_id: &str) -> Result<()> {
+    fn validate_task_binding(
+        &self,
+        project_id: &str,
+        workflow_id: &str,
+        task_id: &str,
+    ) -> Result<()> {
         let tasks = self.storage.list_project_tasks(project_id)?;
-        let task = tasks.into_iter().find(|t| t.id == task_id).with_context(|| {
-            format!(
-                "PROJECT_ISOLATION_VIOLATION: Task '{}' does not exist inside project '{}'",
-                task_id, project_id
-            )
-        })?;
+        let task = tasks
+            .into_iter()
+            .find(|t| t.id == task_id)
+            .with_context(|| {
+                format!(
+                    "PROJECT_ISOLATION_VIOLATION: Task '{}' does not exist inside project '{}'",
+                    task_id, project_id
+                )
+            })?;
         if task.workflow_id != workflow_id {
             bail!(
                 "TASK_WORKFLOW_MISMATCH: Task '{}' maps to workflow '{}', requested '{}'",
@@ -282,9 +290,11 @@ impl RuntimeCoordinator {
         let adapter_kind = classify_device_adapter(device_id, None);
         let runner = self.adb_runner.clone();
         let dev_id = device_id.to_string();
-        let actor = self.registry.register_or_get(device_id, adapter_kind.clone(), move || {
-            Arc::new(AdbDeviceDriver::new(dev_id, runner))
-        });
+        let actor = self
+            .registry
+            .register_or_get(device_id, adapter_kind.clone(), move || {
+                Arc::new(AdbDeviceDriver::new(dev_id, runner))
+            });
         actor.sync_generation(fencing_generation);
         let fenced = Arc::new(FencedDeviceDriver::new(actor, fencing_generation));
         (adapter_kind, fenced)
@@ -335,13 +345,18 @@ impl RuntimeCoordinator {
             && fp_adb::infer_local_emulator_canonical_key(&req.device_id).is_none()
             && !self.adb_runner.adb_path.trim().is_empty()
         {
-            self.adb_runner.probe_canonical_device_identity(&req.device_id).await
+            self.adb_runner
+                .probe_canonical_device_identity(&req.device_id)
+                .await
         } else {
             None
         };
-        let device_lease = self
-            .scheduler
-            .acquire_device_lease_canonical(&req.device_id, canonical_identity.as_deref(), &job_id, ttl)?;
+        let device_lease = self.scheduler.acquire_device_lease_canonical(
+            &req.device_id,
+            canonical_identity.as_deref(),
+            &job_id,
+            ttl,
+        )?;
 
         if let Some(ref acc_id) = req.account_id {
             if let Err(err) = self.scheduler.acquire_account_lease(acc_id, &job_id, ttl) {
@@ -437,7 +452,10 @@ impl RuntimeCoordinator {
         })
     }
 
-    async fn execute_prepared(&self, mut prep: PreparedExecution) -> Result<RunWorkflowExecutionSummary> {
+    async fn execute_prepared(
+        &self,
+        mut prep: PreparedExecution,
+    ) -> Result<RunWorkflowExecutionSummary> {
         let storage = Arc::clone(&self.storage);
         let scheduler = Arc::clone(&self.scheduler);
 
@@ -458,7 +476,8 @@ impl RuntimeCoordinator {
                     if let Some(ref acc_id) = self.account_id {
                         self.scheduler.release_account_lease(acc_id, &self.job_id);
                     }
-                    self.scheduler.release_device_lease(&self.device_id, &self.job_id);
+                    self.scheduler
+                        .release_device_lease(&self.device_id, &self.job_id);
                     let _ = self
                         .storage
                         .delete_device_lease_record(&self.device_id, &self.job_id);
@@ -542,12 +561,13 @@ impl RuntimeCoordinator {
         let ev_storage = Arc::clone(&storage);
         let ev_count = Arc::clone(&event_count);
         let ev_node_holder = Arc::clone(&last_node_id);
-        let event_callback: Arc<dyn Fn(StepEvent) + Send + Sync> = Arc::new(move |ev: StepEvent| {
-            *ev_node_holder.lock().unwrap() = Some(ev.node_id.clone());
-            if ev_storage.insert_step_event(&ev).is_ok() {
-                ev_count.fetch_add(1, Ordering::SeqCst);
-            }
-        });
+        let event_callback: Arc<dyn Fn(StepEvent) + Send + Sync> =
+            Arc::new(move |ev: StepEvent| {
+                *ev_node_holder.lock().unwrap() = Some(ev.node_id.clone());
+                if ev_storage.insert_step_event(&ev).is_ok() {
+                    ev_count.fetch_add(1, Ordering::SeqCst);
+                }
+            });
 
         // 3. Run workflow executor (with optional overall timeout)
         let mut executor = WorkflowExecutor::new(prep.driver, prep.signal_rx);
@@ -715,9 +735,12 @@ impl RuntimeCoordinator {
             .get_project(&project_id)?
             .with_context(|| format!("Project '{}' not found", project_id))?;
 
-        let cp = resume_ctx
-            .latest_checkpoint
-            .with_context(|| format!("CHECKPOINT_NOT_FOUND: No checkpoint persisted for job '{}'", job_id))?;
+        let cp = resume_ctx.latest_checkpoint.with_context(|| {
+            format!(
+                "CHECKPOINT_NOT_FOUND: No checkpoint persisted for job '{}'",
+                job_id
+            )
+        })?;
         let cp_state: RuntimeCheckpointState = serde_json::from_str(&cp.state_json)
             .with_context(|| format!("Corrupt checkpoint JSON in checkpoint '{}'", cp.id))?;
 
@@ -793,7 +816,12 @@ impl RuntimeCoordinator {
         }
 
         let doc = WorkflowValidator::parse_and_validate(&resume_ctx.workflow_graph_json)?;
-        if !doc.graph.nodes.iter().any(|n| n.id == cp_state.next_node_id) {
+        if !doc
+            .graph
+            .nodes
+            .iter()
+            .any(|n| n.id == cp_state.next_node_id)
+        {
             return mark_blocked(format!(
                 "BLOCKED_UNKNOWN_RESUME_NODE: Checkpoint target node '{}' missing from workflow '{}'",
                 cp_state.next_node_id, resume_ctx.workflow_id
@@ -804,7 +832,8 @@ impl RuntimeCoordinator {
         let ttl_secs = lease_ttl_secs.max(4);
         let ttl = ChronoDuration::seconds(ttl_secs as i64);
         let canonical_identity = if custom_driver.is_none()
-            && classify_device_adapter(&resume_ctx.job.device_id, None) != DeviceAdapterKind::Synthetic
+            && classify_device_adapter(&resume_ctx.job.device_id, None)
+                != DeviceAdapterKind::Synthetic
             && fp_adb::infer_local_emulator_canonical_key(&resume_ctx.job.device_id).is_none()
             && !self.adb_runner.adb_path.trim().is_empty()
         {
@@ -814,14 +843,12 @@ impl RuntimeCoordinator {
         } else {
             None
         };
-        let device_lease = self
-            .scheduler
-            .acquire_device_lease_canonical(
-                &resume_ctx.job.device_id,
-                canonical_identity.as_deref(),
-                job_id,
-                ttl,
-            )?;
+        let device_lease = self.scheduler.acquire_device_lease_canonical(
+            &resume_ctx.job.device_id,
+            canonical_identity.as_deref(),
+            job_id,
+            ttl,
+        )?;
 
         if let Some(ref acc_id) = resume_ctx.job.account_id {
             if let Err(err) = self.scheduler.acquire_account_lease(acc_id, job_id, ttl) {
@@ -1208,11 +1235,8 @@ mod tests {
         std::fs::write(&b_tpl, FakeDeviceDriver::generate_template_png(120, 60)).unwrap();
 
         // Workflow owned by Project A attempts to escape into Project B's absolute path and relative .. path
-        let wf_escape = sample_vision_tap_workflow(
-            "wf-alpha-escape",
-            "com.alpha",
-            &b_tpl.to_string_lossy(),
-        );
+        let wf_escape =
+            sample_vision_tap_workflow("wf-alpha-escape", "com.alpha", &b_tpl.to_string_lossy());
         storage
             .save_project_workflow(&proj_a.id, "wf-alpha-escape", "Escape", "daily", &wf_escape)
             .unwrap();
@@ -1347,7 +1371,10 @@ mod tests {
         assert_eq!(drv.key_events.lock().await.as_slice(), &[66]);
 
         // 3. Test unsafe pending side-effect guard -> BLOCKED without repeating action
-        let latest_cp = storage.get_latest_checkpoint("job-suspend-1").unwrap().unwrap();
+        let latest_cp = storage
+            .get_latest_checkpoint("job-suspend-1")
+            .unwrap()
+            .unwrap();
         let mut unsafe_state: RuntimeCheckpointState =
             serde_json::from_str(&latest_cp.state_json).unwrap();
         unsafe_state.next_node_id = "n-key".to_string();

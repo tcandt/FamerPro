@@ -36,14 +36,19 @@ pub async fn run_concurrent_two_device_verification() -> Result<MultiDeviceProof
     let scheduler = Arc::new(MultiDeviceScheduler::new(4));
 
     // 1. Acquire device & account leases for Device A and Device B
-    let lease_dev_a = scheduler.acquire_device_lease("emulator-5554", "job-dev-A", Duration::seconds(120))?;
-    let _lease_acc_a = scheduler.acquire_account_lease("acc-jx2-main", "job-dev-A", Duration::seconds(120))?;
+    let lease_dev_a =
+        scheduler.acquire_device_lease("emulator-5554", "job-dev-A", Duration::seconds(120))?;
+    let _lease_acc_a =
+        scheduler.acquire_account_lease("acc-jx2-main", "job-dev-A", Duration::seconds(120))?;
 
-    let lease_dev_b = scheduler.acquire_device_lease("emulator-5556", "job-dev-B", Duration::seconds(120))?;
-    let _lease_acc_b = scheduler.acquire_account_lease("acc-slg-lord", "job-dev-B", Duration::seconds(120))?;
+    let lease_dev_b =
+        scheduler.acquire_device_lease("emulator-5556", "job-dev-B", Duration::seconds(120))?;
+    let _lease_acc_b =
+        scheduler.acquire_account_lease("acc-slg-lord", "job-dev-B", Duration::seconds(120))?;
 
     // 2. Verify that a conflicting job trying to hijack emulator-5554 is blocked by lease exclusion
-    let conflict_attempt = scheduler.acquire_device_lease("emulator-5554", "job-hijack", Duration::seconds(60));
+    let conflict_attempt =
+        scheduler.acquire_device_lease("emulator-5554", "job-hijack", Duration::seconds(60));
     let lease_conflict_blocked = conflict_attempt.is_err();
 
     // 3. Create DeviceActorHandles and verify generation fencing blocks stale commands

@@ -1087,6 +1087,7 @@ dependencies = [
  "fp-bundle-verify",
  "fp-device",
  "fp-domain",
+ "fp-element",
  "fp-proxy",
  "fp-scheduler",
  "fp-security",
@@ -1341,6 +1342,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "fp-element"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "fp-actions",
+ "fp-domain",
+ "quick-xml",
+ "rand",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "fp-mini-runtime"
 version = "0.1.0"
 dependencies = [
@@ -1490,6 +1510,7 @@ dependencies = [
  "fp-adb",
  "fp-device",
  "fp-domain",
+ "fp-element",
  "fp-scheduler",
  "fp-security",
  "fp-storage",

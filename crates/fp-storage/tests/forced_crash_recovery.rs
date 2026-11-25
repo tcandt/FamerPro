@@ -93,7 +93,9 @@ fn seed_sandbox_with_victim_and_target(
             project_id: victim.id.clone(),
             alias: "Victim_Account".to_string(),
             game_profile_id: Some("Server_Victim".to_string()),
-            secret_ref: Some("CRED_MGR://FarmerPro/account/victim-sentinel/acc-victim-01".to_string()),
+            secret_ref: Some(
+                "CRED_MGR://FarmerPro/account/victim-sentinel/acc-victim-01".to_string(),
+            ),
             state: "ready".to_string(),
         })
         .unwrap();
@@ -320,21 +322,47 @@ fn test_forced_kill_1_after_staging_before_rename() {
     let temp_dir = std::env::temp_dir().join(format!("fp_fk1_{}", uuid::Uuid::new_v4()));
     let db_path = temp_dir.join("sandbox.db");
     let projects_root = temp_dir.join("projects");
-    let (victim_id, _, v_mf, v_wf, v_tpl) = seed_sandbox_with_victim_and_target(&db_path, &projects_root);
+    let (victim_id, _, v_mf, v_wf, v_tpl) =
+        seed_sandbox_with_victim_and_target(&db_path, &projects_root);
 
-    run_forced_kill_child(&db_path, &projects_root, "create:after_staging_before_rename", "");
+    run_forced_kill_child(
+        &db_path,
+        &projects_root,
+        "create:after_staging_before_rename",
+        "",
+    );
 
     // Verify uncommitted staging & journal actually existed before startup reconcile
-    assert!(std::fs::read_dir(projects_root.join(STAGING_DIR_NAME)).unwrap().count() >= 1);
-    assert!(std::fs::read_dir(projects_root.join(JOURNAL_DIR_NAME)).unwrap().count() >= 1);
+    assert!(
+        std::fs::read_dir(projects_root.join(STAGING_DIR_NAME))
+            .unwrap()
+            .count()
+            >= 1
+    );
+    assert!(
+        std::fs::read_dir(projects_root.join(JOURNAL_DIR_NAME))
+            .unwrap()
+            .count()
+            >= 1
+    );
 
     // Restart & Reconcile
     let (reopened, rep) = StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
     assert!(rep.total_resolved >= 1);
-    assert!(reopened.get_project_by_slug("crashed-new-proj").unwrap().is_none());
+    assert!(reopened
+        .get_project_by_slug("crashed-new-proj")
+        .unwrap()
+        .is_none());
     assert!(!projects_root.join("crashed-new-proj").exists());
     assert_no_orphan_dirs_or_journals(&projects_root);
-    assert_victim_intact_and_db_healthy(&reopened, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+    assert_victim_intact_and_db_healthy(
+        &reopened,
+        &projects_root,
+        &victim_id,
+        &v_mf,
+        &v_wf,
+        &v_tpl,
+    );
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
@@ -344,9 +372,15 @@ fn test_forced_kill_2_after_rename_before_db_commit() {
     let temp_dir = std::env::temp_dir().join(format!("fp_fk2_{}", uuid::Uuid::new_v4()));
     let db_path = temp_dir.join("sandbox.db");
     let projects_root = temp_dir.join("projects");
-    let (victim_id, _, v_mf, v_wf, v_tpl) = seed_sandbox_with_victim_and_target(&db_path, &projects_root);
+    let (victim_id, _, v_mf, v_wf, v_tpl) =
+        seed_sandbox_with_victim_and_target(&db_path, &projects_root);
 
-    run_forced_kill_child(&db_path, &projects_root, "create:after_rename_before_db_commit", "");
+    run_forced_kill_child(
+        &db_path,
+        &projects_root,
+        "create:after_rename_before_db_commit",
+        "",
+    );
 
     // Right after OS kill: directory was ALREADY renamed into projects/, while SQLite never committed!
     assert!(projects_root.join("crashed-new-proj").exists());
@@ -354,10 +388,20 @@ fn test_forced_kill_2_after_rename_before_db_commit() {
     // Restart & Reconcile MUST detect uncommitted create journal and remove orphan directory!
     let (reopened, rep) = StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
     assert_eq!(rep.uncommitted_dirs_reverted, 1);
-    assert!(reopened.get_project_by_slug("crashed-new-proj").unwrap().is_none());
+    assert!(reopened
+        .get_project_by_slug("crashed-new-proj")
+        .unwrap()
+        .is_none());
     assert!(!projects_root.join("crashed-new-proj").exists());
     assert_no_orphan_dirs_or_journals(&projects_root);
-    assert_victim_intact_and_db_healthy(&reopened, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+    assert_victim_intact_and_db_healthy(
+        &reopened,
+        &projects_root,
+        &victim_id,
+        &v_mf,
+        &v_wf,
+        &v_tpl,
+    );
 
     // Retrying create_project with the SAME slug MUST now succeed instead of being blocked!
     let retried = reopened
@@ -388,19 +432,43 @@ fn test_forced_kill_3_after_db_commit_before_cleanup() {
     let temp_dir = std::env::temp_dir().join(format!("fp_fk3_{}", uuid::Uuid::new_v4()));
     let db_path = temp_dir.join("sandbox.db");
     let projects_root = temp_dir.join("projects");
-    let (victim_id, _, v_mf, v_wf, v_tpl) = seed_sandbox_with_victim_and_target(&db_path, &projects_root);
+    let (victim_id, _, v_mf, v_wf, v_tpl) =
+        seed_sandbox_with_victim_and_target(&db_path, &projects_root);
 
-    run_forced_kill_child(&db_path, &projects_root, "create:after_db_commit_before_cleanup", "");
+    run_forced_kill_child(
+        &db_path,
+        &projects_root,
+        "create:after_db_commit_before_cleanup",
+        "",
+    );
 
     // Journal still lingering before restart
-    assert!(std::fs::read_dir(projects_root.join(JOURNAL_DIR_NAME)).unwrap().count() >= 1);
+    assert!(
+        std::fs::read_dir(projects_root.join(JOURNAL_DIR_NAME))
+            .unwrap()
+            .count()
+            >= 1
+    );
 
     let (reopened, rep) = StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
     assert_eq!(rep.creates_finalized, 1);
-    assert!(reopened.get_project_by_slug("crashed-new-proj").unwrap().is_some());
-    assert!(projects_root.join("crashed-new-proj").join("project.json").exists());
+    assert!(reopened
+        .get_project_by_slug("crashed-new-proj")
+        .unwrap()
+        .is_some());
+    assert!(projects_root
+        .join("crashed-new-proj")
+        .join("project.json")
+        .exists());
     assert_no_orphan_dirs_or_journals(&projects_root);
-    assert_victim_intact_and_db_healthy(&reopened, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+    assert_victim_intact_and_db_healthy(
+        &reopened,
+        &projects_root,
+        &victim_id,
+        &v_mf,
+        &v_wf,
+        &v_tpl,
+    );
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
@@ -436,7 +504,14 @@ fn test_forced_kill_4_manifest_and_workflow_updates_pre_and_post_commit() {
     assert!(wf_rec[0].draft_json.contains("Target V1"));
     assert_eq!(wf_rec[0].latest_version_no, Some(1));
     assert_no_orphan_dirs_or_journals(&projects_root);
-    assert_victim_intact_and_db_healthy(&reopened_a, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+    assert_victim_intact_and_db_healthy(
+        &reopened_a,
+        &projects_root,
+        &victim_id,
+        &v_mf,
+        &v_wf,
+        &v_tpl,
+    );
     drop(reopened_a);
 
     // 4b. Kill AFTER update_project overwrote project.json & ui-schema.json, BEFORE DB commit
@@ -451,9 +526,19 @@ fn test_forced_kill_4_manifest_and_workflow_updates_pre_and_post_commit() {
     let (reopened_b, rep_b) = StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
     assert_eq!(rep_b.mutations_rolled_back, 1);
     assert_eq!(std::fs::read(&mf_disk_path).unwrap(), pre_mf_bytes);
-    assert_eq!(reopened_b.get_project(&target_id).unwrap().unwrap().version, "1.0.0");
+    assert_eq!(
+        reopened_b.get_project(&target_id).unwrap().unwrap().version,
+        "1.0.0"
+    );
     assert_no_orphan_dirs_or_journals(&projects_root);
-    assert_victim_intact_and_db_healthy(&reopened_b, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+    assert_victim_intact_and_db_healthy(
+        &reopened_b,
+        &projects_root,
+        &victim_id,
+        &v_mf,
+        &v_wf,
+        &v_tpl,
+    );
     drop(reopened_b);
 
     // 4c. Kill AFTER workflow DB commit, BEFORE journal/backup cleanup
@@ -468,9 +553,18 @@ fn test_forced_kill_4_manifest_and_workflow_updates_pre_and_post_commit() {
     let wf_rec_c = reopened_c.list_project_workflows(&target_id).unwrap();
     assert!(wf_rec_c[0].draft_json.contains("Target V2 Crash"));
     assert_eq!(wf_rec_c[0].latest_version_no, Some(2));
-    assert!(std::fs::read_to_string(&wf_disk_path).unwrap().contains("Target V2 Crash"));
+    assert!(std::fs::read_to_string(&wf_disk_path)
+        .unwrap()
+        .contains("Target V2 Crash"));
     assert_no_orphan_dirs_or_journals(&projects_root);
-    assert_victim_intact_and_db_healthy(&reopened_c, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+    assert_victim_intact_and_db_healthy(
+        &reopened_c,
+        &projects_root,
+        &victim_id,
+        &v_mf,
+        &v_wf,
+        &v_tpl,
+    );
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
@@ -485,7 +579,8 @@ fn test_forced_kill_5_after_delete_to_trash_before_commit() {
 
     let target_dir = projects_root.join("target-crash-proj");
     let pre_mf_bytes = std::fs::read(target_dir.join("project.json")).unwrap();
-    let pre_wf_bytes = std::fs::read(target_dir.join("workflows").join("wf-target-01.json")).unwrap();
+    let pre_wf_bytes =
+        std::fs::read(target_dir.join("workflows").join("wf-target-01.json")).unwrap();
 
     run_forced_kill_child(
         &db_path,
@@ -496,19 +591,34 @@ fn test_forced_kill_5_after_delete_to_trash_before_commit() {
 
     // Before reconcile: target dir was moved to .fp_trash, so live dir is missing!
     assert!(!target_dir.exists());
-    assert!(std::fs::read_dir(projects_root.join(TRASH_DIR_NAME)).unwrap().count() >= 1);
+    assert!(
+        std::fs::read_dir(projects_root.join(TRASH_DIR_NAME))
+            .unwrap()
+            .count()
+            >= 1
+    );
 
     // Restart & Reconcile MUST restore target directory completely from .fp_trash!
     let (reopened, rep) = StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
     assert_eq!(rep.deletes_restored, 1);
     assert!(reopened.get_project(&target_id).unwrap().is_some());
-    assert_eq!(std::fs::read(target_dir.join("project.json")).unwrap(), pre_mf_bytes);
+    assert_eq!(
+        std::fs::read(target_dir.join("project.json")).unwrap(),
+        pre_mf_bytes
+    );
     assert_eq!(
         std::fs::read(target_dir.join("workflows").join("wf-target-01.json")).unwrap(),
         pre_wf_bytes
     );
     assert_no_orphan_dirs_or_journals(&projects_root);
-    assert_victim_intact_and_db_healthy(&reopened, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+    assert_victim_intact_and_db_healthy(
+        &reopened,
+        &projects_root,
+        &victim_id,
+        &v_mf,
+        &v_wf,
+        &v_tpl,
+    );
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
@@ -529,15 +639,32 @@ fn test_forced_kill_6_after_delete_commit_before_cleanup() {
     );
 
     // Trash & delete journal left behind on crash right after commit
-    assert!(std::fs::read_dir(projects_root.join(TRASH_DIR_NAME)).unwrap().count() >= 1);
-    assert!(std::fs::read_dir(projects_root.join(JOURNAL_DIR_NAME)).unwrap().count() >= 1);
+    assert!(
+        std::fs::read_dir(projects_root.join(TRASH_DIR_NAME))
+            .unwrap()
+            .count()
+            >= 1
+    );
+    assert!(
+        std::fs::read_dir(projects_root.join(JOURNAL_DIR_NAME))
+            .unwrap()
+            .count()
+            >= 1
+    );
 
     let (reopened, rep) = StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
     assert_eq!(rep.deletes_finalized, 1);
     assert!(reopened.get_project(&target_id).unwrap().is_none());
     assert!(!projects_root.join("target-crash-proj").exists());
     assert_no_orphan_dirs_or_journals(&projects_root);
-    assert_victim_intact_and_db_healthy(&reopened, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+    assert_victim_intact_and_db_healthy(
+        &reopened,
+        &projects_root,
+        &victim_id,
+        &v_mf,
+        &v_wf,
+        &v_tpl,
+    );
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
@@ -560,7 +687,13 @@ fn test_forced_kill_7_deep_clone_multi_asset_pre_and_post_commit() {
                 wf_id, i, i, i, i, i, i
             );
             storage
-                .save_project_workflow(&target_id, &wf_id, &format!("Deep Flow {}", i), "Deep", &wf_json)
+                .save_project_workflow(
+                    &target_id,
+                    &wf_id,
+                    &format!("Deep Flow {}", i),
+                    "Deep",
+                    &wf_json,
+                )
                 .unwrap();
         }
         for i in 1..=8 {
@@ -615,44 +748,95 @@ fn test_forced_kill_7_deep_clone_multi_asset_pre_and_post_commit() {
                 .unwrap();
         }
         std::fs::write(
-            projects_root.join("target-crash-proj").join("branding").join("icon.ico"),
+            projects_root
+                .join("target-crash-proj")
+                .join("branding")
+                .join("icon.ico"),
             b"FAKE-ICO-BRANDING-DEEP-CLONE",
         )
         .unwrap();
     }
 
     // 7a. Kill mid-staging before rename (multi-asset clone aborted cleanly)
-    run_forced_kill_child(&db_path, &projects_root, "clone:after_staging_before_rename", &target_id);
-    let (reopened_a, _rep_a) = StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
-    assert!(reopened_a.get_project_by_slug("deep-clone-crash").unwrap().is_none());
+    run_forced_kill_child(
+        &db_path,
+        &projects_root,
+        "clone:after_staging_before_rename",
+        &target_id,
+    );
+    let (reopened_a, _rep_a) =
+        StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
+    assert!(reopened_a
+        .get_project_by_slug("deep-clone-crash")
+        .unwrap()
+        .is_none());
     assert!(!projects_root.join("deep-clone-crash").exists());
     assert_no_orphan_dirs_or_journals(&projects_root);
-    assert_victim_intact_and_db_healthy(&reopened_a, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+    assert_victim_intact_and_db_healthy(
+        &reopened_a,
+        &projects_root,
+        &victim_id,
+        &v_mf,
+        &v_wf,
+        &v_tpl,
+    );
     drop(reopened_a);
 
     // 7b. Kill AFTER rename of deep-cloned dir -> projects/deep-clone-crash BEFORE SQLite commit!
-    run_forced_kill_child(&db_path, &projects_root, "clone:after_rename_before_db_commit", &target_id);
+    run_forced_kill_child(
+        &db_path,
+        &projects_root,
+        "clone:after_rename_before_db_commit",
+        &target_id,
+    );
     assert!(projects_root.join("deep-clone-crash").exists());
     let (reopened_b, rep_b) = StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
     assert_eq!(rep_b.uncommitted_dirs_reverted, 1);
-    assert!(reopened_b.get_project_by_slug("deep-clone-crash").unwrap().is_none());
+    assert!(reopened_b
+        .get_project_by_slug("deep-clone-crash")
+        .unwrap()
+        .is_none());
     assert!(!projects_root.join("deep-clone-crash").exists());
     assert_no_orphan_dirs_or_journals(&projects_root);
-    assert_victim_intact_and_db_healthy(&reopened_b, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
-    assert_eq!(reopened_b.list_project_workflows(&target_id).unwrap().len(), 10);
-    assert_eq!(reopened_b.list_vision_templates(&target_id).unwrap().len(), 8);
+    assert_victim_intact_and_db_healthy(
+        &reopened_b,
+        &projects_root,
+        &victim_id,
+        &v_mf,
+        &v_wf,
+        &v_tpl,
+    );
+    assert_eq!(
+        reopened_b.list_project_workflows(&target_id).unwrap().len(),
+        10
+    );
+    assert_eq!(
+        reopened_b.list_vision_templates(&target_id).unwrap().len(),
+        8
+    );
     drop(reopened_b);
 
     // 7c. Kill AFTER SQLite commit BEFORE cleanup -> deep clone with ALL 10 workflows, 8 nested templates, 3 tasks preserved!
-    run_forced_kill_child(&db_path, &projects_root, "clone:after_db_commit_before_cleanup", &target_id);
+    run_forced_kill_child(
+        &db_path,
+        &projects_root,
+        "clone:after_db_commit_before_cleanup",
+        &target_id,
+    );
     let (reopened_c, rep_c) = StorageManager::open_and_reconcile(&db_path, &projects_root).unwrap();
     assert_eq!(rep_c.creates_finalized, 1);
     let cloned = reopened_c
         .get_project_by_slug("deep-clone-crash")
         .unwrap()
         .expect("Committed deep clone must survive post-commit crash");
-    assert_eq!(reopened_c.list_project_workflows(&cloned.id).unwrap().len(), 10);
-    assert_eq!(reopened_c.list_vision_templates(&cloned.id).unwrap().len(), 8);
+    assert_eq!(
+        reopened_c.list_project_workflows(&cloned.id).unwrap().len(),
+        10
+    );
+    assert_eq!(
+        reopened_c.list_vision_templates(&cloned.id).unwrap().len(),
+        8
+    );
     assert_eq!(reopened_c.list_project_tasks(&cloned.id).unwrap().len(), 3);
     assert!(PathBuf::from(&cloned.project_dir_path)
         .join("templates")
@@ -664,7 +848,14 @@ fn test_forced_kill_7_deep_clone_multi_asset_pre_and_post_commit() {
         .join("icon.ico")
         .exists());
     assert_no_orphan_dirs_or_journals(&projects_root);
-    assert_victim_intact_and_db_healthy(&reopened_c, &projects_root, &victim_id, &v_mf, &v_wf, &v_tpl);
+    assert_victim_intact_and_db_healthy(
+        &reopened_c,
+        &projects_root,
+        &victim_id,
+        &v_mf,
+        &v_wf,
+        &v_tpl,
+    );
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }

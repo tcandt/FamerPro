@@ -248,29 +248,33 @@ impl MiniToolPackager {
         let keystore_dir = custom_keystore_dir
             .map(|p| p.to_path_buf())
             .unwrap_or_else(ProducerKeyManager::default_external_keystore_dir);
-        let (signing_key, key_meta) = ProducerKeyManager::load_or_create_signing_key(&keystore_dir)?;
+        let (signing_key, key_meta) =
+            ProducerKeyManager::load_or_create_signing_key(&keystore_dir)?;
 
         // Build derived PE VERSIONINFO cleanly if caller didn't override every field
-        let mut version_spec = options.version_info.clone().unwrap_or_else(|| PeVersionInfoSpec {
-            company_name: options
-                .publisher_profile
-                .as_ref()
-                .map(|p| p.organization.clone())
-                .filter(|s| !s.trim().is_empty())
-                .unwrap_or_else(|| "FarmerPro Internal Studio".to_string()),
-            file_description: format!("{} Automated Mini Tool", project.name),
-            file_version: project.version.clone(),
-            internal_name: project.slug.clone(),
-            legal_copyright: options
-                .publisher_profile
-                .as_ref()
-                .map(|p| p.copyright.clone())
-                .filter(|s| !s.trim().is_empty())
-                .unwrap_or_else(|| format!("Copyright (c) 2026 {}", project.name)),
-            original_filename: project.exe_name.clone(),
-            product_name: project.name.clone(),
-            product_version: project.version.clone(),
-        });
+        let mut version_spec = options
+            .version_info
+            .clone()
+            .unwrap_or_else(|| PeVersionInfoSpec {
+                company_name: options
+                    .publisher_profile
+                    .as_ref()
+                    .map(|p| p.organization.clone())
+                    .filter(|s| !s.trim().is_empty())
+                    .unwrap_or_else(|| "FarmerPro Internal Studio".to_string()),
+                file_description: format!("{} Automated Mini Tool", project.name),
+                file_version: project.version.clone(),
+                internal_name: project.slug.clone(),
+                legal_copyright: options
+                    .publisher_profile
+                    .as_ref()
+                    .map(|p| p.copyright.clone())
+                    .filter(|s| !s.trim().is_empty())
+                    .unwrap_or_else(|| format!("Copyright (c) 2026 {}", project.name)),
+                original_filename: project.exe_name.clone(),
+                product_name: project.name.clone(),
+                product_version: project.version.clone(),
+            });
         if version_spec.original_filename.trim().is_empty() {
             version_spec.original_filename = project.exe_name.clone();
         }
@@ -614,7 +618,8 @@ impl MiniToolPackager {
 
         steps.push(BuildStepMetric {
             step_no: 8,
-            name: "Authenticode Sign/Verify (WinVerifyTrust) & Final Release Manifest Check".to_string(),
+            name: "Authenticode Sign/Verify (WinVerifyTrust) & Final Release Manifest Check"
+                .to_string(),
             duration_ms: t8.elapsed().as_millis() as u64,
             status: "PASS".to_string(),
             detail: format!(
@@ -757,7 +762,10 @@ impl MiniToolPackager {
         let icon_present = match validate_safe_relative_path(project_dir, &project.icon_rel_path) {
             Ok(p) => p.exists(),
             Err(err) => {
-                issues.push(format!("Invalid icon path '{}': {}", project.icon_rel_path, err));
+                issues.push(format!(
+                    "Invalid icon path '{}': {}",
+                    project.icon_rel_path, err
+                ));
                 false
             }
         };
@@ -768,7 +776,12 @@ impl MiniToolPackager {
             step_no: 4,
             name: "Preflight Templates & Branding Icon".to_string(),
             duration_ms: t4.elapsed().as_millis() as u64,
-            status: if tpl_ok && icon_present { "PASS" } else { "FAIL" }.to_string(),
+            status: if tpl_ok && icon_present {
+                "PASS"
+            } else {
+                "FAIL"
+            }
+            .to_string(),
             detail: format!(
                 "{} templates, icon_present={}",
                 project.template_files.len(),
@@ -794,7 +807,9 @@ impl MiniToolPackager {
                 .unwrap_or(false)
         };
         if !adb_ready {
-            issues.push("bundle_adb=true but bin/adb.exe is missing from workspace_bin_dir".to_string());
+            issues.push(
+                "bundle_adb=true but bin/adb.exe is missing from workspace_bin_dir".to_string(),
+            );
         }
 
         let ks_dir = custom_keystore_dir
@@ -1390,7 +1405,10 @@ pub fn verify_final_distributed_release(
 
     let exe_path = release_dir.join(&pkg.exe_name);
     if !exe_path.is_file() {
-        bail!("FINAL_VERIFY_ERROR: missing target exe '{}'", exe_path.display());
+        bail!(
+            "FINAL_VERIFY_ERROR: missing target exe '{}'",
+            exe_path.display()
+        );
     }
     let final_exe_sha = sha256_hex(&std::fs::read(&exe_path)?);
     if !final_exe_sha.eq_ignore_ascii_case(&pkg.final_exe_sha256) {
@@ -1424,20 +1442,28 @@ pub fn verify_final_distributed_release(
     }
     if timestamp_policy == TimestampVerificationPolicy::RequireTimestampWhenPublicSigned
         && require_public_chain
-        && auth_rep.timestamp_status.to_ascii_lowercase().contains("missing")
+        && auth_rep
+            .timestamp_status
+            .to_ascii_lowercase()
+            .contains("missing")
     {
-        issues.push("AUTHENTICODE_TIMESTAMP_REQUIRED: missing counter-signature timestamp".to_string());
+        issues.push(
+            "AUTHENTICODE_TIMESTAMP_REQUIRED: missing counter-signature timestamp".to_string(),
+        );
     }
 
     let bundle_dir = release_dir.join("bundle");
     let pe_pub = read_pe_embedded_pubkey_from_exe(&exe_path)?;
     let sig_bytes = std::fs::read(bundle_dir.join("signature.fpbundle.json"))?;
     let env: SignedBundleEnvelope = serde_json::from_slice(&sig_bytes)?;
-    let ed_ok = env.verify_ed25519_with_public_key(&bundle_dir, &pe_pub).is_ok();
+    let ed_ok = env
+        .verify_ed25519_with_public_key(&bundle_dir, &pe_pub)
+        .is_ok();
     if !ed_ok {
         issues.push("ED25519_BUNDLE_VERIFY_FAILED".to_string());
     }
-    let disk_pub = std::fs::read_to_string(bundle_dir.join("trusted_publisher.pub")).unwrap_or_default();
+    let disk_pub =
+        std::fs::read_to_string(bundle_dir.join("trusted_publisher.pub")).unwrap_or_default();
     let pe_match = disk_pub.trim().eq_ignore_ascii_case(&pe_pub);
     if !pe_match {
         issues.push("PE_RCDATA_PUBKEY_MISMATCH".to_string());
@@ -1448,8 +1474,10 @@ pub fn verify_final_distributed_release(
         issues.push("PE_VERSIONINFO_READ_FAILED".to_string());
     }
 
-    let (pub_cert_match, pub_cert_detail) =
-        verify_publisher_matches_cert_subject(pkg.publisher.as_ref(), auth_rep.signer_subject.as_deref());
+    let (pub_cert_match, pub_cert_detail) = verify_publisher_matches_cert_subject(
+        pkg.publisher.as_ref(),
+        auth_rep.signer_subject.as_deref(),
+    );
 
     let mut file_mismatches = Vec::new();
     for entry in &pkg.distributed_files {
@@ -1458,7 +1486,10 @@ pub fn verify_final_distributed_release(
             Ok(bytes) => {
                 let actual = sha256_hex(&bytes);
                 if actual != entry.sha256 {
-                    file_mismatches.push(format!("{}: expected {}, got {}", entry.rel_path, entry.sha256, actual));
+                    file_mismatches.push(format!(
+                        "{}: expected {}, got {}",
+                        entry.rel_path, entry.sha256, actual
+                    ));
                 }
             }
             Err(e) => {
@@ -1467,7 +1498,10 @@ pub fn verify_final_distributed_release(
         }
     }
     if !file_mismatches.is_empty() {
-        issues.push(format!("{} distributed file hash mismatch(es)", file_mismatches.len()));
+        issues.push(format!(
+            "{} distributed file hash mismatch(es)",
+            file_mismatches.len()
+        ));
     }
 
     Ok(FinalReleaseVerificationReport {
@@ -1495,7 +1529,8 @@ mod tests {
 
     #[test]
     fn test_ed25519_signing_key_rotation_and_tamper_scenarios() {
-        let temp_dir = std::env::temp_dir().join(format!("fp_ed25519_test_{}", uuid::Uuid::new_v4()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("fp_ed25519_test_{}", uuid::Uuid::new_v4()));
         let keystore_dir = temp_dir.join("keystore");
         let bundle_dir = temp_dir.join("bundle");
         std::fs::create_dir_all(&bundle_dir).unwrap();
@@ -1508,7 +1543,10 @@ mod tests {
         std::fs::write(bundle_dir.join("ui-schema.json"), ui_bytes).unwrap();
 
         let mut checksums = BTreeMap::new();
-        checksums.insert("manifest.fpbundle.json".to_string(), sha256_hex(manifest_bytes));
+        checksums.insert(
+            "manifest.fpbundle.json".to_string(),
+            sha256_hex(manifest_bytes),
+        );
         checksums.insert("ui-schema.json".to_string(), sha256_hex(ui_bytes));
 
         let env = ProducerKeyManager::sign_bundle_ed25519(
@@ -1585,7 +1623,10 @@ mod tests {
         let registry = ModuleRegistry::resolve_for_release(&packaged, &packaged);
 
         assert!(registry
-            .assert_capability_granted("mod.account_vault", &ModuleCapability::CredentialVaultAccess)
+            .assert_capability_granted(
+                "mod.account_vault",
+                &ModuleCapability::CredentialVaultAccess
+            )
             .is_ok());
         assert!(registry
             .assert_capability_granted("mod.account_vault", &ModuleCapability::OutboundProxyConnect)
@@ -1708,7 +1749,8 @@ mod tests {
             .is_ok());
 
         // Verify that the rogue envelope IS 100% cryptographically valid against the disk trusted_publisher.pub
-        let disk_pubkey = std::fs::read_to_string(bundle_dir.join("trusted_publisher.pub")).unwrap();
+        let disk_pubkey =
+            std::fs::read_to_string(bundle_dir.join("trusted_publisher.pub")).unwrap();
         assert!(rogue_env
             .verify_ed25519_with_public_key(&bundle_dir, &disk_pubkey)
             .is_ok());
@@ -1751,10 +1793,12 @@ mod tests {
         std::fs::write(old_bundle_dir.join("manifest.fpbundle.json"), m1).unwrap();
         let mut cs1 = BTreeMap::new();
         cs1.insert("manifest.fpbundle.json".to_string(), sha256_hex(m1));
-        let env1 = ProducerKeyManager::sign_bundle_ed25519(&sk1, &meta1.key_id, sha256_hex(m1), cs1);
+        let env1 =
+            ProducerKeyManager::sign_bundle_ed25519(&sk1, &meta1.key_id, sha256_hex(m1), cs1);
 
         // 2. Producer rotates key -> Key2 becomes active, Key1 is archived
-        let (sk2, meta2) = ProducerKeyManager::rotate_producer_key(&keystore_dir, "scheduled_rotation").unwrap();
+        let (sk2, meta2) =
+            ProducerKeyManager::rotate_producer_key(&keystore_dir, "scheduled_rotation").unwrap();
         assert_ne!(meta1.key_id, meta2.key_id);
         inject_ed25519_pubkey_into_pe_exe(&new_minitool_exe, &meta2.public_key_hex).unwrap();
 
@@ -1762,18 +1806,25 @@ mod tests {
         std::fs::write(new_bundle_dir.join("manifest.fpbundle.json"), m2).unwrap();
         let mut cs2 = BTreeMap::new();
         cs2.insert("manifest.fpbundle.json".to_string(), sha256_hex(m2));
-        let env2 = ProducerKeyManager::sign_bundle_ed25519(&sk2, &meta2.key_id, sha256_hex(m2), cs2);
+        let env2 =
+            ProducerKeyManager::sign_bundle_ed25519(&sk2, &meta2.key_id, sha256_hex(m2), cs2);
 
         // 3. Old Mini Tool v1 STILL verifies its old bundle using its embedded Key1 RT_RCDATA #7777!
         let old_pe_pub = read_pe_embedded_pubkey_from_exe(&old_minitool_exe).unwrap();
         assert_eq!(old_pe_pub, meta1.public_key_hex);
-        assert!(env1.verify_ed25519_with_public_key(&old_bundle_dir, &old_pe_pub).is_ok());
+        assert!(env1
+            .verify_ed25519_with_public_key(&old_bundle_dir, &old_pe_pub)
+            .is_ok());
 
         // 4. New Mini Tool v2 verifies new bundle using Key2, and rejects Key1 bundle (cross-version mismatch)
         let new_pe_pub = read_pe_embedded_pubkey_from_exe(&new_minitool_exe).unwrap();
         assert_eq!(new_pe_pub, meta2.public_key_hex);
-        assert!(env2.verify_ed25519_with_public_key(&new_bundle_dir, &new_pe_pub).is_ok());
-        assert!(env1.verify_ed25519_with_public_key(&old_bundle_dir, &new_pe_pub).is_err());
+        assert!(env2
+            .verify_ed25519_with_public_key(&new_bundle_dir, &new_pe_pub)
+            .is_ok());
+        assert!(env1
+            .verify_ed25519_with_public_key(&old_bundle_dir, &new_pe_pub)
+            .is_err());
 
         // 5. Export V3 Argon2id+AES-256-GCM recovery bundle before rotation OR import restored Key1 after rotation:
         // Simulate restoring archived Key1 via V3 portable recovery from a second producer workstation
@@ -1801,13 +1852,18 @@ mod tests {
         )
         .unwrap();
         assert_eq!(restored_meta2.key_id, meta2.key_id);
-        let (sk2_restored, _) = ProducerKeyManager::load_or_create_signing_key(&ks_workstation2).unwrap();
-        let env2_resigned =
-            ProducerKeyManager::sign_bundle_ed25519(&sk2_restored, &restored_meta2.key_id, sha256_hex(m2), {
+        let (sk2_restored, _) =
+            ProducerKeyManager::load_or_create_signing_key(&ks_workstation2).unwrap();
+        let env2_resigned = ProducerKeyManager::sign_bundle_ed25519(
+            &sk2_restored,
+            &restored_meta2.key_id,
+            sha256_hex(m2),
+            {
                 let mut m = BTreeMap::new();
                 m.insert("manifest.fpbundle.json".to_string(), sha256_hex(m2));
                 m
-            });
+            },
+        );
         // v2 Mini Tool continues verifying bundle signed by restored Key2, while v1 Mini Tool still verifies old Key1 bundle!
         assert!(env2_resigned
             .verify_ed25519_with_public_key(&new_bundle_dir, &new_pe_pub)
@@ -1846,10 +1902,7 @@ mod tests {
             target_resolution: (1280, 720),
             workflow_files: vec!["workflows/daily.fpwf.json".to_string()],
             template_files: vec!["templates/collect.png".to_string()],
-            packaged_modules: vec![
-                "mod.adb_core".to_string(),
-                "mod.vision_ocr".to_string(),
-            ],
+            packaged_modules: vec!["mod.adb_core".to_string(), "mod.vision_ocr".to_string()],
             bundle_adb: true,
         };
         std::fs::write(
@@ -1944,7 +1997,11 @@ mod tests {
             packaged_modules: vec!["mod.adb_core".to_string()],
             bundle_adb: false,
         };
-        std::fs::write(proj_dir.join("project.json"), serde_json::to_vec_pretty(&manifest).unwrap()).unwrap();
+        std::fs::write(
+            proj_dir.join("project.json"),
+            serde_json::to_vec_pretty(&manifest).unwrap(),
+        )
+        .unwrap();
         let ui = MiniToolUiSchema {
             schema_version: 1,
             project_slug: manifest.slug.clone(),
@@ -1962,7 +2019,11 @@ mod tests {
             utilities: vec![],
             initial_runtime_vars: HashMap::new(),
         };
-        std::fs::write(proj_dir.join("ui-schema.json"), serde_json::to_vec_pretty(&ui).unwrap()).unwrap();
+        std::fs::write(
+            proj_dir.join("ui-schema.json"),
+            serde_json::to_vec_pretty(&ui).unwrap(),
+        )
+        .unwrap();
         let wf = r#"{"schemaVersion":1,"workflowId":"wf-main","name":"Main","status":"published","graph":{"nodes":[{"id":"n1","type":"flow.start","position":{"x":0,"y":0}},{"id":"n2","type":"flow.end","position":{"x":100,"y":0}}],"edges":[{"id":"e1","source":"n1","sourcePort":"flow","target":"n2","targetPort":"flow"}]}}"#;
         std::fs::write(proj_dir.join("workflows/main.fpwf.json"), wf).unwrap();
 
@@ -2007,7 +2068,9 @@ mod tests {
         .unwrap();
         assert_eq!(rep_unsigned.signing_mode, SigningMode::UnsignedInternal);
         assert!(!rep_unsigned.trusted_public_release);
-        let readback = fp_bundle_verify::read_pe_version_info_from_exe(Path::new(&rep_unsigned.tool_exe_path)).unwrap();
+        let readback =
+            fp_bundle_verify::read_pe_version_info_from_exe(Path::new(&rep_unsigned.tool_exe_path))
+                .unwrap();
         assert_eq!(readback.company_name, ver_spec.company_name);
         assert_eq!(readback.product_name, ver_spec.product_name);
         assert_eq!(readback.file_description, ver_spec.file_description);
@@ -2016,7 +2079,8 @@ mod tests {
 
         // 2. SelfSignedQa build with Windows CNG cert + PublicSigned fail-closed gate
         if authenticode::find_signtool_exe().is_some() {
-            let qa_cert = authenticode::create_self_signed_qa_cert("FarmerPro P53 Builder Test").unwrap();
+            let qa_cert =
+                authenticode::create_self_signed_qa_cert("FarmerPro P53 Builder Test").unwrap();
             let out_qa = tmp.join("rel_qa");
             let rep_qa = MiniToolPackager::build_and_export_release_with_options(
                 &proj_dir,
@@ -2035,7 +2099,9 @@ mod tests {
             assert_eq!(rep_qa.signing_mode, SigningMode::SelfSignedQa);
             assert!(!rep_qa.trusted_public_release);
             assert!(rep_qa.pe_embedded_pubkey_verified);
-            let qa_ver_readback = fp_bundle_verify::read_pe_version_info_from_exe(Path::new(&rep_qa.tool_exe_path)).unwrap();
+            let qa_ver_readback =
+                fp_bundle_verify::read_pe_version_info_from_exe(Path::new(&rep_qa.tool_exe_path))
+                    .unwrap();
             assert_eq!(qa_ver_readback.company_name, ver_spec.company_name);
 
             // PublicSigned MUST FAIL CLOSED on self-signed cert (cannot claim TrustedPublicRelease)
@@ -2053,10 +2119,20 @@ mod tests {
                     ..Default::default()
                 },
             );
-            assert!(pub_err.is_err(), "PublicSigned must reject untrusted self-signed cert");
+            assert!(
+                pub_err.is_err(),
+                "PublicSigned must reject untrusted self-signed cert"
+            );
 
             let _ = std::process::Command::new("powershell")
-                .args(["-NoProfile", "-Command", &format!("Remove-Item 'Cert:\\CurrentUser\\My\\{}' -ErrorAction SilentlyContinue", qa_cert.thumbprint)])
+                .args([
+                    "-NoProfile",
+                    "-Command",
+                    &format!(
+                        "Remove-Item 'Cert:\\CurrentUser\\My\\{}' -ErrorAction SilentlyContinue",
+                        qa_cert.thumbprint
+                    ),
+                ])
                 .output();
         }
 
@@ -2117,7 +2193,11 @@ mod tests {
             packaged_modules: vec!["mod.adb_core".to_string()],
             bundle_adb: true,
         };
-        std::fs::write(proj_dir.join("project.json"), serde_json::to_vec_pretty(&manifest).unwrap()).unwrap();
+        std::fs::write(
+            proj_dir.join("project.json"),
+            serde_json::to_vec_pretty(&manifest).unwrap(),
+        )
+        .unwrap();
         let ui = MiniToolUiSchema {
             schema_version: 1,
             project_slug: manifest.slug.clone(),
@@ -2135,7 +2215,11 @@ mod tests {
             utilities: vec![],
             initial_runtime_vars: HashMap::new(),
         };
-        std::fs::write(proj_dir.join("ui-schema.json"), serde_json::to_vec_pretty(&ui).unwrap()).unwrap();
+        std::fs::write(
+            proj_dir.join("ui-schema.json"),
+            serde_json::to_vec_pretty(&ui).unwrap(),
+        )
+        .unwrap();
         let wf = r#"{"schemaVersion":1,"workflowId":"wf-main","name":"Main","status":"published","graph":{"nodes":[{"id":"n1","type":"flow.start","position":{"x":0,"y":0}},{"id":"n2","type":"flow.end","position":{"x":100,"y":0}}],"edges":[{"id":"e1","source":"n1","sourcePort":"flow","target":"n2","targetPort":"flow"}]}}"#;
         std::fs::write(proj_dir.join("workflows/main.fpwf.json"), wf).unwrap();
 
@@ -2190,9 +2274,15 @@ mod tests {
             release_channel: "qa".to_string(),
             signing_policy: SigningMode::SelfSignedQa,
         };
-        let (mismatch, _) = verify_publisher_matches_cert_subject(Some(&fake_pub), Some("CN=Different Rogue Publisher"));
+        let (mismatch, _) = verify_publisher_matches_cert_subject(
+            Some(&fake_pub),
+            Some("CN=Different Rogue Publisher"),
+        );
         assert!(!mismatch);
-        let (matched, _) = verify_publisher_matches_cert_subject(Some(&fake_pub), Some("CN=Alpha Automation Co., Ltd."));
+        let (matched, _) = verify_publisher_matches_cert_subject(
+            Some(&fake_pub),
+            Some("CN=Alpha Automation Co., Ltd."),
+        );
         assert!(matched);
 
         // Tamper 1 distributed file after packaging -> verify_final_distributed_release MUST FAIL!

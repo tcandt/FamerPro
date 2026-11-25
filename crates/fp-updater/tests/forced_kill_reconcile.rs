@@ -138,7 +138,11 @@ fn build_signed_dummy_release(dir: &Path, slug: &str, exe_name: &str, version: &
     let tbl_hash = sha256_hex(tbl_json.as_bytes());
     let msg = canonical_signing_message("key-kill-test", &manifest_sha, &tbl_hash);
     let sig = signing_key.sign(&msg);
-    let sig_hex: String = sig.to_bytes().iter().map(|b| format!("{:02x}", b)).collect();
+    let sig_hex: String = sig
+        .to_bytes()
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect();
 
     let env = SignedBundleEnvelope {
         algorithm: "Ed25519-RFC8032-SHA256".to_string(),
