@@ -684,110 +684,24 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
 
   return (
     <div className="flex flex-col h-full w-full bg-[#0B0F17] text-[#EDF3FC] select-none overflow-hidden">
-      {/* 1. TOP HEADER BAR */}
-      <header className="h-14 border-b border-[#1E293B] bg-[#0E1522] px-4 flex items-center justify-between shrink-0 z-20">
-        <div className="flex items-center gap-3">
+      {/* 1. UNIFIED STUDIO ACTION BAR */}
+      <nav className="h-12 bg-[#0E1522] border-b border-[#1E293B] px-4 flex items-center justify-between shrink-0 z-20">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => onNavigate('devices')}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#1E293B] hover:bg-[#2B3B52] text-[#94A3B8] hover:text-white text-xs font-medium transition"
             title="Quay lại danh sách Device Manager"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Device Manager
+            <span className="hidden sm:inline">Devices</span>
           </button>
 
-          <div className="h-4 w-[1px] bg-[#223147]" />
+          <div className="h-4 w-[1px] bg-[#223147] mx-1" />
 
-          {/* Active Device Dropdown / Badge */}
-          <div className="flex items-center gap-2">
-            <Smartphone className="w-4 h-4 text-[#38BDF8]" />
-            <span className="font-semibold text-sm text-white">
-              {currentDevice?.model || 'Samsung SM-G930F'}
-            </span>
-            <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-[#16253B] text-[#7DD3FC] border border-[#223859]">
-              {serial}
-            </span>
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#063726] text-[#34D399] border border-[#065F46]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#34D399] animate-pulse" />
-              LIVE ADB
-            </span>
-          </div>
-        </div>
-
-        {/* Center: Live Performance Metrics */}
-        <div className="hidden lg:flex items-center gap-4 text-xs font-mono text-[#94A3B8] bg-[#070B12] px-3 py-1 rounded-full border border-[#1E293B]">
-          <div className="flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-[#38BDF8]" />
-            <span>
-              FPS: <strong className="text-white">{streamFps}</strong>
-            </span>
-          </div>
-          <div className="w-[1px] h-3 bg-[#1E293B]" />
-          <div>
-            Độ trễ: <strong className="text-white">{streamLatency}ms</strong>
-          </div>
-          <div className="w-[1px] h-3 bg-[#1E293B]" />
-          <div>
-            Độ phân giải:{' '}
-            <strong className="text-white">
-              {screenWidth}x{screenHeight}
-            </strong>
-          </div>
-          <div className="w-[1px] h-3 bg-[#1E293B]" />
-          <div>
-            Xoay:{' '}
-            <strong className="text-white">
-              {isLandscape ? 'Ngang (90°)' : 'Dọc (0°)'}
-            </strong>
-          </div>
-        </div>
-
-        {/* Right: Interaction Mode Toggle */}
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg p-0.5 bg-[#070B12] border border-[#1E293B]">
-            <button
-              onClick={() => setControlMode('touch')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition ${
-                controlMode === 'touch'
-                  ? 'bg-[#2563EB] text-white shadow'
-                  : 'text-[#94A3B8] hover:text-white'
-              }`}
-            >
-              <MousePointer className="w-3.5 h-3.5" />
-              Touch Control
-            </button>
-            <button
-              onClick={() => setControlMode('inspect')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition ${
-                controlMode === 'inspect'
-                  ? 'bg-[#059669] text-white shadow'
-                  : 'text-[#94A3B8] hover:text-white'
-              }`}
-            >
-              <Target className="w-3.5 h-3.5" />
-              Inspect Element
-            </button>
-            <button
-              onClick={() => setControlMode('region')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition ${
-                controlMode === 'region'
-                  ? 'bg-[#D97706] text-white shadow'
-                  : 'text-[#94A3B8] hover:text-white'
-              }`}
-            >
-              <Square className="w-3.5 h-3.5" />
-              Region Select
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* 2. TAB NAVIGATION BAR */}
-      <nav className="h-11 bg-[#0A101C] border-b border-[#1E293B] px-4 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-1">
+          {/* Studio Workspace Tabs */}
           <button
             onClick={() => setActiveTab('control')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
               activeTab === 'control'
                 ? 'bg-[#1E293B] text-[#38BDF8] border-b-2 border-[#38BDF8]'
                 : 'text-[#94A3B8] hover:text-white hover:bg-[#131D2D]'
@@ -802,7 +716,7 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
               setActiveTab('inspector');
               if (!snapshotResult) refreshSnapshot();
             }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
               activeTab === 'inspector'
                 ? 'bg-[#1E293B] text-[#38BDF8] border-b-2 border-[#38BDF8]'
                 : 'text-[#94A3B8] hover:text-white hover:bg-[#131D2D]'
@@ -819,7 +733,7 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
 
           <button
             onClick={() => setActiveTab('recorder')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
               activeTab === 'recorder'
                 ? 'bg-[#1E293B] text-[#38BDF8] border-b-2 border-[#38BDF8]'
                 : 'text-[#94A3B8] hover:text-white hover:bg-[#131D2D]'
@@ -841,14 +755,14 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
 
           <button
             onClick={() => setActiveTab('library')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
               activeTab === 'library'
                 ? 'bg-[#1E293B] text-[#38BDF8] border-b-2 border-[#38BDF8]'
                 : 'text-[#94A3B8] hover:text-white hover:bg-[#131D2D]'
             }`}
           >
             <Database className="w-3.5 h-3.5" />
-            Element Library
+            Library
             <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-[#1E293B] text-[#94A3B8]">
               {libraryElements.length}
             </span>
@@ -856,22 +770,37 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
 
           <button
             onClick={() => setActiveTab('logs')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
               activeTab === 'logs'
                 ? 'bg-[#1E293B] text-[#38BDF8] border-b-2 border-[#38BDF8]'
                 : 'text-[#94A3B8] hover:text-white hover:bg-[#131D2D]'
             }`}
           >
             <Terminal className="w-3.5 h-3.5" />
-            Debug Logs
+            Logs
           </button>
         </div>
 
-        {/* Quick Toolbar */}
-        <div className="flex items-center gap-2">
+        {/* Right Toolbar: Live Metrics + Snapshot Controls */}
+        <div className="flex items-center gap-3">
+          {/* Live Performance Metrics */}
+          <div className="hidden lg:flex items-center gap-3 text-xs font-mono text-[#94A3B8] bg-[#070B12] px-3 py-1 rounded-full border border-[#1E293B]">
+            <div className="flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-[#38BDF8]" />
+              <span>
+                FPS: <strong className="text-white">{streamFps}</strong>
+              </span>
+            </div>
+            <div className="w-[1px] h-3 bg-[#1E293B]" />
+            <div>
+              Độ trễ: <strong className="text-white">{streamLatency}ms</strong>
+            </div>
+          </div>
+
+          {/* Freeze / Live Toggle */}
           <button
             onClick={() => setIsStreaming(!isStreaming)}
-            className={`px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 transition ${
               isStreaming
                 ? 'bg-[#1E293B] text-[#38BDF8] hover:bg-[#25364E]'
                 : 'bg-[#EF4444]/20 text-[#EF4444] hover:bg-[#EF4444]/30'
@@ -880,23 +809,25 @@ export const DeviceStudioView: React.FC<DeviceStudioViewProps> = ({
             {isStreaming ? (
               <>
                 <Pause className="w-3 h-3" />
-                Đóng băng
+                <span className="hidden sm:inline">Freeze</span>
               </>
             ) : (
               <>
                 <Play className="w-3 h-3" />
-                Tiếp tục stream
+                <span className="hidden sm:inline">Resume</span>
               </>
             )}
           </button>
 
+          {/* Refresh Snapshot */}
           <button
             onClick={refreshSnapshot}
             disabled={inspectLoading}
-            className="px-2.5 py-1 rounded text-xs font-medium bg-[#1E293B] text-white hover:bg-[#25364E] flex items-center gap-1.5 transition disabled:opacity-50"
+            className="px-2.5 py-1 rounded-lg text-xs font-medium bg-[#1E293B] text-white hover:bg-[#25364E] flex items-center gap-1.5 transition disabled:opacity-50"
+            title="Chụp & trích xuất lại UI"
           >
-            <RefreshCw className={`w-3 h-3 ${inspectLoading ? 'animate-spin' : ''}`} />
-            Chụp & Phân tích
+            <RefreshCw className={`w-3.5 h-3.5 ${inspectLoading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Chụp & Phân tích</span>
           </button>
         </div>
       </nav>
